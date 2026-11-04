@@ -160,8 +160,17 @@ function WallWithOpening({
   height: number;
   color: string;
   texture?: Texture;
-  opening: "door" | "window" | "none";
+  opening: "door" | "window" | "none" | "solid";
 }) {
+  if (opening === "solid") {
+    const wallThickness = 0.22;
+    return (
+      <mesh position={[x, height / 2, 0]} receiveShadow>
+        <boxGeometry args={[wallThickness, height, depth]} />
+        <meshStandardMaterial color={color} map={texture} roughness={0.88} />
+      </mesh>
+    );
+  }
   if (opening === "none") return null;
   const wallThickness = 0.22;
   const doorWidth = 1.65;
@@ -241,18 +250,20 @@ function GalleryRoom({
   onSelect?: (id: string) => void;
   walkable: boolean;
   onFloorClick?: (point: Vector3) => void;
-  leftOpening: "door" | "window" | "none";
-  rightOpening: "door" | "window";
+  leftOpening: "door" | "window" | "none" | "solid";
+  rightOpening: "door" | "window" | "solid";
   entrance: boolean;
 }) {
   const { width, depth, height } = roomLayouts[room.layout];
   const wallZ = -depth / 2;
   const wallTexture = useMemo(() => createSurfaceTexture(room.wallTexture), [room.wallTexture]);
   const floorTexture = useMemo(() => createSurfaceTexture(room.floorTexture), [room.floorTexture]);
+  const ceilingTexture = useMemo(() => createSurfaceTexture(room.ceilingTexture), [room.ceilingTexture]);
   useEffect(() => () => {
     wallTexture?.dispose();
     floorTexture?.dispose();
-  }, [floorTexture, wallTexture]);
+    ceilingTexture?.dispose();
+  }, [ceilingTexture, floorTexture, wallTexture]);
   const artworkNodes = useMemo(
     () =>
       artworks.map((artwork) => (
@@ -270,7 +281,7 @@ function GalleryRoom({
     <group position={[offsetX, 0, 0]}>
       <mesh position={[0, height - 0.12, 0]} receiveShadow>
         <boxGeometry args={[width, 0.24, depth]} />
-        <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.9} />
+        <meshStandardMaterial color={room.ceilingColor} map={ceilingTexture} roughness={0.9} />
       </mesh>
       <mesh
         position={[0, -0.08, 0]}
@@ -606,9 +617,13 @@ export default function GalleryScene({
         destination.current = new Vector3(point.x, 0, point.z);
         onFloorClick?.(point);
       } : undefined}
-      leftOpening={walkMode && index > 0 ? "none" : "window"}
-      rightOpening={walkMode && index < sceneRooms.length - 1 ? "door" : "window"}
-      entrance={walkMode && index === 0}
+      // In walk mode the visitor stays inside: shared walls keep the single
+      // door wall (no doubled wall, so no z-fighting), the outer ends are
+      // solid and the front stays closed, so no void or box exterior is
+      // ever visible through a window or an entrance hole.
+      leftOpening={walkMode ? (index > 0 ? "none" : "solid") : "window"}
+      rightOpening={walkMode ? (index < sceneRooms.length - 1 ? "door" : "solid") : "window"}
+      entrance={false}
     />
   ));
   const startRoom = sceneRooms[Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)))];

@@ -7,7 +7,7 @@ const rooms = [
   {
     id: "demo-origins",
     name: "Origins & Memory",
-    layout: "white-cube",
+    layout: "cube",
     wallColor: "#eee7db",
     sideWallColor: "#d9d0c3",
     floorColor: "#b8afa1",
@@ -15,7 +15,7 @@ const rooms = [
   {
     id: "demo-presence",
     name: "Presence",
-    layout: "long-gallery",
+    layout: "grand-hall",
     wallColor: "#d8c8b7",
     sideWallColor: "#b8a894",
     floorColor: "#85786b",
@@ -23,7 +23,7 @@ const rooms = [
   {
     id: "demo-inner-worlds",
     name: "Inner Worlds",
-    layout: "intimate-room",
+    layout: "quiet-minimal",
     wallColor: "#d1d4c4",
     sideWallColor: "#b4b9a7",
     floorColor: "#929582",
@@ -31,7 +31,7 @@ const rooms = [
   {
     id: "demo-reflections",
     name: "Reflections",
-    layout: "white-cube",
+    layout: "cube",
     wallColor: "#dfc9bd",
     sideWallColor: "#bea79b",
     floorColor: "#918178",

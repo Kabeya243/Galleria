@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  exhibitions  Exhibition[]
+}
+
+model Exhibition {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  description String     @default("")
+  status      String     @default("draft")
+  roomColor   String     @default("#f5f2eb")
+  rooms       String     @default("[{\"id\":\"room-main\",\"name\":\"Room 1\",\"layout\":\"white-cube\",\"wallColor\":\"#f5f2eb\",\"sideWallColor\":\"#e2ded6\",\"floorColor\":\"#c5beb2\"}]")
+  views       Int        @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  artworks    Artwork[]
+
+  @@index([ownerId])
+  @@index([status, slug])
+}
+
+model Artwork {
+  id           String     @id @default(cuid())
+  title        String
+  artist       String     @default("")
+  year         String     @default("")
+  medium       String     @default("")
+  dimensions   String     @default("")
+  description  String     @default("")
+  color        String     @default("#b8a184")
+  accent       String     @default("#343e36")
+  positionX    Float      @default(0)
+  positionY    Float      @default(2.5)
+  positionZ    Float      @default(-5.72)
+  rotation     Float      @default(0)
+  scale        Float      @default(1)
+  imageUrl     String?
+  roomId       String     @default("room-main")
+  createdAt    DateTime   @default(now())
+  exhibitionId String
+  exhibition   Exhibition @relation(fields: [exhibitionId], references: [id], onDelete: Cascade)
+
+  @@index([exhibitionId])
+}

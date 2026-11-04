@@ -1,0 +1,105 @@
+import { NextResponse } from "next/server";
+import { ZodError } from "zod";
+import { getCurrentUser, toClientArtwork } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { parseGalleryRooms } from "@/lib/rooms";
+import { exhibitionUpdateSchema } from "@/lib/validation";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, { params }: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Sign in to edit this exhibition." }, { status: 401 });
+  const { id } = await params;
+  const exhibition = await db.exhibition.findFirst({
+    where: { id, ownerId: user.id },
+    include: { artworks: { orderBy: { createdAt: "asc" } } },
+  });
+  if (!exhibition) return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+
+  return NextResponse.json({
+    exhibition: {
+      ...exhibition,
+      rooms: parseGalleryRooms(exhibition.rooms),
+      artworks: exhibition.artworks.map(toClientArtwork),
+    },
+  });
+}
+
+export async function PUT(request: Request, { params }: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Sign in to save this exhibition." }, { status: 401 });
+  const { id } = await params;
+
+  try {
+    const input = exhibitionUpdateSchema.parse(await request.json());
+    const existing = await db.exhibition.findFirst({ where: { id, ownerId: user.id } });
+    if (!existing) return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+
+    await db.$transaction(async (transaction) => {
+      await transaction.exhibition.update({
+        where: { id },
+        data: {
+          title: input.title,
+          description: input.description,
+          roomColor: input.rooms[0].wallColor,
+          rooms: JSON.stringify(input.rooms),
+        },
+      });
+      await transaction.artwork.deleteMany({ where: { exhibitionId: id } });
+      if (input.artworks.length) {
+        await transaction.artwork.createMany({
+          data: input.artworks.map((artwork) => ({
+            id: artwork.id,
+            title: artwork.title,
+            artist: artwork.artist,
+            year: artwork.year,
+            medium: artwork.medium,
+            dimensions: artwork.dimensions,
+            description: artwork.description,
+            color: artwork.color,
+            accent: artwork.accent,
+            positionX: artwork.position[0],
+            positionY: artwork.position[1],
+            positionZ: artwork.position[2],
+            rotation: artwork.rotation,
+            scale: artwork.scale,
+            imageUrl: artwork.imageUrl ?? null,
+            roomId: artwork.roomId,
+            exhibitionId: id,
+          })),
+        });
+      }
+    });
+
+    const exhibition = await db.exhibition.findUniqueOrThrow({
+      where: { id },
+      include: { artworks: { orderBy: { createdAt: "asc" } } },
+    });
+    return NextResponse.json({
+      exhibition: {
+        ...exhibition,
+        rooms: parseGalleryRooms(exhibition.rooms),
+        artworks: exhibition.artworks.map(toClientArtwork),
+      },
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid exhibition data." }, { status: 400 });
+    }
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid exhibition data." }, { status: 400 });
+    }
+    console.error("Could not save exhibition.", error);
+    return NextResponse.json({ error: "Could not save this exhibition." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, { params }: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Sign in to delete this exhibition." }, { status: 401 });
+  const { id } = await params;
+  const result = await db.exhibition.deleteMany({ where: { id, ownerId: user.id } });
+  if (!result.count) return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}

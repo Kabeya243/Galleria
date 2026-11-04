@@ -1,7 +1,6 @@
 # Galleria (SANAA)
 
-SANAA est une application indépendante de création et de visite d’expositions d’art virtuelles en 3D. Elle se trouve dans ce dossier et ne modifie pas le portfolio à la racine du dépôt.
-
+SANAA est une application indépendante de création et de visite d’expositions d’art virtuelles en 3D. 
 ## Fonctionnalités disponibles
 
 - Création de compte et connexion avec adresse e-mail et mot de passe.

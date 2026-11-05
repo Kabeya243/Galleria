@@ -798,6 +798,7 @@ export type WalkDebugState = {
   keys: string[];
   destination: [number, number, number] | null;
   camera: [number, number, number] | null;
+  lastKey: string | null;
 };
 
 function WalkControls({
@@ -835,6 +836,7 @@ function WalkControls({
   const direction = useRef(new Vector3());
   const right = useRef(new Vector3());
   const stuckTime = useRef(0);
+  const lastKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -872,6 +874,7 @@ function WalkControls({
       if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
         event.preventDefault();
         input.current.add(event.code);
+        lastKey.current = event.code;
       }
     };
     const keyUp = (event: KeyboardEvent) => input.current.delete(event.code);
@@ -931,6 +934,7 @@ function WalkControls({
           ? [destination.current.x, destination.current.y, destination.current.z]
           : null,
         camera: [camera.position.x, camera.position.y, camera.position.z],
+        lastKey: lastKey.current,
       };
     }
     if (!enabled) return;

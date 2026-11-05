@@ -72,20 +72,28 @@ export default function PublicExhibition({
   useEffect(() => {
     if (!debug) return;
     const id = setInterval(() => {
-      const card = document.getElementById("walk-start");
-      const rect = card?.getBoundingClientRect();
+      const btn = document.getElementById("walk-start") as HTMLElement | null;
+      const card = btn?.closest(".walk-start-card") as HTMLElement | null;
+      const rect = btn?.getBoundingClientRect();
       const cx = rect ? rect.left + rect.width / 2 : 0;
       const cy = rect ? rect.top + rect.height / 2 : 0;
       const topEl = rect && rect.width > 0 ? document.elementFromPoint(cx, cy) : null;
       const loader = document.querySelector(".exhibition-loader");
+      const cs = card ? getComputedStyle(card) : null;
+      const bs = btn ? getComputedStyle(btn) : null;
       const d = walkDebug.current;
       setDebugText([
         `walking=${walking}`,
+        `card class=${card?.className ?? "none"}`,
         `card rect=${rect ? `${Math.round(rect.x)},${Math.round(rect.y)} ${Math.round(rect.width)}x${Math.round(rect.height)}` : "none"}`,
+        `card computed: pos=${cs?.position} top=${cs?.top} left=${cs?.left} w=${cs?.width} transform=${cs?.transform} z=${cs?.zIndex} display=${cs?.display}`,
+        `btn computed: minH=${bs?.minHeight} pad=${bs?.padding} bg=${bs?.backgroundColor}`,
+        `card offsetParent=${(card?.offsetParent as HTMLElement)?.tagName ?? "none"}.${((card?.offsetParent as HTMLElement)?.className as string) ?? ""}`,
         `top at card center=${topEl ? `${topEl.tagName}.${(topEl as HTMLElement).className || ""}` : "none"}`,
         `loader in DOM=${loader ? "yes" : "no"}`,
         `walk enabled=${d?.enabled ?? "?"}`,
         `keys=${d?.keys?.length ? d.keys.join(",") : "none"}`,
+        `lastKey=${d?.lastKey ?? "none"}`,
         `destination=${d?.destination ? d.destination.map((n) => n.toFixed(1)).join(",") : "null"}`,
         `camera=${d?.camera ? d.camera.map((n) => n.toFixed(2)).join(",") : "?"}`,
       ].join(" | "));

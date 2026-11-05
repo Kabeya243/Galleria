@@ -27,7 +27,7 @@ import {
   Undo2,
   Upload,
 } from "lucide-react";
-import GalleryScene from "@/components/gallery-scene";
+import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork } from "@/lib/demo-data";
 import { applyLayoutPreset, createGalleryRoom, floorTextures, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
@@ -471,7 +471,7 @@ async function compressImage(file: File): Promise<File> {
           <div className="asset-list">
             {currentArtworks.map((artwork, index) => (
               <button className={`asset-row ${selectedId === artwork.id ? "selected" : ""}`} key={artwork.id} onClick={() => setSelectedId(artwork.id)}>
-                <span className={`asset-thumb asset-color-${index % 3}`}><span /></span>
+                <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.title} /> : <span />}</span>
                 <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.medium.split(" ")[0]}</small></span>
                 {selectedId === artwork.id && <span className="selected-mark"><Check size={12} /></span>}
               </button>
@@ -502,8 +502,8 @@ async function compressImage(file: File): Promise<File> {
             </div>
           </div>
           <div className="scene-wrap">
-            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={setSelectedId} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); setSelectedId(undefined); }} />}
-            <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
+            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={setSelectedId} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); setSelectedId(undefined); }} editable onArtworkUpdate={(id, patch) => updateArtwork(id, (artwork) => ({ ...artwork, ...patch }))} />}
+            <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(1.6, artwork.scale + 0.1) }))} title="Increase scale"><Expand size={14} /></button><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) }))} title="Decrease scale"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
@@ -515,8 +515,21 @@ async function compressImage(file: File): Promise<File> {
           <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="More properties"><Info size={15} /></button></div>
           {selected ? (
             <>
-              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}><span style={{ backgroundColor: selected.accent }} /></div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
+              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
               <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><input aria-label={`Position ${axis}`} type="number" step="0.1" value={selected.position[index]} onChange={(event) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = Number(event.target.value); return { ...artwork, position }; })} /></div>)}</div></div>
+              <div className="property-section"><label>DIMENSIONS <span>CM</span></label><div className="coordinate-row">{(["Width", "Height"] as const).map((label, index) => {
+                const parsed = parseArtworkDimensions(selected.dimensions ?? "");
+                const current = parsed ?? { widthCm: 182, heightCm: 212 };
+                const value = index === 0 ? current.widthCm : current.heightCm;
+                return (
+                  <div key={label}><span>{label}</span><input aria-label={`Artwork ${label.toLowerCase()} in centimetres`} type="number" min="1" step="1" value={value} onChange={(event) => {
+                    const next = Math.max(1, Math.round(Number(event.target.value) || 1));
+                    const widthCm = index === 0 ? next : current.widthCm;
+                    const heightCm = index === 1 ? next : current.heightCm;
+                    updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: `${widthCm} × ${heightCm} cm` }));
+                  }} /></div>
+                );
+              })}</div></div>
               <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Artwork scale" type="range" min="0.5" max="1.6" step="0.05" value={selected.scale} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Number(event.target.value) }))} /><span>{Math.round(selected.scale * 100)}%</span></div></div>
               <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation - Math.PI / 12 }))}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selected.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }))}><RotateCw size={15} /></button></div></div>
               <div className="property-section"><label>ARTWORK LABEL</label><input className="full-input" value={selected.title} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, title: event.target.value }))} /></div>

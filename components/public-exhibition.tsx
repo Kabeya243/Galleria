@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, Maximize2 } from "lucide-react";
 import { useProgress } from "@react-three/drei";
-import GalleryScene, { type WalkDebugState } from "@/components/gallery-scene";
+import GalleryScene from "@/components/gallery-scene";
 import type { Artwork } from "@/lib/demo-data";
 import type { GalleryRoom } from "@/lib/rooms";
 
@@ -60,48 +60,6 @@ export default function PublicExhibition({
   const activeRoom = exhibition.rooms.find((room) => room.id === activeRoomId) ?? exhibition.rooms[0];
   const roomArtworks = exhibition.artworks.filter((artwork) => artwork.roomId === activeRoom?.id);
 
-  // Temporary walk-mode diagnostics, visible only with ?debug=walk in the
-  // URL (never for normal visitors). Reports the live walk state, the
-  // "Enter the room" card's real position, what element covers it, and the
-  // camera position, so a walk failure can be pinpointed from the page text.
-  const [debug, setDebug] = useState(false);
-  const walkDebug = useRef<WalkDebugState | null>(null);
-  const [debugText, setDebugText] = useState("");
-  useEffect(() => {
-    setDebug(new URLSearchParams(window.location.search).get("debug") === "walk");
-  }, []);
-  useEffect(() => {
-    if (!debug) return;
-    const id = setInterval(() => {
-      const btn = document.getElementById("walk-start") as HTMLElement | null;
-      const card = btn?.closest(".walk-start-card") as HTMLElement | null;
-      const rect = btn?.getBoundingClientRect();
-      const cx = rect ? rect.left + rect.width / 2 : 0;
-      const cy = rect ? rect.top + rect.height / 2 : 0;
-      const topEl = rect && rect.width > 0 ? document.elementFromPoint(cx, cy) : null;
-      const loader = document.querySelector(".exhibition-loader");
-      const cs = card ? getComputedStyle(card) : null;
-      const bs = btn ? getComputedStyle(btn) : null;
-      const d = walkDebug.current;
-      setDebugText([
-        `walking=${walking}`,
-        `card class=${card?.className ?? "none"}`,
-        `card rect=${rect ? `${Math.round(rect.x)},${Math.round(rect.y)} ${Math.round(rect.width)}x${Math.round(rect.height)}` : "none"}`,
-        `card computed: pos=${cs?.position} top=${cs?.top} left=${cs?.left} w=${cs?.width} transform=${cs?.transform} z=${cs?.zIndex} display=${cs?.display}`,
-        `btn computed: minH=${bs?.minHeight} pad=${bs?.padding} bg=${bs?.backgroundColor}`,
-        `card offsetParent=${(card?.offsetParent as HTMLElement)?.tagName ?? "none"}.${((card?.offsetParent as HTMLElement)?.className as string) ?? ""}`,
-        `top at card center=${topEl ? `${topEl.tagName}.${(topEl as HTMLElement).className || ""}` : "none"}`,
-        `loader in DOM=${loader ? "yes" : "no"}`,
-        `walk enabled=${d?.enabled ?? "?"}`,
-        `keys=${d?.keys?.length ? d.keys.join(",") : "none"}`,
-        `lastKey=${d?.lastKey ?? "none"}`,
-        `destination=${d?.destination ? d.destination.map((n) => n.toFixed(1)).join(",") : "null"}`,
-        `camera=${d?.camera ? d.camera.map((n) => n.toFixed(2)).join(",") : "?"}`,
-      ].join(" | "));
-    }, 250);
-    return () => clearInterval(id);
-  }, [debug, walking]);
-
   function changeRoom(index: number) {
     const room = exhibition.rooms[index];
     if (!room) return;
@@ -112,7 +70,6 @@ export default function PublicExhibition({
   return (
     <main className="public-exhibition">
       <ExhibitionLoader />
-      {debug && <div className="walk-debug-panel">{debugText}</div>}
       {activeRoom && <GalleryScene
         artworks={exhibition.artworks}
         onSelect={(id) => setSelected(roomArtworks.find((artwork) => artwork.id === id))}
@@ -124,7 +81,6 @@ export default function PublicExhibition({
         walking={walking}
         input={movementKeys}
         onRoomChange={(id) => { setActiveRoomId(id); setSelected(undefined); }}
-        debugState={walkDebug}
         resetSignal={walkReset}
       />}
       <header className="public-topbar">

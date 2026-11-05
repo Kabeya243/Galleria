@@ -208,6 +208,9 @@ function ArtworkFrame({
   onWalkTo,
   offsetX,
   dragged,
+  editable,
+  onDragStart,
+  onHoverChange,
 }: {
   artwork: Artwork;
   selected: boolean;
@@ -219,9 +222,15 @@ function ArtworkFrame({
   onWalkTo?: (point: Vector3, yaw: number) => void;
   offsetX?: number;
   dragged?: React.RefObject<boolean>;
+  // Editor only: drag the artwork along its wall with the hand cursor,
+  // and resize it from the lime handle at its bottom-right corner.
+  editable?: boolean;
+  onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
+  onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
 }) {
   const [x, y, z] = artwork.position;
   const { width, height } = artworkSize(artwork);
+  const interactive = editable && !walkable;
   return (
     <group
       position={[x, y, z]}
@@ -239,6 +248,20 @@ function ArtworkFrame({
           );
         }
         onSelect?.(artwork.id);
+      }}
+      onPointerOver={(event) => {
+        if (!interactive) return;
+        event.stopPropagation();
+        onHoverChange?.({ id: artwork.id, cursor: "grab" });
+      }}
+      onPointerOut={() => {
+        if (!interactive) return;
+        onHoverChange?.(null);
+      }}
+      onPointerDown={(event) => {
+        if (!interactive) return;
+        event.stopPropagation();
+        onDragStart?.(artwork.id, "move", event);
       }}
     >
       <mesh>
@@ -267,6 +290,25 @@ function ArtworkFrame({
         <mesh position={[0, 0, -0.1]}>
           <boxGeometry args={[width + 0.35, height + 0.35, 0.02]} />
           <meshBasicMaterial color="#bc8056" wireframe />
+        </mesh>
+      )}
+      {interactive && selected && (
+        <mesh
+          position={[(width + 0.2) / 2 + 0.18, -(height + 0.2) / 2 - 0.18, 0.12]}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            onDragStart?.(artwork.id, "resize", event);
+          }}
+          onPointerOver={(event) => {
+            event.stopPropagation();
+            onHoverChange?.({ id: artwork.id, cursor: "nwse-resize" });
+          }}
+          onPointerOut={() => {
+            onHoverChange?.({ id: artwork.id, cursor: "grab" });
+          }}
+        >
+          <boxGeometry args={[0.26, 0.26, 0.26]} />
+          <meshStandardMaterial color="#d7ff32" emissive="#d7ff32" emissiveIntensity={0.4} />
         </mesh>
       )}
     </group>
@@ -652,6 +694,9 @@ function GalleryRoom({
   leftOpening,
   rightOpening,
   entrance,
+  editable,
+  onDragStart,
+  onHoverChange,
 }: {
   room: GalleryRoom;
   offsetX: number;
@@ -665,6 +710,9 @@ function GalleryRoom({
   leftOpening: "door" | "window" | "none" | "solid";
   rightOpening: "door" | "window" | "solid";
   entrance: boolean;
+  editable?: boolean;
+  onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
+  onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
 }) {
   const { width, depth, height } = roomLayouts[room.layout];
   const wallZ = -depth / 2;
@@ -698,9 +746,12 @@ function GalleryRoom({
           onWalkTo={onWalkTo}
           offsetX={offsetX}
           dragged={dragged}
+          editable={editable}
+          onDragStart={onDragStart}
+          onHoverChange={onHoverChange}
         />
       )),
-    [artworks, dragged, offsetX, onSelect, onWalkTo, selectedId, walkable],
+    [artworks, dragged, editable, offsetX, onDragStart, onHoverChange, onSelect, onWalkTo, selectedId, walkable],
   );
 
   return (
@@ -832,16 +883,6 @@ function GalleryRoom({
   );
 }
 
-// Live walk-mode state, written by WalkControls every frame when a debug
-// ref is provided (only used with ?debug=walk on the public exhibition).
-export type WalkDebugState = {
-  enabled: boolean;
-  keys: string[];
-  destination: [number, number, number] | null;
-  camera: [number, number, number] | null;
-  lastKey: string | null;
-};
-
 function WalkControls({
   rooms,
   activeRoomId,
@@ -852,7 +893,6 @@ function WalkControls({
   dragged,
   enabled,
   onRoomChange,
-  debugState,
   resetSignal,
 }: {
   rooms: GalleryRoom[];
@@ -868,7 +908,6 @@ function WalkControls({
   dragged: React.RefObject<boolean>;
   enabled: boolean;
   onRoomChange?: (id: string) => void;
-  debugState?: React.RefObject<WalkDebugState | null>;
   // Increment to send the visitor back to the entrance (room 1, start
   // position, facing the back wall).
   resetSignal?: React.RefObject<number>;
@@ -972,17 +1011,6 @@ function WalkControls({
   }, [camera, dragged, enabled, gl, input]);
 
   useFrame((_, delta) => {
-    if (debugState) {
-      debugState.current = {
-        enabled,
-        keys: [...input.current],
-        destination: destination.current
-          ? [destination.current.x, destination.current.y, destination.current.z]
-          : null,
-        camera: [camera.position.x, camera.position.y, camera.position.z],
-        lastKey: lastKey.current,
-      };
-    }
     if (!enabled) return;
     // "Back to the entrance": put the visitor at the first room's start
     // position, facing the back wall, and clear any walk target.
@@ -1158,6 +1186,80 @@ function InteriorCameraRig({
   return null;
 }
 
+type ArtworkDragState = {
+  id: string;
+  mode: "move" | "resize";
+  plane: Plane;
+  grabOffset: Vector3;
+  center: Vector3;
+  startScale: number;
+  startDist: number;
+  clamp: { minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number };
+};
+
+// Editor drag: while an artwork drag is active, pointer moves on the canvas
+// are turned into a point on the artwork's wall plane and applied as a new
+// position (move) or a new scale (resize). The listeners live on the canvas
+// element, so the drag keeps working even when the pointer leaves the frame.
+function DragHandler({
+  dragRef,
+  onArtworkUpdate,
+  onDragEnd,
+}: {
+  dragRef: React.RefObject<ArtworkDragState | null>;
+  onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
+  onDragEnd: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const updateRef = useRef(onArtworkUpdate);
+  updateRef.current = onArtworkUpdate;
+  const endRef = useRef(onDragEnd);
+  endRef.current = onDragEnd;
+  useEffect(() => {
+    const raycaster = new Raycaster();
+    const ndc = new Vector2();
+    const hit = new Vector3();
+    const onMove = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      const update = updateRef.current;
+      if (!drag || !update) return;
+      const rect = gl.domElement.getBoundingClientRect();
+      ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(drag.plane, hit)) return;
+      if (drag.mode === "move") {
+        const next = hit.clone().sub(drag.grabOffset);
+        const c = drag.clamp;
+        update(drag.id, {
+          position: [
+            Math.min(c.maxX, Math.max(c.minX, next.x)),
+            Math.min(c.maxY, Math.max(c.minY, next.y)),
+            Math.min(c.maxZ, Math.max(c.minZ, next.z)),
+          ],
+        });
+      } else {
+        const dist = Math.max(0.05, hit.distanceTo(drag.center));
+        const scale = Math.min(1.6, Math.max(0.5, drag.startScale * (dist / drag.startDist)));
+        update(drag.id, { scale: Math.round(scale * 100) / 100 });
+      }
+    };
+    const onUp = () => {
+      if (!dragRef.current) return;
+      dragRef.current = null;
+      endRef.current();
+    };
+    gl.domElement.addEventListener("pointermove", onMove);
+    gl.domElement.addEventListener("pointerup", onUp);
+    gl.domElement.addEventListener("pointercancel", onUp);
+    return () => {
+      gl.domElement.removeEventListener("pointermove", onMove);
+      gl.domElement.removeEventListener("pointerup", onUp);
+      gl.domElement.removeEventListener("pointercancel", onUp);
+    };
+  }, [camera, gl, dragRef]);
+  return null;
+}
+
 export default function GalleryScene({
   artworks,
   selectedId,
@@ -1172,8 +1274,9 @@ export default function GalleryScene({
   onFloorClick,
   walking,
   interior = false,
-  debugState,
   resetSignal,
+  editable,
+  onArtworkUpdate,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -1187,13 +1290,16 @@ export default function GalleryScene({
   input?: React.RefObject<Set<string>>;
   onFloorClick?: (point: Vector3) => void;
   walking?: boolean;
-  debugState?: React.RefObject<WalkDebugState | null>;
   resetSignal?: React.RefObject<number>;
   // Interior view: the camera starts inside the room and orbits from within,
   // so the visitor arrives directly in the gallery instead of looking at a
   // closed box from outside. The exterior (garden, doors, buildings) is a
   // later phase: the room boxes stay intact, only the viewpoint changes.
   interior?: boolean;
+  // Editor only: drag artworks along their wall with the hand cursor and
+  // resize them from the lime handle. Disabled while walking.
+  editable?: boolean;
+  onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   const offsets = useMemo(() => {
@@ -1213,6 +1319,54 @@ export default function GalleryScene({
   const destination = useRef<Vector3 | null>(null);
   const lookYaw = useRef<number | null>(null);
   const dragged = useRef(false);
+  // Editor drag state: set on pointerdown on an artwork (or its resize
+  // handle), read by DragHandler on every pointer move, cleared on
+  // pointerup. While a drag is active the orbit controls stay off, so the
+  // camera never rotates while an artwork is being moved.
+  const dragRef = useRef<ArtworkDragState | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragCursor, setDragCursor] = useState<string | null>(null);
+  const [hoveredArtwork, setHoveredArtwork] = useState<{ id: string; cursor: string } | null>(null);
+
+  const handleDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
+    if (!editable || walking) return;
+    const artwork = artworks.find((item) => item.id === id);
+    if (!artwork) return;
+    const { width, height } = artworkSize(artwork);
+    const layout = roomLayouts[room.layout];
+    const halfW = ((width + 0.2) / 2) * artwork.scale;
+    const halfH = ((height + 0.2) / 2) * artwork.scale;
+    const normal = new Vector3(Math.sin(artwork.rotation), 0, Math.cos(artwork.rotation));
+    const position = new Vector3(artwork.position[0], artwork.position[1], artwork.position[2]);
+    const plane = new Plane().setFromNormalAndCoplanarPoint(normal, position);
+    // Grab offset, projected onto the wall plane so the artwork never drifts
+    // off its wall while it is dragged.
+    const grabOffset = event.point.clone().sub(position);
+    grabOffset.addScaledVector(normal, -grabOffset.dot(normal));
+    const hitOnPlane = event.point.clone().addScaledVector(normal, -event.point.clone().sub(position).dot(normal));
+    const startDist = Math.max(0.1, hitOnPlane.distanceTo(position));
+    dragRef.current = {
+      id,
+      mode,
+      plane,
+      grabOffset,
+      center: position,
+      startScale: artwork.scale,
+      startDist,
+      clamp: {
+        minX: -layout.width / 2 + halfW,
+        maxX: layout.width / 2 - halfW,
+        minY: halfH + 0.05,
+        maxY: layout.height - halfH - 0.05,
+        minZ: -layout.depth / 2 + halfW,
+        maxZ: layout.depth / 2 - halfW,
+      },
+    };
+    setIsDragging(true);
+    setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
+    onSelect?.(id);
+  };
+
   const artworkNodes = artworkRooms.map((sceneRoom, index) => (
     <GalleryRoom
       key={sceneRoom.id}
@@ -1222,6 +1376,9 @@ export default function GalleryScene({
       selectedId={selectedId}
       onSelect={onSelect}
       walkable={walkMode && walking === true && sceneRoom.id === (activeRoomId ?? room.id)}
+      editable={editable}
+      onDragStart={handleDragStart}
+      onHoverChange={setHoveredArtwork}
       onFloorClick={walkMode ? (point) => {
         destination.current = new Vector3(point.x, 0, point.z);
         lookYaw.current = null;
@@ -1252,7 +1409,10 @@ export default function GalleryScene({
   }, [room.layout]);
 
   return (
-    <div className={`${className ?? "gallery-canvas"}${walkMode && walking ? " is-walking" : ""}`}>
+    <div
+      className={`${className ?? "gallery-canvas"}${walkMode && walking ? " is-walking" : ""}`}
+      style={{ cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? undefined }}
+    >
       <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={[1, 1.6]} shadows>
         <color attach="background" args={[room.wallColor]} />
         <ambientLight intensity={1.4} />
@@ -1261,14 +1421,23 @@ export default function GalleryScene({
         {/* Artwork textures load through Suspense so a slow image suspends
             only the artworks — never the whole room or page. */}
         <Suspense fallback={null}>{artworkNodes}</Suspense>
+        <DragHandler
+          dragRef={dragRef}
+          onArtworkUpdate={onArtworkUpdate}
+          onDragEnd={() => {
+            setIsDragging(false);
+            setDragCursor(null);
+          }}
+        />
         {interiorView && (
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}
         {walkMode && input ? (
-          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} debugState={debugState} resetSignal={resetSignal} />
+          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
         ) : (
           <OrbitControls
             makeDefault
+            enabled={!isDragging && !hoveredArtwork}
             minDistance={interiorView ? 1.2 : 4}
             maxDistance={interiorView ? interiorLimits.maxDistance : Math.max(roomLayouts[room.layout].width, roomLayouts[room.layout].depth) + 6}
             minPolarAngle={interiorView ? interiorLimits.minPolarAngle : 0}

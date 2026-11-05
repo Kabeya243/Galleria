@@ -4,11 +4,27 @@ import { galleryRoomSchema } from "@/lib/rooms";
 export const credentialsSchema = z.object({
   email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()),
   password: z.string().min(10).max(72),
+  rememberMe: z.boolean().optional(),
 });
 
 export const registrationSchema = credentialsSchema.extend({
   name: z.string().trim().min(2).max(60),
   password: z
+    .string()
+    .min(10)
+    .max(72)
+    .regex(/[a-z]/, "Password must include a lowercase letter.")
+    .regex(/[A-Z]/, "Password must include an uppercase letter.")
+    .regex(/[0-9]/, "Password must include a number."),
+});
+
+export const profileUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(60),
+});
+
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(1).max(72),
+  newPassword: z
     .string()
     .min(10)
     .max(72)

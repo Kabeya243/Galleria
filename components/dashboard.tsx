@@ -6,18 +6,16 @@ import {
   ArrowRight,
   ArrowUpRight,
   Bell,
-  ChevronDown,
-  CircleHelp,
   Compass,
   GalleryVerticalEnd,
-  Grid2X2,
   Image,
   Plus,
   Search,
-  Settings2,
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
+import Sidebar from "@/components/sidebar";
+import ThemeToggle from "@/components/theme-toggle";
 
 type DashboardExhibition = {
   id: string;
@@ -72,61 +70,15 @@ export default function Dashboard({
     }
   }
 
-  async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.assign("/login");
-  }
-
   return (
     <main className="app-shell">
-      <aside className="sidebar">
-        <Link className="brand-lockup" href="/" aria-label="SANAA home">
-          <span className="brand-mark">s.</span>
-          <span className="brand-name">SANAA</span>
-        </Link>
-
-        <div className="workspace-switcher">
-          <div className="workspace-avatar">S</div>
-          <div className="workspace-copy">
-            <span>Workspace</span>
-            <strong>{user.name}</strong>
-          </div>
-          <ChevronDown size={15} />
-        </div>
-
-        <div className="nav-section-label">Workspace</div>
-        <nav className="side-nav" aria-label="Main navigation">
-          <Link className="nav-item active" href="/">
-            <Grid2X2 size={17} /> Overview
-          </Link>
-          <Link className="nav-item" href="/editor">
-            <GalleryVerticalEnd size={17} /> Exhibitions
-            <span className="nav-count">{exhibitions.length}</span>
-          </Link>
-          <a className="nav-item" href="#artworks">
-            <Image size={17} /> Artworks
-          </a>
-          <a className="nav-item" href="#library">
-            <Compass size={17} /> Explore
-          </a>
-        </nav>
-
-        <div className="sidebar-spacer" />
-        <div className="sidebar-bottom">
-          <a className="nav-item" href="#help"><CircleHelp size={17} /> Help center</a>
-          <a className="nav-item" href="#settings"><Settings2 size={17} /> Settings</a>
-          <div className="profile-chip">
-            <div className="profile-avatar">{user.name.slice(0, 2).toUpperCase()}</div>
-            <div className="profile-copy"><strong>{user.name}</strong><span>{user.email}</span></div>
-            <button className="sign-out-button" onClick={signOut}>Sign out</button>
-          </div>
-        </div>
-      </aside>
+      <Sidebar user={user} active="overview" exhibitionCount={exhibitions.length} />
 
       <section className="dashboard-main">
         <header className="topbar">
           <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div>
           <div className="topbar-actions">
+            <ThemeToggle />
             <button className="icon-button" aria-label="Search"><Search size={17} /></button>
             <button className="icon-button notification-button" aria-label="Notifications"><Bell size={17} /><i /></button>
             <span className="topbar-divider" />

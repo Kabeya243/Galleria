@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 
 const COOKIE_NAME = "sanaa_session";
 const SESSION_DURATION = 60 * 60 * 24 * 30;
+const SHORT_SESSION_DURATION = 60 * 60 * 24;
 
 function getSecret() {
   const secret = process.env.SESSION_SECRET;
@@ -13,12 +14,13 @@ function getSecret() {
   return new TextEncoder().encode(secret);
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, options?: { rememberMe?: boolean }) {
+  const duration = options?.rememberMe === false ? SHORT_SESSION_DURATION : SESSION_DURATION;
   const token = await new SignJWT({})
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(userId)
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_DURATION}s`)
+    .setExpirationTime(`${duration}s`)
     .sign(getSecret());
 
   (await cookies()).set(COOKIE_NAME, token, {
@@ -26,7 +28,7 @@ export async function createSession(userId: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_DURATION,
+    maxAge: duration,
   });
 }
 

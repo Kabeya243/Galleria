@@ -27,6 +27,7 @@ import {
   Upload,
 } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
+import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork } from "@/lib/demo-data";
 import { createGalleryRoom, floorTextures, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
 
@@ -316,6 +317,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
           <button className="subtle-edit-button" aria-label="Edit exhibition title" onClick={editTitle}><Settings2 size={14} /></button>
         </div>
         <div className="editor-top-actions">
+          <ThemeToggle />
           <span className="saved-state"><span className={saved ? "save-indicator done" : "save-indicator"} />{saved ? "Saved" : "Unsaved changes"}</span>
           <button className="editor-secondary-button" onClick={() => void saveExhibition()} disabled={busy}><Save size={15} /> Save</button>
           {status === "public" && <Link className="editor-secondary-button" href={`/exhibition/${slug}`}><Eye size={15} /> Preview</Link>}

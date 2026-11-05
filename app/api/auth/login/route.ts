@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     if (!user || !(await compare(input.password, user.passwordHash))) {
       return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
     }
-    await createSession(user.id);
+    await createSession(user.id, { rememberMe: input.rememberMe ?? false });
     return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } });
   } catch (error) {
     if (error instanceof ZodError) {

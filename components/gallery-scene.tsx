@@ -7,6 +7,8 @@ import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, PlaneGeometry, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
 import type { Artwork, FrameVariant } from "@/lib/demo-data";
 import { FRAME_VARIANTS } from "@/lib/demo-data";
+import type { FrameSpec, FrameTextureKind } from "@/lib/demo-data";
+import { beadStripTexture, frameTileTexture, matTexture } from "@/lib/frame-textures";
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
 import { roomLayouts, type GalleryRoom, type WallId } from "@/lib/rooms";
 
@@ -212,6 +214,141 @@ function artworkSize(artwork: Artwork): { width: number; height: number } {
   return { width, height };
 }
 
+// Full size of the framed work on the wall, frame + mat + float gap
+// included — the size the drag clamp and the selection outline use, so a
+// wide museum frame or a shadow box never hangs half off the wall.
+export function frameOuterSize(artwork: Artwork): { width: number; height: number } {
+  const { width, height } = artworkSize(artwork);
+  const spec = FRAME_VARIANTS[artwork.frame ?? "wood"] ?? FRAME_VARIANTS.wood;
+  if (artwork.frame === "none") return { width, height };
+  const extra = (spec.width + Math.max(spec.floatGap, spec.mat?.width ?? 0)) * 2;
+  return { width: width + extra, height: height + extra };
+}
+
+// One material tile, cloned per bar so each bar can repeat it along its
+// own length. The clone shares the cached canvas; disposing it on
+// unmount only drops the GPU copy.
+function useTiledFrameMaterial(spec: FrameSpec, repeatX: number, repeatY: number) {
+  const material = useMemo(() => {
+    const tile = frameTileTexture(spec.texture);
+    const map = tile?.clone();
+    if (map) {
+      map.repeat.set(Math.max(1, repeatX), Math.max(1, repeatY));
+      map.needsUpdate = true;
+    }
+    return { map, color: tile ? "#ffffff" : spec.color, metalness: spec.metalness, roughness: spec.roughness };
+  }, [spec, repeatX, repeatY]);
+  useEffect(() => () => {
+    material.map?.dispose();
+  }, [material]);
+  return material;
+}
+
+function FrameBar({ size, position, material }: { size: [number, number, number]; position: [number, number, number]; material: { map?: CanvasTexture; color: string; metalness: number; roughness: number } }) {
+  return (
+    <mesh position={position}>
+      <boxGeometry args={size} />
+      <meshStandardMaterial map={material.map} color={material.color} metalness={material.metalness} roughness={material.roughness} />
+    </mesh>
+  );
+}
+
+// The beaded inner edge of the gold frames: a row of gold dots on a
+// transparent strip, repeated along the frame's inner edge.
+function BeadStrip({ length, position, rotation }: { length: number; position: [number, number, number]; rotation?: [number, number, number] }) {
+  const map = useMemo(() => {
+    const base = beadStripTexture();
+    const clone = base?.clone();
+    if (clone) {
+      clone.repeat.set(Math.max(1, Math.round(length / 0.25)), 1);
+      clone.needsUpdate = true;
+    }
+    return clone;
+  }, [length]);
+  useEffect(() => () => {
+    map?.dispose();
+  }, [map]);
+  if (!map) return null;
+  return (
+    <mesh position={position} rotation={rotation ?? [0, 0, 0]}>
+      <planeGeometry args={[length, 0.03]} />
+      <meshBasicMaterial map={map} transparent toneMapped={false} />
+    </mesh>
+  );
+}
+
+// The frame around an artwork, built from its digitized spec: four
+// profiled bars with the drawn material texture, a back panel (the tray
+// a floated work hangs against), an optional mat the work sits on, thin
+// gold trim rings and a beaded inner edge where the photo has one.
+// Local z: the frame back sits at -0.06, the front face at -0.06 + depth.
+function FrameAssembly({ width, height, spec, selected }: { width: number; height: number; spec: FrameSpec; selected: boolean }) {
+  const w = spec.width;
+  const d = spec.depth;
+  const border = Math.max(spec.floatGap, spec.mat?.width ?? 0);
+  const openingW = width + 2 * border;
+  const openingH = height + 2 * border;
+  const outerW = openingW + 2 * w;
+  const outerH = openingH + 2 * w;
+  const backZ = -0.06;
+  const frontZ = backZ + d;
+  const barZ = backZ + d / 2;
+  const artZ = frontZ - spec.recess;
+  const tile = 0.4; // metres per texture tile along a bar
+  const topMaterial = useTiledFrameMaterial(spec, outerW / tile, w / tile);
+  const sideMaterial = useTiledFrameMaterial(spec, w / tile, openingH / tile);
+  const matMap = useMemo(() => (spec.mat ? matTexture(spec.mat.texture, spec.mat.color) : undefined), [spec.mat]);
+  const trim = spec.trim;
+  const trimZ = artZ - 0.005;
+  return (
+    <group>
+      {/* Back panel: the tray interior a floated work hangs against. */}
+      <mesh position={[0, 0, backZ + 0.02]}>
+        <boxGeometry args={[outerW, outerH, 0.04]} />
+        <meshStandardMaterial color={selected ? "#aa7958" : spec.trayColor ?? spec.color} metalness={0} roughness={0.9} />
+      </mesh>
+      {/* Four profiled bars. */}
+      <FrameBar size={[outerW, w, d]} position={[0, openingH / 2 + w / 2, barZ]} material={topMaterial} />
+      <FrameBar size={[outerW, w, d]} position={[0, -openingH / 2 - w / 2, barZ]} material={topMaterial} />
+      <FrameBar size={[w, openingH, d]} position={[-openingW / 2 - w / 2, 0, barZ]} material={sideMaterial} />
+      <FrameBar size={[w, openingH, d]} position={[openingW / 2 + w / 2, 0, barZ]} material={sideMaterial} />
+      {/* Mat between frame and artwork. */}
+      {spec.mat && (
+        <mesh position={[0, 0, artZ - 0.01]}>
+          <planeGeometry args={[openingW, openingH]} />
+          <meshStandardMaterial map={matMap} color={matMap ? "#ffffff" : spec.mat.color} metalness={0} roughness={0.95} />
+        </mesh>
+      )}
+      {/* Thin gold trim: around the artwork, between frame and mat, or both. */}
+      {trim && (trim.at === "artwork" || trim.at === "both") && (
+        <group>
+          <FrameBar size={[width + 2 * trim.width, trim.width, 0.02]} position={[0, height / 2 + trim.width / 2, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+          <FrameBar size={[width + 2 * trim.width, trim.width, 0.02]} position={[0, -height / 2 - trim.width / 2, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+          <FrameBar size={[trim.width, height, 0.02]} position={[-width / 2 - trim.width / 2, 0, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+          <FrameBar size={[trim.width, height, 0.02]} position={[width / 2 + trim.width / 2, 0, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+        </group>
+      )}
+      {trim && (trim.at === "mat" || trim.at === "both") && (
+        <group>
+          <FrameBar size={[openingW, trim.width, 0.02]} position={[0, openingH / 2 + trim.width / 2, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+          <FrameBar size={[openingW, trim.width, 0.02]} position={[0, -openingH / 2 - trim.width / 2, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+          <FrameBar size={[trim.width, openingH, 0.02]} position={[-openingW / 2 - trim.width / 2, 0, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+          <FrameBar size={[trim.width, openingH, 0.02]} position={[openingW / 2 + trim.width / 2, 0, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
+        </group>
+      )}
+      {/* Beaded inner edge, just inside the frame on its front face. */}
+      {spec.bead && (
+        <group>
+          <BeadStrip length={openingW} position={[0, openingH / 2 + 0.02, frontZ + 0.002]} />
+          <BeadStrip length={openingW} position={[0, -openingH / 2 - 0.02, frontZ + 0.002]} />
+          <BeadStrip length={openingH} position={[-openingW / 2 - 0.02, 0, frontZ + 0.002]} rotation={[0, 0, Math.PI / 2]} />
+          <BeadStrip length={openingH} position={[openingW / 2 + 0.02, 0, frontZ + 0.002]} rotation={[0, 0, Math.PI / 2]} />
+        </group>
+      )}
+    </group>
+  );
+}
+
 function ArtworkFrame({
   artwork,
   selected,
@@ -246,7 +383,10 @@ function ArtworkFrame({
   // The frame finish chosen in the inspector (wood, metal, gold, black,
   // white, or none). "None" hangs the print frameless on the wall.
   const frameVariant: FrameVariant = artwork.frame ?? "wood";
-  const frame = FRAME_VARIANTS[frameVariant];
+  const frame = FRAME_VARIANTS[frameVariant] ?? FRAME_VARIANTS.wood;
+  // Full framed size on the wall, for the selection outline and the
+  // resize handle (wide frames and mats stick out past the artwork).
+  const frameOuter = frameOuterSize(artwork);
   return (
     <group
       position={[x, y, z]}
@@ -289,27 +429,22 @@ function ArtworkFrame({
         onDragStart?.(artwork.id, "move", event);
       }}
     >
-      {frameVariant !== "none" && (
-        <mesh>
-          <boxGeometry args={[width + 0.2, height + 0.2, 0.12]} />
-          <meshStandardMaterial color={selected ? "#aa7958" : frame.color} metalness={frame.metalness} roughness={frame.roughness} />
-        </mesh>
-      )}
-      {/* Frameless prints sit almost flat on the wall; framed works sit
-          just proud of the frame box. */}
+      {frameVariant !== "none" && <FrameAssembly width={width} height={height} spec={frame} selected={selected} />}
+      {/* Frameless prints sit almost flat on the wall; framed works sit at
+          the frame's front face, recessed inside a shadow box. */}
       {artwork.imageUrl ? (
-        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={frameVariant === "none" ? 0.02 : 0.083} />
+        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={frameVariant === "none" ? 0.02 : -0.06 + frame.depth - frame.recess + 0.005} />
       ) : (
         <>
-          <mesh position={[0, 0, frameVariant === "none" ? 0.012 : 0.071]}>
+          <mesh position={[0, 0, frameVariant === "none" ? 0.012 : -0.06 + frame.depth - frame.recess + 0.005]}>
             <planeGeometry args={[width, height]} />
             <meshStandardMaterial color={artwork.color} />
           </mesh>
-          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), frameVariant === "none" ? 0.022 : 0.082]} rotation={[0, 0, -0.22]}>
+          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), frameVariant === "none" ? 0.022 : -0.06 + frame.depth - frame.recess + 0.015]} rotation={[0, 0, -0.22]}>
             <circleGeometry args={[0.48 * Math.min(width / 1.82, height / 2.12), 48]} />
             <meshStandardMaterial color={artwork.accent} />
           </mesh>
-          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), frameVariant === "none" ? 0.024 : 0.084]} rotation={[0, 0, 0.12]}>
+          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), frameVariant === "none" ? 0.024 : -0.06 + frame.depth - frame.recess + 0.017]} rotation={[0, 0, 0.12]}>
             <planeGeometry args={[0.8 * (width / 1.82), 0.32 * (height / 2.12)]} />
             <meshStandardMaterial color="#d7c6a9" />
           </mesh>
@@ -317,13 +452,13 @@ function ArtworkFrame({
       )}
       {selected && (
         <mesh position={[0, 0, -0.1]}>
-          <boxGeometry args={[width + 0.35, height + 0.35, 0.02]} />
+          <boxGeometry args={[frameOuter.width + 0.15, frameOuter.height + 0.15, 0.02]} />
           <meshBasicMaterial color="#bc8056" wireframe />
         </mesh>
       )}
       {interactive && selected && (
         <mesh
-          position={[(width + 0.2) / 2 + 0.18, -(height + 0.2) / 2 - 0.18, 0.12]}
+          position={[frameOuter.width / 2 + 0.18, -frameOuter.height / 2 - 0.18, -0.06 + frame.depth + 0.02]}
           onPointerDown={(event) => {
             event.stopPropagation();
             onDragStart?.(artwork.id, "resize", event);
@@ -2439,8 +2574,11 @@ export default function GalleryScene({
     onEditStart?.();
     const { width, height } = artworkSize(artwork);
     const layout = roomLayouts[room.layout];
-    const halfW = ((width + 0.2) / 2) * artwork.scale;
-    const halfH = ((height + 0.2) / 2) * artwork.scale;
+    // The full framed size: a wide museum frame or a shadow box must
+    // stay on the wall, not just the artwork itself.
+    const outer = frameOuterSize(artwork);
+    const halfW = (outer.width / 2) * artwork.scale;
+    const halfH = (outer.height / 2) * artwork.scale;
     const normal = new Vector3(Math.sin(artwork.rotation), 0, Math.cos(artwork.rotation));
     const position = new Vector3(artwork.position[0], artwork.position[1], artwork.position[2]);
     const plane = new Plane().setFromNormalAndCoplanarPoint(normal, position);

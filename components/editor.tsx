@@ -29,6 +29,7 @@ import {
   Upload,
 } from "lucide-react";
 import ElementThumbnail from "@/components/element-thumbnail";
+import FrameThumbnail from "@/components/frame-thumbnail";
 import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameVariant } from "@/lib/demo-data";
@@ -1086,7 +1087,7 @@ async function compressImage(file: File): Promise<File> {
                       aria-pressed={(selected.frame ?? "wood") === variant}
                       onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: variant })); }}
                     >
-                      <span className={`frame-preview frame-preview-${variant}`}><span className="frame-preview-art" /></span>
+                      <FrameThumbnail variant={variant} />
                       {FRAME_VARIANTS[variant].label}
                     </button>
                   ))}</div></div>

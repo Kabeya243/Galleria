@@ -545,10 +545,10 @@ button { color: inherit; }
   color-scheme: light;
 }
 [data-theme="dark"] {
-  --ink: var(--surface);
+  --ink: #f3f0e5;
   --muted: #a8a496;
   --paper: #131312;
-  --line: var(--surface);
+  --line: #f3f0e5;
   --accent: #ff6a4d;
   --surface: #1b1b19;
   --surface-2: #242421;
@@ -740,7 +740,7 @@ button { font-weight: 700; }
 .auth-noir-forgot-note { margin: -18px 0 22px; color: #8f8d82; font-size: 11px; line-height: 1.6; }
 .auth-noir-hint { margin: -14px 0 22px; color: #8f8d82; font-size: 11px; line-height: 1.6; }
 .auth-noir-error { margin: 0 0 22px; padding: 11px 13px; border: 1px solid #5a2b22; border-radius: 6px; background: #2a1410; color: #f0a58f; font-size: 12px; }
-.auth-noir-submit { position: absolute; right: 30px; bottom: 30px; width: 96px; height: 96px; border: 0; border-radius: 50%; background: #fff; color: #000; font: 700 11px "Manrope", sans-serif; letter-spacing: .08em; cursor: pointer; transition: transform .18s, background .18s; }
+.auth-noir-submit { position: absolute; right: 30px; bottom: 30px; width: 96px; height: 96px; border: 0; border-radius: 50% !important; background: #fff; color: #000; font: 700 11px "Manrope", sans-serif; letter-spacing: .08em; cursor: pointer; transition: transform .18s, background .18s; }
 .auth-noir-submit:hover { transform: scale(1.05); background: #e8e6df; }
 .auth-noir-submit:disabled { opacity: .6; cursor: wait; }
 .auth-noir-switch { margin: 34px 0 0; color: #8f8d82; font-size: 11px; text-align: center; }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
-function AsteriskMark() {
+export function AsteriskMark() {
   return (
     <svg viewBox="0 0 200 200" fill="none" aria-hidden="true">
       <g stroke="currentColor" strokeWidth="9" strokeLinecap="square">
@@ -23,7 +23,6 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const isRegister = mode === "register";
@@ -145,20 +144,10 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                   />
                   Remember me
                 </label>
-                <button
-                  type="button"
-                  className="auth-noir-forgot"
-                  onClick={() => setShowForgot(!showForgot)}
-                >
+                <Link className="auth-noir-forgot" href="/forgot-password">
                   Forgot?
-                </button>
+                </Link>
               </div>
-            )}
-            {!isRegister && showForgot && (
-              <p className="auth-noir-forgot-note">
-                Password reset isn&apos;t available yet. If you can&apos;t sign in, you can create
-                a new account with another email address.
-              </p>
             )}
             {error && (
               <p className="auth-noir-error" role="alert">

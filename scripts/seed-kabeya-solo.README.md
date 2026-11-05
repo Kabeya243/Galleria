@@ -2,21 +2,25 @@
 
 Creates the public solo exhibition **“Already Enough As We Are”**
 (`https://galleria-bice.vercel.app/exhibition/kabeya-ilunga-already-enough-as-we-are`):
-1 White Cube room, 5 works, status `public` — so it appears on the public
-homepage the moment it exists.
+1 White Cube room, 7 works, status `public` — so it appears on the public
+homepage the moment it exists. The two sold works hang with a red circle
+(🔴) in their title — sold, not available.
 
 ## Works in the show
 
 | # | Work | Year | Medium | Dimensions | Source image |
 |---|------|------|--------|------------|--------------|
-| 1 | The Nose Ring | 2026 | Acrylics and charcoal on paper | 130 × 94 cm | `goals/dot-ateliers-2027-residency-application/files/Ilunga_Kabeya_TheNoseRing_Acrylics-Charcoal_2026_130x94cm.jpg` |
-| 2 | The Boy with Gold Jewelry | 2026 | Acrylics, sequins and charcoal on paper | 120 × 89 cm | `goals/dot-ateliers-2027-residency-application/files/Ilunga_Kabeya_TheBoyWithGoldJewelry_Acrylics-Sequins-Charcoal_2026_120x89cm.jpg` |
-| 3 | The Family Photograph | 2026 | Acrylics and charcoal on paper | 120 × 94 cm | `goals/dot-ateliers-2027-residency-application/files/Ilunga_Kabeya_TheFamilyPhotograph_Acrylics-Charcoal_2026_120x94cm.jpg` |
-| 4 | Authenticity I | 2024 | Charcoal on paper | 120 × 89 cm | `site-kabeyailunga/images/works/authenticity-i.jpg` |
-| 5 | Crown of Continuity | 2026 | Acrylics and graphite on paper | 120 × 89 cm | `site-kabeyailunga/images/works/crown-continuity.jpg` |
+| 1 | The Red Nails 🔴 | 2026 | Acrylics and charcoals on paper | 130 × 94 cm | `goals/dot-ateliers-2027-residency-application/files/Ilunga_Kabeya_TheRedNails_Acrylics-Charcoals_2026_130x94cm.jpg` |
+| 2 | The Nose Ring | 2026 | Acrylics and charcoal on paper | 130 × 94 cm | `goals/dot-ateliers-2027-residency-application/files/Ilunga_Kabeya_TheNoseRing_Acrylics-Charcoal_2026_130x94cm.jpg` |
+| 3 | The Boy with Gold Jewelry | 2026 | Acrylics, sequins and charcoal on paper | 120 × 89 cm | `goals/dot-ateliers-2027-residency-application/files/Ilunga_Kabeya_TheBoyWithGoldJewelry_Acrylics-Sequins-Charcoal_2026_120x89cm.jpg` |
+| 4 | The Family Photograph | 2026 | Acrylics and charcoal on paper | 120 × 94 cm | `goals/dot-ateliers-2027-residency-application/files/Ilunga_Kabeya_TheFamilyPhotograph_Acrylics-Charcoal_2026_120x94cm.jpg` |
+| 5 | Authenticity I | 2024 | Charcoal on paper | 120 × 89 cm | `site-kabeyailunga/images/works/authenticity-i.jpg` |
+| 6 | Crown of Continuity | 2026 | Acrylics and graphite on paper | 120 × 89 cm | `site-kabeyailunga/images/works/crown-continuity.jpg` |
+| 7 | Maze Of Blackness I, Genesis 🔴 | 2026 | Acrylics, collage and charcoals on paper | 92 × 86 cm | `site-kabeyailunga/images/works/genesis.jpg` |
 
-Deliberately excluded: **The Red Nails** and **Maze Of Blackness I, Genesis**
-(both SOLD — never in a public catalogue). “Crown of Continuity”: title,
+The sold works (**The Red Nails** and **Maze Of Blackness I, Genesis**)
+are in the show with a 🔴 — they are never in a buyer-facing catalogue,
+but they hang in the exhibition as sold. “Crown of Continuity”: title,
 medium and dimensions come from the file name — confirm them with Kabeya
 before or right after publishing.
 

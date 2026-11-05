@@ -1,11 +1,11 @@
 // Creates Kabeya Ilunga's public solo exhibition on SANAA:
-// "Already Enough As We Are" — 5 works in one White Cube room.
+// "Already Enough As We Are" — 7 works in one White Cube room.
 //
 // WHAT IT CREATES (and nothing else)
 //   - 1 exhibition, status "public", slug
 //     kabeya-ilunga-already-enough-as-we-are
-//   - 5 Upload rows (the artwork images, stored in the database) +
-//     5 Artwork rows pointing at them
+//   - 7 Upload rows (the artwork images, stored in the database) +
+//     7 Artwork rows pointing at them
 //   - Public URL: https://galleria-bice.vercel.app/exhibition/kabeya-ilunga-already-enough-as-we-are
 //
 // RUN IT (from ~/workspace/galleria, against the PRODUCTION database):
@@ -20,15 +20,17 @@
 //     `npx prisma generate` after that change is in place and try again.
 //   - DATABASE_URL must point at the database you want to seed. The script
 //     refuses to run without it and never guesses a database.
-//   - The 5 source images below must exist (3 clean photos from the
-//     dot.ateliers dossier, 2 from Kabeya's website images).
+//   - The 7 source images below must exist (5 clean photos from the
+//     dot.ateliers dossier and Kabeya's website images, plus the 2 sold
+//     works).
 //
 // SAFETY
 //   - Idempotent: if an exhibition with this slug already exists, the
 //     script prints its URL and stops without creating anything.
 //   - It never deletes or updates existing rows.
 //   - The two SOLD works (The Red Nails, Maze Of Blackness I, Genesis) are
-//     deliberately NOT included.
+//     included and marked with a red circle (🔴) in their title and
+//     description — they hang as sold, not available.
 //   - "Crown of Continuity": title, medium and dimensions come from the
 //     file name — confirm them with Kabeya before publishing (the file
 //     itself is his, from his website's works folder).
@@ -64,9 +66,18 @@ const websiteWorksDir =
   process.env.KABEYA_WEBSITE_WORKS_DIR ?? "/home/hatch/workspace/site-kabeyailunga/images/works";
 const ownerEmail = process.env.SEED_OWNER_EMAIL ?? "kabeyailunga243@gmail.com";
 
-// Clean photos only. The Red Nails and Maze Of Blackness I, Genesis are
-// SOLD and stay out of any public catalogue.
+// Clean photos only. The two sold works are marked with a red circle (🔴):
+// they hang in the exhibition as sold, not available.
 const works = [
+  {
+    file: path.join(dotAteliersDir, "Ilunga_Kabeya_TheRedNails_Acrylics-Charcoals_2026_130x94cm.jpg"),
+    title: "The Red Nails 🔴",
+    year: "2026",
+    medium: "Acrylics and charcoals on paper",
+    dimensions: "130 × 94 cm",
+    description: "🔴 Sold. A portrait from the Maze of Blackness series, in acrylics and charcoals on paper.",
+    x: -7,
+  },
   {
     file: path.join(dotAteliersDir, "Ilunga_Kabeya_TheNoseRing_Acrylics-Charcoal_2026_130x94cm.jpg"),
     title: "The Nose Ring",
@@ -74,7 +85,7 @@ const works = [
     medium: "Acrylics and charcoal on paper",
     dimensions: "130 × 94 cm",
     description: "A portrait from the Maze of Blackness series, in acrylics and charcoal on paper.",
-    x: -7,
+    x: -4.67,
   },
   {
     file: path.join(
@@ -87,7 +98,7 @@ const works = [
     dimensions: "120 × 89 cm",
     description:
       "A young man wears only small gold earrings. Gold signifies assurance, self-confidence and community riches.",
-    x: -3.5,
+    x: -2.33,
   },
   {
     file: path.join(
@@ -108,7 +119,7 @@ const works = [
     medium: "Charcoal on paper",
     dimensions: "120 × 89 cm",
     description: "Scarifications and a halo — one of Kabeya's favourite portraits.",
-    x: 3.5,
+    x: 2.33,
   },
   {
     // Title, medium and dimensions from the file name — confirm with Kabeya.
@@ -118,6 +129,15 @@ const works = [
     medium: "Acrylics and graphite on paper",
     dimensions: "120 × 89 cm",
     description: "A portrait in acrylics and graphite on paper.",
+    x: 4.67,
+  },
+  {
+    file: path.join(websiteWorksDir, "genesis.jpg"),
+    title: "Maze Of Blackness I, Genesis 🔴",
+    year: "2026",
+    medium: "Acrylics, collage and charcoals on paper",
+    dimensions: "92 × 86 cm",
+    description: "🔴 Sold. The first work of the Maze of Blackness series — acrylics, collage and charcoals on paper.",
     x: 7,
   },
 ];

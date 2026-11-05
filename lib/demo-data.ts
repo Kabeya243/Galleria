@@ -13,7 +13,22 @@ export type Artwork = {
   scale: number;
   imageUrl?: string | null;
   roomId: string;
+  // Frame around the artwork in the 3D room ("wood" when absent).
+  frame?: FrameVariant;
 };
+
+// Frame finishes for artworks in the 3D room: material colour,
+// metalness and roughness for the frame box around each work.
+export const FRAME_VARIANTS = {
+  none: { label: "No frame", color: "#000000", metalness: 0, roughness: 1 },
+  wood: { label: "Wood", color: "#9c7c54", metalness: 0, roughness: 0.75 },
+  metal: { label: "Metal", color: "#9a9a98", metalness: 0.85, roughness: 0.35 },
+  gold: { label: "Gold", color: "#a67c37", metalness: 0.9, roughness: 0.3 },
+  black: { label: "Black", color: "#141414", metalness: 0.1, roughness: 0.6 },
+  white: { label: "White", color: "#f5f2eb", metalness: 0, roughness: 0.8 },
+} as const;
+
+export type FrameVariant = keyof typeof FRAME_VARIANTS;
 
 export const demoArtworks: Artwork[] = [
   {

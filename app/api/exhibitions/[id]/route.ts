@@ -21,6 +21,7 @@ const ARTWORK_FIELD_LABELS: Record<string, string> = {
   position: "position",
   rotation: "rotation",
   scale: "size",
+  frame: "frame",
 };
 
 // Turn the first validation failure into a message that names the artwork
@@ -99,6 +100,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
             positionZ: artwork.position[2],
             rotation: artwork.rotation,
             scale: artwork.scale,
+            frame: artwork.frame,
             imageUrl: artwork.imageUrl ?? null,
             roomId: artwork.roomId,
             exhibitionId: id,

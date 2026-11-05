@@ -312,6 +312,35 @@ button { color: inherit; }
 .room-settings-note svg { flex: 0 0 auto; }
 .inspector-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding: 13px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 8px; }
 
+/* Elements palette (editor left panel) */
+.element-palette { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.element-palette-item { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 8px 7px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-3); color: var(--ink); font-size: 8px; text-align: left; cursor: pointer; }
+.element-palette-item:hover { border-color: #b89a7e; background: var(--surface-2); }
+.element-palette-item svg { flex: 0 0 auto; color: var(--muted); }
+.element-palette-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.element-thumb { display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+.element-empty-note { padding: 10px 4px; color: var(--muted); font-size: 8px; line-height: 1.55; }
+.element-preview-icon { display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+
+/* Frame options (artwork inspector) */
+.frame-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.frame-option { display: flex; align-items: center; gap: 6px; padding: 7px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-3); color: var(--ink); font-size: 8px; cursor: pointer; }
+.frame-option:hover { border-color: #b89a7e; }
+.frame-option.selected { border-color: var(--accent); background: var(--surface-2); font-weight: 600; }
+.frame-swatch { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.15); }
+.frame-swatch-none { background: repeating-linear-gradient(45deg, #fff 0 3px, #e5e0d5 3px 6px); }
+.frame-swatch-wood { background: #9c7c54; }
+.frame-swatch-metal { background: linear-gradient(135deg, #c8c8c4, #8a8a86); }
+.frame-swatch-gold { background: linear-gradient(135deg, #d4af37, #a67c37); }
+.frame-swatch-black { background: #141414; }
+.frame-swatch-white { background: #f5f2eb; }
+
+/* Wall paint (inspector) */
+.wall-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.wall-swatch { width: 26px; height: 26px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.15); cursor: pointer; }
+.wall-swatch.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+.wall-paint-note { margin: 10px 0 0; color: var(--muted); font-size: 8px; line-height: 1.55; }
+
 /* Public exhibition */
 .public-exhibition { position: relative; width: 100%; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; background: var(--paper); }
 .exhibition-loader { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: var(--paper); transition: opacity 0.5s ease; }

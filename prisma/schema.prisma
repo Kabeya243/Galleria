@@ -69,6 +69,7 @@ model Artwork {
   positionZ    Float      @default(-5.72)
   rotation     Float      @default(0)
   scale        Float      @default(1)
+  frame        String     @default("wood")
   imageUrl     String?
   roomId       String     @default("room-main")
   createdAt    DateTime   @default(now())

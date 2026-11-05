@@ -4,9 +4,19 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Text, useTexture } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState, Suspense } from "react";
-import { CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
-import type { Artwork } from "@/lib/demo-data";
-import { roomLayouts, type GalleryRoom } from "@/lib/rooms";
+import { BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, PlaneGeometry, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
+import type { Artwork, FrameVariant } from "@/lib/demo-data";
+import { FRAME_VARIANTS } from "@/lib/demo-data";
+import { ELEMENT_PLANES, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type RoomElement } from "@/lib/elements";
+import { roomLayouts, type GalleryRoom, type WallId } from "@/lib/rooms";
+
+// Light moods per room: the spot colour and intensity, and the room's
+// ambient and directional light, all follow the room's light type.
+const LIGHT_PRESETS = {
+  "spot-warm": { ambient: 1.4, directional: 1.8, directionalColor: "#fff2df", spotColor: "#fff0d6", spotIntensity: 22, pointColor: "#f4d8b8", pointIntensity: 0.55 },
+  "spot-cool": { ambient: 1.5, directional: 1.9, directionalColor: "#e8f0ff", spotColor: "#dfe8ff", spotIntensity: 22, pointColor: "#d8e2f4", pointIntensity: 0.55 },
+  ambient: { ambient: 2.6, directional: 1.0, directionalColor: "#ffffff", spotColor: "#ffffff", spotIntensity: 0, pointColor: "#ffffff", pointIntensity: 0.3 },
+} as const;
 
 function createSurfaceTexture(style: string): CanvasTexture | undefined {
   if (typeof document === "undefined") return undefined;
@@ -137,7 +147,7 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
   return texture;
 }
 
-function GallerySpotlight({ x, y, z, targetZ, targetPoint }: { x: number; y: number; z: number; targetZ: number; targetPoint?: [number, number, number] }) {
+function GallerySpotlight({ x, y, z, targetZ, targetPoint, color = "#fff0d6", intensity = 22, lightOn = true }: { x: number; y: number; z: number; targetZ: number; targetPoint?: [number, number, number]; color?: string; intensity?: number; lightOn?: boolean }) {
   const target = useMemo(() => new Object3D(), []);
   useEffect(() => {
     if (targetPoint) target.position.set(targetPoint[0], targetPoint[1], targetPoint[2]);
@@ -148,28 +158,30 @@ function GallerySpotlight({ x, y, z, targetZ, targetPoint }: { x: number; y: num
   return (
     <>
       <primitive object={target} />
-      <spotLight
-        position={[x, y, z]}
-        target={target}
-        angle={0.45}
-        penumbra={0.75}
-        intensity={22}
-        distance={14}
-        color="#fff0d6"
-      />
+      {lightOn && (
+        <spotLight
+          position={[x, y, z]}
+          target={target}
+          angle={0.45}
+          penumbra={0.75}
+          intensity={intensity}
+          distance={14}
+          color={color}
+        />
+      )}
       <mesh position={[x, y + 0.02, z]}>
         <cylinderGeometry args={[0.2, 0.24, 0.09, 16]} />
-        <meshStandardMaterial color="#f4ead5" emissive="#f4ead5" emissiveIntensity={0.65} />
+        <meshStandardMaterial color="#f4ead5" emissive="#f4ead5" emissiveIntensity={lightOn ? 0.65 : 0.25} />
       </mesh>
     </>
   );
 }
 
-function LoadedArtwork({ imageUrl, width, height }: { imageUrl: string; width: number; height: number }) {
+function LoadedArtwork({ imageUrl, width, height, z = 0.083 }: { imageUrl: string; width: number; height: number; z?: number }) {
   const texture = useTexture(imageUrl);
   texture.colorSpace = SRGBColorSpace;
   return (
-    <mesh position={[0, 0, 0.083]}>
+    <mesh position={[0, 0, z]}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial map={texture} />
     </mesh>
@@ -231,6 +243,10 @@ function ArtworkFrame({
   const [x, y, z] = artwork.position;
   const { width, height } = artworkSize(artwork);
   const interactive = editable && !walkable;
+  // The frame finish chosen in the inspector (wood, metal, gold, black,
+  // white, or none). "None" hangs the print frameless on the wall.
+  const frameVariant: FrameVariant = artwork.frame ?? "wood";
+  const frame = FRAME_VARIANTS[frameVariant];
   return (
     <group
       position={[x, y, z]}
@@ -264,23 +280,27 @@ function ArtworkFrame({
         onDragStart?.(artwork.id, "move", event);
       }}
     >
-      <mesh>
-        <boxGeometry args={[width + 0.2, height + 0.2, 0.12]} />
-        <meshStandardMaterial color={selected ? "#aa7958" : "#c5b7a3"} />
-      </mesh>
+      {frameVariant !== "none" && (
+        <mesh>
+          <boxGeometry args={[width + 0.2, height + 0.2, 0.12]} />
+          <meshStandardMaterial color={selected ? "#aa7958" : frame.color} metalness={frame.metalness} roughness={frame.roughness} />
+        </mesh>
+      )}
+      {/* Frameless prints sit almost flat on the wall; framed works sit
+          just proud of the frame box. */}
       {artwork.imageUrl ? (
-        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} />
+        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={frameVariant === "none" ? 0.02 : 0.083} />
       ) : (
         <>
-          <mesh position={[0, 0, 0.071]}>
+          <mesh position={[0, 0, frameVariant === "none" ? 0.012 : 0.071]}>
             <planeGeometry args={[width, height]} />
             <meshStandardMaterial color={artwork.color} />
           </mesh>
-          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), 0.082]} rotation={[0, 0, -0.22]}>
+          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), frameVariant === "none" ? 0.022 : 0.082]} rotation={[0, 0, -0.22]}>
             <circleGeometry args={[0.48 * Math.min(width / 1.82, height / 2.12), 48]} />
             <meshStandardMaterial color={artwork.accent} />
           </mesh>
-          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), 0.084]} rotation={[0, 0, 0.12]}>
+          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), frameVariant === "none" ? 0.024 : 0.084]} rotation={[0, 0, 0.12]}>
             <planeGeometry args={[0.8 * (width / 1.82), 0.32 * (height / 2.12)]} />
             <meshStandardMaterial color="#d7c6a9" />
           </mesh>
@@ -322,6 +342,10 @@ function WallWithOpening({
   color,
   texture,
   opening,
+  wallId,
+  highlight,
+  onWallClick,
+  dragged,
 }: {
   x: number;
   depth: number;
@@ -329,18 +353,36 @@ function WallWithOpening({
   color: string;
   texture?: Texture;
   opening: "door" | "window" | "none" | "solid";
+  // Editor only: clicking the wall selects it for painting. The wall
+  // glows faintly gold while selected.
+  wallId?: WallId;
+  highlight?: boolean;
+  onWallClick?: (wallId: WallId) => void;
+  dragged?: React.RefObject<boolean>;
 }) {
+  const wallThickness = 0.22;
+  const materialProps = {
+    color,
+    map: texture,
+    roughness: 0.88,
+    emissive: highlight ? "#a67c37" : "#000000",
+    emissiveIntensity: highlight ? 0.16 : 0,
+  } as const;
+  // A drag (orbit) must not count as a click on the wall.
+  const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    if (!onWallClick || !wallId || dragged?.current) return;
+    event.stopPropagation();
+    onWallClick(wallId);
+  };
   if (opening === "solid") {
-    const wallThickness = 0.22;
     return (
-      <mesh position={[x, height / 2, 0]} receiveShadow>
+      <mesh position={[x, height / 2, 0]} receiveShadow onClick={handleClick}>
         <boxGeometry args={[wallThickness, height, depth]} />
-        <meshStandardMaterial color={color} map={texture} roughness={0.88} />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
     );
   }
   if (opening === "none") return null;
-  const wallThickness = 0.22;
   const doorWidth = 1.65;
   const doorHeight = 2.5;
   const windowWidth = 3.2;
@@ -353,24 +395,24 @@ function WallWithOpening({
 
   return (
     <group>
-      <mesh position={[x, height / 2, -(openingWidth + sideDepth) / 2]} receiveShadow>
+      <mesh position={[x, height / 2, -(openingWidth + sideDepth) / 2]} receiveShadow onClick={handleClick}>
         <boxGeometry args={[wallThickness, height, sideDepth]} />
-        <meshStandardMaterial color={color} map={texture} roughness={0.88} />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
-      <mesh position={[x, height / 2, (openingWidth + sideDepth) / 2]} receiveShadow>
+      <mesh position={[x, height / 2, (openingWidth + sideDepth) / 2]} receiveShadow onClick={handleClick}>
         <boxGeometry args={[wallThickness, height, sideDepth]} />
-        <meshStandardMaterial color={color} map={texture} roughness={0.88} />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
       {openingTop < height && (
-        <mesh position={[x, (openingTop + height) / 2, 0]} receiveShadow>
+        <mesh position={[x, (openingTop + height) / 2, 0]} receiveShadow onClick={handleClick}>
           <boxGeometry args={[wallThickness, height - openingTop, openingWidth]} />
-          <meshStandardMaterial color={color} map={texture} roughness={0.88} />
+          <meshStandardMaterial {...materialProps} />
         </mesh>
       )}
       {openingBottom > 0 && (
-        <mesh position={[x, openingBottom / 2, 0]} receiveShadow>
+        <mesh position={[x, openingBottom / 2, 0]} receiveShadow onClick={handleClick}>
           <boxGeometry args={[wallThickness, openingBottom, openingWidth]} />
-          <meshStandardMaterial color={color} map={texture} roughness={0.88} />
+          <meshStandardMaterial {...materialProps} />
         </mesh>
       )}
       {opening === "door" ? (
@@ -397,6 +439,585 @@ function WallWithOpening({
       )}
     </group>
   );
+}
+
+// Sheer curtain panel: a translucent plane with gentle folds, made by
+// displacing a segmented plane along a sine wave.
+function SheerPanel({ width, color }: { width: number; color: string }) {
+  const geometry = useMemo(() => {
+    const geo = new PlaneGeometry(width, 2.7, 24, 1);
+    const pos = geo.attributes.position as BufferAttribute;
+    for (let i = 0; i < pos.count; i += 1) {
+      pos.setZ(i, Math.sin(pos.getX(i) * 4.5) * 0.07);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }, [width]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh geometry={geometry} position={[0, 1.4, 0]}>
+      <meshStandardMaterial color={color} transparent opacity={0.32} side={DoubleSide} roughness={0.9} depthWrite={false} />
+    </mesh>
+  );
+}
+
+// One placeable 3D element from the Elements palette, rendered in the room
+// like an artwork: clickable to select, draggable along its plane (floor,
+// wall or ceiling), resizable from the lime handle when selected.
+function ElementMesh({
+  element,
+  room,
+  selected,
+  onSelect,
+  walkable,
+  dragged,
+  editable,
+  onDragStart,
+  onHoverChange,
+}: {
+  element: RoomElement;
+  room: GalleryRoom;
+  selected: boolean;
+  onSelect?: (id: string) => void;
+  walkable?: boolean;
+  dragged?: React.RefObject<boolean>;
+  editable?: boolean;
+  onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
+  onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
+}) {
+  const { height } = roomLayouts[room.layout];
+  const interactive = editable && !walkable;
+  const plane = ELEMENT_PLANES[element.type];
+  // Wall-text geometry: title lines + body, laid out per the element's
+  // layout choice. The panel is the text itself (no backing board — the
+  // letters sit straight on the wall, like the reference photo).
+  const wt = element.type === "wall-text" ? (() => {
+    const W = Math.max(1, element.length);
+    const rawLines = (element.title || "Wall text").split("\n").map((l) => l.trim()).filter(Boolean);
+    const titleLines = rawLines.length ? rawLines : ["Wall text"];
+    const font = WALL_TEXT_FONTS[element.font ?? "display"];
+    const align = element.align ?? "left";
+    const layout = element.layout ?? "stacked";
+    const titleSize = element.fontSize;
+    const bodySize = element.bodySize ?? 0.11;
+    const lineH = titleSize * 1.08;
+    const titleH = titleLines.length * lineH;
+    // Estimate how many lines the body wraps to (troika wraps at maxWidth).
+    const bodyMaxW = layout === "side" ? W * 0.36 : W - 0.3;
+    const charsPerLine = Math.max(8, Math.floor(bodyMaxW / Math.max(0.02, bodySize * 0.52)));
+    const bodyLines = element.body ? Math.max(1, Math.ceil(element.body.length / charsPerLine)) : 0;
+    const bodyH = bodyLines * bodySize * 1.5;
+    const gap = element.body ? 0.18 : 0;
+    const contentH = layout === "side" ? Math.max(titleH, bodyH) : titleH + gap + bodyH;
+    const anchorX = (align === "center" ? "center" : align === "right" ? "right" : "left") as "left" | "center" | "right";
+    const xPos = align === "center" ? 0 : align === "right" ? W / 2 - 0.15 : -W / 2 + 0.15;
+    return { W, titleLines, font, align, layout, titleSize, bodySize, lineH, titleH, bodyH, gap, contentH, top: contentH / 2, anchorX, xPos };
+  })() : null;
+  // Selection outline and resize-handle placement, per type.
+  const outline: { size: [number, number, number]; y: number; handle: [number, number, number] } =
+    element.type === "partition"
+      ? { size: [element.length + 0.3, height - 0.2, 0.8], y: (height - 0.25) / 2, handle: [element.length / 2 + 0.18, 0.7, 0.12] }
+      : element.type === "track-light"
+        ? { size: [element.length + 0.3, 0.6, 0.8], y: 0, handle: [element.length / 2 + 0.18, 0, 0.12] }
+        : element.type === "wall-text"
+          ? { size: [(wt?.W ?? 4) + 0.3, (wt?.contentH ?? 1.4) + 0.3, 0.15], y: 0, handle: [(wt?.W ?? 4) / 2 + 0.18, (wt?.contentH ?? 1.4) / 2, 0.12] }
+          : element.type === "shelf"
+            ? { size: [element.length + 0.2, 1.3, 0.5], y: 0, handle: [element.length / 2 + 0.18, 0.4, 0.12] }
+            : element.type === "curtain"
+              ? { size: [element.length + 0.2, 2.9, 0.3], y: 1.4, handle: [element.length / 2 + 0.18, 1.4, 0.12] }
+              : { size: [1.7, 1.7, 1.3], y: 0.7, handle: [0.85, 0.65, 0.2] };
+  // Track-light spot targets (three heads, aimed down and into the room).
+  const trackTargets = useMemo(() => [new Object3D(), new Object3D(), new Object3D()], []);
+  useEffect(() => {
+    if (element.type !== "track-light") return;
+    const spread = element.length / 3;
+    trackTargets.forEach((target, index) => {
+      target.position.set((index - 1) * spread, -2.6, 1.4);
+    });
+    return () => { trackTargets.forEach((target) => target.removeFromParent()); };
+  }, [element.length, element.type, trackTargets]);
+  const plinthHeight = PLINTH_HEIGHTS[element.variant] ?? 0.9;
+
+  return (
+    <group
+      position={[element.x, element.y, element.z]}
+      rotation={[0, element.rotation, 0]}
+      scale={element.scale}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (dragged?.current) return;
+        onSelect?.(element.id);
+      }}
+      onPointerOver={(event) => {
+        if (!interactive) return;
+        event.stopPropagation();
+        onHoverChange?.({ id: element.id, cursor: "grab" });
+      }}
+      onPointerOut={() => {
+        if (!interactive) return;
+        onHoverChange?.(null);
+      }}
+      onPointerDown={(event) => {
+        if (!interactive) return;
+        event.stopPropagation();
+        onDragStart?.(element.id, "move", event);
+      }}
+    >
+      {element.type === "partition" && (
+        <group>
+          {/* Small feet, then a base plinth, then the wall panel — the
+              freestanding movable wall from the reference photos. */}
+          {[-1, 1].map((side) => (
+            <mesh key={side} position={[side * (element.length / 2 - 0.3), 0.07, 0]} castShadow>
+              <boxGeometry args={[0.1, 0.14, 0.45]} />
+              <meshStandardMaterial color="#6b675f" roughness={0.7} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.17, 0]} castShadow>
+            <boxGeometry args={[element.length + 0.2, 0.1, 0.6]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
+          <mesh position={[0, 0.22 + (height - 0.35) / 2, 0]} receiveShadow castShadow>
+            <boxGeometry args={[element.length, height - 0.35, 0.12]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
+        </group>
+      )}
+      {element.type === "chair" && (
+        <group>
+          <mesh position={[0, 0.45, 0]} castShadow>
+            <boxGeometry args={[0.45, 0.06, 0.45]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.75, -0.2]} castShadow>
+            <boxGeometry args={[0.45, 0.55, 0.05]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          {[[-0.19, -0.19], [0.19, -0.19], [-0.19, 0.19], [0.19, 0.19]].map(([lx, lz]) => (
+            <mesh key={`${lx}-${lz}`} position={[lx, 0.225, lz]}>
+              <boxGeometry args={[0.05, 0.45, 0.05]} />
+              <meshStandardMaterial color="#3a3a36" roughness={0.7} />
+            </mesh>
+          ))}
+        </group>
+      )}
+      {element.type === "bench" && (
+        <mesh position={[0, 0.225, 0]} castShadow receiveShadow>
+          <boxGeometry args={[2.4, 0.45, 0.7]} />
+          <meshStandardMaterial color={element.color} roughness={0.85} />
+        </mesh>
+      )}
+      {element.type === "table" && (
+        <group>
+          <mesh position={[0, 0.74, 0]} castShadow>
+            <boxGeometry args={[1.6, 0.06, 0.9]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          {[[-0.72, -0.37], [0.72, -0.37], [-0.72, 0.37], [0.72, 0.37]].map(([lx, lz]) => (
+            <mesh key={`${lx}-${lz}`} position={[lx, 0.37, lz]}>
+              <boxGeometry args={[0.07, 0.74, 0.07]} />
+              <meshStandardMaterial color="#3a3a36" roughness={0.7} />
+            </mesh>
+          ))}
+        </group>
+      )}
+      {element.type === "door" && (
+        <group>
+          {[-0.85, 0.85].map((x) => (
+            <mesh key={x} position={[x, 1.25, 0]} castShadow>
+              <boxGeometry args={[0.1, 2.5, 0.14]} />
+              <meshStandardMaterial color={element.color} roughness={0.8} />
+            </mesh>
+          ))}
+          <mesh position={[0, 2.5, 0]} castShadow>
+            <boxGeometry args={[1.8, 0.12, 0.14]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 1.2, 0.01]} castShadow>
+            <boxGeometry args={[1.6, 2.4, 0.06]} />
+            <meshStandardMaterial color={element.color} roughness={0.75} />
+          </mesh>
+          <mesh position={[0.6, 1.05, 0.08]}>
+            <sphereGeometry args={[0.045, 12, 10]} />
+            <meshStandardMaterial color="#3a3a36" metalness={0.6} roughness={0.4} />
+          </mesh>
+        </group>
+      )}
+      {element.type === "window" && (
+        <group>
+          <mesh position={[0, 0.67, 0]}>
+            <boxGeometry args={[1.8, 0.07, 0.1]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, -0.67, 0]}>
+            <boxGeometry args={[1.8, 0.07, 0.1]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          {[-0.87, 0.87].map((x) => (
+            <mesh key={x} position={[x, 0, 0]}>
+              <boxGeometry args={[0.07, 1.4, 0.1]} />
+              <meshStandardMaterial color={element.color} roughness={0.8} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0, 0]}>
+            <planeGeometry args={[1.6, 1.2]} />
+            <meshPhysicalMaterial color="#9bd1db" transparent opacity={0.28} roughness={0.12} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, -0.73, 0.04]}>
+            <boxGeometry args={[1.9, 0.06, 0.18]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+        </group>
+      )}
+      {element.type === "wall-text" && wt && (
+        <group>
+          {/* Invisible hit plane sized to the text block: the glyphs alone
+              are too thin to click. */}
+          <mesh position={[0, 0, -0.01]}>
+            <planeGeometry args={[wt.W + 0.2, wt.contentH + 0.3]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+          {wt.layout === "side" ? (
+            <>
+              {wt.titleLines.map((line, i) => (
+                <Text
+                  key={i}
+                  font={wt.font.family}
+                  fontWeight={wt.font.weight}
+                  letterSpacing={wt.font.letterSpacing}
+                  fontSize={wt.titleSize}
+                  maxWidth={wt.W * 0.55}
+                  textAlign="left"
+                  anchorX="left"
+                  anchorY="middle"
+                  color={element.textColor}
+                  position={[-wt.W / 2 + 0.15, wt.top - wt.titleSize / 2 - i * wt.lineH, 0.02]}
+                >
+                  {line}
+                </Text>
+              ))}
+              {element.body && (
+                <Text
+                  font={wt.font.family}
+                  fontWeight={400}
+                  fontSize={wt.bodySize}
+                  maxWidth={wt.W * 0.36}
+                  lineHeight={1.5}
+                  textAlign="left"
+                  anchorX="left"
+                  anchorY="top"
+                  color={element.bodyColor}
+                  position={[wt.W * 0.14, wt.top, 0.02]}
+                >
+                  {element.body}
+                </Text>
+              )}
+            </>
+          ) : wt.layout === "block" ? (
+            <>
+              <Text
+                font={wt.font.family}
+                fontWeight={wt.font.weight}
+                letterSpacing={wt.font.letterSpacing}
+                fontSize={wt.titleSize}
+                maxWidth={wt.W - 0.3}
+                lineHeight={1.08}
+                textAlign={wt.align}
+                anchorX={wt.anchorX}
+                anchorY="top"
+                color={element.textColor}
+                position={[wt.xPos, wt.top, 0.02]}
+              >
+                {element.title || "Wall text"}
+              </Text>
+              {element.body && (
+                <Text
+                  font={wt.font.family}
+                  fontWeight={400}
+                  fontSize={wt.bodySize}
+                  maxWidth={wt.W - 0.3}
+                  lineHeight={1.5}
+                  textAlign={wt.align}
+                  anchorX={wt.anchorX}
+                  anchorY="top"
+                  color={element.bodyColor}
+                  position={[wt.xPos, wt.top - wt.titleH - wt.gap, 0.02]}
+                >
+                  {element.body}
+                </Text>
+              )}
+            </>
+          ) : (
+            <>
+              {wt.titleLines.map((line, i) => (
+                <Text
+                  key={i}
+                  font={wt.font.family}
+                  fontWeight={wt.font.weight}
+                  letterSpacing={wt.font.letterSpacing}
+                  fontSize={wt.titleSize}
+                  maxWidth={20}
+                  textAlign={wt.align}
+                  anchorX={wt.anchorX}
+                  anchorY="middle"
+                  color={element.textColor}
+                  position={[wt.xPos, wt.top - wt.titleSize / 2 - i * wt.lineH, 0.02]}
+                >
+                  {line}
+                </Text>
+              ))}
+              {element.body && (
+                <Text
+                  font={wt.font.family}
+                  fontWeight={400}
+                  fontSize={wt.bodySize}
+                  maxWidth={wt.W - 0.3}
+                  lineHeight={1.5}
+                  textAlign={wt.align}
+                  anchorX={wt.anchorX}
+                  anchorY="top"
+                  color={element.bodyColor}
+                  position={[wt.xPos, wt.top - wt.titleH - wt.gap, 0.02]}
+                >
+                  {element.body}
+                </Text>
+              )}
+            </>
+          )}
+        </group>
+      )}
+      {element.type === "plinth" && (
+        <mesh position={[0, plinthHeight / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.6, plinthHeight, 0.6]} />
+          <meshStandardMaterial color={element.color} roughness={0.85} />
+        </mesh>
+      )}
+      {element.type === "vitrine" && (
+        <group>
+          <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.7, 0.9, 0.7]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
+          <mesh position={[0, 1.2, 0]}>
+            <boxGeometry args={[0.65, 0.6, 0.65]} />
+            <meshPhysicalMaterial color="#cfe3e8" transparent opacity={0.18} roughness={0.08} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 1.51, 0]}>
+            <boxGeometry args={[0.68, 0.03, 0.68]} />
+            <meshStandardMaterial color="#555550" roughness={0.6} metalness={0.3} />
+          </mesh>
+          {[-0.31, 0.31].map((x) => [-0.31, 0.31].map((z) => (
+            <mesh key={`${x}-${z}`} position={[x, 1.2, z]}>
+              <boxGeometry args={[0.03, 0.6, 0.03]} />
+              <meshStandardMaterial color="#888880" metalness={0.5} roughness={0.4} />
+            </mesh>
+          )))}
+        </group>
+      )}
+      {element.type === "track-light" && (
+        <group>
+          {/* Invisible hit box: the rail alone is too thin to grab. */}
+          <mesh position={[0, -0.1, 0]}>
+            <boxGeometry args={[element.length, 0.5, 0.6]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[element.length, 0.08, 0.12]} />
+            <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+          </mesh>
+          {[-1, 0, 1].map((index) => {
+            const hx = (index * element.length) / 3;
+            return (
+              <group key={index} position={[hx, -0.14, 0.05]} rotation={[0.6, 0, 0]}>
+                <mesh>
+                  <cylinderGeometry args={[0.07, 0.09, 0.16, 12]} />
+                  <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+                </mesh>
+              </group>
+            );
+          })}
+          {[-1, 0, 1].map((index) => {
+            const hx = (index * element.length) / 3;
+            return (
+              <group key={`light-${index}`}>
+                <primitive object={trackTargets[index + 1]} />
+                <spotLight
+                  position={[hx, -0.16, 0.05]}
+                  target={trackTargets[index + 1]}
+                  angle={0.5}
+                  penumbra={0.7}
+                  intensity={18}
+                  distance={12}
+                  color={element.color}
+                />
+              </group>
+            );
+          })}
+        </group>
+      )}
+      {element.type === "shelf" && (
+        <group>
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[element.length, 1.1, 0.4]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+          {[-element.length / 2, element.length / 2].map((x) => (
+            <mesh key={x} position={[x, 0, 0]}>
+              <boxGeometry args={[0.05, 1.1, 0.3]} />
+              <meshStandardMaterial color="#555550" roughness={0.6} metalness={0.3} />
+            </mesh>
+          ))}
+          {[0.35, -0.35].map((y) => (
+            <mesh key={y} position={[0, y, 0.06]}>
+              <boxGeometry args={[element.length, 0.03, 0.32]} />
+              <meshPhysicalMaterial color="#cfe3e8" transparent opacity={0.25} roughness={0.1} side={DoubleSide} />
+            </mesh>
+          ))}
+        </group>
+      )}
+      {element.type === "desk" && (
+        <group>
+          <mesh position={[0, 0.74, 0]} castShadow>
+            <boxGeometry args={[1.4, 0.05, 0.7]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          {[-0.65, 0.65].map((x) => (
+            <mesh key={x} position={[x, 0.37, 0]}>
+              <boxGeometry args={[0.05, 0.74, 0.65]} />
+              <meshStandardMaterial color="#3a3a36" roughness={0.7} />
+            </mesh>
+          ))}
+          <group position={[0, 0, 0.75]} rotation={[0, Math.PI, 0]}>
+            <mesh position={[0, 0.45, 0]}>
+              <boxGeometry args={[0.42, 0.05, 0.42]} />
+              <meshStandardMaterial color={element.color} roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 0.72, -0.19]}>
+              <boxGeometry args={[0.42, 0.5, 0.05]} />
+              <meshStandardMaterial color={element.color} roughness={0.8} />
+            </mesh>
+            {[[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].map(([lx, lz]) => (
+              <mesh key={`${lx}-${lz}`} position={[lx, 0.225, lz]}>
+                <boxGeometry args={[0.04, 0.45, 0.04]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.7} />
+              </mesh>
+            ))}
+          </group>
+        </group>
+      )}
+      {element.type === "curtain" && (
+        <group>
+          <mesh position={[0, 2.78, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.03, 0.03, element.length, 10]} />
+            <meshStandardMaterial color="#555550" metalness={0.5} roughness={0.4} />
+          </mesh>
+          {[-element.length / 2, element.length / 2].map((x) => (
+            <mesh key={x} position={[x, 2.78, 0]}>
+              <sphereGeometry args={[0.05, 10, 8]} />
+              <meshStandardMaterial color="#555550" metalness={0.5} roughness={0.4} />
+            </mesh>
+          ))}
+          <SheerPanel width={element.length} color={element.color} />
+        </group>
+      )}
+      {selected && (
+        <mesh position={[0, outline.y, 0]}>
+          <boxGeometry args={outline.size} />
+          <meshBasicMaterial color="#bc8056" wireframe />
+        </mesh>
+      )}
+      {interactive && selected && (
+        <mesh
+          position={outline.handle}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            onDragStart?.(element.id, "resize", event);
+          }}
+          onPointerOver={(event) => {
+            event.stopPropagation();
+            onHoverChange?.({ id: element.id, cursor: "nwse-resize" });
+          }}
+          onPointerOut={() => {
+            onHoverChange?.({ id: element.id, cursor: "grab" });
+          }}
+        >
+          <boxGeometry args={[0.26, 0.26, 0.26]} />
+          <meshStandardMaterial color="#d7ff32" emissive="#d7ff32" emissiveIntensity={0.4} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+type ElementDragState = {
+  id: string;
+  mode: "move" | "resize";
+  plane: Plane;
+  grabOffset: Vector3;
+  center: Vector3;
+  startScale: number;
+  startDist: number;
+  clamp: { minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number };
+};
+
+// Mirror of DragHandler for elements: pointer moves become a point on the
+// element's plane (floor, wall or ceiling) and are applied as a new
+// position, or as a new scale from the resize handle.
+function ElementDragHandler({
+  dragRef,
+  onElementUpdate,
+  onDragEnd,
+}: {
+  dragRef: React.RefObject<ElementDragState | null>;
+  onElementUpdate?: (id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) => void;
+  onDragEnd: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const updateRef = useRef(onElementUpdate);
+  updateRef.current = onElementUpdate;
+  const endRef = useRef(onDragEnd);
+  endRef.current = onDragEnd;
+  useEffect(() => {
+    const raycaster = new Raycaster();
+    const ndc = new Vector2();
+    const hit = new Vector3();
+    const onMove = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      const update = updateRef.current;
+      if (!drag || !update) return;
+      const rect = gl.domElement.getBoundingClientRect();
+      ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(drag.plane, hit)) return;
+      if (drag.mode === "move") {
+        const next = hit.clone().sub(drag.grabOffset);
+        const c = drag.clamp;
+        update(drag.id, {
+          x: Math.min(c.maxX, Math.max(c.minX, next.x)),
+          y: Math.min(c.maxY, Math.max(c.minY, next.y)),
+          z: Math.min(c.maxZ, Math.max(c.minZ, next.z)),
+        });
+      } else {
+        const dist = Math.max(0.05, hit.distanceTo(drag.center));
+        const scale = Math.min(3, Math.max(0.25, drag.startScale * (dist / drag.startDist)));
+        update(drag.id, { scale: Math.round(scale * 100) / 100 });
+      }
+    };
+    const onUp = () => {
+      if (!dragRef.current) return;
+      dragRef.current = null;
+      endRef.current();
+    };
+    gl.domElement.addEventListener("pointermove", onMove);
+    gl.domElement.addEventListener("pointerup", onUp);
+    gl.domElement.addEventListener("pointercancel", onUp);
+    return () => {
+      gl.domElement.removeEventListener("pointermove", onMove);
+      gl.domElement.removeEventListener("pointerup", onUp);
+      gl.domElement.removeEventListener("pointercancel", onUp);
+    };
+  }, [camera, gl, dragRef]);
+  return null;
 }
 
 // Built-in furniture of each reference room, derived from the layout only
@@ -678,6 +1299,161 @@ function RoomFeatures({
       </group>
     );
   }
+  // --- Ceiling architectures from the reference photos (November 2026) ---
+  if (layout === "coffered-concrete") {
+    // A grid of concrete coffers: beams hanging below the ceiling slab so
+    // the ceiling reads as a recessed grid, as in the reference photo.
+    const beamY = height - 0.4;
+    const xs: number[] = [];
+    for (let x = -width / 2 + 2; x < width / 2; x += 2.4) xs.push(x);
+    const zs: number[] = [];
+    for (let z = -depth / 2 + 2; z < depth / 2; z += 2.4) zs.push(z);
+    return (
+      <group>
+        {zs.map((z) => (
+          <mesh key={`x-${z}`} position={[0, beamY, z]}>
+            <boxGeometry args={[width, 0.32, 0.2]} />
+            <meshStandardMaterial color="#9d9688" roughness={0.9} />
+          </mesh>
+        ))}
+        {xs.map((x) => (
+          <mesh key={`z-${x}`} position={[x, beamY, 0]}>
+            <boxGeometry args={[0.2, 0.32, depth]} />
+            <meshStandardMaterial color="#9d9688" roughness={0.9} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "skylight-grid") {
+    // A structural grid with glowing skylight panels set into it: the
+    // ceiling reads as a lit grid, as in the reference photo.
+    const beamY = height - 0.35;
+    const xs: number[] = [];
+    for (let x = -width / 2 + 3; x < width / 2; x += 3.2) xs.push(x);
+    const zs: number[] = [];
+    for (let z = -depth / 2 + 3; z < depth / 2; z += 3.2) zs.push(z);
+    const panels: [number, number][] = [];
+    xs.forEach((x, xi) => zs.forEach((z, zi) => {
+      if ((xi + zi) % 2 === 0) panels.push([x, z]);
+    }));
+    return (
+      <group>
+        {zs.map((z) => (
+          <mesh key={`x-${z}`} position={[0, beamY, z]}>
+            <boxGeometry args={[width, 0.3, 0.22]} />
+            <meshStandardMaterial color="#d8d5cf" roughness={0.7} metalness={0.2} />
+          </mesh>
+        ))}
+        {xs.map((x) => (
+          <mesh key={`z-${x}`} position={[x, beamY, 0]}>
+            <boxGeometry args={[0.22, 0.3, depth]} />
+            <meshStandardMaterial color="#d8d5cf" roughness={0.7} metalness={0.2} />
+          </mesh>
+        ))}
+        {panels.map(([x, z]) => (
+          <mesh key={`sky-${x}-${z}`} position={[x, height - 0.26, z]} rotation={[Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[2.6, 2.6]} />
+            <meshStandardMaterial color="#eef4ff" emissive="#dfe9ff" emissiveIntensity={0.9} side={DoubleSide} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "timber-ceiling") {
+    // Warm timber beams across a wooden ceiling.
+    const xs: number[] = [];
+    for (let x = -width / 2 + 1.5; x < width / 2; x += 2.2) xs.push(x);
+    return (
+      <group>
+        {xs.map((x) => (
+          <mesh key={x} position={[x, height - 0.32, 0]}>
+            <boxGeometry args={[0.22, 0.32, depth - 0.4]} />
+            <meshStandardMaterial color="#7a5c38" roughness={0.8} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "high-concrete") {
+    // High concrete ceiling with exposed track rails and spot heads.
+    return (
+      <group>
+        {[-4.5, 0, 4.5].map((x) => (
+          <group key={x}>
+            <mesh position={[x, height - 0.35, 0]}>
+              <boxGeometry args={[0.07, 0.07, depth - 1]} />
+              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+            </mesh>
+            {[-depth / 4, 0, depth / 4].map((z) => (
+              <mesh key={z} position={[x, height - 0.45, z]}>
+                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "beam-white") {
+    // Bright white gallery with exposed ceiling beams (joists).
+    const xs: number[] = [];
+    for (let x = -width / 2 + 2; x < width / 2; x += 2.6) xs.push(x);
+    return (
+      <group>
+        {xs.map((x) => (
+          <mesh key={x} position={[x, height - 0.38, 0]}>
+            <boxGeometry args={[0.26, 0.42, depth - 0.4]} />
+            <meshStandardMaterial color="#f0ece1" roughness={0.85} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "partition-hall") {
+    // A museum hall of freestanding walls: the ceiling is plain white
+    // with exposed track rails and spot heads, as in the photo.
+    return (
+      <group>
+        {[-6, 0, 6].map((x) => (
+          <group key={x}>
+            <mesh position={[x, height - 0.35, 0]}>
+              <boxGeometry args={[0.07, 0.07, depth - 1]} />
+              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+            </mesh>
+            {[-depth / 4, 0, depth / 4].map((z) => (
+              <mesh key={z} position={[x, height - 0.45, z]}>
+                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "storefront") {
+    // A bright storefront gallery: plain white ceiling, two track rails.
+    return (
+      <group>
+        {[-3.5, 3.5].map((x) => (
+          <group key={x}>
+            <mesh position={[x, height - 0.35, 0]}>
+              <boxGeometry args={[0.07, 0.07, depth - 1]} />
+              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+            </mesh>
+            {[-depth / 4, 0, depth / 4].map((z) => (
+              <mesh key={z} position={[x, height - 0.45, z]}>
+                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
   return null;
 }
 
@@ -697,6 +1473,12 @@ function GalleryRoom({
   editable,
   onDragStart,
   onHoverChange,
+  selectedElementId,
+  onSelectElement,
+  onElementDragStart,
+  onElementHover,
+  selectedWallId,
+  onWallSelect,
 }: {
   room: GalleryRoom;
   offsetX: number;
@@ -713,9 +1495,29 @@ function GalleryRoom({
   editable?: boolean;
   onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
   onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
+  // Elements (editor): selection, drag and wall painting.
+  selectedElementId?: string;
+  onSelectElement?: (id: string) => void;
+  onElementDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
+  onElementHover?: (hover: { id: string; cursor: string } | null) => void;
+  selectedWallId?: string | null;
+  onWallSelect?: (wallId: WallId | string) => void;
 }) {
   const { width, depth, height } = roomLayouts[room.layout];
   const wallZ = -depth / 2;
+  // Per-wall paint: a painted wall keeps its own colour, the rest use the
+  // room's back / side wall colours.
+  const paint = room.wallPaint ?? {};
+  const backColor = paint.back ?? room.wallColor;
+  const leftColor = paint.left ?? room.sideWallColor;
+  const rightColor = paint.right ?? room.sideWallColor;
+  const frontColor = paint.front ?? room.sideWallColor;
+  const lights = LIGHT_PRESETS[room.lightType ?? "spot-warm"];
+  const wallHighlight = (wallId: string) => selectedWallId === wallId;
+  const handleWallClick = (wallId: WallId | string) => {
+    if (!editable || !onWallSelect || dragged?.current) return;
+    onWallSelect(wallId);
+  };
   // The curved room's front wall is a real arc, not a flat box face: it
   // bulges toward the viewer, so the curve reads from the outside orbit
   // view as well as from inside. Floor and ceiling extend to cover it.
@@ -777,66 +1579,126 @@ function GalleryRoom({
         <meshStandardMaterial attach="material-4" color={room.floorColor} roughness={0.9} />
         <meshStandardMaterial attach="material-5" color={room.floorColor} roughness={0.9} />
       </mesh>
-      <mesh position={[0, height / 2, wallZ]} receiveShadow>
+      <mesh
+        position={[0, height / 2, wallZ]}
+        receiveShadow
+        onClick={(event) => {
+          if (!editable || !onWallSelect || dragged?.current) return;
+          event.stopPropagation();
+          onWallSelect("back");
+        }}
+      >
         <boxGeometry args={[width, height, 0.25]} />
-        <meshStandardMaterial color={room.wallColor} map={wallTexture} roughness={0.88} />
+        <meshStandardMaterial color={backColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("back") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("back") ? 0.16 : 0} />
       </mesh>
       <WallWithOpening
         x={-width / 2}
         depth={depth}
         height={height}
-        color={room.sideWallColor}
+        color={leftColor}
         texture={wallTexture}
         opening={leftOpening}
+        wallId="left"
+        highlight={wallHighlight("left")}
+        onWallClick={editable ? handleWallClick : undefined}
+        dragged={dragged}
       />
       <WallWithOpening
         x={width / 2}
         depth={depth}
         height={height}
-        color={room.sideWallColor}
+        color={rightColor}
         texture={wallTexture}
         opening={rightOpening}
+        wallId="right"
+        highlight={wallHighlight("right")}
+        onWallClick={editable ? handleWallClick : undefined}
+        dragged={dragged}
       />
       {isCurved ? (
-        <mesh position={[0, height / 2, curveCenterZ]} receiveShadow>
+        <mesh
+          position={[0, height / 2, curveCenterZ]}
+          receiveShadow
+          onClick={(event) => {
+            if (!editable || !onWallSelect || dragged?.current) return;
+            event.stopPropagation();
+            onWallSelect("front");
+          }}
+        >
           <cylinderGeometry args={[curveRadius, curveRadius, height, 64, 1, true, -curveHalfAngle, curveHalfAngle * 2]} />
-          <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} side={DoubleSide} />
+          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} side={DoubleSide} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
       ) : entrance ? (
         <group position={[0, 0, depth / 2]}>
-          <mesh position={[-(width + 1.65) / 4, height / 2, 0]} receiveShadow>
+          <mesh
+            position={[-(width + 1.65) / 4, height / 2, 0]}
+            receiveShadow
+            onClick={(event) => {
+              if (!editable || !onWallSelect || dragged?.current) return;
+              event.stopPropagation();
+              onWallSelect("front");
+            }}
+          >
             <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
           </mesh>
-          <mesh position={[(width + 1.65) / 4, height / 2, 0]} receiveShadow>
+          <mesh
+            position={[(width + 1.65) / 4, height / 2, 0]}
+            receiveShadow
+            onClick={(event) => {
+              if (!editable || !onWallSelect || dragged?.current) return;
+              event.stopPropagation();
+              onWallSelect("front");
+            }}
+          >
             <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
           </mesh>
           <mesh position={[0, (height + 2.5) / 2, 0]} receiveShadow>
             <boxGeometry args={[1.65, height - 2.5, 0.22]} />
-            <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} />
           </mesh>
         </group>
       ) : (
-        <mesh position={[0, height / 2, depth / 2]} receiveShadow>
+        <mesh
+          position={[0, height / 2, depth / 2]}
+          receiveShadow
+          onClick={(event) => {
+            if (!editable || !onWallSelect || dragged?.current) return;
+            event.stopPropagation();
+            onWallSelect("front");
+          }}
+        >
           <boxGeometry args={[width, height, 0.22]} />
-          <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} />
+          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
       )}
       {room.partitionWalls.map((wall) => (
-        <mesh key={wall.id} position={[wall.x, (height - 0.25) / 2, wall.z]} receiveShadow castShadow>
+        <mesh
+          key={wall.id}
+          position={[wall.x, (height - 0.25) / 2, wall.z]}
+          receiveShadow
+          castShadow
+          onClick={(event) => {
+            if (!editable || !onWallSelect || dragged?.current) return;
+            event.stopPropagation();
+            onWallSelect(wall.id);
+          }}
+        >
           <boxGeometry
             args={wall.orientation === "horizontal"
               ? [wall.length, height - 0.25, 0.18]
               : [0.18, height - 0.25, wall.length]}
           />
-          <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} />
+          <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={0.88} emissive={wallHighlight(wall.id) ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
         </mesh>
       ))}
       {room.spotlights && (artworks.length > 0 ? (
         // One ceiling spotlight per artwork, aimed at the work itself —
         // from the ceiling, 1.5 m out from the wall, so every piece gets
-        // its own pool of light (back wall and side walls alike).
+        // its own pool of light (back wall and side walls alike). The
+        // colour and strength follow the room's light type; soft ambient
+        // keeps only the fixture, no beam.
         artworks.map((artwork) => {
           const [ax, ay, az] = artwork.position;
           const nx = Math.sin(artwork.rotation);
@@ -849,6 +1711,9 @@ function GalleryRoom({
               z={az + nz * 1.5}
               targetZ={az}
               targetPoint={[ax, ay, az]}
+              color={lights.spotColor}
+              intensity={lights.spotIntensity}
+              lightOn={room.lightType !== "ambient"}
             />
           );
         })
@@ -856,7 +1721,7 @@ function GalleryRoom({
         Array.from({ length: Math.max(2, Math.floor(width / 5)) }, (_, index) => {
           const spots = Math.max(2, Math.floor(width / 5));
           const x = -width / 2 + ((index + 1) * width) / (spots + 1);
-          return <GallerySpotlight key={index} x={x} y={height - 0.2} z={0} targetZ={wallZ + 1} />;
+          return <GallerySpotlight key={index} x={x} y={height - 0.2} z={0} targetZ={wallZ + 1} color={lights.spotColor} intensity={lights.spotIntensity} lightOn={room.lightType !== "ambient"} />;
         })
       ))}
       {room.curatorialText && (
@@ -879,6 +1744,20 @@ function GalleryRoom({
       )}
       <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} />
       {artworkNodes}
+      {(room.elements ?? []).map((element) => (
+        <ElementMesh
+          key={element.id}
+          element={element}
+          room={room}
+          selected={element.id === selectedElementId}
+          onSelect={onSelectElement}
+          walkable={walkable}
+          dragged={dragged}
+          editable={editable}
+          onDragStart={onElementDragStart}
+          onHoverChange={onElementHover}
+        />
+      ))}
     </group>
   );
 }
@@ -1095,6 +1974,31 @@ function WalkControls({
         }
       }
     }
+    // Movable partition walls (Elements) block the visitor the same way:
+    // a wall running along X is horizontal, along Z is vertical, judged
+    // from its rotation.
+    for (const element of room.elements ?? []) {
+      if (element.type !== "partition") continue;
+      const effectiveLength = element.length * element.scale;
+      const horizontal = Math.abs(Math.sin(element.rotation)) < 0.5;
+      if (horizontal) {
+        const crossesWall = Math.min(camera.position.z, nextZ) <= element.z + 0.2
+          && Math.max(camera.position.z, nextZ) >= element.z - 0.2;
+        const overlapsWall = Math.min(localX, targetX) <= element.x + effectiveLength / 2 + 0.35
+          && Math.max(localX, targetX) >= element.x - effectiveLength / 2 - 0.35;
+        if (crossesWall && overlapsWall) {
+          nextZ = camera.position.z;
+        }
+      } else {
+        const crossesWall = Math.min(localX, targetX) <= element.x + 0.2
+          && Math.max(localX, targetX) >= element.x - 0.2;
+        const overlapsWall = Math.min(camera.position.z, nextZ) <= element.z + effectiveLength / 2 + 0.35
+          && Math.max(camera.position.z, nextZ) >= element.z - effectiveLength / 2 - 0.35;
+        if (crossesWall && overlapsWall) {
+          nextX = camera.position.x;
+        }
+      }
+    }
     const leftEdge = offsets[roomIndex] - width / 2 + 0.45;
     const rightEdge = offsets[roomIndex] + width / 2 - 0.45;
     const frontEdge = depth / 2 - 0.45;
@@ -1277,6 +2181,11 @@ export default function GalleryScene({
   resetSignal,
   editable,
   onArtworkUpdate,
+  selectedElementId,
+  onSelectElement,
+  onElementUpdate,
+  selectedWallId,
+  onWallSelect,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -1300,6 +2209,13 @@ export default function GalleryScene({
   // resize them from the lime handle. Disabled while walking.
   editable?: boolean;
   onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
+  // Editor only: elements (furniture, partition walls, vitrines, ...).
+  selectedElementId?: string;
+  onSelectElement?: (id: string) => void;
+  onElementUpdate?: (id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) => void;
+  // Editor only: wall painting — the wall clicked in the 3D view.
+  selectedWallId?: string | null;
+  onWallSelect?: (wallId: WallId | string) => void;
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   const offsets = useMemo(() => {
@@ -1367,6 +2283,61 @@ export default function GalleryScene({
     onSelect?.(id);
   };
 
+  // Editor drag for elements: the drag plane follows the element type —
+  // the floor plane for furniture and partition walls, the wall plane for
+  // wall-mounted pieces, a horizontal plane at the element's height for
+  // the ceiling track light. Dragging only happens in the editor's orbit
+  // view, where the active room sits at offset 0, so element positions
+  // are room coordinates directly.
+  const elementDragRef = useRef<ElementDragState | null>(null);
+  const [hoveredElement, setHoveredElement] = useState<{ id: string; cursor: string } | null>(null);
+
+  const handleElementDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
+    if (!editable || walking) return;
+    const element = (room.elements ?? []).find((item) => item.id === id);
+    if (!element) return;
+    const layout = roomLayouts[room.layout];
+    const planeKind = ELEMENT_PLANES[element.type];
+    const position = new Vector3(element.x, element.y, element.z);
+    let plane: Plane;
+    if (planeKind === "floor") {
+      plane = new Plane(new Vector3(0, 1, 0), 0);
+    } else if (planeKind === "ceiling") {
+      plane = new Plane(new Vector3(0, 1, 0), -element.y);
+    } else {
+      const normal = new Vector3(Math.sin(element.rotation), 0, Math.cos(element.rotation));
+      plane = new Plane().setFromNormalAndCoplanarPoint(normal, position);
+    }
+    const grabOffset = event.point.clone().sub(position);
+    grabOffset.addScaledVector(plane.normal, -grabOffset.dot(plane.normal));
+    const hitOnPlane = event.point.clone().addScaledVector(plane.normal, -event.point.clone().sub(position).dot(plane.normal));
+    const startDist = Math.max(0.1, hitOnPlane.distanceTo(position));
+    // Doors and curtains stay on the floor; windows, wall text and
+    // shelves slide up and down their wall.
+    const minY = planeKind === "wall" && (element.type === "window" || element.type === "wall-text" || element.type === "shelf") ? 1.0 : element.y;
+    const maxY = planeKind === "wall" && (element.type === "window" || element.type === "wall-text" || element.type === "shelf") ? 3.2 : element.y;
+    elementDragRef.current = {
+      id,
+      mode,
+      plane,
+      grabOffset,
+      center: position,
+      startScale: element.scale,
+      startDist,
+      clamp: {
+        minX: -layout.width / 2 + 0.5,
+        maxX: layout.width / 2 - 0.5,
+        minY,
+        maxY,
+        minZ: -layout.depth / 2 + 0.5,
+        maxZ: layout.depth / 2 - 0.5,
+      },
+    };
+    setIsDragging(true);
+    setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
+    onSelectElement?.(id);
+  };
+
   const artworkNodes = artworkRooms.map((sceneRoom, index) => (
     <GalleryRoom
       key={sceneRoom.id}
@@ -1379,6 +2350,12 @@ export default function GalleryScene({
       editable={editable}
       onDragStart={handleDragStart}
       onHoverChange={setHoveredArtwork}
+      selectedElementId={selectedElementId}
+      onSelectElement={onSelectElement}
+      onElementDragStart={handleElementDragStart}
+      onElementHover={setHoveredElement}
+      selectedWallId={selectedWallId}
+      onWallSelect={onWallSelect}
       onFloorClick={walkMode ? (point) => {
         destination.current = new Vector3(point.x, 0, point.z);
         lookYaw.current = null;
@@ -1407,23 +2384,48 @@ export default function GalleryScene({
     const layout = roomLayouts[room.layout];
     return interiorOrbitLimits(layout.width, layout.depth, layout.height);
   }, [room.layout]);
+  // The active room's light mood drives the scene's ambient and
+  // directional light (the per-artwork spots follow it inside GalleryRoom).
+  const sceneLights = LIGHT_PRESETS[room.lightType ?? "spot-warm"];
+  // Drag vs click: a pointer that moved more than a few pixels is an
+  // orbit drag, not a click — walls and artworks must not select then.
+  const dragStartPoint = useRef<{ x: number; y: number } | null>(null);
 
   return (
     <div
       className={`${className ?? "gallery-canvas"}${walkMode && walking ? " is-walking" : ""}`}
-      style={{ cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? undefined }}
+      style={{ cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? hoveredElement?.cursor ?? undefined }}
+      onPointerDown={(event) => {
+        dragStartPoint.current = { x: event.clientX, y: event.clientY };
+        dragged.current = false;
+      }}
+      onPointerMove={(event) => {
+        const start = dragStartPoint.current;
+        if (start && (Math.abs(event.clientX - start.x) > 6 || Math.abs(event.clientY - start.y) > 6)) {
+          dragged.current = true;
+        }
+      }}
+      onPointerUp={() => { dragStartPoint.current = null; }}
     >
       <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={[1, 1.6]} shadows>
         <color attach="background" args={[room.wallColor]} />
-        <ambientLight intensity={1.4} />
-        <directionalLight position={[-3, 8, 4]} intensity={1.8} />
-        {sceneRooms.map((sceneRoom, index) => <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={0.55} color="#f4d8b8" />)}
+        <ambientLight intensity={sceneLights.ambient} />
+        <directionalLight position={[-3, 8, 4]} intensity={sceneLights.directional} color={sceneLights.directionalColor} />
+        {sceneRooms.map((sceneRoom, index) => <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={sceneLights.pointIntensity} color={sceneLights.pointColor} />)}
         {/* Artwork textures load through Suspense so a slow image suspends
             only the artworks — never the whole room or page. */}
         <Suspense fallback={null}>{artworkNodes}</Suspense>
         <DragHandler
           dragRef={dragRef}
           onArtworkUpdate={onArtworkUpdate}
+          onDragEnd={() => {
+            setIsDragging(false);
+            setDragCursor(null);
+          }}
+        />
+        <ElementDragHandler
+          dragRef={elementDragRef}
+          onElementUpdate={onElementUpdate}
           onDragEnd={() => {
             setIsDragging(false);
             setDragCursor(null);
@@ -1437,7 +2439,7 @@ export default function GalleryScene({
         ) : (
           <OrbitControls
             makeDefault
-            enabled={!isDragging && !hoveredArtwork}
+            enabled={!isDragging && !hoveredArtwork && !hoveredElement}
             minDistance={interiorView ? 1.2 : 4}
             maxDistance={interiorView ? interiorLimits.maxDistance : Math.max(roomLayouts[room.layout].width, roomLayouts[room.layout].depth) + 6}
             minPolarAngle={interiorView ? interiorLimits.minPolarAngle : 0}

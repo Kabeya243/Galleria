@@ -66,6 +66,8 @@ const artworkSchema = z.object({
   ]),
   rotation: z.number().finite().min(-Math.PI * 8).max(Math.PI * 8),
   scale: z.number().finite().min(0.1).max(5),
+  // Frame finish around the artwork in the 3D room.
+  frame: z.enum(["none", "wood", "metal", "gold", "black", "white"]).default("wood"),
   // An artwork image is either a legacy database upload, a portfolio
   // image, or a new R2 upload (public URL under the configured R2 base).
   imageUrl: z

@@ -90,6 +90,7 @@ export function toClientArtwork(artwork: {
   positionZ: number;
   rotation: number;
   scale: number;
+  frame?: string;
   imageUrl: string | null;
   roomId: string;
 }) {
@@ -110,6 +111,7 @@ export function toClientArtwork(artwork: {
     ],
     rotation: artwork.rotation,
     scale: artwork.scale,
+    frame: (artwork.frame as "none" | "wood" | "metal" | "gold" | "black" | "white" | undefined) ?? "wood",
     imageUrl: artwork.imageUrl,
     roomId: artwork.roomId,
   };

@@ -3,34 +3,77 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AppWindow,
+  Armchair,
   ArrowLeft,
   ArrowRight,
+  Blinds,
+  Box,
+  BrickWall,
   Check,
   ChevronDown,
   CircleHelp,
   Copy,
+  DoorOpen,
   Expand,
   Eye,
   Footprints,
   Grid2X2,
   Image,
   Info,
+  Lamp,
+  Layers,
   Lightbulb,
   Minus,
+  Monitor,
   Move,
+  Paintbrush,
+  PanelsTopLeft,
   Plus,
+  RectangleHorizontal,
   RotateCw,
   Save,
   Settings2,
   Sparkles,
+  Table,
   Trash2,
+  Type,
   Undo2,
   Upload,
 } from "lucide-react";
 import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
 import ThemeToggle from "@/components/theme-toggle";
-import type { Artwork } from "@/lib/demo-data";
-import { applyLayoutPreset, createGalleryRoom, floorTextures, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
+import type { Artwork, FrameVariant } from "@/lib/demo-data";
+import { FRAME_VARIANTS } from "@/lib/demo-data";
+import { createElement, ELEMENT_DEFAULTS, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
+import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, lightTypes, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
+
+// The Elements palette: every placeable object, with its icon.
+const ELEMENT_PALETTE: { type: ElementType; label: string; icon: typeof BrickWall }[] = [
+  { type: "partition", label: "Partition wall", icon: BrickWall },
+  { type: "chair", label: "Chair", icon: Armchair },
+  { type: "bench", label: "Long bench", icon: RectangleHorizontal },
+  { type: "table", label: "Table", icon: Table },
+  { type: "door", label: "Door", icon: DoorOpen },
+  { type: "window", label: "Window", icon: AppWindow },
+  { type: "wall-text", label: "Wall text", icon: Type },
+  { type: "plinth", label: "Plinth", icon: Box },
+  { type: "vitrine", label: "Display case", icon: Layers },
+  { type: "track-light", label: "Track light", icon: Lamp },
+  { type: "shelf", label: "Display shelf", icon: PanelsTopLeft },
+  { type: "desk", label: "Desk & chair", icon: Monitor },
+  { type: "curtain", label: "Sheer curtain", icon: Blinds },
+];
+
+// Paint swatches for one wall (plus the colour picker for any colour).
+const WALL_SWATCHES = ["#f5f2eb", "#e8e4da", "#141414", "#b4552d", "#8a9b88", "#2e4a6b", "#c9a227"] as const;
+
+const WALL_LABELS: Record<string, string> = {
+  back: "Back wall",
+  left: "Left wall",
+  right: "Right wall",
+  front: "Front wall",
+};
 
 // A numeric field that keeps what the user types. A controlled
 // `type="number"` input cannot hold an intermediate "-" (Number("-") is
@@ -87,6 +130,9 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
   const [selectedId, setSelectedId] = useState<string>();
+  const [panelTab, setPanelTab] = useState<"artworks" | "elements">("artworks");
+  const [selectedElementId, setSelectedElementId] = useState<string>();
+  const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [title, setTitle] = useState("Untitled exhibition");
   const [description, setDescription] = useState("");
@@ -153,6 +199,131 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     if (!previous) return;
     setArtworks(previous);
     setSaved(false);
+  }
+
+  // Selection is exclusive: picking an artwork clears any element or wall,
+  // and vice versa, so the inspector always shows one thing.
+  function selectArtwork(id: string | undefined) {
+    setSelectedId(id);
+    setSelectedElementId(undefined);
+    setSelectedWallId(null);
+  }
+
+  function selectElement(id: string | undefined) {
+    setSelectedElementId(id);
+    setSelectedId(undefined);
+    setSelectedWallId(null);
+  }
+
+  function selectWall(id: string | null) {
+    setSelectedWallId(id);
+    setSelectedId(undefined);
+    setSelectedElementId(undefined);
+  }
+
+  function clearSelection() {
+    setSelectedId(undefined);
+    setSelectedElementId(undefined);
+    setSelectedWallId(null);
+  }
+
+  const selectedElement = useMemo(
+    () => activeRoom?.elements.find((element) => element.id === selectedElementId),
+    [activeRoom, selectedElementId],
+  );
+  const currentElements = activeRoom?.elements ?? [];
+
+  function updateElement(id: string, patch: Partial<RoomElement>) {
+    if (!activeRoom) return;
+    updateRoom(activeRoom.id, (room) => ({
+      ...room,
+      elements: room.elements.map((element) => (element.id === id ? { ...element, ...patch } : element)),
+    }));
+  }
+
+  function addElement(type: ElementType) {
+    if (!activeRoom) return;
+    const number = currentElements.filter((element) => element.type === type).length;
+    const element = createElement(type, roomLayouts[activeRoom.layout], number);
+    updateRoom(activeRoom.id, (room) => ({ ...room, elements: [...room.elements, element] }));
+    selectElement(element.id);
+  }
+
+  function removeElement() {
+    if (!selectedElement || !activeRoom) return;
+    updateRoom(activeRoom.id, (room) => ({
+      ...room,
+      elements: room.elements.filter((element) => element.id !== selectedElement.id),
+    }));
+    setSelectedElementId(undefined);
+  }
+
+  function duplicateElement() {
+    if (!selectedElement || !activeRoom) return;
+    const copy: RoomElement = {
+      ...selectedElement,
+      id: crypto.randomUUID(),
+      name: `${selectedElement.name} copy`.slice(0, 60),
+      x: Math.min(selectedElement.x + 1.5, roomLayouts[activeRoom.layout].width / 2 - 0.5),
+    };
+    updateRoom(activeRoom.id, (room) => ({ ...room, elements: [...room.elements, copy] }));
+    selectElement(copy.id);
+  }
+
+  // Painting one wall: the colour is stored as an override on the room
+  // (or on the partition wall itself), never on the other walls.
+  function paintWall(color: string) {
+    if (!activeRoom || !selectedWallId) return;
+    if (selectedWallId === "back" || selectedWallId === "left" || selectedWallId === "right" || selectedWallId === "front") {
+      const wallId = selectedWallId as WallId;
+      updateRoom(activeRoom.id, (room) => ({
+        ...room,
+        wallPaint: { ...room.wallPaint, [wallId]: color },
+      }));
+    } else {
+      updateRoom(activeRoom.id, (room) => ({
+        ...room,
+        partitionWalls: room.partitionWalls.map((wall) => (wall.id === selectedWallId ? { ...wall, color } : wall)),
+      }));
+    }
+  }
+
+  function resetWallPaint() {
+    if (!activeRoom || !selectedWallId) return;
+    if (selectedWallId === "back" || selectedWallId === "left" || selectedWallId === "right" || selectedWallId === "front") {
+      const wallId = selectedWallId as WallId;
+      updateRoom(activeRoom.id, (room) => {
+        const wallPaint = { ...room.wallPaint };
+        delete wallPaint[wallId];
+        return { ...room, wallPaint };
+      });
+    } else {
+      updateRoom(activeRoom.id, (room) => ({
+        ...room,
+        partitionWalls: room.partitionWalls.map((wall) => {
+          if (wall.id !== selectedWallId) return wall;
+          const next = { ...wall };
+          delete next.color;
+          return next;
+        }),
+      }));
+    }
+  }
+
+  function selectedWallColor(): string {
+    if (!activeRoom || !selectedWallId) return "#f5f2eb";
+    if (selectedWallId === "back") return activeRoom.wallPaint.back ?? activeRoom.wallColor;
+    if (selectedWallId === "front") return activeRoom.wallPaint.front ?? activeRoom.sideWallColor;
+    if (selectedWallId === "left") return activeRoom.wallPaint.left ?? activeRoom.sideWallColor;
+    if (selectedWallId === "right") return activeRoom.wallPaint.right ?? activeRoom.sideWallColor;
+    return activeRoom.partitionWalls.find((wall) => wall.id === selectedWallId)?.color ?? activeRoom.sideWallColor;
+  }
+
+  function selectedWallLabel(): string {
+    if (!selectedWallId) return "Wall";
+    if (WALL_LABELS[selectedWallId]) return WALL_LABELS[selectedWallId];
+    const index = activeRoom?.partitionWalls.findIndex((wall) => wall.id === selectedWallId) ?? -1;
+    return index >= 0 ? `Partition wall ${index + 1}` : "Wall";
   }
 
   function moveArtwork(axis: 0 | 1, amount: number) {
@@ -271,6 +442,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
       position: [(index - (artworkCount - 1) / 2) * spacing, 1.55, -depth / 2 + 0.28],
       rotation: 0,
       scale: 1,
+      frame: "wood",
       imageUrl,
       roomId: activeRoom.id,
     };
@@ -461,6 +633,17 @@ async function compressImage(file: File): Promise<File> {
       setArtworks((current) => current.map((artwork) => artwork.roomId === id
         ? { ...artwork, position: [Math.max(-width / 2 + 1.5, Math.min(width / 2 - 1.5, artwork.position[0])), artwork.position[1], -depth / 2 + 0.28] }
         : artwork));
+      // Elements stay inside the resized room too.
+      setRooms((current) => current.map((room) => room.id === id
+        ? {
+            ...room,
+            elements: room.elements.map((element) => ({
+              ...element,
+              x: Math.max(-width / 2 + 0.5, Math.min(width / 2 - 0.5, element.x)),
+              z: Math.max(-depth / 2 + 0.5, Math.min(depth / 2 - 0.5, element.z)),
+            })),
+          }
+        : room));
     }
     setSaved(false);
   }
@@ -507,6 +690,8 @@ async function compressImage(file: File): Promise<File> {
     setArtworks((current) => current.filter((artwork) => artwork.roomId !== activeRoom.id));
     setActiveRoomId(nextRoom.id);
     setSelectedId(artworks.find((artwork) => artwork.roomId === nextRoom.id)?.id);
+    setSelectedElementId(undefined);
+    setSelectedWallId(null);
     setSaved(false);
   }
 
@@ -562,7 +747,7 @@ async function compressImage(file: File): Promise<File> {
               <button
                 className={`room-selector ${room.id === activeRoom?.id ? "selected" : ""}`}
                 key={room.id}
-                onClick={() => { setActiveRoomId(room.id); setSelectedId(undefined); }}
+                onClick={() => { setActiveRoomId(room.id); clearSelection(); }}
               >
                 <span className="room-number">{String(index + 1).padStart(2, "0")}</span>
                 <span><strong>{room.name}</strong><small>{roomLayouts[room.layout].label} · {artworks.filter((artwork) => artwork.roomId === room.id).length} artworks</small></span>
@@ -571,28 +756,65 @@ async function compressImage(file: File): Promise<File> {
             ))}
             <button className="add-room-button" onClick={addRoom} disabled={rooms.length >= 12}><Plus size={13} /> Add a room</button>
           </div>
-          <div className="panel-tabs"><button className="active">Artworks <span>{currentArtworks.length}</span></button><button>Elements</button></div>
-          <div className="asset-list">
-            {currentArtworks.map((artwork, index) => (
-              <button className={`asset-row ${selectedId === artwork.id ? "selected" : ""}`} key={artwork.id} onClick={() => setSelectedId(artwork.id)}>
-                <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.title} /> : <span />}</span>
-                <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.medium.split(" ")[0]}</small></span>
-                {selectedId === artwork.id && <span className="selected-mark"><Check size={12} /></span>}
-              </button>
-            ))}
+          <div className="panel-tabs">
+            <button className={panelTab === "artworks" ? "active" : ""} onClick={() => setPanelTab("artworks")}>Artworks <span>{currentArtworks.length}</span></button>
+            <button className={panelTab === "elements" ? "active" : ""} onClick={() => setPanelTab("elements")}>Elements <span>{currentElements.length}</span></button>
           </div>
-          <button className="add-to-room" onClick={() => uploadRef.current?.click()} disabled={busy}><Plus size={15} /> Add artwork to room</button>
-          {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
-          <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
-          <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>
-          <div className="left-panel-bottom"><div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Select an artwork in the room to adjust its placement and scale.</p></div><button className="panel-help-link"><CircleHelp size={15} /> Editor guide <ArrowRight size={13} /></button></div>
+          {panelTab === "artworks" ? (
+            <>
+              <div className="asset-list">
+                {currentArtworks.map((artwork, index) => (
+                  <button className={`asset-row ${selectedId === artwork.id ? "selected" : ""}`} key={artwork.id} onClick={() => selectArtwork(artwork.id)}>
+                    <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.title} /> : <span />}</span>
+                    <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.medium.split(" ")[0]}</small></span>
+                    {selectedId === artwork.id && <span className="selected-mark"><Check size={12} /></span>}
+                  </button>
+                ))}
+              </div>
+              <button className="add-to-room" onClick={() => uploadRef.current?.click()} disabled={busy}><Plus size={15} /> Add artwork to room</button>
+              {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
+              <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
+              <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>
+            </>
+          ) : (
+            <>
+              <div className="element-palette">
+                {ELEMENT_PALETTE.map(({ type, label, icon: Icon }) => (
+                  <button key={type} className="element-palette-item" onClick={() => addElement(type)} title={`Add a ${label.toLowerCase()} to this room`}>
+                    <Icon size={17} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="asset-list">
+                {currentElements.map((element) => {
+                  const palette = ELEMENT_PALETTE.find((item) => item.type === element.type);
+                  const Icon = palette?.icon ?? Box;
+                  return (
+                    <button className={`asset-row ${selectedElementId === element.id ? "selected" : ""}`} key={element.id} onClick={() => selectElement(element.id)}>
+                      <span className="asset-thumb element-thumb"><Icon size={16} /></span>
+                      <span className="asset-copy"><strong>{element.name}</strong><small>{palette?.label ?? element.type}</small></span>
+                      {selectedElementId === element.id && <span className="selected-mark"><Check size={12} /></span>}
+                    </button>
+                  );
+                })}
+                {currentElements.length === 0 && (
+                  <p className="element-empty-note">No elements yet. Add a partition wall, a bench, a plinth or a track light above — then drag it around the room.</p>
+                )}
+              </div>
+            </>
+          )}
+          <div className="left-panel-bottom"><div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Select an artwork or an element in the room to adjust its placement and scale. Click a wall to paint it.</p></div><button className="panel-help-link"><CircleHelp size={15} /> Editor guide <ArrowRight size={13} /></button></div>
         </aside>
 
         <section className="editor-stage">
           <div className="stage-toolbar">
             <div className="tool-group">
               <button className="tool-button active" aria-label="Select and move"><Move size={16} /></button>
-              <button className="tool-button" aria-label="Rotate selected artwork" onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }))}><RotateCw size={16} /></button>
+              <button className="tool-button" aria-label="Rotate selected artwork or element" onClick={() => {
+                if (selected) updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }));
+                else if (selectedElement) updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 });
+              }}><RotateCw size={16} /></button>
               <span className="tool-divider" />
               <button className="tool-button" aria-label="Undo artwork change" onClick={undoArtworkChange} disabled={!historyRef.current.length}><Undo2 size={16} /></button>
               <span className="tool-divider" />
@@ -606,7 +828,7 @@ async function compressImage(file: File): Promise<File> {
             </div>
           </div>
           <div className="scene-wrap">
-            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={setSelectedId} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); setSelectedId(undefined); }} editable onArtworkUpdate={(id, patch) => updateArtwork(id, (artwork) => ({ ...artwork, ...patch }))} />}
+            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} editable onArtworkUpdate={(id, patch) => updateArtwork(id, (artwork) => ({ ...artwork, ...patch }))} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={(id, patch) => updateElement(id, patch)} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} />}
             <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(1.6, artwork.scale + 0.1) }))} title="Increase scale"><Expand size={14} /></button><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) }))} title="Decrease scale"><Minus size={14} /></button></div>
@@ -616,7 +838,7 @@ async function compressImage(file: File): Promise<File> {
         </section>
 
         <aside className="editor-properties-panel">
-          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="More properties"><Info size={15} /></button></div>
+          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="More properties"><Info size={15} /></button></div>
           {selected ? (
             <>
               <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
@@ -642,8 +864,68 @@ async function compressImage(file: File): Promise<File> {
                   <div className="property-section"><label>MEDIUM</label><input className="full-input" value={selected.medium} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, medium: event.target.value }))} /></div>
                   <div className="property-section"><label>DIMENSIONS</label><input className="full-input" value={selected.dimensions} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: event.target.value }))} /></div>
                   <div className="property-section"><label>DESCRIPTION</label><textarea className="full-input property-textarea" value={selected.description} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, description: event.target.value }))} /></div>
-                  <div className="property-section"><label>FRAME STYLE</label><button className="select-input">Natural oak <ChevronDown size={14} /></button></div>
+                  <div className="property-section"><label>FRAME</label><div className="frame-options">{(Object.keys(FRAME_VARIANTS) as FrameVariant[]).map((variant) => (
+                    <button
+                      key={variant}
+                      type="button"
+                      className={`frame-option${(selected.frame ?? "wood") === variant ? " selected" : ""}`}
+                      aria-pressed={(selected.frame ?? "wood") === variant}
+                      onClick={() => updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: variant }))}
+                    >
+                      <span className={`frame-swatch frame-swatch-${variant}`} />
+                      {FRAME_VARIANTS[variant].label}
+                    </button>
+                  ))}</div></div>
                   <div className="property-actions"><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 }))}><Sparkles size={14} /> Fit to wall</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
+                </>
+              ) : selectedElement ? (
+                <>
+                  <div className="selected-art-preview"><div className="selected-art-image element-preview-icon">{(() => { const palette = ELEMENT_PALETTE.find((item) => item.type === selectedElement.type); const Icon = palette?.icon ?? Box; return <Icon size={22} />; })()}</div><div><strong>{selectedElement.name}</strong><small>{ELEMENT_DEFAULTS[selectedElement.type].label}</small></div></div>
+                  <div className="property-section"><label>NAME</label><input className="full-input" value={selectedElement.name} onChange={(event) => updateElement(selectedElement.id, { name: event.target.value.slice(0, 60) })} /></div>
+                  <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => {
+                    const key = ["x", "y", "z"][index] as "x" | "y" | "z";
+                    return (
+                      <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Element position ${axis}`} step="0.1" value={selectedElement[key]} onCommit={(next) => updateElement(selectedElement.id, { [key]: next } as Partial<RoomElement>)} /></div>
+                    );
+                  })}</div></div>
+                  <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => updateElement(selectedElement.id, { rotation: selectedElement.rotation - Math.PI / 12 })}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selectedElement.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 })}><RotateCw size={15} /></button></div></div>
+                  <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Element scale" type="range" min="0.25" max="3" step="0.05" value={selectedElement.scale} onChange={(event) => updateElement(selectedElement.id, { scale: Number(event.target.value) })} /><span>{Math.round(selectedElement.scale * 100)}%</span></div></div>
+                  {(selectedElement.type === "partition" || selectedElement.type === "shelf" || selectedElement.type === "track-light" || selectedElement.type === "wall-text") && (
+                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "RAIL LENGTH" : selectedElement.type === "wall-text" ? "TEXT WIDTH" : "LENGTH"} <span>METERS</span></label><div className="range-control"><input aria-label="Element length in metres" type="range" min={selectedElement.type === "track-light" ? 1 : 0.5} max={selectedElement.type === "partition" || selectedElement.type === "wall-text" ? 12 : 6} step="0.5" value={selectedElement.length} onChange={(event) => updateElement(selectedElement.id, { length: Number(event.target.value) })} /><span>{selectedElement.length} m</span></div></div>
+                  )}
+                  {selectedElement.type === "plinth" && (
+                    <div className="property-section"><label>HEIGHT</label><select className="full-input" value={selectedElement.variant} onChange={(event) => updateElement(selectedElement.id, { variant: event.target.value })}>{PLINTH_VARIANTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
+                  )}
+                  {selectedElement.type === "wall-text" ? (
+                    <>
+                      <div className="property-section"><label>TITLE <span>BIG TEXT · ONE LINE PER ROW</span></label><textarea className="full-input property-textarea" rows={3} value={selectedElement.title} onChange={(event) => updateElement(selectedElement.id, { title: event.target.value.slice(0, 120) })} placeholder={"PEOPLE\nMAKE THIS\nPLACE"} /></div>
+                      <div className="property-section"><label>BODY TEXT</label><textarea className="full-input property-textarea" value={selectedElement.body} onChange={(event) => updateElement(selectedElement.id, { body: event.target.value.slice(0, 600) })} /></div>
+                      <div className="property-section"><label>TYPEFACE</label><select className="full-input" value={selectedElement.font} onChange={(event) => updateElement(selectedElement.id, { font: event.target.value as WallTextFont })}>{(Object.keys(WALL_TEXT_FONTS) as WallTextFont[]).map((font) => <option key={font} value={font}>{WALL_TEXT_FONTS[font].label}</option>)}</select></div>
+                      <div className="property-section"><label>LAYOUT</label><select className="full-input" value={selectedElement.layout} onChange={(event) => updateElement(selectedElement.id, { layout: event.target.value as WallTextLayout })}>{(Object.keys(WALL_TEXT_LAYOUTS) as WallTextLayout[]).map((layout) => <option key={layout} value={layout}>{WALL_TEXT_LAYOUTS[layout]}</option>)}</select></div>
+                      <div className="property-section"><label>ALIGNMENT</label><div className="frame-options">{(Object.keys(WALL_TEXT_ALIGNS) as WallTextAlign[]).map((align) => (
+                        <button key={align} type="button" className={`frame-option${selectedElement.align === align ? " selected" : ""}`} aria-pressed={selectedElement.align === align} onClick={() => updateElement(selectedElement.id, { align })}>{WALL_TEXT_ALIGNS[align]}</button>
+                      ))}</div></div>
+                      <div className="property-section"><label>TITLE SIZE</label><div className="range-control"><input aria-label="Wall text title size" type="range" min="0.08" max="1" step="0.01" value={selectedElement.fontSize} onChange={(event) => updateElement(selectedElement.id, { fontSize: Number(event.target.value) })} /><span>{Math.round(selectedElement.fontSize * 100)} cm</span></div></div>
+                      <div className="property-section"><label>BODY SIZE</label><div className="range-control"><input aria-label="Wall text body size" type="range" min="0.04" max="0.3" step="0.01" value={selectedElement.bodySize} onChange={(event) => updateElement(selectedElement.id, { bodySize: Number(event.target.value) })} /><span>{Math.round(selectedElement.bodySize * 100)} cm</span></div></div>
+                      <div className="property-section"><label>TITLE COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall text title colour" value={selectedElement.textColor} onChange={(event) => updateElement(selectedElement.id, { textColor: event.target.value })} /><span>{selectedElement.textColor}</span></div><div className="wall-swatches">{WALL_TEXT_SWATCHES.map((swatch) => (
+                        <button key={swatch} type="button" className={`wall-swatch${selectedElement.textColor.toLowerCase() === swatch ? " selected" : ""}`} style={{ backgroundColor: swatch }} aria-label={`Title colour ${swatch}`} onClick={() => updateElement(selectedElement.id, { textColor: swatch })} />
+                      ))}</div></div>
+                      <div className="property-section"><label>BODY COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall text body colour" value={selectedElement.bodyColor} onChange={(event) => updateElement(selectedElement.id, { bodyColor: event.target.value })} /><span>{selectedElement.bodyColor}</span></div></div>
+                    </>
+                  ) : (
+                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "LIGHT COLOUR" : "COLOUR"}</label><div className="room-color-control"><input type="color" aria-label="Element colour" value={selectedElement.color} onChange={(event) => updateElement(selectedElement.id, { color: event.target.value })} /><span>{selectedElement.color}</span></div></div>
+                  )}
+                  <div className="property-actions"><button aria-label="Duplicate element" onClick={duplicateElement}><Copy size={14} /></button><button className="delete-action" aria-label="Delete element" onClick={removeElement}><Trash2 size={14} /></button></div>
+                </>
+              ) : selectedWallId ? (
+                <>
+                  <div className="selected-art-preview"><div className="selected-art-image element-preview-icon"><Paintbrush size={22} /></div><div><strong>{selectedWallLabel()}</strong><small>Paint this wall only</small></div></div>
+                  <div className="property-section"><label>WALL COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall colour" value={selectedWallColor()} onChange={(event) => paintWall(event.target.value)} /><span>{selectedWallColor()}</span></div></div>
+                  <div className="property-section"><label>PRESETS</label><div className="wall-swatches">{WALL_SWATCHES.map((swatch) => (
+                    <button key={swatch} type="button" className={`wall-swatch${selectedWallColor().toLowerCase() === swatch ? " selected" : ""}`} style={{ backgroundColor: swatch }} aria-label={`Paint wall ${swatch}`} onClick={() => paintWall(swatch)} />
+                  ))}</div></div>
+                  <div className="property-actions"><button onClick={resetWallPaint}><Sparkles size={14} /> Reset to room colour</button></div>
+                  <p className="wall-paint-note">Only this wall changes colour. The other walls keep the room's colours.</p>
                 </>
               ) : (
                 <div className="room-properties">
@@ -657,8 +939,14 @@ async function compressImage(file: File): Promise<File> {
                       <div className="property-section"><label>FLOOR</label><div className="room-color-control"><input type="color" aria-label="Floor colour" value={activeRoom.floorColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorColor: event.target.value }))} /><span>{activeRoom.floorColor}</span></div></div>
                       <div className="property-section"><label>WALL TEXTURE</label><select className="full-input" value={activeRoom.wallTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallTexture: event.target.value as GalleryRoom["wallTexture"] }))}>{Object.entries(wallTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
                       <div className="property-section"><label>FLOOR TEXTURE</label><select className="full-input" value={activeRoom.floorTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorTexture: event.target.value as GalleryRoom["floorTexture"] }))}>{Object.entries(floorTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
-                      <div className="property-section"><label>CEILING TEXTURE</label><select className="full-input" value={activeRoom.ceilingTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingTexture: event.target.value as GalleryRoom["ceilingTexture"] }))}>{Object.entries(wallTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
+                      <div className="property-section"><label>CEILING TEXTURE</label><select className="full-input" value={activeRoom.ceilingTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingTexture: event.target.value as GalleryRoom["ceilingTexture"] }))}>{Object.entries(ceilingTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
                       <div className="property-section"><label>LIGHTING</label><label className="room-lighting-toggle"><input type="checkbox" checked={activeRoom.spotlights} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, spotlights: event.target.checked }))} /> Ceiling spotlights</label></div>
+                      <div className="property-section"><label>LIGHT TYPE</label><select className="full-input" value={activeRoom.lightType ?? "spot-warm"} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, lightType: event.target.value as GalleryRoom["lightType"] }))}>{Object.entries(lightTypes).map(([type, details]) => <option key={type} value={type}>{details.label}</option>)}</select></div>
+                      <div className="property-section"><label>FLOOR TYPE</label><select className="full-input" value={activeRoom.floorType ?? "charcoal"} onChange={(event) => {
+                        const floorType = event.target.value as GalleryRoom["floorType"];
+                        const preset = floorTypes[floorType];
+                        updateRoom(activeRoom.id, (room) => ({ ...room, floorType, floorColor: preset.color, floorTexture: preset.texture as GalleryRoom["floorTexture"] }));
+                      }}>{Object.entries(floorTypes).map(([type, details]) => <option key={type} value={type}>{details.label}</option>)}</select></div>
                       <div className="property-section">
                         <label>PARTITION WALLS <span>{activeRoom.partitionWalls.length}/8</span></label>
                         <div className="partition-wall-list">{activeRoom.partitionWalls.map((wall, index) => (

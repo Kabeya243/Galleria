@@ -6,7 +6,7 @@ import { ArrowUpRight, Bell, Eye, Footprints, PenLine, Search } from "lucide-rea
 import GalleryScene from "@/components/gallery-scene";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
-import { createGalleryRoom, floorTextures, roomLayouts, wallTextures, type RoomLayout } from "@/lib/rooms";
+import { ceilingTextures, createGalleryRoom, floorTextures, roomLayouts, wallTextures, type RoomLayout } from "@/lib/rooms";
 
 export type GalleryPresetCard = {
   key: RoomLayout;
@@ -20,7 +20,7 @@ export type GalleryPresetCard = {
   ceilingColor: string;
   wallTexture: keyof typeof wallTextures;
   floorTexture: keyof typeof floorTextures;
-  ceilingTexture: keyof typeof wallTextures;
+  ceilingTexture: keyof typeof ceilingTextures;
 };
 
 function shadeHex(hex: string, factor: number): string {

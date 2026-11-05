@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Eye, PenLine } from "lucide-react";
+import { Eye, Footprints, PenLine } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
 import { createGalleryRoom, floorTextures, roomLayouts, wallTextures, type RoomLayout } from "@/lib/rooms";
 
@@ -149,11 +149,14 @@ function RoomPreviewCanvas({ room }: { room: GalleryPresetCard }) {
 export default function GalleriesPage({ rooms }: { rooms: GalleryPresetCard[] }) {
   const [selected, setSelected] = useState<RoomLayout>("cube");
   const [opening, setOpening] = useState<RoomLayout | null>(null);
+  const [walking, setWalking] = useState(false);
+  const movementKeys = useRef(new Set<string>());
   const viewerRef = useRef<HTMLDivElement>(null);
   const selectedRoom = rooms.find((room) => room.key === selected) ?? rooms[0];
   const viewerRoom = useMemo(() => createGalleryRoom(0, selected), [selected]);
 
   function viewIn3D(layout: RoomLayout) {
+    setWalking(false);
     setSelected(layout);
     viewerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -220,11 +223,14 @@ export default function GalleriesPage({ rooms }: { rooms: GalleryPresetCard[] })
           <button className="galleries-open-button" onClick={() => void openInEditor(selected)} disabled={opening !== null}>
             <PenLine size={15} /> {opening === selected ? "Opening…" : "Open in editor"}
           </button>
+          <button className="galleries-open-button" onClick={() => setWalking((value) => !value)} aria-label="Walk through this room">
+            <Footprints size={15} /> {walking ? "Exit walk" : "Walk through"}
+          </button>
         </div>
         <div className="galleries-viewer-stage">
-          <GalleryScene artworks={[]} room={viewerRoom} className="galleries-viewer-canvas" interior />
+          <GalleryScene artworks={[]} room={viewerRoom} rooms={[viewerRoom]} activeRoomId={viewerRoom.id} className="galleries-viewer-canvas" interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} />
         </div>
-        <p className="galleries-viewer-hint">Inside the room · Drag to look around · Scroll to zoom</p>
+        <p className="galleries-viewer-hint">{walking ? "Walk mode · Click the floor to walk · WASD to move · Drag to look" : "Inside the room · Drag to look around · Scroll to zoom"}</p>
       </section>
 
       <section className="galleries-grid">

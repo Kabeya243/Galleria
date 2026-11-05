@@ -11,6 +11,7 @@ import {
   Copy,
   Expand,
   Eye,
+  Footprints,
   Grid2X2,
   Image,
   Info,
@@ -35,6 +36,8 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [rooms, setRooms] = useState<GalleryRoom[]>([]);
   const [activeRoomId, setActiveRoomId] = useState("");
+  const [walking, setWalking] = useState(false);
+  const movementKeys = useRef(new Set<string>());
   const [selectedId, setSelectedId] = useState<string>();
   const [saved, setSaved] = useState(false);
   const [title, setTitle] = useState("Untitled exhibition");
@@ -173,8 +176,12 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
       const body = new FormData();
       body.set("file", file);
       const response = await fetch("/api/uploads", { method: "POST", body });
-      const result = await response.json();
+      // Read as text first: an empty body used to throw a cryptic
+      // "Unexpected end of JSON input" instead of a readable error.
+      const text = await response.text();
+      const result = (text ? JSON.parse(text) : {}) as { error?: string; url?: string };
       if (!response.ok) throw new Error(result.error ?? "Could not upload this image.");
+      if (!result.url) throw new Error("Could not upload this image.");
       addArtwork(result.url);
       if (uploadRef.current) uploadRef.current.value = "";
     } catch (error) {
@@ -365,6 +372,8 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
               <button className="tool-button" aria-label="Rotate selected artwork" onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }))}><RotateCw size={16} /></button>
               <span className="tool-divider" />
               <button className="tool-button" aria-label="Undo artwork change" onClick={undoArtworkChange} disabled={!historyRef.current.length}><Undo2 size={16} /></button>
+              <span className="tool-divider" />
+              <button className={`tool-button${walking ? " active" : ""}`} aria-label="Walk through the rooms" title="Walk through the rooms" onClick={() => setWalking((value) => !value)}><Footprints size={16} /></button>
             </div>
             <div className="stage-room-name"><span /> {activeRoom?.name.toUpperCase() ?? "ROOM"} <ChevronDown size={13} /></div>
             <div className="tool-group">
@@ -374,8 +383,8 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
             </div>
           </div>
           <div className="scene-wrap">
-            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={setSelectedId} className="gallery-canvas editor-canvas" room={activeRoom} interior />}
-            <div className="scene-caption"><span className="scene-caption-dot" /> 3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</div>
+            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={setSelectedId} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); setSelectedId(undefined); }} />}
+            <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(1.6, artwork.scale + 0.1) }))} title="Increase scale"><Expand size={14} /></button><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) }))} title="Decrease scale"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>

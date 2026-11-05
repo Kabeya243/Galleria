@@ -72,3 +72,16 @@ model Artwork {
 
   @@index([exhibitionId])
 }
+
+// Uploaded artwork images, stored in the database (not on disk): Vercel's
+// runtime filesystem is read-only and does not persist between requests,
+// so files written to data/uploads never survived an upload there.
+model Upload {
+  id        String   @id
+  data      Bytes
+  mimeType  String   @default("image/webp")
+  ownerId   String
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+}

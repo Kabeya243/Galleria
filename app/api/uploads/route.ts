@@ -1,14 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import sharp, { type Metadata } from "sharp";
 import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
-const uploadDirectory = path.join(process.cwd(), "data", "uploads");
 const allowedMimeTypes = new Set([
   "image/png",
   "image/jpeg",
@@ -98,8 +96,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not process this image." }, { status: 500 });
   }
 
-  const filename = `${randomUUID()}.webp`;
-  await mkdir(uploadDirectory, { recursive: true });
-  await writeFile(path.join(uploadDirectory, filename), optimized, { flag: "wx" });
+  // Stored in the database, not on disk: Vercel's filesystem is read-only
+  // at runtime, so writing to data/uploads threw and the route answered
+  // with an empty 500 (the "Unexpected end of JSON input" error).
+  const id = randomUUID();
+  const filename = `${id}.webp`;
+  try {
+    await db.upload.create({
+      data: { id, data: Buffer.from(optimized), mimeType: "image/webp", ownerId: user.id },
+    });
+  } catch (error) {
+    console.error("Could not save uploaded image.", error);
+    return NextResponse.json({ error: "Could not save this image." }, { status: 500 });
+  }
   return NextResponse.json({ url: `/api/uploads/${filename}` }, { status: 201 });
 }

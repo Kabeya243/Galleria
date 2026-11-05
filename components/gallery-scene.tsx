@@ -185,10 +185,21 @@ function ArtworkFrame({
   artwork,
   selected,
   onSelect,
+  walkable,
+  onWalkTo,
+  offsetX,
+  dragged,
 }: {
   artwork: Artwork;
   selected: boolean;
   onSelect?: (id: string) => void;
+  // In walk mode a click walks up to the artwork instead of just selecting
+  // it: stand 2.2 m in front of it, facing it. The click still selects the
+  // artwork, so its details stay visible in the inspector / info card.
+  walkable?: boolean;
+  onWalkTo?: (point: Vector3, yaw: number) => void;
+  offsetX?: number;
+  dragged?: React.RefObject<boolean>;
 }) {
   const [x, y, z] = artwork.position;
   return (
@@ -198,6 +209,15 @@ function ArtworkFrame({
       scale={artwork.scale}
       onClick={(event) => {
         event.stopPropagation();
+        if (dragged?.current) return;
+        if (walkable && onWalkTo) {
+          const nx = Math.sin(artwork.rotation);
+          const nz = Math.cos(artwork.rotation);
+          onWalkTo(
+            new Vector3((offsetX ?? 0) + x + nx * 2.2, 0, z + nz * 2.2),
+            Math.atan2(nx, nz),
+          );
+        }
         onSelect?.(artwork.id);
       }}
     >
@@ -607,6 +627,8 @@ function GalleryRoom({
   onSelect,
   walkable,
   onFloorClick,
+  onWalkTo,
+  dragged,
   leftOpening,
   rightOpening,
   entrance,
@@ -618,6 +640,8 @@ function GalleryRoom({
   onSelect?: (id: string) => void;
   walkable: boolean;
   onFloorClick?: (point: Vector3) => void;
+  onWalkTo?: (point: Vector3, yaw: number) => void;
+  dragged?: React.RefObject<boolean>;
   leftOpening: "door" | "window" | "none" | "solid";
   rightOpening: "door" | "window" | "solid";
   entrance: boolean;
@@ -650,9 +674,13 @@ function GalleryRoom({
           artwork={artwork}
           selected={artwork.id === selectedId}
           onSelect={onSelect}
+          walkable={walkable}
+          onWalkTo={onWalkTo}
+          offsetX={offsetX}
+          dragged={dragged}
         />
       )),
-    [artworks, onSelect, selectedId],
+    [artworks, dragged, offsetX, onSelect, onWalkTo, selectedId, walkable],
   );
 
   return (
@@ -665,7 +693,7 @@ function GalleryRoom({
         position={[0, -0.09, roomDepthCenter]}
         receiveShadow
         onClick={(event) => {
-          if (!walkable) return;
+          if (!walkable || dragged?.current) return;
           event.stopPropagation();
           onFloorClick?.(event.point);
         }}
@@ -769,6 +797,8 @@ function WalkControls({
   offsets,
   input,
   destination,
+  lookYaw,
+  dragged,
   enabled,
   onRoomChange,
 }: {
@@ -777,6 +807,12 @@ function WalkControls({
   offsets: number[];
   input: React.RefObject<Set<string>>;
   destination: React.RefObject<Vector3 | null>;
+  // Yaw to face once the destination is reached (e.g. an artwork just
+  // clicked): the camera turns toward it while walking.
+  lookYaw: React.RefObject<number | null>;
+  // Set while the pointer drags (look around): a drag must not also count
+  // as a click-to-walk on the floor or an artwork.
+  dragged: React.RefObject<boolean>;
   enabled: boolean;
   onRoomChange?: (id: string) => void;
 }) {
@@ -787,6 +823,7 @@ function WalkControls({
   const velocity = useRef(new Vector3());
   const direction = useRef(new Vector3());
   const right = useRef(new Vector3());
+  const stuckTime = useRef(0);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -835,15 +872,23 @@ function WalkControls({
     let pointerId: number | undefined;
     let lastX = 0;
     let lastY = 0;
+    let downX = 0;
+    let downY = 0;
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
       pointerId = event.pointerId;
       lastX = event.clientX;
       lastY = event.clientY;
+      downX = event.clientX;
+      downY = event.clientY;
+      dragged.current = false;
       gl.domElement.setPointerCapture(pointerId);
     };
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
+      if (Math.abs(event.clientX - downX) > 6 || Math.abs(event.clientY - downY) > 6) {
+        dragged.current = true;
+      }
       camera.rotation.order = "YXZ";
       camera.rotation.y -= (event.clientX - lastX) * 0.004;
       camera.rotation.x = MathUtils.clamp(camera.rotation.x - (event.clientY - lastY) * 0.004, -1.35, 1.35);
@@ -864,7 +909,7 @@ function WalkControls({
       gl.domElement.removeEventListener("pointerup", onPointerUp);
       gl.domElement.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [camera, enabled, gl, input]);
+  }, [camera, dragged, enabled, gl, input]);
 
   useFrame((_, delta) => {
     if (!enabled) return;
@@ -876,6 +921,7 @@ function WalkControls({
 
     if (forwardInput || sideInput) {
       destination.current = null;
+      lookYaw.current = null;
       direction.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
       direction.current.y = 0;
       direction.current.normalize();
@@ -888,12 +934,23 @@ function WalkControls({
       direction.current.set(destinationPoint.x - camera.position.x, 0, destinationPoint.z - camera.position.z);
       if (direction.current.length() < 0.2) {
         destination.current = null;
+        lookYaw.current = null;
         return;
       }
       direction.current.normalize();
       velocity.current.copy(direction.current);
+      // Turn to face the destination (e.g. the artwork just clicked) while
+      // walking toward it.
+      if (lookYaw.current !== null) {
+        const step = Math.min(delta, 0.05) * 2.5;
+        let diff = lookYaw.current - camera.rotation.y;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        camera.rotation.y += MathUtils.clamp(diff, -step, step);
+      }
     }
     velocity.current.multiplyScalar(Math.min(delta, 0.05) * 4);
+    const startX = camera.position.x;
+    const startZ = camera.position.z;
 
     const roomIndex = currentRoomIndex.current;
     const room = rooms[roomIndex];
@@ -938,12 +995,28 @@ function WalkControls({
       camera.position.x = offsets[nextIndex] + (nextX < leftEdge ? 1 : -1) * (nextWidth / 2 - 3);
       camera.rotation.set(0, 0, 0);
       destination.current = null;
+      lookYaw.current = null;
       currentRoomIndex.current = nextIndex;
       handledRoomId.current = rooms[nextIndex].id;
       onRoomChange?.(rooms[nextIndex].id);
       return;
     }
     camera.position.x = MathUtils.clamp(nextX, leftEdge, rightEdge);
+
+    // Give up on a destination the visitor cannot reach (blocked by a wall):
+    // otherwise the camera would keep pushing against it forever.
+    if (destination.current) {
+      if (Math.abs(camera.position.x - startX) < 0.001 && Math.abs(camera.position.z - startZ) < 0.001) {
+        stuckTime.current += delta;
+        if (stuckTime.current > 1.5) {
+          destination.current = null;
+          lookYaw.current = null;
+          stuckTime.current = 0;
+        }
+      } else {
+        stuckTime.current = 0;
+      }
+    }
   });
 
   return null;
@@ -1045,6 +1118,8 @@ export default function GalleryScene({
   const artworkRooms = walkMode ? sceneRooms : [room];
   const artworkOffsets = walkMode ? offsets : [0];
   const destination = useRef<Vector3 | null>(null);
+  const lookYaw = useRef<number | null>(null);
+  const dragged = useRef(false);
   const artworkNodes = artworkRooms.map((sceneRoom, index) => (
     <GalleryRoom
       key={sceneRoom.id}
@@ -1056,8 +1131,14 @@ export default function GalleryScene({
       walkable={walkMode && walking === true && sceneRoom.id === (activeRoomId ?? room.id)}
       onFloorClick={walkMode ? (point) => {
         destination.current = new Vector3(point.x, 0, point.z);
+        lookYaw.current = null;
         onFloorClick?.(point);
       } : undefined}
+      onWalkTo={walkMode ? (point, yaw) => {
+        destination.current = point;
+        lookYaw.current = yaw;
+      } : undefined}
+      dragged={dragged}
       // In walk mode the visitor stays inside: shared walls keep the single
       // door wall (no doubled wall, so no z-fighting), the outer ends are
       // solid and the front stays closed, so no void or box exterior is
@@ -1089,7 +1170,7 @@ export default function GalleryScene({
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}
         {walkMode && input ? (
-          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} enabled={walking ?? false} onRoomChange={onRoomChange} />
+          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} />
         ) : (
           <OrbitControls
             makeDefault

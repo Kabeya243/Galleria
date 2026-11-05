@@ -791,6 +791,15 @@ function GalleryRoom({
   );
 }
 
+// Live walk-mode state, written by WalkControls every frame when a debug
+// ref is provided (only used with ?debug=walk on the public exhibition).
+export type WalkDebugState = {
+  enabled: boolean;
+  keys: string[];
+  destination: [number, number, number] | null;
+  camera: [number, number, number] | null;
+};
+
 function WalkControls({
   rooms,
   activeRoomId,
@@ -801,6 +810,7 @@ function WalkControls({
   dragged,
   enabled,
   onRoomChange,
+  debugState,
 }: {
   rooms: GalleryRoom[];
   activeRoomId: string;
@@ -815,6 +825,7 @@ function WalkControls({
   dragged: React.RefObject<boolean>;
   enabled: boolean;
   onRoomChange?: (id: string) => void;
+  debugState?: React.RefObject<WalkDebugState | null>;
 }) {
   const { camera, gl } = useThree();
   const currentRoomIndex = useRef(Math.max(0, rooms.findIndex((room) => room.id === activeRoomId)));
@@ -912,6 +923,16 @@ function WalkControls({
   }, [camera, dragged, enabled, gl, input]);
 
   useFrame((_, delta) => {
+    if (debugState) {
+      debugState.current = {
+        enabled,
+        keys: [...input.current],
+        destination: destination.current
+          ? [destination.current.x, destination.current.y, destination.current.z]
+          : null,
+        camera: [camera.position.x, camera.position.y, camera.position.z],
+      };
+    }
     if (!enabled) return;
     const keys = input.current;
     const forwardInput = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
@@ -1083,6 +1104,7 @@ export default function GalleryScene({
   onFloorClick,
   walking,
   interior = false,
+  debugState,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -1096,6 +1118,7 @@ export default function GalleryScene({
   input?: React.RefObject<Set<string>>;
   onFloorClick?: (point: Vector3) => void;
   walking?: boolean;
+  debugState?: React.RefObject<WalkDebugState | null>;
   // Interior view: the camera starts inside the room and orbits from within,
   // so the visitor arrives directly in the gallery instead of looking at a
   // closed box from outside. The exterior (garden, doors, buildings) is a
@@ -1172,7 +1195,7 @@ export default function GalleryScene({
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}
         {walkMode && input ? (
-          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} />
+          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} debugState={debugState} />
         ) : (
           <OrbitControls
             makeDefault

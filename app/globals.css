@@ -313,6 +313,7 @@ button { color: inherit; }
 .exhibition-loader .loader-bar { width: min(320px, 72vw); height: 8px; border: 2px solid var(--ink); background: var(--surface); }
 .exhibition-loader .loader-bar span { display: block; height: 100%; background: #d7ff32; transition: width 0.2s ease; }
 .exhibition-loader p { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; }
+.walk-debug-panel { position: absolute; z-index: 100; top: 8px; left: 8px; max-width: 94vw; padding: 8px 10px; background: rgba(255,255,255,0.94); color: #111; font: 11px/1.6 monospace; white-space: pre-wrap; pointer-events: none; }
 .public-gallery-canvas { position: absolute; inset: 0; }
 .public-gallery-canvas.is-walking canvas { cursor: crosshair; }
 .public-topbar { position: absolute; z-index: 2; top: 0; left: 0; right: 0; height: 67px; display: flex; align-items: center; justify-content: space-between; padding: 0 29px; border-bottom: 1px solid var(--border); background: var(--surface); backdrop-filter: blur(8px); }

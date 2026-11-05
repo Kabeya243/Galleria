@@ -313,7 +313,7 @@ export default async function AdminRoute({
             <span className="ad-stat-label">Total visits</span>
             <strong className="ad-stat-value">{views}</strong>
             <span className="ad-stat-delta ad-delta-flat">All exhibitions, all time</span>
-            <span className="ad-stat-note">No daily visit history yet — visits are counted as a total only</span>
+            <span className="ad-stat-note">Total only — no daily breakdown yet</span>
           </div>
         </div>
 

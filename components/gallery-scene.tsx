@@ -15,45 +15,131 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
   const context = canvas.getContext("2d");
   if (!context) return undefined;
 
-  context.fillStyle = "#eeeeeb";
-  context.fillRect(0, 0, 256, 256);
-  if (style === "brick") {
-    context.fillStyle = "#a9a49c";
-    for (let row = 0; row < 8; row += 1) {
-      const y = row * 32;
-      context.fillRect(0, y, 256, 3);
-      const offset = row % 2 ? -32 : 0;
-      for (let x = offset; x < 256; x += 64) context.fillRect(x, y, 3, 32);
-    }
-  } else if (style === "wood") {
-    context.fillStyle = "#a9a49c";
-    for (let y = 0; y < 256; y += 64) {
-      context.fillRect(0, y, 256, 2);
-      for (let x = (y / 64 % 2) * 64; x < 256; x += 128) context.fillRect(x, y, 2, 64);
-      context.strokeStyle = "#d0ccc4";
-      context.beginPath();
-      context.moveTo(0, y + 18);
-      context.bezierCurveTo(72, y + 12, 144, y + 25, 256, y + 16);
-      context.stroke();
-    }
-  } else {
-    let seed = style === "concrete" ? 41 : 13;
-    for (let i = 0; i < (style === "concrete" ? 950 : 420); i += 1) {
-      seed = (seed * 16807) % 2147483647;
-      const x = seed % 256;
-      seed = (seed * 16807) % 2147483647;
-      const y = seed % 256;
-      const shade = style === "concrete" ? 145 + (seed % 70) : 190 + (seed % 50);
-      context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${style === "concrete" ? 0.24 : 0.14})`;
-      context.fillRect(x, y, style === "concrete" ? 2 : 1, style === "concrete" ? 2 : 1);
-    }
-  }
-
+  // The map is multiplied by the material colour, so patterns are drawn in
+  // near-white with dark lines: the colour tints the surface and the dark
+  // joints, seams and veins stay dark, so each finish reads at a glance —
+  // including from outside the room, where the same materials face out.
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
-  texture.repeat.set(2, 2);
+
+  if (style === "brick") {
+    context.fillStyle = "#f7f2e8";
+    context.fillRect(0, 0, 256, 256);
+    for (let row = 0; row < 8; row += 1) {
+      const y = row * 32;
+      const offset = row % 2 ? -32 : 0;
+      for (let x = offset; x < 256; x += 64) {
+        const shade = 236 + ((row * 7 + x) % 3) * 5;
+        context.fillStyle = `rgb(${shade}, ${shade - 4}, ${shade - 12})`;
+        context.fillRect(x + 2, y + 2, 60, 28);
+      }
+    }
+    context.fillStyle = "#453831";
+    for (let row = 0; row <= 8; row += 1) context.fillRect(0, row * 32 - 1, 256, 3);
+    for (let row = 0; row < 8; row += 1) {
+      const offset = row % 2 ? -32 : 0;
+      for (let x = offset; x <= 256; x += 64) context.fillRect(x - 1, row * 32, 3, 32);
+    }
+    texture.repeat.set(6, 3);
+  } else if (style === "wood") {
+    context.fillStyle = "#f8f2e2";
+    context.fillRect(0, 0, 256, 256);
+    for (let plank = 0; plank < 8; plank += 1) {
+      const y = plank * 32;
+      const tone = 232 + (plank % 3) * 8;
+      context.fillStyle = `rgb(${tone}, ${tone - 8}, ${tone - 26})`;
+      context.fillRect(0, y + 2, 256, 28);
+      context.strokeStyle = "rgba(122, 102, 70, 0.5)";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(0, y + 12 + (plank % 3) * 4);
+      context.bezierCurveTo(80, y + 8, 170, y + 18, 256, y + 12);
+      context.stroke();
+    }
+    context.fillStyle = "#6f5b3f";
+    for (let plank = 0; plank <= 8; plank += 1) context.fillRect(0, plank * 32 - 1, 256, 2);
+    for (let plank = 0; plank < 8; plank += 1) {
+      context.fillRect(plank % 2 ? 170 : 85, plank * 32, 2, 32);
+    }
+    texture.repeat.set(6, 4);
+  } else if (style === "concrete") {
+    context.fillStyle = "#f4f1ea";
+    context.fillRect(0, 0, 256, 256);
+    // Board-formed concrete: a 2 x 2 grid of formwork panels with joints
+    // and tie holes, the signature of the reference room.
+    context.fillStyle = "#6b655a";
+    context.fillRect(0, 127, 256, 3);
+    context.fillRect(127, 0, 3, 256);
+    context.fillStyle = "#57524a";
+    for (const cx of [32, 96, 160, 224]) {
+      for (const cy of [32, 96, 160, 224]) {
+        context.beginPath();
+        context.arc(cx, cy, 4, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+    let seed = 41;
+    for (let i = 0; i < 950; i += 1) {
+      seed = (seed * 16807) % 2147483647;
+      const x = seed % 256;
+      seed = (seed * 16807) % 2147483647;
+      const y = seed % 256;
+      const shade = 150 + (seed % 70);
+      context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, 0.22)`;
+      context.fillRect(x, y, 2, 2);
+    }
+    texture.repeat.set(4, 2);
+  } else if (style === "marble") {
+    context.fillStyle = "#fbfaf6";
+    context.fillRect(0, 0, 256, 256);
+    let seed = 97;
+    for (let i = 0; i < 9; i += 1) {
+      seed = (seed * 16807) % 2147483647;
+      const startX = seed % 256;
+      seed = (seed * 16807) % 2147483647;
+      const startY = seed % 256;
+      seed = (seed * 16807) % 2147483647;
+      const drift = (seed % 120) - 60;
+      context.strokeStyle = i % 3 === 0 ? "rgba(125, 119, 107, 0.75)" : "rgba(164, 158, 146, 0.55)";
+      context.lineWidth = i % 3 === 0 ? 1.6 : 1;
+      context.beginPath();
+      context.moveTo(startX, startY);
+      context.bezierCurveTo(startX + drift, startY + 80, startX - drift, startY + 160, startX + drift / 2, 256);
+      context.stroke();
+    }
+    texture.repeat.set(2, 2);
+  } else if (style === "stone") {
+    context.fillStyle = "#f3f0e8";
+    context.fillRect(0, 0, 256, 256);
+    for (let ty = 0; ty < 2; ty += 1) {
+      for (let tx = 0; tx < 2; tx += 1) {
+        const shade = 238 + ((tx + ty) % 2) * 6;
+        context.fillStyle = `rgb(${shade}, ${shade - 3}, ${shade - 10})`;
+        context.fillRect(tx * 128 + 2, ty * 128 + 2, 124, 124);
+      }
+    }
+    context.fillStyle = "#b3ac9c";
+    context.fillRect(0, 127, 256, 3);
+    context.fillRect(127, 0, 3, 256);
+    texture.repeat.set(4, 3);
+  } else {
+    context.fillStyle = "#f6f3ec";
+    context.fillRect(0, 0, 256, 256);
+    let seed = 13;
+    for (let i = 0; i < 420; i += 1) {
+      seed = (seed * 16807) % 2147483647;
+      const x = seed % 256;
+      seed = (seed * 16807) % 2147483647;
+      const y = seed % 256;
+      const shade = 190 + (seed % 50);
+      context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, 0.14)`;
+      context.fillRect(x, y, 1, 1);
+    }
+    texture.repeat.set(2, 2);
+  }
+
   return texture;
 }
 
@@ -231,6 +317,288 @@ function WallWithOpening({
   );
 }
 
+// Built-in furniture of each reference room, derived from the layout only
+// (nothing stored per exhibition). Suspended panels, plinths and rails live
+// inside the room; the curved wall itself is built in GalleryRoom because
+// it replaces the front wall.
+function RoomFeatures({
+  layout,
+  width,
+  depth,
+  height,
+}: {
+  layout: string;
+  width: number;
+  depth: number;
+  height: number;
+}) {
+  if (layout === "cube") {
+    // Ceiling track rails running the depth of the room, with spot heads.
+    return (
+      <group>
+        {[-4.5, 0, 4.5].map((x) => (
+          <group key={x}>
+            <mesh position={[x, height - 0.35, 0]}>
+              <boxGeometry args={[0.07, 0.07, depth - 1]} />
+              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+            </mesh>
+            {[-depth / 4, 0, depth / 4].map((z) => (
+              <mesh key={z} position={[x, height - 0.45, z]}>
+                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "grand-hall") {
+    // Three white panels suspended from the ceiling by thin rods, plus two
+    // plinths carrying dark abstract figures.
+    return (
+      <group>
+        {[-7, 0, 7].map((x) => (
+          <group key={x}>
+            <mesh position={[x, 2.6, -1]}>
+              <boxGeometry args={[3.2, 3.0, 0.12]} />
+              <meshStandardMaterial color="#f8f6f0" roughness={0.85} />
+            </mesh>
+            {[-1.3, 1.3].map((dx) => (
+              <mesh key={dx} position={[x + dx, (height + 4.1) / 2, -1]}>
+                <cylinderGeometry args={[0.02, 0.02, height - 4.1, 6]} />
+                <meshStandardMaterial color="#555550" roughness={0.5} metalness={0.5} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+        {[-4, 4].map((x) => (
+          <group key={x} position={[x, 0, 2.5]}>
+            <mesh position={[0, 0.55, 0]}>
+              <boxGeometry args={[0.9, 1.1, 0.9]} />
+              <meshStandardMaterial color="#f2efe8" roughness={0.85} />
+            </mesh>
+            <mesh position={[0, 1.55, 0]}>
+              <capsuleGeometry args={[0.16, 0.7, 6, 12]} />
+              <meshStandardMaterial color="#33332f" roughness={0.4} metalness={0.2} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "black-panels") {
+    // Tall black panels suspended by rods, each carrying a framed
+    // black-and-white photograph.
+    return (
+      <group>
+        {[-5.5, 0, 5.5].map((x) => (
+          <group key={x}>
+            <mesh position={[x, 2.7, -1.5]}>
+              <boxGeometry args={[2.2, 3.4, 0.14]} />
+              <meshStandardMaterial color="#101010" roughness={0.85} />
+            </mesh>
+            <mesh position={[x, 2.7, -1.42]}>
+              <planeGeometry args={[1.7, 2.6]} />
+              <meshStandardMaterial color="#d8d5cc" roughness={0.9} />
+            </mesh>
+            <mesh position={[x, 2.9, -1.41]}>
+              <circleGeometry args={[0.5, 32]} />
+              <meshStandardMaterial color="#1c1c1a" roughness={0.9} />
+            </mesh>
+            {[-0.8, 0.8].map((dx) => (
+              <mesh key={dx} position={[x + dx, (height + 4.4) / 2, -1.5]}>
+                <cylinderGeometry args={[0.02, 0.02, height - 4.4, 6]} />
+                <meshStandardMaterial color="#444440" roughness={0.5} metalness={0.5} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "raw-concrete") {
+    // Seven freestanding black-framed panels in a staggered (quincunx) row.
+    const panels: [number, number][] = [[-6, -3], [0, -3], [6, -3], [-3, 0], [3, 0], [-6, 3], [6, 3]];
+    return (
+      <group>
+        {panels.map(([x, z], index) => (
+          <group key={index} position={[x, 0, z]}>
+            <mesh position={[0, 1.35, 0]}>
+              <boxGeometry args={[1.7, 2.5, 0.1]} />
+              <meshStandardMaterial color="#171716" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 1.35, 0.06]}>
+              <planeGeometry args={[1.5, 2.3]} />
+              <meshStandardMaterial color="#e8e6e0" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, 1.5, 0.07]}>
+              <circleGeometry args={[0.45, 32]} />
+              <meshStandardMaterial color="#232320" roughness={0.9} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "parquet-portraits") {
+    // Ceiling track rails with spot heads, as in the reference room.
+    return (
+      <group>
+        {[-3.5, 3.5].map((x) => (
+          <group key={x}>
+            <mesh position={[x, height - 0.35, 0]}>
+              <boxGeometry args={[0.07, 0.07, depth - 1]} />
+              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+            </mesh>
+            {[-depth / 4, 0, depth / 4].map((z) => (
+              <mesh key={z} position={[x, height - 0.45, z]}>
+                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "curved-wall") {
+    // Seven hanging spots along the arc of the curved front wall.
+    const curveRadius = 40;
+    const halfAngle = Math.asin(Math.min(0.95, width / 2 / curveRadius));
+    const centerZ = depth / 2 - curveRadius * Math.cos(halfAngle);
+    const tones = ["#8a9b88", "#bb8365", "#8796a9", "#a89a7a", "#7d8a99", "#b0855b", "#94a08e"];
+    return (
+      <group>
+        {Array.from({ length: 7 }, (_, index) => {
+          const theta = -halfAngle * 0.75 + (index * (halfAngle * 1.5)) / 6;
+          const r = curveRadius - 0.15;
+          const x = r * Math.sin(theta);
+          const z = centerZ + r * Math.cos(theta);
+          return (
+            <group key={index} position={[x, 2.3, z]} rotation={[0, theta + Math.PI, 0]}>
+              <mesh>
+                <boxGeometry args={[1.5, 1.9, 0.1]} />
+                <meshStandardMaterial color="#c5b7a3" roughness={0.85} />
+              </mesh>
+              <mesh position={[0, 0, 0.06]}>
+                <planeGeometry args={[1.3, 1.7]} />
+                <meshStandardMaterial color={tones[index]} roughness={0.9} />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+    );
+  }
+  if (layout === "marble-sculpture") {
+    // Bronze figures on black and white plinths.
+    return (
+      <group>
+        {[
+          { x: -4, z: -1, plinth: "#171716" },
+          { x: 0, z: 1.5, plinth: "#f2efe8" },
+          { x: 4, z: -2, plinth: "#171716" },
+        ].map(({ x, z, plinth }) => (
+          <group key={`${x}-${z}`} position={[x, 0, z]}>
+            <mesh position={[0, 0.6, 0]}>
+              <boxGeometry args={[0.9, 1.2, 0.9]} />
+              <meshStandardMaterial color={plinth} roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 1.75, 0]}>
+              <cylinderGeometry args={[0.12, 0.22, 1.1, 16]} />
+              <meshStandardMaterial color="#6b5433" roughness={0.45} metalness={0.6} />
+            </mesh>
+            <mesh position={[0, 2.44, 0]}>
+              <sphereGeometry args={[0.15, 20, 16]} />
+              <meshStandardMaterial color="#6b5433" roughness={0.45} metalness={0.6} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "quiet-minimal") {
+    // A single wooden bench and ceiling track rails, nothing else.
+    return (
+      <group>
+        <mesh position={[0, 0.45, 0]}>
+          <boxGeometry args={[2.2, 0.12, 0.7]} />
+          <meshStandardMaterial color="#8a6a45" roughness={0.8} />
+        </mesh>
+        {[-0.9, 0.9].map((x) => (
+          <mesh key={x} position={[x, 0.21, 0]}>
+            <boxGeometry args={[0.08, 0.42, 0.6]} />
+            <meshStandardMaterial color="#6b4f33" roughness={0.8} />
+          </mesh>
+        ))}
+        {[-3, 3].map((x) => (
+          <group key={x}>
+            <mesh position={[x, height - 0.35, 0]}>
+              <boxGeometry args={[0.07, 0.07, depth - 1]} />
+              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+            </mesh>
+            {[-depth / 4, 0, depth / 4].map((z) => (
+              <mesh key={z} position={[x, height - 0.45, z]}>
+                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "pop-brick") {
+    // Three loud colour accents on the back wall.
+    return (
+      <group>
+        {[
+          { x: -4, color: "#ff4d2e" },
+          { x: 0, color: "#f5c518" },
+          { x: 4, color: "#2e6fb0" },
+        ].map(({ x, color }) => (
+          <mesh key={x} position={[x, 2.4, -depth / 2 + 0.16]}>
+            <planeGeometry args={[2.2, 2.6]} />
+            <meshStandardMaterial color={color} roughness={0.85} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (layout === "totem-studio") {
+    // Works suspended from the ceiling by thin cables, plus two plinths.
+    return (
+      <group>
+        {[
+          { x: -5, z: -2 },
+          { x: 0, z: 0.5 },
+          { x: 5, z: -2 },
+          { x: -2.5, z: 2.5 },
+        ].map(({ x, z }, index) => (
+          <group key={index} position={[x, 0, z]}>
+            <mesh position={[0, 2.2, 0]}>
+              <boxGeometry args={[1.3, 1.6, 0.08]} />
+              <meshStandardMaterial color={["#8a9b88", "#bb8365", "#8796a9", "#a89a7a"][index]} roughness={0.9} />
+            </mesh>
+            <mesh position={[0, (height + 3.0) / 2, 0]}>
+              <cylinderGeometry args={[0.015, 0.015, height - 3.0, 6]} />
+              <meshStandardMaterial color="#555550" roughness={0.5} metalness={0.5} />
+            </mesh>
+          </group>
+        ))}
+        {[-6, 6].map((x) => (
+          <mesh key={x} position={[x, 0.5, 3]}>
+            <boxGeometry args={[0.9, 1.0, 0.9]} />
+            <meshStandardMaterial color="#f2efe8" roughness={0.85} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  return null;
+}
+
 function GalleryRoom({
   room,
   offsetX,
@@ -256,6 +624,16 @@ function GalleryRoom({
 }) {
   const { width, depth, height } = roomLayouts[room.layout];
   const wallZ = -depth / 2;
+  // The curved room's front wall is a real arc, not a flat box face: it
+  // bulges toward the viewer, so the curve reads from the outside orbit
+  // view as well as from inside. Floor and ceiling extend to cover it.
+  const isCurved = room.layout === "curved-wall";
+  const curveRadius = 40;
+  const curveHalfAngle = Math.asin(Math.min(0.95, width / 2 / curveRadius));
+  const curveSagitta = curveRadius - curveRadius * Math.cos(curveHalfAngle);
+  const curveCenterZ = depth / 2 - curveRadius * Math.cos(curveHalfAngle);
+  const roomDepth = isCurved ? depth + curveSagitta : depth;
+  const roomDepthCenter = isCurved ? curveSagitta / 2 : 0;
   const wallTexture = useMemo(() => createSurfaceTexture(room.wallTexture), [room.wallTexture]);
   const floorTexture = useMemo(() => createSurfaceTexture(room.floorTexture), [room.floorTexture]);
   const ceilingTexture = useMemo(() => createSurfaceTexture(room.ceilingTexture), [room.ceilingTexture]);
@@ -279,13 +657,12 @@ function GalleryRoom({
 
   return (
     <group position={[offsetX, 0, 0]}>
-      <mesh position={[0, height - 0.12, 0]} receiveShadow>
-        <boxGeometry args={[width, 0.24, depth]} />
+      <mesh position={[0, height - 0.12, roomDepthCenter]} receiveShadow>
+        <boxGeometry args={[width, 0.24, roomDepth]} />
         <meshStandardMaterial color={room.ceilingColor} map={ceilingTexture} roughness={0.9} />
       </mesh>
       <mesh
-        position={[0, -0.08, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.09, roomDepthCenter]}
         receiveShadow
         onClick={(event) => {
           if (!walkable) return;
@@ -293,8 +670,13 @@ function GalleryRoom({
           onFloorClick?.(event.point);
         }}
       >
-        <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color={room.floorColor} map={floorTexture} roughness={0.9} />
+        <boxGeometry args={[width, 0.18, roomDepth]} />
+        <meshStandardMaterial attach="material-0" color={room.floorColor} roughness={0.9} />
+        <meshStandardMaterial attach="material-1" color={room.floorColor} roughness={0.9} />
+        <meshStandardMaterial attach="material-2" color={room.floorColor} map={floorTexture} roughness={0.9} />
+        <meshStandardMaterial attach="material-3" color={room.floorColor} roughness={0.9} />
+        <meshStandardMaterial attach="material-4" color={room.floorColor} roughness={0.9} />
+        <meshStandardMaterial attach="material-5" color={room.floorColor} roughness={0.9} />
       </mesh>
       <mesh position={[0, height / 2, wallZ]} receiveShadow>
         <boxGeometry args={[width, height, 0.25]} />
@@ -316,7 +698,12 @@ function GalleryRoom({
         texture={wallTexture}
         opening={rightOpening}
       />
-      {entrance ? (
+      {isCurved ? (
+        <mesh position={[0, height / 2, curveCenterZ]} receiveShadow>
+          <cylinderGeometry args={[curveRadius, curveRadius, height, 64, 1, true, -curveHalfAngle, curveHalfAngle * 2]} />
+          <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} side={DoubleSide} />
+        </mesh>
+      ) : entrance ? (
         <group position={[0, 0, depth / 2]}>
           <mesh position={[-(width + 1.65) / 4, height / 2, 0]} receiveShadow>
             <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
@@ -370,6 +757,7 @@ function GalleryRoom({
           </Text>
         </group>
       )}
+      <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} />
       {artworkNodes}
     </group>
   );

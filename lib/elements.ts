@@ -135,14 +135,14 @@ export const ELEMENT_DEFAULTS: Record<ElementType, ElementDefaults> = {
   bench: { label: "Long bench", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
   table: { label: "Table", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
   door: { label: "Door", color: "#8a6a45", length: 1, y: 0, wallOffset: 0.15 },
-  window: { label: "Window", color: "#f5f2eb", length: 1, y: 1.8, wallOffset: 0.08 },
-  "wall-text": { label: "Wall text", color: "#f5f2eb", length: 4, y: 2.2, wallOffset: 0.06 },
+  window: { label: "Window", color: "#f5f2eb", length: 1, y: 1.8, wallOffset: 0.16 },
+  "wall-text": { label: "Wall text", color: "#f5f2eb", length: 4, y: 2.2, wallOffset: 0.16 },
   plinth: { label: "Plinth", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
   vitrine: { label: "Display case", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
   "track-light": { label: "Track light", color: "#fff0d6", length: 3, y: 0, wallOffset: 0 },
   shelf: { label: "Display shelf", color: "#f5f2eb", length: 2, y: 1.7, wallOffset: 0.2 },
   desk: { label: "Desk & chair", color: "#8a6a45", length: 1, y: 0, wallOffset: 0 },
-  curtain: { label: "Sheer curtain", color: "#ffffff", length: 2.4, y: 0, wallOffset: 0.12 },
+  curtain: { label: "Sheer curtain", color: "#ffffff", length: 2.4, y: 0, wallOffset: 0.16 },
 };
 
 // A new element, placed sensibly for its type: floor pieces near the

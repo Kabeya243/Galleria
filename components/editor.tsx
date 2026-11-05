@@ -3,66 +3,56 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AppWindow,
-  Armchair,
   ArrowLeft,
   ArrowRight,
-  Blinds,
-  Box,
-  BrickWall,
   Check,
   ChevronDown,
   CircleHelp,
   Copy,
-  DoorOpen,
   Expand,
   Eye,
   Footprints,
   Grid2X2,
-  Image,
   Info,
-  Lamp,
-  Layers,
   Lightbulb,
   Minus,
-  Monitor,
   Move,
   Paintbrush,
-  PanelsTopLeft,
   Plus,
-  RectangleHorizontal,
+  Redo2,
   RotateCw,
   Save,
   Settings2,
   Sparkles,
-  Table,
   Trash2,
-  Type,
   Undo2,
   Upload,
 } from "lucide-react";
+import ElementThumbnail from "@/components/element-thumbnail";
 import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameVariant } from "@/lib/demo-data";
 import { FRAME_VARIANTS } from "@/lib/demo-data";
-import { createElement, ELEMENT_DEFAULTS, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
+import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, lightTypes, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 
-// The Elements palette: every placeable object, with its icon.
-const ELEMENT_PALETTE: { type: ElementType; label: string; icon: typeof BrickWall }[] = [
-  { type: "partition", label: "Partition wall", icon: BrickWall },
-  { type: "chair", label: "Chair", icon: Armchair },
-  { type: "bench", label: "Long bench", icon: RectangleHorizontal },
-  { type: "table", label: "Table", icon: Table },
-  { type: "door", label: "Door", icon: DoorOpen },
-  { type: "window", label: "Window", icon: AppWindow },
-  { type: "wall-text", label: "Wall text", icon: Type },
-  { type: "plinth", label: "Plinth", icon: Box },
-  { type: "vitrine", label: "Display case", icon: Layers },
-  { type: "track-light", label: "Track light", icon: Lamp },
-  { type: "shelf", label: "Display shelf", icon: PanelsTopLeft },
-  { type: "desk", label: "Desk & chair", icon: Monitor },
-  { type: "curtain", label: "Sheer curtain", icon: Blinds },
+// The Elements palette: every placeable object. Each row shows a
+// faithful thumbnail (components/element-thumbnail.tsx) and can be
+// dragged straight into the 3D room, or clicked to add it.
+const ELEMENT_PALETTE: { type: ElementType; label: string }[] = [
+  { type: "partition", label: "Partition wall" },
+  { type: "chair", label: "Chair" },
+  { type: "bench", label: "Long bench" },
+  { type: "table", label: "Table" },
+  { type: "door", label: "Door" },
+  { type: "window", label: "Window" },
+  { type: "wall-text", label: "Wall text" },
+  { type: "plinth", label: "Plinth" },
+  { type: "vitrine", label: "Display case" },
+  { type: "track-light", label: "Track light" },
+  { type: "shelf", label: "Display shelf" },
+  { type: "desk", label: "Desk & chair" },
+  { type: "curtain", label: "Sheer curtain" },
 ];
 
 // Paint swatches for one wall (plus the colour picker for any colour).
@@ -86,12 +76,16 @@ function NumberField({
   ariaLabel,
   step,
   min,
+  onFocus,
+  onBlur,
 }: {
   value: number;
   onCommit: (next: number) => void;
   ariaLabel: string;
   step?: string;
   min?: number;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }) {
   const [text, setText] = useState(String(value));
   const focusedRef = useRef(false);
@@ -108,10 +102,12 @@ function NumberField({
       value={text}
       onFocus={() => {
         focusedRef.current = true;
+        onFocus?.();
       }}
       onBlur={() => {
         focusedRef.current = false;
         setText(String(value));
+        onBlur?.();
       }}
       onChange={(event) => {
         const nextText = event.target.value;
@@ -147,7 +143,17 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   // Two-step inline confirm for removing a room (see removeRoom).
   const [confirmingRemoveRoom, setConfirmingRemoveRoom] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
-  const historyRef = useRef<Artwork[][]>([]);
+  // Undo history: full editor snapshots (artworks + rooms + title +
+  // description), so Ctrl+Z covers artworks, elements and room settings
+  // alike. One snapshot per discrete action — never per keystroke (see
+  // beginEdit/endEdit below).
+  type EditorSnapshot = { artworks: Artwork[]; rooms: GalleryRoom[]; title: string; description: string };
+  const historyRef = useRef<{ past: EditorSnapshot[]; future: EditorSnapshot[] }>({ past: [], future: [] });
+  const [, setHistoryTick] = useState(0);
+  const latestRef = useRef({ artworks, rooms, title, description });
+  useEffect(() => {
+    latestRef.current = { artworks, rooms, title, description };
+  });
 
   useEffect(() => {
     let active = true;
@@ -164,7 +170,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
         setArtworks(result.exhibition.artworks);
         setRooms(result.exhibition.rooms);
         setActiveRoomId(result.exhibition.rooms[0]?.id ?? "");
-        historyRef.current = [];
+        historyRef.current = { past: [], future: [] };
         setSelectedId(result.exhibition.artworks.find((artwork: Artwork) => artwork.roomId === result.exhibition.rooms[0]?.id)?.id);
         setTitle(result.exhibition.title);
         setDescription(result.exhibition.description);
@@ -190,16 +196,111 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const activeRoom = rooms.find((room) => room.id === activeRoomId) ?? rooms[0];
   const currentArtworks = artworks.filter((artwork) => artwork.roomId === activeRoom?.id);
 
-  function updateArtwork(id: string, update: (artwork: Artwork) => Artwork) {
-    historyRef.current = [...historyRef.current, artworks].slice(-30);
-    setArtworks((current) => current.map((artwork) => (artwork.id === id ? update(artwork) : artwork)));
+  function snapshot() {
+    const current = latestRef.current;
+    historyRef.current = {
+      past: [...historyRef.current.past, { artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description }].slice(-50),
+      future: [],
+    };
+    setHistoryTick((tick) => tick + 1);
+  }
+
+  function applySnapshot(next: EditorSnapshot) {
+    setArtworks(next.artworks);
+    setRooms(next.rooms);
+    setTitle(next.title);
+    setDescription(next.description);
     setSaved(false);
   }
 
-  function undoArtworkChange() {
-    const previous = historyRef.current.pop();
+  function undo() {
+    const history = historyRef.current;
+    const previous = history.past[history.past.length - 1];
     if (!previous) return;
-    setArtworks(previous);
+    const current = latestRef.current;
+    historyRef.current = {
+      past: history.past.slice(0, -1),
+      future: [{ artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description }, ...history.future],
+    };
+    applySnapshot(previous);
+    setHistoryTick((tick) => tick + 1);
+  }
+
+  function redo() {
+    const history = historyRef.current;
+    const next = history.future[0];
+    if (!next) return;
+    const current = latestRef.current;
+    historyRef.current = {
+      past: [...history.past, { artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description }],
+      future: history.future.slice(1),
+    };
+    applySnapshot(next);
+    setHistoryTick((tick) => tick + 1);
+  }
+
+  // One undo step per discrete edit: a typing session (focus to blur), a
+  // slider drag (pointer down to up) or a 3D drag snapshots once at the
+  // start, and the changes inside it never snapshot again.
+  const editSessionRef = useRef(false);
+  function beginEdit() {
+    if (editSessionRef.current) return;
+    snapshot();
+    editSessionRef.current = true;
+  }
+  function endEdit() {
+    editSessionRef.current = false;
+  }
+  // Spread onto text inputs, selects and sliders: focus starts one undo
+  // step, blur ends it. Sliders also get onPointerDown/Up.
+  const editSessionProps = { onFocus: beginEdit, onBlur: endEdit } as const;
+
+  // Which walls an artwork hangs on, from its position (within 0.4 m of
+  // the wall plane and inside its span). Near a corner several walls can
+  // match at once; the caller prefers the wall the artwork was already
+  // on, so sliding along one wall never flips it to the next.
+  function wallsForArtwork(artwork: Artwork, room: GalleryRoom): { key: string; rotation: number }[] {
+    const { width, depth } = roomLayouts[room.layout];
+    const [x, , z] = artwork.position;
+    const inset = 0.28;
+    const found: { key: string; rotation: number }[] = [];
+    // Partition walls first: they stand inside the room, so an artwork
+    // can be near both a partition and a room wall at once.
+    for (const wall of room.partitionWalls) {
+      if (wall.orientation === "horizontal") {
+        if (Math.abs(z - wall.z) > 0.45 || Math.abs(x - wall.x) > wall.length / 2 + 0.3) continue;
+        found.push({ key: `partition:${wall.id}`, rotation: z >= wall.z ? 0 : Math.PI });
+      } else {
+        if (Math.abs(x - wall.x) > 0.45 || Math.abs(z - wall.z) > wall.length / 2 + 0.3) continue;
+        found.push({ key: `partition:${wall.id}`, rotation: x >= wall.x ? Math.PI / 2 : -Math.PI / 2 });
+      }
+    }
+    if (Math.abs(z - (-depth / 2 + inset)) < 0.4 && Math.abs(x) <= width / 2) found.push({ key: "back", rotation: 0 });
+    if (Math.abs(z - (depth / 2 - inset)) < 0.4 && Math.abs(x) <= width / 2) found.push({ key: "front", rotation: Math.PI });
+    if (Math.abs(x - (-width / 2 + inset)) < 0.4 && Math.abs(z) <= depth / 2) found.push({ key: "left", rotation: Math.PI / 2 });
+    if (Math.abs(x - (width / 2 - inset)) < 0.4 && Math.abs(z) <= depth / 2) found.push({ key: "right", rotation: -Math.PI / 2 });
+    return found;
+  }
+
+  function updateArtwork(id: string, update: (artwork: Artwork) => Artwork) {
+    setArtworks((current) => current.map((artwork) => {
+      if (artwork.id !== id) return artwork;
+      const next = update(artwork);
+      // Auto-rotate: when the artwork moves onto a different wall, turn
+      // it to face that wall. A move along the same wall keeps its
+      // rotation, so a deliberate tilt is never reset.
+      const moved = next.position[0] !== artwork.position[0] || next.position[1] !== artwork.position[1] || next.position[2] !== artwork.position[2];
+      if (moved && activeRoom && artwork.roomId === activeRoom.id) {
+        const before = wallsForArtwork(artwork, activeRoom);
+        const after = wallsForArtwork(next, activeRoom);
+        const beforeKey = before[0]?.key;
+        const match = after.find((wall) => wall.key === beforeKey) ?? after[0];
+        if (match && beforeKey !== match.key) {
+          return { ...next, rotation: match.rotation };
+        }
+      }
+      return next;
+    }));
     setSaved(false);
   }
 
@@ -252,7 +353,32 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     if (!activeRoom) return;
     const number = currentElements.filter((element) => element.type === type).length;
     const element = createElement(type, roomLayouts[activeRoom.layout], number);
+    snapshot();
     updateRoom(activeRoom.id, (room) => ({ ...room, elements: [...room.elements, element] }));
+    selectElement(element.id);
+  }
+
+  // Drag and drop from the palette: the dropped element lands at the drop
+  // point in the room (on the floor, or against the back wall for wall
+  // pieces) and is selected right away. Click-to-add still works too.
+  function dropElement(type: ElementType, point: { x: number; y: number; z: number }) {
+    if (!activeRoom) return;
+    const layout = roomLayouts[activeRoom.layout];
+    const number = currentElements.filter((element) => element.type === type).length;
+    const element = createElement(type, layout, number);
+    const plane = ELEMENT_PLANES[type];
+    const y = plane === "floor"
+      ? 0
+      : plane === "ceiling"
+        ? Math.max(2.5, layout.height - 0.4)
+        : type === "window" || type === "wall-text" || type === "shelf"
+          ? Math.min(3.2, Math.max(1.0, point.y))
+          : 0;
+    snapshot();
+    updateRoom(activeRoom.id, (room) => ({
+      ...room,
+      elements: [...room.elements, { ...element, x: Math.round(point.x * 100) / 100, y, z: Math.round(point.z * 100) / 100 }],
+    }));
     selectElement(element.id);
   }
 
@@ -262,6 +388,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   function removeElementById(id: string) {
     const owner = rooms.find((room) => room.elements.some((element) => element.id === id));
     if (!owner) return;
+    snapshot();
     updateRoom(owner.id, (room) => ({
       ...room,
       elements: room.elements.filter((element) => element.id !== id),
@@ -278,6 +405,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     if (!selectedElement) return;
     const owner = rooms.find((room) => room.elements.some((element) => element.id === selectedElement.id)) ?? activeRoom;
     if (!owner) return;
+    snapshot();
     const copy: RoomElement = {
       ...selectedElement,
       id: crypto.randomUUID(),
@@ -309,6 +437,31 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedElementId, selectedId, walking, rooms]);
 
+  // Ctrl+Z / Cmd+Z undoes one real action (artworks, elements, room
+  // settings); Ctrl+Shift+Z / Ctrl+Y redoes it. Never fires while typing
+  // in a field, so the browser's own text undo keeps working there, and
+  // never while walking.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (walking) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
+      if (!event.ctrlKey && !event.metaKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        undo();
+      } else if ((key === "z" && event.shiftKey) || key === "y") {
+        event.preventDefault();
+        redo();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // undo/redo read state through refs, so they stay correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walking]);
+
   // A room switch disarms a pending room removal — the second click must
   // always remove the room the user is looking at.
   useEffect(() => { setConfirmingRemoveRoom(false); }, [activeRoomId]);
@@ -317,6 +470,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   // (or on the partition wall itself), never on the other walls.
   function paintWall(color: string) {
     if (!activeRoom || !selectedWallId) return;
+    snapshot();
     if (selectedWallId === "back" || selectedWallId === "left" || selectedWallId === "right" || selectedWallId === "front") {
       const wallId = selectedWallId as WallId;
       updateRoom(activeRoom.id, (room) => ({
@@ -333,6 +487,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
 
   function resetWallPaint() {
     if (!activeRoom || !selectedWallId) return;
+    snapshot();
     if (selectedWallId === "back" || selectedWallId === "left" || selectedWallId === "right" || selectedWallId === "front") {
       const wallId = selectedWallId as WallId;
       updateRoom(activeRoom.id, (room) => {
@@ -371,6 +526,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
 
   function moveArtwork(axis: 0 | 1, amount: number) {
     if (!selected) return;
+    snapshot();
     updateArtwork(selected.id, (artwork) => {
       const position: [number, number, number] = [...artwork.position];
       position[axis] += amount;
@@ -489,7 +645,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
       imageUrl,
       roomId: activeRoom.id,
     };
-    historyRef.current = [...historyRef.current, artworks].slice(-30);
+    snapshot();
     setArtworks((current) => [...current, artwork]);
     setSelectedId(artwork.id);
     setSaved(false);
@@ -631,7 +787,7 @@ async function compressImage(file: File): Promise<File> {
 
   function removeArtwork() {
     if (!selected) return;
-    historyRef.current = [...historyRef.current, artworks].slice(-30);
+    snapshot();
     setArtworks((current) => current.filter((artwork) => artwork.id !== selected.id));
     setSelectedId(undefined);
     setSaved(false);
@@ -645,7 +801,7 @@ async function compressImage(file: File): Promise<File> {
       title: `${selected.title} copy`.slice(0, 120),
       position: [selected.position[0] + 1.5, selected.position[1], selected.position[2]],
     };
-    historyRef.current = [...historyRef.current, artworks].slice(-30);
+    snapshot();
     setArtworks((current) => [...current, copy]);
     setSelectedId(copy.id);
     setSaved(false);
@@ -672,7 +828,6 @@ async function compressImage(file: File): Promise<File> {
     };
     setRooms((current) => current.map((room) => room.id === id ? normalizedRoom : room));
     if (updatedRoom.layout !== currentRoom.layout) {
-      historyRef.current = [...historyRef.current, artworks].slice(-30);
       setArtworks((current) => current.map((artwork) => artwork.roomId === id
         ? { ...artwork, position: [Math.max(-width / 2 + 1.5, Math.min(width / 2 - 1.5, artwork.position[0])), artwork.position[1], -depth / 2 + 0.28] }
         : artwork));
@@ -693,6 +848,7 @@ async function compressImage(file: File): Promise<File> {
 
   function addPartitionWall() {
     if (!activeRoom || activeRoom.partitionWalls.length >= 8) return;
+    snapshot();
     updateRoom(activeRoom.id, (room) => ({
       ...room,
       partitionWalls: [...room.partitionWalls, {
@@ -707,6 +863,7 @@ async function compressImage(file: File): Promise<File> {
 
   function removePartitionWall(wallId: string) {
     if (!activeRoom) return;
+    snapshot();
     updateRoom(activeRoom.id, (room) => ({
       ...room,
       partitionWalls: room.partitionWalls.filter((wall) => wall.id !== wallId),
@@ -716,6 +873,7 @@ async function compressImage(file: File): Promise<File> {
   function addRoom() {
     if (rooms.length >= 12) return;
     const room = createGalleryRoom(rooms.length);
+    snapshot();
     setRooms((current) => [...current, room]);
     setActiveRoomId(room.id);
     setSelectedId(undefined);
@@ -730,13 +888,13 @@ async function compressImage(file: File): Promise<File> {
     // armed state clears when the room changes or after a few seconds.
     if (!confirmingRemoveRoom) {
       setConfirmingRemoveRoom(true);
-      window.setTimeout(() => setConfirmingRemoveRoom(false), 5000);
+      window.setTimeout(() => setConfirmingRemoveRoom(false), 10000);
       return;
     }
     setConfirmingRemoveRoom(false);
     const nextRooms = rooms.filter((room) => room.id !== activeRoom.id);
     const nextRoom = nextRooms[0];
-    historyRef.current = [];
+    snapshot();
     setRooms(nextRooms);
     setArtworks((current) => current.filter((artwork) => artwork.roomId !== activeRoom.id));
     setActiveRoomId(nextRoom.id);
@@ -757,6 +915,7 @@ async function compressImage(file: File): Promise<File> {
           {editingTitle ? (
             <input
               className="editor-title-input"
+              {...editSessionProps}
               value={titleDraft}
               autoFocus
               maxLength={120}
@@ -830,9 +989,9 @@ async function compressImage(file: File): Promise<File> {
           ) : (
             <>
               <div className="element-palette">
-                {ELEMENT_PALETTE.map(({ type, label, icon: Icon }) => (
-                  <button key={type} className="element-palette-item" onClick={() => addElement(type)} title={`Add a ${label.toLowerCase()} to this room`}>
-                    <Icon size={17} />
+                {ELEMENT_PALETTE.map(({ type, label }) => (
+                  <button key={type} className="element-palette-item" draggable onDragStart={(event) => { event.dataTransfer.setData("application/x-sanaa-element", type); event.dataTransfer.effectAllowed = "copy"; }} onClick={() => addElement(type)} title={`Add a ${label.toLowerCase()} to this room — or drag it into the room`}>
+                    <ElementThumbnail type={type} size={26} />
                     <span>{label}</span>
                   </button>
                 ))}
@@ -840,11 +999,10 @@ async function compressImage(file: File): Promise<File> {
               <div className="asset-list">
                 {currentElements.map((element) => {
                   const palette = ELEMENT_PALETTE.find((item) => item.type === element.type);
-                  const Icon = palette?.icon ?? Box;
                   return (
                     <div className="asset-row-wrap" key={element.id}>
                       <button className={`asset-row ${selectedElementId === element.id ? "selected" : ""}`} onClick={() => selectElement(element.id)}>
-                        <span className="asset-thumb element-thumb"><Icon size={16} /></span>
+                        <span className="asset-thumb element-thumb"><ElementThumbnail type={element.type} size={26} /></span>
                         <span className="asset-copy"><strong>{element.name}</strong><small>{palette?.label ?? element.type}</small></span>
                         {selectedElementId === element.id && <span className="selected-mark"><Check size={12} /></span>}
                       </button>
@@ -858,7 +1016,7 @@ async function compressImage(file: File): Promise<File> {
               </div>
             </>
           )}
-          <div className="left-panel-bottom"><div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Select an artwork or an element in the room to adjust its placement and scale. Click a wall to paint it.</p></div><button className="panel-help-link"><CircleHelp size={15} /> Editor guide <ArrowRight size={13} /></button></div>
+          <div className="left-panel-bottom"><div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. Double-click a wall to paint it.</p></div><button className="panel-help-link"><CircleHelp size={15} /> Editor guide <ArrowRight size={13} /></button></div>
         </aside>
 
         <section className="editor-stage">
@@ -866,11 +1024,13 @@ async function compressImage(file: File): Promise<File> {
             <div className="tool-group">
               <button className="tool-button active" aria-label="Select and move"><Move size={16} /></button>
               <button className="tool-button" aria-label="Rotate selected artwork or element" onClick={() => {
+                snapshot();
                 if (selected) updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }));
                 else if (selectedElement) updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 });
               }}><RotateCw size={16} /></button>
               <span className="tool-divider" />
-              <button className="tool-button" aria-label="Undo artwork change" onClick={undoArtworkChange} disabled={!historyRef.current.length}><Undo2 size={16} /></button>
+              <button className="tool-button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={historyRef.current.past.length === 0}><Undo2 size={16} /></button>
+              <button className="tool-button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={historyRef.current.future.length === 0}><Redo2 size={16} /></button>
               <span className="tool-divider" />
               <button className={`tool-button${walking ? " active" : ""}`} aria-label="Walk through the rooms" title="Walk through the rooms" onClick={() => setWalking((value) => !value)}><Footprints size={16} /></button>
             </div>
@@ -882,10 +1042,10 @@ async function compressImage(file: File): Promise<File> {
             </div>
           </div>
           <div className="scene-wrap">
-            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} editable onArtworkUpdate={(id, patch) => updateArtwork(id, (artwork) => ({ ...artwork, ...patch }))} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={(id, patch) => updateElement(id, patch)} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} />}
+            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} editable onArtworkUpdate={(id, patch) => updateArtwork(id, (artwork) => ({ ...artwork, ...patch }))} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={(id, patch) => updateElement(id, patch)} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} />}
             <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
-            <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(1.6, artwork.scale + 0.1) }))} title="Increase scale"><Expand size={14} /></button><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) }))} title="Decrease scale"><Minus size={14} /></button></div>
+            <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
           </div>
           <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLayouts[activeRoom.layout].label : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks</span><span>100%</span></div>
@@ -896,13 +1056,13 @@ async function compressImage(file: File): Promise<File> {
           {selected ? (
             <>
               <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
-              <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Position ${axis}`} step="0.1" value={selected.position[index]} onCommit={(next) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = next; return { ...artwork, position }; })} /></div>)}</div></div>
+              <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Position ${axis}`} step="0.1" value={selected.position[index]} {...editSessionProps} onCommit={(next) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = next; return { ...artwork, position }; })} /></div>)}</div></div>
               <div className="property-section"><label>DIMENSIONS <span>CM</span></label><div className="coordinate-row">{(["Width", "Height"] as const).map((label, index) => {
                 const parsed = parseArtworkDimensions(selected.dimensions ?? "");
                 const current = parsed ?? { widthCm: 182, heightCm: 212 };
                 const value = index === 0 ? current.widthCm : current.heightCm;
                 return (
-                  <div key={label}><span>{label}</span><NumberField ariaLabel={`Artwork ${label.toLowerCase()} in centimetres`} step="1" min={1} value={value} onCommit={(next) => {
+                  <div key={label}><span>{label}</span><NumberField ariaLabel={`Artwork ${label.toLowerCase()} in centimetres`} step="1" min={1} value={value} {...editSessionProps} onCommit={(next) => {
                     const clamped = Math.max(1, Math.round(next));
                     const widthCm = index === 0 ? clamped : current.widthCm;
                     const heightCm = index === 1 ? clamped : current.heightCm;
@@ -910,71 +1070,71 @@ async function compressImage(file: File): Promise<File> {
                   }} /></div>
                 );
               })}</div></div>
-              <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Artwork scale" type="range" min="0.5" max="1.6" step="0.05" value={selected.scale} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Number(event.target.value) }))} /><span>{Math.round(selected.scale * 100)}%</span></div></div>
-              <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation - Math.PI / 12 }))}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selected.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }))}><RotateCw size={15} /></button></div></div>
-              <div className="property-section"><label>ARTWORK LABEL</label><input className="full-input" value={selected.title} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, title: event.target.value }))} /></div>
-                  <div className="property-section"><label>ARTIST</label><input className="full-input" value={selected.artist ?? ""} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, artist: event.target.value }))} /></div>
-                  <div className="property-section"><label>YEAR</label><input className="full-input" value={selected.year} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, year: event.target.value }))} /></div>
-                  <div className="property-section"><label>MEDIUM</label><input className="full-input" value={selected.medium} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, medium: event.target.value }))} /></div>
-                  <div className="property-section"><label>DIMENSIONS</label><input className="full-input" value={selected.dimensions} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: event.target.value }))} /></div>
-                  <div className="property-section"><label>DESCRIPTION</label><textarea className="full-input property-textarea" value={selected.description} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, description: event.target.value }))} /></div>
+              <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Artwork scale" type="range" min="0.5" max="3" step="0.05" value={selected.scale} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Number(event.target.value) }))} /><span>{Math.round(selected.scale * 100)}%</span></div></div>
+              <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation - Math.PI / 12 })); }}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selected.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 })); }}><RotateCw size={15} /></button></div></div>
+              <div className="property-section"><label>ARTWORK LABEL</label><input className="full-input" {...editSessionProps} value={selected.title} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, title: event.target.value }))} /></div>
+                  <div className="property-section"><label>ARTIST</label><input className="full-input" {...editSessionProps} value={selected.artist ?? ""} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, artist: event.target.value }))} /></div>
+                  <div className="property-section"><label>YEAR</label><input className="full-input" {...editSessionProps} value={selected.year} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, year: event.target.value }))} /></div>
+                  <div className="property-section"><label>MEDIUM</label><input className="full-input" {...editSessionProps} value={selected.medium} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, medium: event.target.value }))} /></div>
+                  <div className="property-section"><label>DIMENSIONS</label><input className="full-input" {...editSessionProps} value={selected.dimensions} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: event.target.value }))} /></div>
+                  <div className="property-section"><label>DESCRIPTION</label><textarea className="full-input property-textarea" {...editSessionProps} value={selected.description} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, description: event.target.value }))} /></div>
                   <div className="property-section"><label>FRAME</label><div className="frame-options">{(Object.keys(FRAME_VARIANTS) as FrameVariant[]).map((variant) => (
                     <button
                       key={variant}
                       type="button"
                       className={`frame-option${(selected.frame ?? "wood") === variant ? " selected" : ""}`}
                       aria-pressed={(selected.frame ?? "wood") === variant}
-                      onClick={() => updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: variant }))}
+                      onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: variant })); }}
                     >
-                      <span className={`frame-swatch frame-swatch-${variant}`} />
+                      <span className={`frame-preview frame-preview-${variant}`}><span className="frame-preview-art" /></span>
                       {FRAME_VARIANTS[variant].label}
                     </button>
                   ))}</div></div>
-                  <div className="property-actions"><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 }))}><Sparkles size={14} /> Fit to wall</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
+                  <div className="property-actions"><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 })); }}><Sparkles size={14} /> Fit to wall</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
                 </>
               ) : selectedElement ? (
                 <>
-                  <div className="selected-art-preview"><div className="selected-art-image element-preview-icon">{(() => { const palette = ELEMENT_PALETTE.find((item) => item.type === selectedElement.type); const Icon = palette?.icon ?? Box; return <Icon size={22} />; })()}</div><div><strong>{selectedElement.name}</strong><small>{ELEMENT_DEFAULTS[selectedElement.type].label}</small></div></div>
-                  <div className="property-section"><label>NAME</label><input className="full-input" value={selectedElement.name} onChange={(event) => updateElement(selectedElement.id, { name: event.target.value.slice(0, 60) })} /></div>
+                  <div className="selected-art-preview"><div className="selected-art-image element-preview-icon"><ElementThumbnail type={selectedElement.type} size={32} /></div><div><strong>{selectedElement.name}</strong><small>{ELEMENT_DEFAULTS[selectedElement.type].label}</small></div></div>
+                  <div className="property-section"><label>NAME</label><input className="full-input" {...editSessionProps} value={selectedElement.name} onChange={(event) => updateElement(selectedElement.id, { name: event.target.value.slice(0, 60) })} /></div>
                   <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => {
                     const key = ["x", "y", "z"][index] as "x" | "y" | "z";
                     return (
-                      <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Element position ${axis}`} step="0.1" value={selectedElement[key]} onCommit={(next) => updateElement(selectedElement.id, { [key]: next } as Partial<RoomElement>)} /></div>
+                      <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Element position ${axis}`} step="0.1" value={selectedElement[key]} {...editSessionProps} onCommit={(next) => updateElement(selectedElement.id, { [key]: next } as Partial<RoomElement>)} /></div>
                     );
                   })}</div></div>
-                  <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => updateElement(selectedElement.id, { rotation: selectedElement.rotation - Math.PI / 12 })}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selectedElement.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 })}><RotateCw size={15} /></button></div></div>
-                  <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Element scale" type="range" min="0.25" max="3" step="0.05" value={selectedElement.scale} onChange={(event) => updateElement(selectedElement.id, { scale: Number(event.target.value) })} /><span>{Math.round(selectedElement.scale * 100)}%</span></div></div>
+                  <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => { snapshot(); updateElement(selectedElement.id, { rotation: selectedElement.rotation - Math.PI / 12 }); }}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selectedElement.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => { snapshot(); updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 }); }}><RotateCw size={15} /></button></div></div>
+                  <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Element scale" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min="0.25" max="3" step="0.05" value={selectedElement.scale} onChange={(event) => updateElement(selectedElement.id, { scale: Number(event.target.value) })} /><span>{Math.round(selectedElement.scale * 100)}%</span></div></div>
                   {(selectedElement.type === "partition" || selectedElement.type === "shelf" || selectedElement.type === "track-light" || selectedElement.type === "wall-text") && (
-                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "RAIL LENGTH" : selectedElement.type === "wall-text" ? "TEXT WIDTH" : "LENGTH"} <span>METERS</span></label><div className="range-control"><input aria-label="Element length in metres" type="range" min={selectedElement.type === "track-light" ? 1 : 0.5} max={selectedElement.type === "partition" || selectedElement.type === "wall-text" ? 12 : 6} step="0.5" value={selectedElement.length} onChange={(event) => updateElement(selectedElement.id, { length: Number(event.target.value) })} /><span>{selectedElement.length} m</span></div></div>
+                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "RAIL LENGTH" : selectedElement.type === "wall-text" ? "TEXT WIDTH" : "LENGTH"} <span>METERS</span></label><div className="range-control"><input aria-label="Element length in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={selectedElement.type === "track-light" ? 1 : 0.5} max={selectedElement.type === "partition" || selectedElement.type === "wall-text" ? 12 : 6} step="0.5" value={selectedElement.length} onChange={(event) => updateElement(selectedElement.id, { length: Number(event.target.value) })} /><span>{selectedElement.length} m</span></div></div>
                   )}
                   {selectedElement.type === "plinth" && (
-                    <div className="property-section"><label>HEIGHT</label><select className="full-input" value={selectedElement.variant} onChange={(event) => updateElement(selectedElement.id, { variant: event.target.value })}>{PLINTH_VARIANTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
+                    <div className="property-section"><label>HEIGHT</label><select className="full-input" {...editSessionProps} value={selectedElement.variant} onChange={(event) => updateElement(selectedElement.id, { variant: event.target.value })}>{PLINTH_VARIANTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
                   )}
                   {selectedElement.type === "wall-text" ? (
                     <>
-                      <div className="property-section"><label>TITLE <span>BIG TEXT · ONE LINE PER ROW</span></label><textarea className="full-input property-textarea" rows={3} value={selectedElement.title} onChange={(event) => updateElement(selectedElement.id, { title: event.target.value.slice(0, 120) })} placeholder={"PEOPLE\nMAKE THIS\nPLACE"} /></div>
-                      <div className="property-section"><label>BODY TEXT</label><textarea className="full-input property-textarea" value={selectedElement.body} onChange={(event) => updateElement(selectedElement.id, { body: event.target.value.slice(0, 600) })} /></div>
-                      <div className="property-section"><label>TYPEFACE</label><select className="full-input" value={selectedElement.font} onChange={(event) => updateElement(selectedElement.id, { font: event.target.value as WallTextFont })}>{(Object.keys(WALL_TEXT_FONTS) as WallTextFont[]).map((font) => <option key={font} value={font}>{WALL_TEXT_FONTS[font].label}</option>)}</select></div>
-                      <div className="property-section"><label>LAYOUT</label><select className="full-input" value={selectedElement.layout} onChange={(event) => updateElement(selectedElement.id, { layout: event.target.value as WallTextLayout })}>{(Object.keys(WALL_TEXT_LAYOUTS) as WallTextLayout[]).map((layout) => <option key={layout} value={layout}>{WALL_TEXT_LAYOUTS[layout]}</option>)}</select></div>
+                      <div className="property-section"><label>TITLE <span>BIG TEXT · ONE LINE PER ROW</span></label><textarea className="full-input property-textarea" {...editSessionProps} rows={3} value={selectedElement.title} onChange={(event) => updateElement(selectedElement.id, { title: event.target.value.slice(0, 120) })} placeholder={"PEOPLE\nMAKE THIS\nPLACE"} /></div>
+                      <div className="property-section"><label>BODY TEXT</label><textarea className="full-input property-textarea" {...editSessionProps} value={selectedElement.body} onChange={(event) => updateElement(selectedElement.id, { body: event.target.value.slice(0, 600) })} /></div>
+                      <div className="property-section"><label>TYPEFACE</label><select className="full-input" {...editSessionProps} value={selectedElement.font} onChange={(event) => updateElement(selectedElement.id, { font: event.target.value as WallTextFont })}>{(Object.keys(WALL_TEXT_FONTS) as WallTextFont[]).map((font) => <option key={font} value={font}>{WALL_TEXT_FONTS[font].label}</option>)}</select></div>
+                      <div className="property-section"><label>LAYOUT</label><select className="full-input" {...editSessionProps} value={selectedElement.layout} onChange={(event) => updateElement(selectedElement.id, { layout: event.target.value as WallTextLayout })}>{(Object.keys(WALL_TEXT_LAYOUTS) as WallTextLayout[]).map((layout) => <option key={layout} value={layout}>{WALL_TEXT_LAYOUTS[layout]}</option>)}</select></div>
                       <div className="property-section"><label>ALIGNMENT</label><div className="frame-options">{(Object.keys(WALL_TEXT_ALIGNS) as WallTextAlign[]).map((align) => (
-                        <button key={align} type="button" className={`frame-option${selectedElement.align === align ? " selected" : ""}`} aria-pressed={selectedElement.align === align} onClick={() => updateElement(selectedElement.id, { align })}>{WALL_TEXT_ALIGNS[align]}</button>
+                        <button key={align} type="button" className={`frame-option${selectedElement.align === align ? " selected" : ""}`} aria-pressed={selectedElement.align === align} onClick={() => { snapshot(); updateElement(selectedElement.id, { align }); }}>{WALL_TEXT_ALIGNS[align]}</button>
                       ))}</div></div>
-                      <div className="property-section"><label>TITLE SIZE</label><div className="range-control"><input aria-label="Wall text title size" type="range" min="0.08" max="1" step="0.01" value={selectedElement.fontSize} onChange={(event) => updateElement(selectedElement.id, { fontSize: Number(event.target.value) })} /><span>{Math.round(selectedElement.fontSize * 100)} cm</span></div></div>
-                      <div className="property-section"><label>BODY SIZE</label><div className="range-control"><input aria-label="Wall text body size" type="range" min="0.04" max="0.3" step="0.01" value={selectedElement.bodySize} onChange={(event) => updateElement(selectedElement.id, { bodySize: Number(event.target.value) })} /><span>{Math.round(selectedElement.bodySize * 100)} cm</span></div></div>
-                      <div className="property-section"><label>TITLE COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall text title colour" value={selectedElement.textColor} onChange={(event) => updateElement(selectedElement.id, { textColor: event.target.value })} /><span>{selectedElement.textColor}</span></div><div className="wall-swatches">{WALL_TEXT_SWATCHES.map((swatch) => (
-                        <button key={swatch} type="button" className={`wall-swatch${selectedElement.textColor.toLowerCase() === swatch ? " selected" : ""}`} style={{ backgroundColor: swatch }} aria-label={`Title colour ${swatch}`} onClick={() => updateElement(selectedElement.id, { textColor: swatch })} />
+                      <div className="property-section"><label>TITLE SIZE</label><div className="range-control"><input aria-label="Wall text title size" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min="0.08" max="1" step="0.01" value={selectedElement.fontSize} onChange={(event) => updateElement(selectedElement.id, { fontSize: Number(event.target.value) })} /><span>{Math.round(selectedElement.fontSize * 100)} cm</span></div></div>
+                      <div className="property-section"><label>BODY SIZE</label><div className="range-control"><input aria-label="Wall text body size" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min="0.04" max="0.3" step="0.01" value={selectedElement.bodySize} onChange={(event) => updateElement(selectedElement.id, { bodySize: Number(event.target.value) })} /><span>{Math.round(selectedElement.bodySize * 100)} cm</span></div></div>
+                      <div className="property-section"><label>TITLE COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall text title colour" {...editSessionProps} value={selectedElement.textColor} onChange={(event) => updateElement(selectedElement.id, { textColor: event.target.value })} /><span>{selectedElement.textColor}</span></div><div className="wall-swatches">{WALL_TEXT_SWATCHES.map((swatch) => (
+                        <button key={swatch} type="button" className={`wall-swatch${selectedElement.textColor.toLowerCase() === swatch ? " selected" : ""}`} style={{ backgroundColor: swatch }} aria-label={`Title colour ${swatch}`} onClick={() => { snapshot(); updateElement(selectedElement.id, { textColor: swatch }); }} />
                       ))}</div></div>
-                      <div className="property-section"><label>BODY COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall text body colour" value={selectedElement.bodyColor} onChange={(event) => updateElement(selectedElement.id, { bodyColor: event.target.value })} /><span>{selectedElement.bodyColor}</span></div></div>
+                      <div className="property-section"><label>BODY COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall text body colour" {...editSessionProps} value={selectedElement.bodyColor} onChange={(event) => updateElement(selectedElement.id, { bodyColor: event.target.value })} /><span>{selectedElement.bodyColor}</span></div></div>
                     </>
                   ) : (
-                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "LIGHT COLOUR" : "COLOUR"}</label><div className="room-color-control"><input type="color" aria-label="Element colour" value={selectedElement.color} onChange={(event) => updateElement(selectedElement.id, { color: event.target.value })} /><span>{selectedElement.color}</span></div></div>
+                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "LIGHT COLOUR" : "COLOUR"}</label><div className="room-color-control"><input type="color" aria-label="Element colour" {...editSessionProps} value={selectedElement.color} onChange={(event) => updateElement(selectedElement.id, { color: event.target.value })} /><span>{selectedElement.color}</span></div></div>
                   )}
                   <div className="property-actions"><button aria-label="Duplicate element" onClick={duplicateElement}><Copy size={14} /></button><button className="delete-action" aria-label="Delete element" onClick={removeElement}><Trash2 size={14} /></button></div>
                 </>
               ) : selectedWallId ? (
                 <>
                   <div className="selected-art-preview"><div className="selected-art-image element-preview-icon"><Paintbrush size={22} /></div><div><strong>{selectedWallLabel()}</strong><small>Paint this wall only</small></div></div>
-                  <div className="property-section"><label>WALL COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall colour" value={selectedWallColor()} onChange={(event) => paintWall(event.target.value)} /><span>{selectedWallColor()}</span></div></div>
+                  <div className="property-section"><label>WALL COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall colour" {...editSessionProps} value={selectedWallColor()} onChange={(event) => paintWall(event.target.value)} /><span>{selectedWallColor()}</span></div></div>
                   <div className="property-section"><label>PRESETS</label><div className="wall-swatches">{WALL_SWATCHES.map((swatch) => (
                     <button key={swatch} type="button" className={`wall-swatch${selectedWallColor().toLowerCase() === swatch ? " selected" : ""}`} style={{ backgroundColor: swatch }} aria-label={`Paint wall ${swatch}`} onClick={() => paintWall(swatch)} />
                   ))}</div></div>
@@ -985,18 +1145,18 @@ async function compressImage(file: File): Promise<File> {
                 <div className="room-properties">
                     <p>Shape this room and its walls.</p>
                     {activeRoom && <>
-                      <div className="property-section"><label>ROOM NAME</label><input className="full-input" value={activeRoom.name} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, name: event.target.value.slice(0, 60) }))} /></div>
-                      <div className="property-section"><label>GALLERY</label><select className="full-input" value={activeRoom.layout} onChange={(event) => updateRoom(activeRoom.id, (room) => applyLayoutPreset(room, event.target.value as RoomLayout))}>{Object.entries(roomLayouts).map(([layout, details]) => <option key={layout} value={layout}>{details.label} · {details.width} × {details.depth} m</option>)}</select></div>
-                      <div className="property-section"><label>BACK WALL</label><div className="room-color-control"><input type="color" aria-label="Back wall colour" value={activeRoom.wallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallColor: event.target.value }))} /><span>{activeRoom.wallColor}</span></div></div>
-                      <div className="property-section"><label>SIDE WALLS</label><div className="room-color-control"><input type="color" aria-label="Side walls colour" value={activeRoom.sideWallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, sideWallColor: event.target.value }))} /><span>{activeRoom.sideWallColor}</span></div></div>
-                      <div className="property-section"><label>CEILING</label><div className="room-color-control"><input type="color" aria-label="Ceiling colour" value={activeRoom.ceilingColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingColor: event.target.value }))} /><span>{activeRoom.ceilingColor}</span></div></div>
-                      <div className="property-section"><label>FLOOR</label><div className="room-color-control"><input type="color" aria-label="Floor colour" value={activeRoom.floorColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorColor: event.target.value }))} /><span>{activeRoom.floorColor}</span></div></div>
-                      <div className="property-section"><label>WALL TEXTURE</label><select className="full-input" value={activeRoom.wallTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallTexture: event.target.value as GalleryRoom["wallTexture"] }))}>{Object.entries(wallTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
-                      <div className="property-section"><label>FLOOR TEXTURE</label><select className="full-input" value={activeRoom.floorTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorTexture: event.target.value as GalleryRoom["floorTexture"] }))}>{Object.entries(floorTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
-                      <div className="property-section"><label>CEILING TEXTURE</label><select className="full-input" value={activeRoom.ceilingTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingTexture: event.target.value as GalleryRoom["ceilingTexture"] }))}>{Object.entries(ceilingTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
+                      <div className="property-section"><label>ROOM NAME</label><input className="full-input" {...editSessionProps} value={activeRoom.name} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, name: event.target.value.slice(0, 60) }))} /></div>
+                      <div className="property-section"><label>GALLERY</label><select className="full-input" {...editSessionProps} value={activeRoom.layout} onChange={(event) => updateRoom(activeRoom.id, (room) => applyLayoutPreset(room, event.target.value as RoomLayout))}>{Object.entries(roomLayouts).map(([layout, details]) => <option key={layout} value={layout}>{details.label} · {details.width} × {details.depth} m</option>)}</select></div>
+                      <div className="property-section"><label>BACK WALL</label><div className="room-color-control"><input type="color" aria-label="Back wall colour" {...editSessionProps} value={activeRoom.wallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallColor: event.target.value }))} /><span>{activeRoom.wallColor}</span></div></div>
+                      <div className="property-section"><label>SIDE WALLS</label><div className="room-color-control"><input type="color" aria-label="Side walls colour" {...editSessionProps} value={activeRoom.sideWallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, sideWallColor: event.target.value }))} /><span>{activeRoom.sideWallColor}</span></div></div>
+                      <div className="property-section"><label>CEILING</label><div className="room-color-control"><input type="color" aria-label="Ceiling colour" {...editSessionProps} value={activeRoom.ceilingColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingColor: event.target.value }))} /><span>{activeRoom.ceilingColor}</span></div></div>
+                      <div className="property-section"><label>FLOOR</label><div className="room-color-control"><input type="color" aria-label="Floor colour" {...editSessionProps} value={activeRoom.floorColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorColor: event.target.value }))} /><span>{activeRoom.floorColor}</span></div></div>
+                      <div className="property-section"><label>WALL TEXTURE</label><select className="full-input" {...editSessionProps} value={activeRoom.wallTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallTexture: event.target.value as GalleryRoom["wallTexture"] }))}>{Object.entries(wallTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
+                      <div className="property-section"><label>FLOOR TEXTURE</label><select className="full-input" {...editSessionProps} value={activeRoom.floorTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorTexture: event.target.value as GalleryRoom["floorTexture"] }))}>{Object.entries(floorTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
+                      <div className="property-section"><label>CEILING TEXTURE</label><select className="full-input" {...editSessionProps} value={activeRoom.ceilingTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingTexture: event.target.value as GalleryRoom["ceilingTexture"] }))}>{Object.entries(ceilingTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
                       <div className="property-section"><label>LIGHTING</label><label className="room-lighting-toggle"><input type="checkbox" checked={activeRoom.spotlights} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, spotlights: event.target.checked }))} /> Ceiling spotlights</label></div>
-                      <div className="property-section"><label>LIGHT TYPE</label><select className="full-input" value={activeRoom.lightType ?? "spot-warm"} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, lightType: event.target.value as GalleryRoom["lightType"] }))}>{Object.entries(lightTypes).map(([type, details]) => <option key={type} value={type}>{details.label}</option>)}</select></div>
-                      <div className="property-section"><label>FLOOR TYPE</label><select className="full-input" value={activeRoom.floorType ?? "charcoal"} onChange={(event) => {
+                      <div className="property-section"><label>LIGHT TYPE</label><select className="full-input" {...editSessionProps} value={activeRoom.lightType ?? "spot-warm"} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, lightType: event.target.value as GalleryRoom["lightType"] }))}>{Object.entries(lightTypes).map(([type, details]) => <option key={type} value={type}>{details.label}</option>)}</select></div>
+                      <div className="property-section"><label>FLOOR TYPE</label><select className="full-input" {...editSessionProps} value={activeRoom.floorType ?? "charcoal"} onChange={(event) => {
                         const floorType = event.target.value as GalleryRoom["floorType"];
                         const preset = floorTypes[floorType];
                         updateRoom(activeRoom.id, (room) => ({ ...room, floorType, floorColor: preset.color, floorTexture: preset.texture as GalleryRoom["floorTexture"] }));
@@ -1006,22 +1166,22 @@ async function compressImage(file: File): Promise<File> {
                         <div className="partition-wall-list">{activeRoom.partitionWalls.map((wall, index) => (
                           <div className="partition-wall-setting" key={wall.id}>
                             <div className="partition-wall-heading"><span>WALL {String(index + 1).padStart(2, "0")}</span><button type="button" aria-label={`Remove wall ${index + 1}`} onClick={() => removePartitionWall(wall.id)}><Trash2 size={12} /></button></div>
-                            <select className="full-input" aria-label={`Wall ${index + 1} direction`} value={wall.orientation} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, orientation: event.target.value as typeof item.orientation } : item) }))}>
+                            <select className="full-input" {...editSessionProps} aria-label={`Wall ${index + 1} direction`} value={wall.orientation} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, orientation: event.target.value as typeof item.orientation } : item) }))}>
                               <option value="horizontal">Horizontal</option><option value="vertical">Vertical</option>
                             </select>
                             <div className="partition-wall-coordinates">
-                              <label>X<NumberField ariaLabel={`Wall ${index + 1} position X`} step="0.5" value={wall.x} onCommit={(next) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, x: next } : item) }))} /></label>
-                              <label>Z<NumberField ariaLabel={`Wall ${index + 1} position Z`} step="0.5" value={wall.z} onCommit={(next) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, z: next } : item) }))} /></label>
-                              <label>LENGTH<input aria-label={`Wall ${index + 1} length`} type="number" min="1" max="16" step="0.5" value={wall.length} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, length: Number(event.target.value) } : item) }))} /></label>
+                              <label>X<NumberField ariaLabel={`Wall ${index + 1} position X`} step="0.5" value={wall.x} {...editSessionProps} onCommit={(next) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, x: next } : item) }))} /></label>
+                              <label>Z<NumberField ariaLabel={`Wall ${index + 1} position Z`} step="0.5" value={wall.z} {...editSessionProps} onCommit={(next) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, z: next } : item) }))} /></label>
+                              <label>LENGTH<input aria-label={`Wall ${index + 1} length`} type="number" min="1" max="16" step="0.5" value={wall.length} {...editSessionProps} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, length: Number(event.target.value) } : item) }))} /></label>
                             </div>
                           </div>
                         ))}</div>
                         <button className="add-partition-wall" type="button" onClick={addPartitionWall} disabled={activeRoom.partitionWalls.length >= 8}><Plus size={12} /> Add a partition wall</button>
                       </div>
-                      <div className="property-section"><label>CURATORIAL TEXT ON WALL <span>{activeRoom.curatorialText.length}/300</span></label><textarea className="full-input property-textarea" maxLength={300} placeholder="Write the introduction visitors will read in this room." value={activeRoom.curatorialText} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, curatorialText: event.target.value }))} /></div>
+                      <div className="property-section"><label>CURATORIAL TEXT ON WALL <span>{activeRoom.curatorialText.length}/300</span></label><textarea className="full-input property-textarea" {...editSessionProps} maxLength={300} placeholder="Write the introduction visitors will read in this room." value={activeRoom.curatorialText} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, curatorialText: event.target.value }))} /></div>
                       <button className={`remove-room-button${confirmingRemoveRoom ? " confirming" : ""}`} onClick={removeRoom} disabled={rooms.length <= 1}><Trash2 size={13} /> {confirmingRemoveRoom ? `Click again to remove "${activeRoom.name}"` : "Remove this room"}</button>
                     </>}
-                    <div className="property-section"><label>EXHIBITION DESCRIPTION</label><textarea className="full-input property-textarea" value={description} onChange={(event) => { setDescription(event.target.value); setSaved(false); }} /></div>
+                    <div className="property-section"><label>EXHIBITION DESCRIPTION</label><textarea className="full-input property-textarea" {...editSessionProps} value={description} onChange={(event) => { setDescription(event.target.value); setSaved(false); }} /></div>
                 <div className="room-settings-note"><Sparkles size={15} /><span>Each gallery keeps its own layout, colours, ceiling and artworks.</span></div>
             </div>
           )}

@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, PlaneGeometry, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
 import type { Artwork, FrameVariant } from "@/lib/demo-data";
 import { FRAME_VARIANTS } from "@/lib/demo-data";
-import { ELEMENT_PLANES, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type RoomElement } from "@/lib/elements";
+import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
 import { roomLayouts, type GalleryRoom, type WallId } from "@/lib/rooms";
 
 // Light moods per room: the spot colour and intensity, and the room's
@@ -255,6 +255,9 @@ function ArtworkFrame({
       onClick={(event) => {
         event.stopPropagation();
         if (dragged?.current) return;
+        // Walk mode keeps its single click (walk up to the artwork). In
+        // the editor a single click selects nothing — selection is a
+        // double-click, so a click never gets in the way of orbiting.
         if (walkable && onWalkTo) {
           const nx = Math.sin(artwork.rotation);
           const nz = Math.cos(artwork.rotation);
@@ -262,20 +265,26 @@ function ArtworkFrame({
             new Vector3((offsetX ?? 0) + x + nx * 2.2, 0, z + nz * 2.2),
             Math.atan2(nx, nz),
           );
+          onSelect?.(artwork.id);
         }
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        if (walkable || dragged?.current) return;
         onSelect?.(artwork.id);
       }}
       onPointerOver={(event) => {
         if (!interactive) return;
         event.stopPropagation();
-        onHoverChange?.({ id: artwork.id, cursor: "grab" });
+        onHoverChange?.({ id: artwork.id, cursor: selected ? "grab" : "default" });
       }}
       onPointerOut={() => {
         if (!interactive) return;
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        if (!interactive) return;
+        // Only a selected artwork drags: double-click it first, then drag.
+        if (!interactive || !selected) return;
         event.stopPropagation();
         onDragStart?.(artwork.id, "move", event);
       }}
@@ -368,15 +377,16 @@ function WallWithOpening({
     emissive: highlight ? "#a67c37" : "#000000",
     emissiveIntensity: highlight ? 0.16 : 0,
   } as const;
-  // A drag (orbit) must not count as a click on the wall.
-  const handleClick = (event: ThreeEvent<MouseEvent>) => {
+  // A drag (orbit) must not count as a click on the wall, and a single
+  // click does not select a wall at all — only a double-click does.
+  const handleDoubleClick = (event: ThreeEvent<MouseEvent>) => {
     if (!onWallClick || !wallId || dragged?.current) return;
     event.stopPropagation();
     onWallClick(wallId);
   };
   if (opening === "solid") {
     return (
-      <mesh position={[x, height / 2, 0]} receiveShadow onClick={handleClick}>
+      <mesh position={[x, height / 2, 0]} receiveShadow onDoubleClick={handleDoubleClick}>
         <boxGeometry args={[wallThickness, height, depth]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
@@ -395,22 +405,22 @@ function WallWithOpening({
 
   return (
     <group>
-      <mesh position={[x, height / 2, -(openingWidth + sideDepth) / 2]} receiveShadow onClick={handleClick}>
+      <mesh position={[x, height / 2, -(openingWidth + sideDepth) / 2]} receiveShadow onDoubleClick={handleDoubleClick}>
         <boxGeometry args={[wallThickness, height, sideDepth]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
-      <mesh position={[x, height / 2, (openingWidth + sideDepth) / 2]} receiveShadow onClick={handleClick}>
+      <mesh position={[x, height / 2, (openingWidth + sideDepth) / 2]} receiveShadow onDoubleClick={handleDoubleClick}>
         <boxGeometry args={[wallThickness, height, sideDepth]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
       {openingTop < height && (
-        <mesh position={[x, (openingTop + height) / 2, 0]} receiveShadow onClick={handleClick}>
+        <mesh position={[x, (openingTop + height) / 2, 0]} receiveShadow onDoubleClick={handleDoubleClick}>
           <boxGeometry args={[wallThickness, height - openingTop, openingWidth]} />
           <meshStandardMaterial {...materialProps} />
         </mesh>
       )}
       {openingBottom > 0 && (
-        <mesh position={[x, openingBottom / 2, 0]} receiveShadow onClick={handleClick}>
+        <mesh position={[x, openingBottom / 2, 0]} receiveShadow onDoubleClick={handleDoubleClick}>
           <boxGeometry args={[wallThickness, openingBottom, openingWidth]} />
           <meshStandardMaterial {...materialProps} />
         </mesh>
@@ -615,7 +625,7 @@ function WallTextPlane({ element, widthM }: { element: RoomElement; widthM: numb
   return (
     <mesh position={[0, 0, 0.02]}>
       <planeGeometry args={[widthM, drawn.heightM]} />
-      <meshBasicMaterial map={drawn.texture} transparent toneMapped={false} />
+      <meshBasicMaterial map={drawn.texture} transparent toneMapped={false} side={DoubleSide} />
     </mesh>
   );
 }
@@ -757,19 +767,28 @@ function ElementMesh({
       onClick={(event) => {
         event.stopPropagation();
         if (dragged?.current) return;
+        // Outside the editor a single click still selects (public view).
+        // In the editor only a double-click selects.
+        if (!editable) onSelect?.(element.id);
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        if (dragged?.current) return;
+        if (!editable) return;
         onSelect?.(element.id);
       }}
       onPointerOver={(event) => {
         if (!interactive) return;
         event.stopPropagation();
-        onHoverChange?.({ id: element.id, cursor: "grab" });
+        onHoverChange?.({ id: element.id, cursor: selected ? "grab" : "default" });
       }}
       onPointerOut={() => {
         if (!interactive) return;
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        if (!interactive) return;
+        // Only a selected element drags: double-click it first, then drag.
+        if (!interactive || !selected) return;
         event.stopPropagation();
         onDragStart?.(element.id, "move", event);
       }}
@@ -1689,7 +1708,7 @@ function GalleryRoom({
       <mesh
         position={[0, height / 2, wallZ]}
         receiveShadow
-        onClick={(event) => {
+        onDoubleClick={(event) => {
           if (!editable || !onWallSelect || dragged?.current) return;
           event.stopPropagation();
           onWallSelect("back");
@@ -1726,7 +1745,7 @@ function GalleryRoom({
         <mesh
           position={[0, height / 2, curveCenterZ]}
           receiveShadow
-          onClick={(event) => {
+          onDoubleClick={(event) => {
             if (!editable || !onWallSelect || dragged?.current) return;
             event.stopPropagation();
             onWallSelect("front");
@@ -1740,7 +1759,7 @@ function GalleryRoom({
           <mesh
             position={[-(width + 1.65) / 4, height / 2, 0]}
             receiveShadow
-            onClick={(event) => {
+            onDoubleClick={(event) => {
               if (!editable || !onWallSelect || dragged?.current) return;
               event.stopPropagation();
               onWallSelect("front");
@@ -1752,7 +1771,7 @@ function GalleryRoom({
           <mesh
             position={[(width + 1.65) / 4, height / 2, 0]}
             receiveShadow
-            onClick={(event) => {
+            onDoubleClick={(event) => {
               if (!editable || !onWallSelect || dragged?.current) return;
               event.stopPropagation();
               onWallSelect("front");
@@ -1770,7 +1789,7 @@ function GalleryRoom({
         <mesh
           position={[0, height / 2, depth / 2]}
           receiveShadow
-          onClick={(event) => {
+          onDoubleClick={(event) => {
             if (!editable || !onWallSelect || dragged?.current) return;
             event.stopPropagation();
             onWallSelect("front");
@@ -1786,7 +1805,7 @@ function GalleryRoom({
           position={[wall.x, (height - 0.25) / 2, wall.z]}
           receiveShadow
           castShadow
-          onClick={(event) => {
+          onDoubleClick={(event) => {
             if (!editable || !onWallSelect || dragged?.current) return;
             event.stopPropagation();
             onWallSelect(wall.id);
@@ -2239,7 +2258,7 @@ function DragHandler({
         });
       } else {
         const dist = Math.max(0.05, hit.distanceTo(drag.center));
-        const scale = Math.min(1.6, Math.max(0.5, drag.startScale * (dist / drag.startDist)));
+        const scale = Math.min(3, Math.max(0.5, drag.startScale * (dist / drag.startDist)));
         update(drag.id, { scale: Math.round(scale * 100) / 100 });
       }
     };
@@ -2257,6 +2276,70 @@ function DragHandler({
       gl.domElement.removeEventListener("pointercancel", onUp);
     };
   }, [camera, gl, dragRef]);
+  return null;
+}
+
+// Drag and drop from the Elements palette: the palette item carries its
+// type in the drag payload; dropping on the canvas raycasts the drop
+// point onto the floor (or the back wall for wall pieces, a horizontal
+// plane at rail height for the track light) and hands the room position
+// to the editor, which adds the element there and selects it.
+function ElementDropHandler({
+  room,
+  enabled,
+  onDrop,
+}: {
+  room: GalleryRoom;
+  enabled: boolean;
+  onDrop?: (type: ElementType, point: { x: number; y: number; z: number }) => void;
+}) {
+  const { camera, gl } = useThree();
+  const dropRef = useRef(onDrop);
+  dropRef.current = onDrop;
+  const roomRef = useRef(room);
+  roomRef.current = room;
+  useEffect(() => {
+    if (!enabled) return;
+    const el = gl.domElement;
+    const onDragOver = (event: DragEvent) => {
+      if (!event.dataTransfer || !Array.from(event.dataTransfer.types).includes("application/x-sanaa-element")) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    };
+    const onDropEvent = (event: DragEvent) => {
+      const type = event.dataTransfer?.getData("application/x-sanaa-element") as ElementType | "";
+      if (!type || !(elementTypes as readonly string[]).includes(type)) return;
+      event.preventDefault();
+      const currentRoom = roomRef.current;
+      const { width, depth, height } = roomLayouts[currentRoom.layout];
+      const rect = el.getBoundingClientRect();
+      const ndc = new Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      const raycaster = new Raycaster();
+      raycaster.setFromCamera(ndc, camera);
+      const hit = new Vector3();
+      const planeKind = ELEMENT_PLANES[type];
+      let point: Vector3 | null = null;
+      if (planeKind === "wall") {
+        const wallOffset = ELEMENT_DEFAULTS[type].wallOffset;
+        const wallPlane = new Plane(new Vector3(0, 0, 1), depth / 2 - wallOffset);
+        if (raycaster.ray.intersectPlane(wallPlane, hit)) point = hit.clone();
+      } else if (planeKind === "ceiling") {
+        const y = Math.max(2.5, height - 0.4);
+        if (raycaster.ray.intersectPlane(new Plane(new Vector3(0, 1, 0), -y), hit)) point = hit.clone();
+      }
+      if (!point && raycaster.ray.intersectPlane(new Plane(new Vector3(0, 1, 0), 0), hit)) point = hit.clone();
+      if (!point) return;
+      point.x = Math.min(width / 2 - 0.5, Math.max(-width / 2 + 0.5, point.x));
+      point.z = Math.min(depth / 2 - 0.5, Math.max(-depth / 2 + 0.5, point.z));
+      dropRef.current?.(type, { x: point.x, y: point.y, z: point.z });
+    };
+    el.addEventListener("dragover", onDragOver);
+    el.addEventListener("drop", onDropEvent);
+    return () => {
+      el.removeEventListener("dragover", onDragOver);
+      el.removeEventListener("drop", onDropEvent);
+    };
+  }, [camera, enabled, gl]);
   return null;
 }
 
@@ -2282,6 +2365,9 @@ export default function GalleryScene({
   onElementUpdate,
   selectedWallId,
   onWallSelect,
+  onEditStart,
+  onEditEnd,
+  onElementDrop,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -2312,6 +2398,12 @@ export default function GalleryScene({
   // Editor only: wall painting — the wall clicked in the 3D view.
   selectedWallId?: string | null;
   onWallSelect?: (wallId: WallId | string) => void;
+  // Editor only: a drag (or any discrete edit) is starting / ending, so
+  // the editor can snapshot once per action for Ctrl+Z.
+  onEditStart?: () => void;
+  onEditEnd?: () => void;
+  // Editor only: an element dropped from the palette onto the room.
+  onElementDrop?: (type: ElementType, point: { x: number; y: number; z: number }) => void;
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   const offsets = useMemo(() => {
@@ -2343,7 +2435,8 @@ export default function GalleryScene({
   const handleDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
     if (!editable || walking) return;
     const artwork = artworks.find((item) => item.id === id);
-    if (!artwork) return;
+    if (!artwork || artwork.id !== selectedId) return;
+    onEditStart?.();
     const { width, height } = artworkSize(artwork);
     const layout = roomLayouts[room.layout];
     const halfW = ((width + 0.2) / 2) * artwork.scale;
@@ -2376,7 +2469,6 @@ export default function GalleryScene({
     };
     setIsDragging(true);
     setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
-    onSelect?.(id);
   };
 
   // Editor drag for elements: the drag plane follows the element type —
@@ -2394,7 +2486,8 @@ export default function GalleryScene({
     // shows all rooms at once): find the room that holds this element.
     const ownerRoom = sceneRooms.find((sceneRoom) => (sceneRoom.elements ?? []).some((item) => item.id === id)) ?? room;
     const element = (ownerRoom.elements ?? []).find((item) => item.id === id);
-    if (!element) return;
+    if (!element || element.id !== selectedElementId) return;
+    onEditStart?.();
     const layout = roomLayouts[ownerRoom.layout];
     const planeKind = ELEMENT_PLANES[element.type];
     const position = new Vector3(element.x, element.y, element.z);
@@ -2434,7 +2527,6 @@ export default function GalleryScene({
     };
     setIsDragging(true);
     setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
-    onSelectElement?.(id);
   };
 
   const artworkNodes = artworkRooms.map((sceneRoom, index) => (
@@ -2520,6 +2612,7 @@ export default function GalleryScene({
           onDragEnd={() => {
             setIsDragging(false);
             setDragCursor(null);
+            onEditEnd?.();
           }}
         />
         <ElementDragHandler
@@ -2528,8 +2621,10 @@ export default function GalleryScene({
           onDragEnd={() => {
             setIsDragging(false);
             setDragCursor(null);
+            onEditEnd?.();
           }}
         />
+        <ElementDropHandler room={room} enabled={Boolean(editable) && !walking} onDrop={onElementDrop} />
         {interiorView && (
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}
@@ -2538,7 +2633,7 @@ export default function GalleryScene({
         ) : (
           <OrbitControls
             makeDefault
-            enabled={!isDragging && !hoveredArtwork && !hoveredElement}
+            enabled={!isDragging && !(hoveredArtwork && hoveredArtwork.id === selectedId) && !(hoveredElement && hoveredElement.id === selectedElementId)}
             minDistance={interiorView ? 1.2 : 4}
             maxDistance={interiorView ? interiorLimits.maxDistance : Math.max(roomLayouts[room.layout].width, roomLayouts[room.layout].depth) + 6}
             minPolarAngle={interiorView ? interiorLimits.minPolarAngle : 0}

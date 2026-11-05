@@ -326,21 +326,24 @@ button { color: inherit; }
 .element-palette-item svg { flex: 0 0 auto; color: var(--muted); }
 .element-palette-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .element-thumb { display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+.element-thumb svg, .element-preview-icon svg, .element-palette-item svg { display: block; }
 .element-empty-note { padding: 10px 4px; color: var(--muted); font-size: 8px; line-height: 1.55; }
 .element-preview-icon { display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
 
 /* Frame options (artwork inspector) */
 .frame-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.frame-option { display: flex; align-items: center; gap: 6px; padding: 7px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-3); color: var(--ink); font-size: 8px; cursor: pointer; }
+.frame-option { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 4px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-3); color: var(--ink); font-size: 8px; text-align: center; cursor: pointer; }
 .frame-option:hover { border-color: #b89a7e; }
 .frame-option.selected { border-color: var(--accent); background: var(--surface-2); font-weight: 600; }
-.frame-swatch { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.15); }
-.frame-swatch-none { background: repeating-linear-gradient(45deg, #fff 0 3px, #e5e0d5 3px 6px); }
-.frame-swatch-wood { background: #9c7c54; }
-.frame-swatch-metal { background: linear-gradient(135deg, #c8c8c4, #8a8a86); }
-.frame-swatch-gold { background: linear-gradient(135deg, #d4af37, #a67c37); }
-.frame-swatch-black { background: #141414; }
-.frame-swatch-white { background: #f5f2eb; }
+.frame-preview { flex: 0 0 auto; width: 36px; height: 28px; display: grid; place-items: center; background: #e9e4d8; border-radius: 1px; }
+.frame-preview-art { width: 24px; height: 17px; background: linear-gradient(145deg, #617164, #bc9e73 52%, #485448); display: block; }
+.frame-preview-none { border: 1px dashed rgba(0, 0, 0, 0.3); }
+.frame-preview-none .frame-preview-art { width: 28px; height: 20px; }
+.frame-preview-wood { border: 3px solid #9c7c54; }
+.frame-preview-metal { border: 3px solid transparent; border-image: linear-gradient(135deg, #d8d8d4, #8a8a86) 1; }
+.frame-preview-gold { border: 3px solid transparent; border-image: linear-gradient(135deg, #e8c96a, #a67c37) 1; }
+.frame-preview-black { border: 3px solid #141414; }
+.frame-preview-white { border: 3px solid #f5f2eb; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18); }
 
 /* Wall paint (inspector) */
 .wall-swatches { display: flex; gap: 6px; flex-wrap: wrap; }

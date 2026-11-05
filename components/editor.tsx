@@ -115,7 +115,44 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     });
   }
 
+  // The server rejects the whole save when a single artwork is missing a
+  // required detail (title, colours, room, or a valid uploaded image).
+  // Check here first, so the editor names the artwork and the missing
+  // detail instead of failing with a cryptic error.
+  function artworkSaveProblems(artwork: Artwork): string[] {
+    const problems: string[] = [];
+    if (!artwork.title.trim()) problems.push("a title");
+    if (!/^#[0-9a-f]{6}$/i.test(artwork.color)) problems.push("a valid frame colour");
+    if (!/^#[0-9a-f]{6}$/i.test(artwork.accent)) problems.push("a valid accent colour");
+    if (
+      artwork.imageUrl &&
+      !/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i.test(artwork.imageUrl)
+    ) {
+      problems.push("a re-uploaded image (this image link cannot be saved)");
+    }
+    if (!artwork.roomId) problems.push("a room");
+    return problems;
+  }
+
   async function saveExhibition() {
+    if (!title.trim()) {
+      window.alert("Give the exhibition a title before saving.");
+      return false;
+    }
+    const incomplete = artworks
+      .map((artwork, index) => ({ artwork, index, problems: artworkSaveProblems(artwork) }))
+      .filter((item) => item.problems.length > 0);
+    if (incomplete.length > 0) {
+      const first = incomplete[0];
+      const label = first.artwork.title.trim() || `Artwork ${first.index + 1}`;
+      window.alert(
+        `${label} needs ${first.problems.join(" and ")} before this exhibition can be saved.` +
+          (incomplete.length > 1 ? ` ${incomplete.length} artworks are missing details.` : "") +
+          " Fill them in on the right, then save again.",
+      );
+      setSelectedId(first.artwork.id);
+      return false;
+    }
     setBusy(true);
     try {
       const response = await fetch(`/api/exhibitions/${exhibitionId}`, {
@@ -128,12 +165,28 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
           artworks,
         }),
       });
-      const result = await response.json();
+      // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+      // an oversized request) is not JSON and used to throw a cryptic
+      // "Unexpected end of JSON input" instead of a readable error.
+      const text = await response.text();
+      let result: { error?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as { error?: string }) : {};
+      } catch {
+        result = {};
+      }
       if (response.status === 401) {
         window.location.assign("/login");
         return false;
       }
-      if (!response.ok) throw new Error(result.error ?? "Could not save this exhibition.");
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413
+              ? "This exhibition is too large to save. Remove an artwork or use smaller images, then save again."
+              : "Could not save this exhibition."),
+        );
+      }
       setSaved(true);
       return true;
     } catch (error) {

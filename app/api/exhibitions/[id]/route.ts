@@ -7,6 +7,41 @@ import { exhibitionUpdateSchema } from "@/lib/validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+const ARTWORK_FIELD_LABELS: Record<string, string> = {
+  title: "title",
+  artist: "artist",
+  year: "year",
+  medium: "medium",
+  dimensions: "dimensions",
+  description: "description",
+  color: "frame colour",
+  accent: "accent colour",
+  imageUrl: "image",
+  roomId: "room",
+  position: "position",
+  rotation: "rotation",
+  scale: "size",
+};
+
+// Turn the first validation failure into a message that names the artwork
+// and the missing detail, instead of Zod's raw "String must contain at
+// least 1 character(s)".
+function readableExhibitionError(error: ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Invalid exhibition data.";
+  let detail = issue.message;
+  if (detail.includes("at least 1 character") || detail === "Required") detail = "is required";
+  else if (detail === "Invalid") detail = "is not valid";
+  const path = issue.path;
+  if (path[0] === "artworks" && typeof path[1] === "number") {
+    const field = typeof path[2] === "string" ? ARTWORK_FIELD_LABELS[path[2]] ?? path[2] : "details";
+    return `Artwork ${path[1] + 1}: ${field} ${detail}.`;
+  }
+  if (path[0] === "title") return `Exhibition title ${detail}.`;
+  if (path[0] === "rooms") return `A room ${detail}.`;
+  return issue.message;
+}
+
 export async function GET(_request: Request, { params }: RouteContext) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in to edit this exhibition." }, { status: 401 });
@@ -85,7 +120,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid exhibition data." }, { status: 400 });
+      return NextResponse.json({ error: readableExhibitionError(error) }, { status: 400 });
     }
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Invalid exhibition data." }, { status: 400 });

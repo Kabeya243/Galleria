@@ -881,3 +881,84 @@ button { font-weight: 600; }
 .admin-nav { display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 22px; }
 .admin-nav a { padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-3); color: var(--ink); font-size: 12px; font-weight: 600; text-decoration: none; }
 .admin-nav a:hover { border-color: var(--accent); }
+
+/* Admin dashboard — light SaaS back-office look (Kravio-style reference),
+   deliberately separate from the public white-gallery look: light grey page,
+   white cards, clean sans typography, dense but calm. Scoped to .admin-shell
+   so the public site, editor and tools are untouched. Always light. */
+.admin-shell .dashboard-main { background: #f4f5f7; }
+.admin-shell .sidebar { background: #ffffff; }
+.admin-shell .welcome-row { margin-bottom: 22px; }
+.admin-shell .welcome-row h1 { font-family: "Manrope", "DM Sans", "Helvetica Neue", Arial, sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -.02em; text-transform: none; }
+.admin-shell .welcome-copy { color: #6f6f6c; font-size: 13px; }
+.admin-shell .dashboard-content { max-width: 1450px; padding: 36px 40px 32px; }
+
+.ad-card { background: #ffffff; border: 1px solid #e8e8e5; border-radius: 12px; box-shadow: 0 1px 2px rgba(20, 20, 20, .04); padding: 20px; }
+.ad-card h2 { margin: 0; color: #141414; font-family: "Manrope", "DM Sans", "Helvetica Neue", Arial, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -.01em; text-transform: none; }
+.ad-card-sub { margin: 4px 0 0; color: #6f6f6c; font-size: 12px; line-height: 1.5; }
+.ad-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.ad-card-total { color: #141414; font-size: 22px; font-weight: 700; white-space: nowrap; }
+.ad-card-total span { color: #6f6f6c; font-size: 12px; font-weight: 600; }
+.ad-card-link { color: #a67c37; font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.ad-card-link:hover { text-decoration: underline; }
+
+.ad-grid-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+.ad-stat { display: flex; flex-direction: column; gap: 2px; }
+.ad-stat-label { color: #6f6f6c; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.ad-stat-value { color: #141414; font-family: "Manrope", "DM Sans", "Helvetica Neue", Arial, sans-serif; font-size: 32px; font-weight: 700; line-height: 1.15; letter-spacing: -.02em; }
+.ad-stat-delta { font-size: 12px; font-weight: 600; }
+.ad-delta-up { color: #2e7d4f; }
+.ad-delta-down { color: #b3382c; }
+.ad-delta-flat { color: #6f6f6c; }
+.ad-stat-note { color: #6f6f6c; font-size: 12px; }
+.ad-spark { width: 100%; height: 36px; margin-top: 10px; }
+
+.ad-layout-main { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+.ad-layout-half { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.ad-table-card { margin-bottom: 16px; }
+.ad-table-card table { margin-top: 4px; }
+
+.ad-bars { display: flex; align-items: flex-end; gap: 6px; height: 150px; margin-top: 8px; }
+.ad-bar-wrap { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.ad-bar-value { color: #141414; font-size: 11px; font-weight: 700; line-height: 1; min-height: 11px; }
+.ad-bar { width: 100%; max-width: 34px; border-radius: 4px 4px 0 0; background: #e6e6e2; }
+.ad-bar-max { background: #141414; }
+.ad-bar-labels { display: flex; gap: 6px; margin-top: 6px; }
+.ad-bar-labels span { flex: 1; min-width: 0; text-align: center; color: #6f6f6c; font-size: 11px; }
+.ad-chart-foot { margin-top: 12px; }
+
+.ad-feed { list-style: none; margin: 0; padding: 0; }
+.ad-feed li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0ee; }
+.ad-feed li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ad-feed li:first-child { padding-top: 0; }
+.ad-feed-dot { flex: none; width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: #a67c37; }
+.ad-feed-signup { background: #2e7d4f; }
+.ad-feed-exhibition { background: #141414; }
+.ad-feed-artwork { background: #a67c37; }
+.ad-feed-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ad-feed-body strong { color: #141414; font-size: 13px; font-weight: 600; line-height: 1.4; }
+.ad-feed-body span { color: #6f6f6c; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.ad-feed-time { flex: none; color: #6f6f6c; font-size: 11px; white-space: nowrap; }
+
+.ad-share { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.ad-share-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.ad-share-name { color: #141414; font-size: 13px; font-weight: 600; }
+.ad-share-count { color: #6f6f6c; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.ad-share-track { height: 7px; border-radius: 999px; background: #f0f0ee; overflow: hidden; }
+.ad-share-fill { height: 100%; border-radius: 999px; background: #141414; }
+.ad-share-fill-gold { background: #a67c37; }
+
+.ad-foot { margin: 4px 0 0; color: #6f6f6c; font-size: 12px; line-height: 1.6; }
+.ad-foot a { color: #a67c37; font-weight: 600; }
+
+@media (max-width: 1100px) {
+  .ad-grid-stats { grid-template-columns: repeat(2, 1fr); }
+  .ad-layout-main { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .ad-layout-half { grid-template-columns: 1fr; }
+  .admin-shell .dashboard-content { padding: 26px 16px 20px; }
+}
+@media (max-width: 520px) {
+  .ad-grid-stats { grid-template-columns: 1fr; }
+}

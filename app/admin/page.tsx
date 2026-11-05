@@ -15,150 +15,469 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function relativeTime(d: Date): string {
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString("en-GB");
+}
+
+// Counts per day for the last `days` days (oldest first). `dates` are the
+// createdAt values of the rows to bucket; the bucket key is the local date.
+function dailyCounts(dates: Date[], days: number): { date: Date; count: number }[] {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
+  const buckets = Array.from({ length: days }, (_, i) => {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    return { date, count: 0 };
+  });
+  const index = new Map(buckets.map((b, i) => [b.date.toDateString(), i]));
+  for (const d of dates) {
+    const i = index.get(new Date(d.getFullYear(), d.getMonth(), d.getDate()).toDateString());
+    if (i !== undefined) buckets[i].count += 1;
+  }
+  return buckets;
+}
+
+function deltaTone(now: number, prev: number): { text: string; tone: "up" | "down" | "flat" } {
+  const diff = now - prev;
+  if (diff > 0) return { text: `+${diff} vs previous 7 days`, tone: "up" };
+  if (diff < 0) return { text: `${diff} vs previous 7 days`, tone: "down" };
+  return { text: "Same as previous 7 days", tone: "flat" };
+}
+
+// Small sparkline from real daily counts — pure SVG, no chart library.
+function Sparkline({ values }: { values: number[] }) {
+  const max = Math.max(...values, 1);
+  const w = 140;
+  const h = 36;
+  const points = values.map((v, i) => {
+    const x = values.length > 1 ? (i * (w - 4)) / (values.length - 1) + 2 : w / 2;
+    const y = h - 3 - (v / max) * (h - 8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const line = points.join(" ");
+  return (
+    <svg className="ad-spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+      <polygon points={`2,${h} ${line} ${w - 2},${h}`} fill="#f7f2e8" />
+      <polyline points={line} fill="none" stroke="#a67c37" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export default async function AdminOverviewRoute() {
   const user = await requireAdmin();
+  const now = new Date();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
   const [
-    userCount,
-    newUsers,
-    exhibitionCount,
-    publicExhibitions,
-    artworkCount,
+    userDates,
+    exhibitionDates,
+    artworkDates,
     totalViews,
+    publicExhibitions,
     topExhibitions,
     recentUsers,
     recentExhibitions,
+    recentArtworks,
+    countryGroups,
+    roleGroups,
     storage,
   ] = await Promise.all([
-    db.user.count(),
-    db.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-    db.exhibition.count(),
-    db.exhibition.count({ where: { status: "public" } }),
-    db.artwork.count(),
+    db.user.findMany({ select: { createdAt: true } }),
+    db.exhibition.findMany({ select: { createdAt: true } }),
+    db.artwork.findMany({ select: { createdAt: true } }),
     db.exhibition.aggregate({ _sum: { views: true } }),
+    db.exhibition.count({ where: { status: "public" } }),
     db.exhibition.findMany({
       orderBy: { views: "desc" },
-      take: 5,
-      select: { id: true, title: true, slug: true, status: true, views: true, owner: { select: { name: true } } },
+      take: 6,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        views: true,
+        owner: { select: { name: true, email: true } },
+        _count: { select: { artworks: true } },
+      },
     }),
-    db.user.findMany({ orderBy: { createdAt: "desc" }, take: 8, select: { id: true, name: true, email: true, role: true, country: true, createdAt: true } }),
-    db.exhibition.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, title: true, status: true, createdAt: true, owner: { select: { name: true } } } }),
+    db.user.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        country: true,
+        createdAt: true,
+        _count: { select: { exhibitions: true } },
+      },
+    }),
+    db.exhibition.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, title: true, status: true, createdAt: true, owner: { select: { name: true } } },
+    }),
+    db.artwork.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, title: true, createdAt: true, exhibition: { select: { title: true } } },
+    }),
+    db.user.groupBy({ by: ["country"], _count: { _all: true } }),
+    db.user.groupBy({ by: ["role"], _count: { _all: true } }),
     db.$queryRaw<{ total: bigint }[]>`SELECT COALESCE(SUM(octet_length(data)), 0) AS total FROM "Upload"`,
   ]);
-  const storageBytes = Number(storage[0]?.total ?? 0);
 
-  const stats = [
-    { label: "Registered users", value: userCount, note: `${newUsers} new this week` },
-    { label: "Exhibitions", value: exhibitionCount, note: `${publicExhibitions} public` },
-    { label: "Artworks", value: artworkCount, note: "across all exhibitions" },
-    { label: "Total visits", value: totalViews._sum.views ?? 0, note: "all exhibitions, all time" },
-    { label: "Images in the database", value: formatBytes(storageBytes), note: "legacy uploads (R2 is separate)" },
-  ];
+  const userCount = userDates.length;
+  const exhibitionCount = exhibitionDates.length;
+  const artworkCount = artworkDates.length;
+  const storageBytes = Number(storage[0]?.total ?? 0);
+  const views = totalViews._sum.views ?? 0;
+
+  const inRange = (dates: Date[], from: Date, to?: Date) =>
+    dates.filter((d) => d >= from && (to === undefined || d < to)).length;
+
+  const usersThisWeek = inRange(userDates.map((u) => u.createdAt), sevenDaysAgo);
+  const usersPrevWeek = inRange(userDates.map((u) => u.createdAt), fourteenDaysAgo, sevenDaysAgo);
+  const exhibitionsThisWeek = inRange(exhibitionDates.map((e) => e.createdAt), sevenDaysAgo);
+  const exhibitionsPrevWeek = inRange(exhibitionDates.map((e) => e.createdAt), fourteenDaysAgo, sevenDaysAgo);
+  const artworksThisWeek = inRange(artworkDates.map((a) => a.createdAt), sevenDaysAgo);
+  const artworksPrevWeek = inRange(artworkDates.map((a) => a.createdAt), fourteenDaysAgo, sevenDaysAgo);
+
+  const signupDays = dailyCounts(userDates.map((u) => u.createdAt), 14);
+  const exhibitionDays = dailyCounts(exhibitionDates.map((e) => e.createdAt), 14);
+  const artworkDays = dailyCounts(artworkDates.map((a) => a.createdAt), 14);
+  const signupsTotal = signupDays.reduce((sum, d) => sum + d.count, 0);
+  const signupMax = Math.max(...signupDays.map((d) => d.count), 1);
+
+  const usersDelta = deltaTone(usersThisWeek, usersPrevWeek);
+  const exhibitionsDelta = deltaTone(exhibitionsThisWeek, exhibitionsPrevWeek);
+  const artworksDelta = deltaTone(artworksThisWeek, artworksPrevWeek);
+
+  const countries = countryGroups
+    .map((g) => ({ name: (g.country ?? "").trim() || "Not specified", count: g._count._all }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+  const roles = roleGroups
+    .map((g) => ({ name: (g.role ?? "").trim() || "Not specified", count: g._count._all }))
+    .sort((a, b) => b.count - a.count);
+
+  // Latest activity: newest signups, exhibitions and artworks, merged and
+  // sorted by when they happened. All real rows, nothing invented.
+  const activity = [
+    ...recentUsers.map((a) => ({
+      key: `user-${a.id}`,
+      kind: "signup",
+      title: `New signup — ${a.name}`,
+      sub: `${a.email}${a.role ? ` · ${a.role}` : ""}${a.country ? ` · ${a.country}` : ""}`,
+      at: a.createdAt,
+    })),
+    ...recentExhibitions.map((e) => ({
+      key: `exhibition-${e.id}`,
+      kind: "exhibition",
+      title: `Exhibition created — ${e.title}`,
+      sub: `by ${e.owner.name} · ${e.status}`,
+      at: e.createdAt,
+    })),
+    ...recentArtworks.map((a) => ({
+      key: `artwork-${a.id}`,
+      kind: "artwork",
+      title: `Artwork added — ${a.title}`,
+      sub: `in ${a.exhibition.title}`,
+      at: a.createdAt,
+    })),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 8);
+
+  const todayLabel = now.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <AdminShell
       user={user}
-      title="Platform overview"
+      title="Hello, Kabeya"
       eyebrow="ADMIN · FOR THE OWNER ONLY"
-      description="Everything on SANAA in one place: who signed up, what they built, and what visitors looked at."
+      description={`${todayLabel} — a look at who joined, what was built, and what visitors viewed on SANAA.`}
     >
-      <div className={styles.summaryRow}>
-        {stats.map((stat) => (
-          <div key={stat.label}>
-            <strong>{stat.value}</strong>
-            <span>{stat.label}</span>
-            <span>{stat.note}</span>
-          </div>
-        ))}
+      {/* Stat cards */}
+      <div className="ad-grid-stats">
+        <div className="ad-card ad-stat">
+          <span className="ad-stat-label">Total users</span>
+          <strong className="ad-stat-value">{userCount}</strong>
+          <span className={`ad-stat-delta ad-delta-${usersDelta.tone}`}>{usersDelta.text}</span>
+          <span className="ad-stat-note">{usersThisWeek} new in the last 7 days</span>
+          <Sparkline values={signupDays.map((d) => d.count)} />
+        </div>
+        <div className="ad-card ad-stat">
+          <span className="ad-stat-label">Total exhibitions</span>
+          <strong className="ad-stat-value">{exhibitionCount}</strong>
+          <span className={`ad-stat-delta ad-delta-${exhibitionsDelta.tone}`}>{exhibitionsDelta.text}</span>
+          <span className="ad-stat-note">{publicExhibitions} public</span>
+          <Sparkline values={exhibitionDays.map((d) => d.count)} />
+        </div>
+        <div className="ad-card ad-stat">
+          <span className="ad-stat-label">Total artworks</span>
+          <strong className="ad-stat-value">{artworkCount}</strong>
+          <span className={`ad-stat-delta ad-delta-${artworksDelta.tone}`}>{artworksDelta.text}</span>
+          <span className="ad-stat-note">{artworksThisWeek} added in the last 7 days</span>
+          <Sparkline values={artworkDays.map((d) => d.count)} />
+        </div>
+        <div className="ad-card ad-stat">
+          <span className="ad-stat-label">Total visits</span>
+          <strong className="ad-stat-value">{views}</strong>
+          <span className="ad-stat-delta ad-delta-flat">All exhibitions, all time</span>
+          <span className="ad-stat-note">No daily visit history yet — visits are counted as a total only</span>
+        </div>
       </div>
 
-      <h2 className="section-heading">Most visited exhibitions</h2>
-      {topExhibitions.length === 0 ? (
-        <div className={styles.emptyBox}>
-          <strong>No visits yet.</strong>
-          <p>Visits appear here once a public exhibition is opened.</p>
-        </div>
-      ) : (
-        <table className={styles.inventoryTable}>
-          <thead>
-            <tr>
-              <th>Exhibition</th>
-              <th>Owner</th>
-              <th>Status</th>
-              <th>Visits</th>
-            </tr>
-          </thead>
-          <tbody>
-            {topExhibitions.map((exhibition) => (
-              <tr key={exhibition.id}>
-                <td>
-                  <Link href={`/exhibition/${exhibition.slug}`}>{exhibition.title}</Link>
-                </td>
-                <td>{exhibition.owner.name}</td>
-                <td>{exhibition.status}</td>
-                <td>{exhibition.views}</td>
-              </tr>
+      {/* Signups chart + activity feed */}
+      <div className="ad-layout-main">
+        <section className="ad-card">
+          <div className="ad-card-head">
+            <div>
+              <h2>Signups — last 14 days</h2>
+              <p className="ad-card-sub">New accounts per day</p>
+            </div>
+            <strong className="ad-card-total">
+              {signupsTotal} <span>new</span>
+            </strong>
+          </div>
+          <div className="ad-bars">
+            {signupDays.map((d) => (
+              <div
+                key={d.date.toDateString()}
+                className="ad-bar-wrap"
+                title={`${d.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}: ${d.count} signup${d.count === 1 ? "" : "s"}`}
+              >
+                <span className="ad-bar-value">{d.count > 0 ? d.count : ""}</span>
+                <div
+                  className={`ad-bar${d.count === signupMax && d.count > 0 ? " ad-bar-max" : ""}`}
+                  style={{ height: `${d.count > 0 ? Math.max((d.count / signupMax) * 100, 7) : 2}%` }}
+                />
+              </div>
             ))}
-          </tbody>
-        </table>
-      )}
+          </div>
+          <div className="ad-bar-labels">
+            {signupDays.map((d) => (
+              <span key={d.date.toDateString()}>{d.date.getDate()}</span>
+            ))}
+          </div>
+          <p className="ad-card-sub ad-chart-foot">
+            {signupDays[0].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} –{" "}
+            {signupDays[signupDays.length - 1].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+          </p>
+        </section>
 
-      <h2 className="section-heading">Latest signups</h2>
-      {recentUsers.length === 0 ? (
-        <div className={styles.emptyBox}>
-          <strong>No users yet.</strong>
-          <p>New registrations will appear here.</p>
+        <section className="ad-card">
+          <div className="ad-card-head">
+            <div>
+              <h2>Latest activity</h2>
+              <p className="ad-card-sub">Signups, exhibitions and artworks</p>
+            </div>
+          </div>
+          {activity.length === 0 ? (
+            <div className={styles.emptyBox}>
+              <strong>Nothing yet.</strong>
+              <p>Activity appears here as soon as someone signs up or builds something.</p>
+            </div>
+          ) : (
+            <ul className="ad-feed">
+              {activity.map((item) => (
+                <li key={item.key}>
+                  <span className={`ad-feed-dot ad-feed-${item.kind}`} aria-hidden="true" />
+                  <div className="ad-feed-body">
+                    <strong>{item.title}</strong>
+                    <span>{item.sub}</span>
+                  </div>
+                  <span className="ad-feed-time">{relativeTime(item.at)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Countries + roles */}
+      <div className="ad-layout-half">
+        <section className="ad-card">
+          <div className="ad-card-head">
+            <div>
+              <h2>Users by country</h2>
+              <p className="ad-card-sub">Where accounts are based</p>
+            </div>
+          </div>
+          {countries.length === 0 ? (
+            <div className={styles.emptyBox}>
+              <strong>No users yet.</strong>
+              <p>Countries appear here once accounts sign up.</p>
+            </div>
+          ) : (
+            <ul className="ad-share">
+              {countries.map((c) => (
+                <li key={c.name}>
+                  <div className="ad-share-row">
+                    <span className="ad-share-name">{c.name}</span>
+                    <span className="ad-share-count">
+                      {c.count} · {userCount > 0 ? Math.round((c.count / userCount) * 100) : 0}%
+                    </span>
+                  </div>
+                  <div className="ad-share-track">
+                    <div
+                      className="ad-share-fill"
+                      style={{ width: `${userCount > 0 ? Math.max((c.count / userCount) * 100, 2) : 0}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="ad-card">
+          <div className="ad-card-head">
+            <div>
+              <h2>Users by role</h2>
+              <p className="ad-card-sub">What accounts do on SANAA</p>
+            </div>
+          </div>
+          {roles.length === 0 ? (
+            <div className={styles.emptyBox}>
+              <strong>No users yet.</strong>
+              <p>Roles appear here once accounts sign up.</p>
+            </div>
+          ) : (
+            <ul className="ad-share">
+              {roles.map((r) => (
+                <li key={r.name}>
+                  <div className="ad-share-row">
+                    <span className="ad-share-name">{r.name}</span>
+                    <span className="ad-share-count">
+                      {r.count} · {userCount > 0 ? Math.round((r.count / userCount) * 100) : 0}%
+                    </span>
+                  </div>
+                  <div className="ad-share-track">
+                    <div
+                      className="ad-share-fill ad-share-fill-gold"
+                      style={{ width: `${userCount > 0 ? Math.max((r.count / userCount) * 100, 2) : 0}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Top exhibitions */}
+      <section className="ad-card ad-table-card">
+        <div className="ad-card-head">
+          <div>
+            <h2>Top exhibitions by visits</h2>
+            <p className="ad-card-sub">The most visited rooms on the platform</p>
+          </div>
+          <Link className="ad-card-link" href="/admin/exhibitions">
+            See all exhibitions
+          </Link>
         </div>
-      ) : (
-        <table className={styles.inventoryTable}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Country</th>
-              <th>Signed up</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentUsers.map((account) => (
-              <tr key={account.id}>
-                <td>{account.name}</td>
-                <td>{account.email}</td>
-                <td>{account.role ?? "—"}</td>
-                <td>{account.country ?? "—"}</td>
-                <td>{account.createdAt.toLocaleDateString("en-GB")}</td>
+        {topExhibitions.length === 0 ? (
+          <div className={styles.emptyBox}>
+            <strong>No visits yet.</strong>
+            <p>Visits appear here once a public exhibition is opened.</p>
+          </div>
+        ) : (
+          <table className={styles.inventoryTable}>
+            <thead>
+              <tr>
+                <th>Exhibition</th>
+                <th>Owner</th>
+                <th>Status</th>
+                <th>Artworks</th>
+                <th>Visits</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <p className={styles.resultNote}>
-        <Link href="/admin/users">See all users</Link> · <Link href="/admin/exhibitions">See all exhibitions</Link> ·{" "}
+            </thead>
+            <tbody>
+              {topExhibitions.map((exhibition) => (
+                <tr key={exhibition.id}>
+                  <td>
+                    {exhibition.status === "public" ? (
+                      <Link href={`/exhibition/${exhibition.slug}`}>{exhibition.title}</Link>
+                    ) : (
+                      exhibition.title
+                    )}
+                  </td>
+                  <td>
+                    {exhibition.owner.name} ({exhibition.owner.email})
+                  </td>
+                  <td>{exhibition.status}</td>
+                  <td>{exhibition._count.artworks}</td>
+                  <td>{exhibition.views}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* Recent users */}
+      <section className="ad-card ad-table-card">
+        <div className="ad-card-head">
+          <div>
+            <h2>Recent users</h2>
+            <p className="ad-card-sub">The latest accounts to join</p>
+          </div>
+          <Link className="ad-card-link" href="/admin/users">
+            See all users
+          </Link>
+        </div>
+        {recentUsers.length === 0 ? (
+          <div className={styles.emptyBox}>
+            <strong>No users yet.</strong>
+            <p>New registrations will appear here.</p>
+          </div>
+        ) : (
+          <table className={styles.inventoryTable}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Country</th>
+                <th>Role</th>
+                <th>Exhibitions</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentUsers.map((account) => (
+                <tr key={account.id}>
+                  <td>{account.name}</td>
+                  <td>{account.email}</td>
+                  <td>{account.country ?? "—"}</td>
+                  <td>{account.role ?? "—"}</td>
+                  <td>{account._count.exhibitions}</td>
+                  <td>{account.createdAt.toLocaleDateString("en-GB")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <p className="ad-foot">
+        Legacy image storage in the database: {formatBytes(storageBytes)} (R2 is separate). ·{" "}
         <Link href="/admin/artworks">See all artworks</Link>
       </p>
-
-      <h2 className="section-heading">Latest exhibitions</h2>
-      <table className={styles.inventoryTable}>
-        <thead>
-          <tr>
-            <th>Exhibition</th>
-            <th>Owner</th>
-            <th>Status</th>
-            <th>Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recentExhibitions.map((exhibition) => (
-            <tr key={exhibition.id}>
-              <td>{exhibition.title}</td>
-              <td>{exhibition.owner.name}</td>
-              <td>{exhibition.status}</td>
-              <td>{exhibition.createdAt.toLocaleDateString("en-GB")}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </AdminShell>
   );
 }

@@ -21,7 +21,7 @@ export default function AdminShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="app-shell">
+    <div className="app-shell admin-shell">
       <Sidebar user={user} active="admin" exhibitionCount={0} />
       <main className="dashboard-main">
         <div className="dashboard-content">

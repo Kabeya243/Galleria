@@ -121,6 +121,11 @@ button { color: inherit; }
 .art-three { background: #e4e6e0; }
 .artwork-image-inner { position: relative; width: 44%; height: 71%; border: 5px solid #b9a98e; padding: 6px; background: #f1eee5; box-shadow: 2px 6px 12px #31352a2b; transform: rotate(-3deg); }
 .artwork-image-inner[style*="background-image"] { border-color: #b9a98e; }
+/* When a real photo is set as the background image, hide the decorative
+   gradient placeholder (::before) — it is opaque and used to paint OVER
+   the photo, so the dashboard showed gradient frames instead of the
+   artwork. Without a photo the gradient (and the shapes inside) stays. */
+.artwork-image-inner[style*="background-image"]:before { display: none; }
 .artwork-image-inner:before { content: ""; position: absolute; inset: 5px; background: linear-gradient(140deg, #748173, #c8b38f 53%, #515d50); }
 .art-two .artwork-image-inner { transform: rotate(2deg); border-color: #d5c9b1; }
 .art-two .artwork-image-inner:before { background: linear-gradient(130deg, #bd6249 0 48%, #d5b981 49% 66%, #4c574d 67%); }

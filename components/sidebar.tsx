@@ -9,6 +9,7 @@ import {
   Grid2X2,
   Image,
   Settings2,
+  Wrench,
 } from "lucide-react";
 
 export default function Sidebar({
@@ -17,7 +18,7 @@ export default function Sidebar({
   exhibitionCount,
 }: {
   user: { name: string; email: string };
-  active: "overview" | "settings" | "galleries" | "exhibitions" | "explore";
+  active: "overview" | "settings" | "galleries" | "exhibitions" | "explore" | "tools";
   exhibitionCount: number;
 }) {
   async function signOut() {
@@ -58,6 +59,9 @@ export default function Sidebar({
         </a>
         <Link className={active === "explore" ? "nav-item active" : "nav-item"} href="/explore">
           <Compass size={17} /> Explore
+        </Link>
+        <Link className={active === "tools" ? "nav-item active" : "nav-item"} href="/tools">
+          <Wrench size={17} /> Tools
         </Link>
       </nav>
 

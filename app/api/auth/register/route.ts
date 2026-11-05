@@ -19,8 +19,10 @@ export async function POST(request: Request) {
         email: input.email,
         name: input.name,
         passwordHash: await hash(input.password, 12),
+        role: input.role,
+        country: input.country || undefined,
       },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, role: true, country: true },
     });
     await createSession(user.id);
     return NextResponse.json({ user }, { status: 201 });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { USER_ROLES } from "@/lib/validation";
 
 export function AsteriskMark() {
   return (
@@ -21,6 +22,8 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("");
+  const [country, setCountry] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
@@ -36,7 +39,9 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          isRegister ? { name, email, password } : { email, password, rememberMe },
+          isRegister
+            ? { name, email, password, role: role || undefined, country: country || undefined }
+            : { email, password, rememberMe },
         ),
       });
       const result = await response.json();
@@ -86,6 +91,68 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                     onChange={(event) => setName(event.target.value)}
                     placeholder="How should we call you?"
                   />
+                </div>
+              </div>
+            )}
+            {isRegister && (
+              <div className="auth-noir-field">
+                <label htmlFor="auth-role">Your role</label>
+                <div className="auth-noir-field-row">
+                  <select
+                    id="auth-role"
+                    value={role}
+                    onChange={(event) => setRole(event.target.value)}
+                    aria-label="Your role on SANAA"
+                  >
+                    <option value="">Choose your role (optional)</option>
+                    {USER_ROLES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+            {isRegister && (
+              <div className="auth-noir-field">
+                <label htmlFor="auth-country">Country</label>
+                <div className="auth-noir-field-row">
+                  <input
+                    id="auth-country"
+                    autoComplete="country-name"
+                    maxLength={80}
+                    value={country}
+                    onChange={(event) => setCountry(event.target.value)}
+                    placeholder="Where are you based? (optional)"
+                    list="auth-country-list"
+                  />
+                  <datalist id="auth-country-list">
+                    {[
+                      "Uganda",
+                      "Kenya",
+                      "Senegal",
+                      "DR Congo",
+                      "Nigeria",
+                      "Ghana",
+                      "South Africa",
+                      "Rwanda",
+                      "Tanzania",
+                      "Ethiopia",
+                      "France",
+                      "Belgium",
+                      "United Kingdom",
+                      "United States",
+                      "Canada",
+                      "Germany",
+                      "Netherlands",
+                      "Spain",
+                      "Italy",
+                      "United Arab Emirates",
+                    ].map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
             )}

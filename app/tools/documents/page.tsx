@@ -1,0 +1,34 @@
+import { redirect } from "next/navigation";
+import CertificateTool from "@/components/certificate-tool";
+import ToolsShell from "@/components/tools-shell";
+import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+export const metadata = {
+  title: "Documents — SANAA Tools",
+  description: "Certificates of authenticity, labels and artwork sheets, ready to print.",
+};
+
+export default async function DocumentsRoute() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const [exhibitionCount, artworks] = await Promise.all([
+    db.exhibition.count({ where: { ownerId: user.id } }),
+    db.artwork.findMany({
+      where: { exhibition: { ownerId: user.id } },
+      select: { id: true, title: true, medium: true, dimensions: true, year: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+  return (
+    <ToolsShell
+      user={user}
+      exhibitionCount={exhibitionCount}
+      title="Documents"
+      eyebrow="TOOLS · DOCUMENTS & REPORTING"
+      description="The paper that goes with a sale. Pick a work and print its certificate of authenticity — title, medium, dimensions, year, edition and signature."
+    >
+      <CertificateTool artistName={user.name} artworks={artworks} />
+    </ToolsShell>
+  );
+}

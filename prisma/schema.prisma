@@ -12,6 +12,11 @@ model User {
   email        String       @unique
   name         String
   passwordHash String
+  // Chosen at signup: what the account does on SANAA (artist, curator,
+  // gallery, collector, advisor, institution…) and where they are based.
+  // Optional so accounts created before this field existed keep working.
+  role         String?
+  country      String?
   createdAt    DateTime     @default(now())
   exhibitions  Exhibition[]
   resetTokens  PasswordResetToken[]

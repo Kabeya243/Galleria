@@ -7,6 +7,17 @@ export const credentialsSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
+// Roles offered on the signup form — what the account does on SANAA.
+export const USER_ROLES = [
+  "Artist",
+  "Curator",
+  "Gallery",
+  "Collector",
+  "Art Advisor",
+  "Institution",
+  "Other",
+] as const;
+
 export const registrationSchema = credentialsSchema.extend({
   name: z.string().trim().min(2).max(60),
   password: z
@@ -16,6 +27,10 @@ export const registrationSchema = credentialsSchema.extend({
     .regex(/[a-z]/, "Password must include a lowercase letter.")
     .regex(/[A-Z]/, "Password must include an uppercase letter.")
     .regex(/[0-9]/, "Password must include a number."),
+  // Optional: older clients and accounts created before these fields
+  // existed send nothing, and the account still works.
+  role: z.enum(USER_ROLES).optional(),
+  country: z.string().trim().max(80).optional(),
 });
 
 export const profileUpdateSchema = z.object({

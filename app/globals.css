@@ -760,6 +760,8 @@ button { font-weight: 700; }
 .auth-noir-field > label { color: #8f8d82; font-size: 10px; font-weight: 600; letter-spacing: .06em; }
 .auth-noir-field-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #2b2b28; }
 .auth-noir-field-row input { flex: 1; min-width: 0; height: 38px; padding: 0; border: 0; outline: 0; background: transparent; color: #f5f4ef; font-size: 14px; }
+.auth-noir-field-row select { flex: 1; min-width: 0; height: 38px; padding: 0; border: 0; outline: 0; background: transparent; color: #f5f4ef; font-size: 14px; cursor: pointer; }
+.auth-noir-field-row select option { color: #1a1a1a; }
 .auth-noir-field-row input::placeholder { color: #55544d; }
 .auth-noir-field-row:focus-within { border-bottom-color: #f5f4ef; }
 .auth-noir-eye { display: grid; place-items: center; width: 30px; height: 30px; border: 0; background: transparent; color: #8f8d82; cursor: pointer; }

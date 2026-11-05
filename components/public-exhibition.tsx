@@ -56,6 +56,7 @@ export default function PublicExhibition({
   const [activeRoomId, setActiveRoomId] = useState(exhibition.rooms[0]?.id ?? "");
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
+  const walkReset = useRef(0);
   const activeRoom = exhibition.rooms.find((room) => room.id === activeRoomId) ?? exhibition.rooms[0];
   const roomArtworks = exhibition.artworks.filter((artwork) => artwork.roomId === activeRoom?.id);
 
@@ -124,6 +125,7 @@ export default function PublicExhibition({
         input={movementKeys}
         onRoomChange={(id) => { setActiveRoomId(id); setSelected(undefined); }}
         debugState={walkDebug}
+        resetSignal={walkReset}
       />}
       <header className="public-topbar">
         <Link href="/" className="public-back"><ArrowLeft size={16} /> SANAA</Link>
@@ -142,6 +144,7 @@ export default function PublicExhibition({
         <button id="walk-start" onClick={() => setWalking(true)}>Enter the room</button>
       </div>}
       {walking && <div className="public-controls-hint"><span>CLICK THE FLOOR OR USE WASD / ARROWS TO WALK</span><i /> <span>DRAG TO LOOK</span><i /> <span>PASS THROUGH DOORS TO CHANGE ROOMS</span></div>}
+      {walking && <button className="public-reset-view" onClick={() => { walkReset.current += 1; }}>↺ Entrance</button>}
       {walking && <div className="walk-pad" aria-label="Touch movement controls">
         {([
           ["ArrowUp", "Forward", "↑"],

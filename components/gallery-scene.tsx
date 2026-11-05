@@ -812,6 +812,7 @@ function WalkControls({
   enabled,
   onRoomChange,
   debugState,
+  resetSignal,
 }: {
   rooms: GalleryRoom[];
   activeRoomId: string;
@@ -827,6 +828,9 @@ function WalkControls({
   enabled: boolean;
   onRoomChange?: (id: string) => void;
   debugState?: React.RefObject<WalkDebugState | null>;
+  // Increment to send the visitor back to the entrance (room 1, start
+  // position, facing the back wall).
+  resetSignal?: React.RefObject<number>;
 }) {
   const { camera, gl } = useThree();
   const currentRoomIndex = useRef(Math.max(0, rooms.findIndex((room) => room.id === activeRoomId)));
@@ -837,6 +841,7 @@ function WalkControls({
   const right = useRef(new Vector3());
   const stuckTime = useRef(0);
   const lastKey = useRef<string | null>(null);
+  const lastReset = useRef(resetSignal?.current ?? 0);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -938,6 +943,24 @@ function WalkControls({
       };
     }
     if (!enabled) return;
+    // "Back to the entrance": put the visitor at the first room's start
+    // position, facing the back wall, and clear any walk target.
+    if (resetSignal && resetSignal.current !== lastReset.current) {
+      lastReset.current = resetSignal.current;
+      const targetRoom = rooms[0];
+      const { depth } = roomLayouts[targetRoom.layout];
+      camera.position.set(offsets[0], 1.65, depth / 2 - 1.5);
+      camera.rotation.set(0, 0, 0);
+      destination.current = null;
+      lookYaw.current = null;
+      velocity.current.set(0, 0, 0);
+      if (currentRoomIndex.current !== 0) {
+        currentRoomIndex.current = 0;
+        handledRoomId.current = targetRoom.id;
+        onRoomChange?.(targetRoom.id);
+      }
+      return;
+    }
     const keys = input.current;
     const forwardInput = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
     const sideInput = Number(keys.has("KeyD") || keys.has("ArrowRight")) - Number(keys.has("KeyA") || keys.has("ArrowLeft"));
@@ -1109,6 +1132,7 @@ export default function GalleryScene({
   walking,
   interior = false,
   debugState,
+  resetSignal,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -1123,6 +1147,7 @@ export default function GalleryScene({
   onFloorClick?: (point: Vector3) => void;
   walking?: boolean;
   debugState?: React.RefObject<WalkDebugState | null>;
+  resetSignal?: React.RefObject<number>;
   // Interior view: the camera starts inside the room and orbits from within,
   // so the visitor arrives directly in the gallery instead of looking at a
   // closed box from outside. The exterior (garden, doors, buildings) is a
@@ -1199,7 +1224,7 @@ export default function GalleryScene({
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}
         {walkMode && input ? (
-          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} debugState={debugState} />
+          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} debugState={debugState} resetSignal={resetSignal} />
         ) : (
           <OrbitControls
             makeDefault

@@ -46,6 +46,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [status, setStatus] = useState("draft");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<Artwork[][]>([]);
 
@@ -169,24 +170,60 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     setSaved(false);
   }
 
+// Photos from a phone are often over Vercel's 4.5 MB request limit, which
+// rejects the upload before it reaches the server (HTTP 413, plain text).
+// Shrink big files in the browser first so they always fit. On any failure
+// (e.g. HEIC, which canvas cannot decode) the original file is sent and the
+// server answers with a readable error instead.
+async function compressImage(file: File): Promise<File> {
+  if (file.size <= 3_500_000) return file;
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 3000 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) return file;
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) return file;
+  return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+}
+
   async function uploadArtwork(file?: File) {
     if (!file) return;
     setBusy(true);
+    setUploadError(null);
     try {
+      const uploadFile = await compressImage(file).catch(() => file);
       const body = new FormData();
-      body.set("file", file);
+      body.set("file", uploadFile);
       const response = await fetch("/api/uploads", { method: "POST", body });
-      // Read as text first: an empty body used to throw a cryptic
+      // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+      // an oversized request) is not JSON and used to throw a cryptic
       // "Unexpected end of JSON input" instead of a readable error.
       const text = await response.text();
-      const result = (text ? JSON.parse(text) : {}) as { error?: string; url?: string };
-      if (!response.ok) throw new Error(result.error ?? "Could not upload this image.");
+      let result: { error?: string; url?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as { error?: string; url?: string }) : {};
+      } catch {
+        result = {};
+      }
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413
+              ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
+              : "Could not upload this image."),
+        );
+      }
       if (!result.url) throw new Error("Could not upload this image.");
       addArtwork(result.url);
       if (uploadRef.current) uploadRef.current.value = "";
     } catch (error) {
       console.error("Could not upload artwork.", error);
-      window.alert(error instanceof Error ? error.message : "Could not upload this image.");
+      setUploadError(error instanceof Error ? error.message : "Could not upload this image.");
     } finally {
       setBusy(false);
     }
@@ -360,8 +397,9 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
             ))}
           </div>
           <button className="add-to-room" onClick={() => uploadRef.current?.click()} disabled={busy}><Plus size={15} /> Add artwork to room</button>
+          {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
           <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
-          <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image (max. 8 MB).</span></div>
+          <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>
           <div className="left-panel-bottom"><div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Select an artwork in the room to adjust its placement and scale.</p></div><button className="panel-help-link"><CircleHelp size={15} /> Editor guide <ArrowRight size={13} /></button></div>
         </aside>
 

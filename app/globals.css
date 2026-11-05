@@ -212,6 +212,7 @@ button { color: inherit; }
 .add-to-room { display: flex; justify-content: center; align-items: center; gap: 7px; margin-top: 10px; padding: 9px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-3); color: var(--muted); font-size: 9px; cursor: pointer; }
 .add-to-room:hover { border-color: #b89a7e; background: var(--surface-2); }
 .asset-upload-hint { display: flex; align-items: flex-start; gap: 8px; padding: 12px 4px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 8px; line-height: 1.5; }
+.asset-upload-error { padding: 10px 12px; margin-top: 8px; border: 1px solid #c0392b; border-radius: 8px; background: rgba(192, 57, 43, 0.08); color: #c0392b; font-size: 12px; line-height: 1.5; }
 .asset-upload-hint svg { min-width: 15px; }
 .left-panel-bottom { margin-top: auto; }
 .tip-card { padding: 10px; border-radius: 4px; background: var(--surface-2); }

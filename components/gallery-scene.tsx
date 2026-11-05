@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, useTexture } from "@react-three/drei";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, Suspense } from "react";
 import { CanvasTexture, DoubleSide, MathUtils, Object3D, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from "three";
 import type { Artwork } from "@/lib/demo-data";
 import { roomLayouts, type GalleryRoom } from "@/lib/rooms";
@@ -1165,7 +1165,9 @@ export default function GalleryScene({
         <ambientLight intensity={1.4} />
         <directionalLight position={[-3, 8, 4]} intensity={1.8} />
         {sceneRooms.map((sceneRoom, index) => <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={0.55} color="#f4d8b8" />)}
-        {artworkNodes}
+        {/* Artwork textures load through Suspense so a slow image suspends
+            only the artworks — never the whole room or page. */}
+        <Suspense fallback={null}>{artworkNodes}</Suspense>
         {interiorView && (
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}

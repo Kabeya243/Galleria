@@ -307,6 +307,12 @@ button { color: inherit; }
 
 /* Public exhibition */
 .public-exhibition { position: relative; width: 100%; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; background: var(--paper); }
+.exhibition-loader { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: var(--paper); transition: opacity 0.5s ease; }
+.exhibition-loader.done { opacity: 0; pointer-events: none; }
+.exhibition-loader .loader-brand { display: flex; align-items: baseline; gap: 6px; }
+.exhibition-loader .loader-bar { width: min(320px, 72vw); height: 8px; border: 2px solid var(--ink); background: var(--surface); }
+.exhibition-loader .loader-bar span { display: block; height: 100%; background: #d7ff32; transition: width 0.2s ease; }
+.exhibition-loader p { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; }
 .public-gallery-canvas { position: absolute; inset: 0; }
 .public-gallery-canvas.is-walking canvas { cursor: crosshair; }
 .public-topbar { position: absolute; z-index: 2; top: 0; left: 0; right: 0; height: 67px; display: flex; align-items: center; justify-content: space-between; padding: 0 29px; border-bottom: 1px solid var(--border); background: var(--surface); backdrop-filter: blur(8px); }

@@ -1,11 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, Maximize2 } from "lucide-react";
+import { useProgress } from "@react-three/drei";
 import GalleryScene from "@/components/gallery-scene";
 import type { Artwork } from "@/lib/demo-data";
 import type { GalleryRoom } from "@/lib/rooms";
+
+// Loading screen for the exhibition opening: a progress bar fed by the
+// real 3D asset loading (artwork textures), covering the site until the
+// room is ready, then fading out. A safety timeout makes sure it can
+// never block the site if an image stalls.
+function ExhibitionLoader() {
+  const { progress, active } = useProgress();
+  const [fading, setFading] = useState(false);
+  const [gone, setGone] = useState(false);
+  const done = progress >= 100 && !active;
+  useEffect(() => {
+    if (!done) return;
+    const fadeTimer = setTimeout(() => setFading(true), 150);
+    const goneTimer = setTimeout(() => setGone(true), 750);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(goneTimer);
+    };
+  }, [done]);
+  useEffect(() => {
+    const timer = setTimeout(() => setGone(true), 10000);
+    return () => clearTimeout(timer);
+  }, []);
+  if (gone) return null;
+  return (
+    <div className={`exhibition-loader${fading ? " done" : ""}`} aria-hidden={fading || undefined}>
+      <div className="loader-brand"><span className="brand-mark">s.</span><span className="brand-name">SANAA</span></div>
+      <div className="loader-bar"><span style={{ width: `${Math.round(progress)}%` }} /></div>
+      <p>Loading the exhibition… {Math.round(progress)}%</p>
+    </div>
+  );
+}
 
 export default function PublicExhibition({
   exhibition,
@@ -35,6 +68,7 @@ export default function PublicExhibition({
 
   return (
     <main className="public-exhibition">
+      <ExhibitionLoader />
       {activeRoom && <GalleryScene
         artworks={exhibition.artworks}
         onSelect={(id) => setSelected(roomArtworks.find((artwork) => artwork.id === id))}

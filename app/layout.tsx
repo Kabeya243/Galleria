@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 
-// Warm editorial typography: Fraunces (serif headlines) + DM Sans (body/UI).
+// Clean white-gallery typography: Fraunces (light serif headlines) + DM Sans (body/UI).
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",

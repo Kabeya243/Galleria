@@ -32,6 +32,54 @@ import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork } from "@/lib/demo-data";
 import { applyLayoutPreset, createGalleryRoom, floorTextures, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
 
+// A numeric field that keeps what the user types. A controlled
+// `type="number"` input cannot hold an intermediate "-" (Number("-") is
+// NaN, so React snaps the value back and the minus is lost — typing -5.72
+// produced +5.72). This keeps the raw text locally and only commits a
+// value once it parses to a real number, so a leading minus survives.
+function NumberField({
+  value,
+  onCommit,
+  ariaLabel,
+  step,
+  min,
+}: {
+  value: number;
+  onCommit: (next: number) => void;
+  ariaLabel: string;
+  step?: string;
+  min?: number;
+}) {
+  const [text, setText] = useState(String(value));
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setText(String(value));
+  }, [value]);
+  return (
+    <input
+      aria-label={ariaLabel}
+      type="text"
+      inputMode="decimal"
+      step={step}
+      min={min}
+      value={text}
+      onFocus={() => {
+        focusedRef.current = true;
+      }}
+      onBlur={() => {
+        focusedRef.current = false;
+        setText(String(value));
+      }}
+      onChange={(event) => {
+        const nextText = event.target.value;
+        setText(nextText);
+        const next = Number(nextText);
+        if (Number.isFinite(next)) onCommit(next);
+      }}
+    />
+  );
+}
+
 export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [rooms, setRooms] = useState<GalleryRoom[]>([]);
@@ -47,6 +95,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const uploadRef = useRef<HTMLInputElement>(null);
@@ -135,8 +184,9 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   }
 
   async function saveExhibition() {
+    setSaveError(null);
     if (!title.trim()) {
-      window.alert("Give the exhibition a title before saving.");
+      setSaveError("Give the exhibition a title before saving.");
       return false;
     }
     const incomplete = artworks
@@ -145,7 +195,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     if (incomplete.length > 0) {
       const first = incomplete[0];
       const label = first.artwork.title.trim() || `Artwork ${first.index + 1}`;
-      window.alert(
+      setSaveError(
         `${label} needs ${first.problems.join(" and ")} before this exhibition can be saved.` +
           (incomplete.length > 1 ? ` ${incomplete.length} artworks are missing details.` : "") +
           " Fill them in on the right, then save again.",
@@ -191,7 +241,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
       return true;
     } catch (error) {
       console.error("Could not save exhibition.", error);
-      window.alert(error instanceof Error ? error.message : "Could not save this exhibition.");
+      setSaveError(error instanceof Error ? error.message : "Could not save this exhibition.");
       return false;
     } finally {
       setBusy(false);
@@ -449,6 +499,14 @@ async function compressImage(file: File): Promise<File> {
           <button className="editor-publish-button" onClick={() => void publishExhibition()} disabled={busy}>{status === "public" ? "Unpublish" : "Publish"} <ArrowRight size={15} /></button>
         </div>
       </header>
+      {saveError && (
+        <div className="editor-error-banner" role="alert">
+          <span>{saveError}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setSaveError(null)}>
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="editor-workspace">
         <aside className="editor-assets-panel">
@@ -516,16 +574,16 @@ async function compressImage(file: File): Promise<File> {
           {selected ? (
             <>
               <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
-              <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><input aria-label={`Position ${axis}`} type="number" step="0.1" value={selected.position[index]} onChange={(event) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = Number(event.target.value); return { ...artwork, position }; })} /></div>)}</div></div>
+              <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Position ${axis}`} step="0.1" value={selected.position[index]} onCommit={(next) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = next; return { ...artwork, position }; })} /></div>)}</div></div>
               <div className="property-section"><label>DIMENSIONS <span>CM</span></label><div className="coordinate-row">{(["Width", "Height"] as const).map((label, index) => {
                 const parsed = parseArtworkDimensions(selected.dimensions ?? "");
                 const current = parsed ?? { widthCm: 182, heightCm: 212 };
                 const value = index === 0 ? current.widthCm : current.heightCm;
                 return (
-                  <div key={label}><span>{label}</span><input aria-label={`Artwork ${label.toLowerCase()} in centimetres`} type="number" min="1" step="1" value={value} onChange={(event) => {
-                    const next = Math.max(1, Math.round(Number(event.target.value) || 1));
-                    const widthCm = index === 0 ? next : current.widthCm;
-                    const heightCm = index === 1 ? next : current.heightCm;
+                  <div key={label}><span>{label}</span><NumberField ariaLabel={`Artwork ${label.toLowerCase()} in centimetres`} step="1" min={1} value={value} onCommit={(next) => {
+                    const clamped = Math.max(1, Math.round(next));
+                    const widthCm = index === 0 ? clamped : current.widthCm;
+                    const heightCm = index === 1 ? clamped : current.heightCm;
                     updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: `${widthCm} × ${heightCm} cm` }));
                   }} /></div>
                 );
@@ -564,8 +622,8 @@ async function compressImage(file: File): Promise<File> {
                               <option value="horizontal">Horizontal</option><option value="vertical">Vertical</option>
                             </select>
                             <div className="partition-wall-coordinates">
-                              <label>X<input aria-label={`Wall ${index + 1} position X`} type="number" step="0.5" value={wall.x} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, x: Number(event.target.value) } : item) }))} /></label>
-                              <label>Z<input aria-label={`Wall ${index + 1} position Z`} type="number" step="0.5" value={wall.z} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, z: Number(event.target.value) } : item) }))} /></label>
+                              <label>X<NumberField ariaLabel={`Wall ${index + 1} position X`} step="0.5" value={wall.x} onCommit={(next) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, x: next } : item) }))} /></label>
+                              <label>Z<NumberField ariaLabel={`Wall ${index + 1} position Z`} step="0.5" value={wall.z} onCommit={(next) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, z: next } : item) }))} /></label>
                               <label>LENGTH<input aria-label={`Wall ${index + 1} length`} type="number" min="1" max="16" step="0.5" value={wall.length} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, partitionWalls: room.partitionWalls.map((item) => item.id === wall.id ? { ...item, length: Number(event.target.value) } : item) }))} /></label>
                             </div>
                           </div>

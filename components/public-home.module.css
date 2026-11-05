@@ -1,0 +1,93 @@
+/* Homepage-only styles. The page layout reuses the global galleries classes
+   (.galleries-page, .galleries-header, .galleries-intro, .galleries-grid,
+   .gallery-card); only the cover image, hero actions, empty state and
+   footer live here, so nothing global changes. */
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.heroSecondary {
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.coverLink {
+  display: block;
+  border-bottom: 2px solid var(--ink);
+}
+
+.cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.coverFallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #2f3932;
+  color: #d7ff32;
+  font: 800 15px "Manrope", sans-serif;
+  letter-spacing: 0.22em;
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  border: 2px solid var(--ink);
+  background: var(--surface-3);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 36px 28px;
+  text-align: center;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.emptyState strong {
+  font: 700 18px/1.3 "Manrope", sans-serif;
+}
+
+.emptyState p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.homeFooter {
+  max-width: 1350px;
+  margin: 0 auto;
+  padding: 20px 44px 32px;
+  border-top: 2px solid var(--ink);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .homeFooter {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

@@ -222,9 +222,9 @@ export default function GalleriesPage({ rooms }: { rooms: GalleryPresetCard[] })
           </button>
         </div>
         <div className="galleries-viewer-stage">
-          <GalleryScene artworks={[]} room={viewerRoom} className="galleries-viewer-canvas" />
+          <GalleryScene artworks={[]} room={viewerRoom} className="galleries-viewer-canvas" interior />
         </div>
-        <p className="galleries-viewer-hint">Drag to orbit · Scroll to zoom</p>
+        <p className="galleries-viewer-hint">Inside the room · Drag to look around · Scroll to zoom</p>
       </section>
 
       <section className="galleries-grid">

@@ -374,8 +374,8 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
             </div>
           </div>
           <div className="scene-wrap">
-            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={setSelectedId} className="gallery-canvas editor-canvas" room={activeRoom} />}
-            <div className="scene-caption"><span className="scene-caption-dot" /> 3D VIEW <span className="caption-divider">·</span> DRAG TO ORBIT <span className="caption-divider">·</span> SCROLL TO ZOOM</div>
+            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={setSelectedId} className="gallery-canvas editor-canvas" room={activeRoom} interior />}
+            <div className="scene-caption"><span className="scene-caption-dot" /> 3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(1.6, artwork.scale + 0.1) }))} title="Increase scale"><Expand size={14} /></button><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) }))} title="Decrease scale"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>

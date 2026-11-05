@@ -949,6 +949,53 @@ function WalkControls({
   return null;
 }
 
+// Interior orbit limits: the camera stays inside the room. The orbit radius
+// never reaches a wall, and the polar band keeps the camera between floor
+// and ceiling, so the room always reads as an interior — never as a flat
+// field of colour, and never as a closed box seen from outside.
+function interiorOrbitLimits(width: number, depth: number, height: number) {
+  const maxDistance = Math.min(width, depth) / 2 - 0.6;
+  const eyeY = 1.8;
+  const topCos = Math.min(0.99, (height - 0.4 - eyeY) / maxDistance);
+  const bottomCos = Math.max(-0.99, (0.4 - eyeY) / maxDistance);
+  return {
+    maxDistance,
+    minPolarAngle: Math.acos(topCos),
+    maxPolarAngle: Math.acos(bottomCos),
+  };
+}
+
+// When the active room changes, put the camera back inside the new room:
+// at the entrance, eye height, looking at the room's centre. Without this
+// the camera would stay wherever the previous room left it — possibly
+// outside the new room's walls.
+function InteriorCameraRig({
+  roomKey,
+  depth,
+  enabled,
+}: {
+  roomKey: string;
+  depth: number;
+  enabled: boolean;
+}) {
+  const camera = useThree((state) => state.camera);
+  const controls = useThree((state) => state.controls) as unknown as {
+    target: Vector3;
+    update: () => void;
+  } | null;
+  useEffect(() => {
+    if (!enabled) return;
+    camera.position.set(0, 2.0, depth / 2 - 1.8);
+    if (controls) {
+      controls.target.set(0, 1.8, 0);
+      controls.update();
+    } else {
+      camera.lookAt(0, 1.8, 0);
+    }
+  }, [camera, controls, depth, enabled, roomKey]);
+  return null;
+}
+
 export default function GalleryScene({
   artworks,
   selectedId,
@@ -962,6 +1009,7 @@ export default function GalleryScene({
   input,
   onFloorClick,
   walking,
+  interior = false,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -975,6 +1023,11 @@ export default function GalleryScene({
   input?: React.RefObject<Set<string>>;
   onFloorClick?: (point: Vector3) => void;
   walking?: boolean;
+  // Interior view: the camera starts inside the room and orbits from within,
+  // so the visitor arrives directly in the gallery instead of looking at a
+  // closed box from outside. The exterior (garden, doors, buildings) is a
+  // later phase: the room boxes stay intact, only the viewpoint changes.
+  interior?: boolean;
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   const offsets = useMemo(() => {
@@ -1018,24 +1071,33 @@ export default function GalleryScene({
   const startIndex = Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)));
   const startOffset = offsets[startIndex];
   const startDepth = roomLayouts[startRoom.layout].depth;
+  const interiorView = interior === true && !walkMode;
+  const interiorLimits = useMemo(() => {
+    const layout = roomLayouts[room.layout];
+    return interiorOrbitLimits(layout.width, layout.depth, layout.height);
+  }, [room.layout]);
 
   return (
     <div className={`${className ?? "gallery-canvas"}${walkMode && walking ? " is-walking" : ""}`}>
-      <Canvas camera={{ position: walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: walkMode ? 75 : 43 }} dpr={[1, 1.6]} shadows>
+      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={[1, 1.6]} shadows>
         <color attach="background" args={[room.wallColor]} />
         <ambientLight intensity={1.4} />
         <directionalLight position={[-3, 8, 4]} intensity={1.8} />
         {sceneRooms.map((sceneRoom, index) => <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={0.55} color="#f4d8b8" />)}
         {artworkNodes}
+        {interiorView && (
+          <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
+        )}
         {walkMode && input ? (
           <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} enabled={walking ?? false} onRoomChange={onRoomChange} />
         ) : (
           <OrbitControls
             makeDefault
-            minDistance={4}
-            maxDistance={Math.max(roomLayouts[room.layout].width, roomLayouts[room.layout].depth) + 6}
-            maxPolarAngle={Math.PI / 2.03}
-            target={[0, 2.1, -roomLayouts[room.layout].depth / 2]}
+            minDistance={interiorView ? 1.2 : 4}
+            maxDistance={interiorView ? interiorLimits.maxDistance : Math.max(roomLayouts[room.layout].width, roomLayouts[room.layout].depth) + 6}
+            minPolarAngle={interiorView ? interiorLimits.minPolarAngle : 0}
+            maxPolarAngle={interiorView ? interiorLimits.maxPolarAngle : Math.PI / 2.03}
+            target={interiorView ? [0, 1.8, 0] : [0, 2.1, -roomLayouts[room.layout].depth / 2]}
             enableDamping
           />
         )}

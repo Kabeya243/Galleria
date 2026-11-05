@@ -8,6 +8,7 @@ import {
   Menu,
   Search,
   Users,
+  Wrench,
   Image as ImageIcon,
 } from "lucide-react";
 import AdminThemeToggle from "@/components/admin-theme-toggle";
@@ -42,7 +43,7 @@ export default function AdminShell({
   title: string;
   eyebrow: string;
   description: string;
-  counts?: { users: number; exhibitions: number; artworks: number };
+  counts?: { users: number; exhibitions: number; artworks: number; tools?: number };
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -58,7 +59,7 @@ export default function AdminShell({
   // Track which section is on screen, so the matching menu item is
   // highlighted (like the reference's active Dashboard row).
   useEffect(() => {
-    const ids = ["overview", "users", "exhibitions", "artworks"];
+    const ids = ["overview", "users", "exhibitions", "artworks", "tools"];
     const elements = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -107,6 +108,13 @@ export default function AdminShell({
       href: "#artworks",
       icon: <ImageIcon size={18} />,
       badge: counts?.artworks,
+    },
+    {
+      id: "tools",
+      label: "Tools used",
+      href: "#tools",
+      icon: <Wrench size={18} />,
+      badge: counts?.tools,
     },
   ];
   const needle = query.trim().toLowerCase();

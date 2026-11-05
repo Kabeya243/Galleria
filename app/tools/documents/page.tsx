@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import CertificateTool from "@/components/certificate-tool";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
+import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
@@ -12,6 +13,7 @@ export const metadata = {
 export default async function DocumentsRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await logToolUse("documents", user.id);
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({

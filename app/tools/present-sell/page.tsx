@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
+import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
@@ -13,6 +14,7 @@ export const metadata = {
 export default async function PresentSellRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await logToolUse("present-sell", user.id);
   const [exhibitionCount, published] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.exhibition.findMany({

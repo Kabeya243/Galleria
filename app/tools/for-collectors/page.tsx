@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import AudiencePage from "@/components/audience-page";
 import { getCurrentUser } from "@/lib/auth";
+import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
@@ -11,6 +12,7 @@ export const metadata = {
 export default async function ForCollectorsRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await logToolUse("for-collectors", user.id);
   const exhibitionCount = await db.exhibition.count({ where: { ownerId: user.id } });
   return (
     <AudiencePage

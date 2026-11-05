@@ -90,3 +90,17 @@ model Upload {
 
   @@index([ownerId])
 }
+
+// One row per tool page load: which tool was opened, by whom, and when.
+// No input values, form contents or calculator numbers are ever stored
+// here — only the tool slug, the user id (null when not signed in) and the
+// time. The table starts empty and grows from the day tracking ships.
+model ToolUse {
+  id        String   @id @default(cuid())
+  tool      String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([tool])
+  @@index([createdAt])
+}

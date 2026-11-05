@@ -2,11 +2,12 @@ import Link from "next/link";
 import AdminShell from "@/components/admin-shell";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
 
 export const metadata = {
   title: "Admin — SANAA",
   description:
-    "The platform overview for the owner: users, exhibitions, artworks and visits — everything on one page.",
+    "The platform overview for the owner: users, exhibitions, artworks, visits and tool use — everything on one page.",
 };
 
 function formatBytes(bytes: number): string {
@@ -99,6 +100,7 @@ export default async function AdminRoute({
   const now = new Date();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [
     userDates,
     exhibitionDates,
@@ -115,6 +117,9 @@ export default async function AdminRoute({
     allUsers,
     allExhibitions,
     allArtworks,
+    toolUseAllTime,
+    toolUseLast30Days,
+    recentToolUses,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -207,6 +212,20 @@ export default async function AdminRoute({
         exhibition: { select: { title: true, status: true, owner: { select: { name: true } } } },
       },
     }),
+    // Tool use: per-tool totals, all time and last 30 days, plus the most
+    // recent opens. The table starts empty and grows from the day tracking
+    // shipped — a tool with no rows yet simply shows 0.
+    db.toolUse.groupBy({ by: ["tool"], _count: { _all: true } }),
+    db.toolUse.groupBy({
+      by: ["tool"],
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+    }),
+    db.toolUse.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: { id: true, tool: true, userId: true, createdAt: true },
+    }),
   ]);
 
   const userCount = userDates.length;
@@ -242,6 +261,30 @@ export default async function AdminRoute({
   const roles = roleGroups
     .map((g) => ({ name: (g.role ?? "").trim() || "Not specified", count: g._count._all }))
     .sort((a, b) => b.count - a.count);
+
+  // Tools used: every tool is listed, even with zero recorded uses — the
+  // table starts empty and grows from the day tracking shipped.
+  const toolAllTime = new Map(toolUseAllTime.map((g) => [g.tool, g._count._all]));
+  const toolLast30 = new Map(toolUseLast30Days.map((g) => [g.tool, g._count._all]));
+  const toolStats = TOOL_SLUGS.map((slug: ToolSlug) => ({
+    slug,
+    label: TOOL_LABELS[slug],
+    allTime: toolAllTime.get(slug) ?? 0,
+    last30: toolLast30.get(slug) ?? 0,
+  })).sort((a, b) => b.allTime - a.allTime);
+  const totalToolUses = toolStats.reduce((sum, t) => sum + t.allTime, 0);
+  const toolMax = Math.max(...toolStats.map((t) => t.allTime), 1);
+  // Names for the recent tool activity feed (one lookup for the users who
+  // opened a tool recently; signed-out opens show as "Signed-out visitor").
+  const recentToolUserIds = [...new Set(recentToolUses.map((u) => u.userId).filter((id): id is string => id !== null))];
+  const recentToolUsers = new Map(
+    (
+      await db.user.findMany({
+        where: { id: { in: recentToolUserIds } },
+        select: { id: true, name: true, email: true },
+      })
+    ).map((u) => [u.id, u]),
+  );
 
   // Latest activity: newest signups, exhibitions and artworks, merged and
   // sorted by when they happened. All real rows, nothing invented.
@@ -284,7 +327,7 @@ export default async function AdminRoute({
       title="Hello, Kabeya"
       eyebrow="ADMIN · FOR THE OWNER ONLY"
       description={`${todayLabel} — a look at who joined, what was built, and what visitors viewed on SANAA.`}
-      counts={{ users: userCount, exhibitions: exhibitionCount, artworks: artworkCount }}
+      counts={{ users: userCount, exhibitions: exhibitionCount, artworks: artworkCount, tools: totalToolUses }}
     >
       <div id="overview" className="ad-section">
         {/* Stat cards */}
@@ -542,6 +585,79 @@ export default async function AdminRoute({
           )}
         </section>
       </div>
+
+      {/* Tools used */}
+      <section id="tools" className="ad-section">
+        <div className="ad-section-head">
+          <h2>Tools used</h2>
+          <p>
+            {totalToolUses} {totalToolUses === 1 ? "use" : "uses"} recorded — per tool, all time and in the last 30
+            days. Tracking started when this version shipped, so a tool nobody has opened yet shows 0.
+          </p>
+        </div>
+        <div className="ad-layout-half">
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Uses per tool</h2>
+                <p className="ad-card-sub">Every tool, ranked by total uses</p>
+              </div>
+              <strong className="ad-card-total">
+                {totalToolUses} <span>total</span>
+              </strong>
+            </div>
+            <ul className="ad-share">
+              {toolStats.map((t) => (
+                <li key={t.slug}>
+                  <div className="ad-share-row">
+                    <span className="ad-share-name">{t.label}</span>
+                    <span className="ad-share-count">
+                      {t.allTime} total · {t.last30} in 30 days
+                    </span>
+                  </div>
+                  <div className="ad-share-track">
+                    <div
+                      className="ad-share-fill"
+                      style={{ width: `${t.allTime > 0 ? Math.max((t.allTime / toolMax) * 100, 2) : 0}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Recent tool activity</h2>
+                <p className="ad-card-sub">The latest tools opened, and by whom</p>
+              </div>
+            </div>
+            {recentToolUses.length === 0 ? (
+              <EmptyBox
+                title="No tool use yet."
+                body="Tracking started with this version — uses appear here as soon as someone opens a tool."
+              />
+            ) : (
+              <ul className="ad-feed">
+                {recentToolUses.map((use) => {
+                  const who = use.userId ? recentToolUsers.get(use.userId) : undefined;
+                  return (
+                    <li key={use.id}>
+                      <span className="ad-feed-dot ad-feed-tool" aria-hidden="true" />
+                      <div className="ad-feed-body">
+                        <strong>{TOOL_LABELS[use.tool as ToolSlug] ?? use.tool}</strong>
+                        <span>{who ? `${who.name} (${who.email})` : "Signed-out visitor"}</span>
+                      </div>
+                      <span className="ad-feed-time">{relativeTime(use.createdAt)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        </div>
+      </section>
 
       {/* All users */}
       <section id="users" className="ad-section">

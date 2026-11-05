@@ -898,6 +898,7 @@ button { font-weight: 600; }
   --ad-muted: #9c9ca3;
   --ad-up: #34d399;
   --ad-down: #f87171;
+  --ad-tool: #f59e0b;
   --ad-track: #26262b;
   --ad-fill: #f4f4f5;
   --ad-fill-alt: #71717a;
@@ -933,6 +934,7 @@ html[data-admin-theme="light"] .ad-root {
   --ad-muted: #6f6f6c;
   --ad-up: #2e7d4f;
   --ad-down: #b3382c;
+  --ad-tool: #b45309;
   --ad-track: #f0f0ee;
   --ad-fill: #141414;
   --ad-fill-alt: #a1a1aa;
@@ -1174,6 +1176,7 @@ html[data-admin-collapsed="true"] .ad-nav-item { justify-content: center; paddin
 .ad-feed-signup { background: var(--ad-up); }
 .ad-feed-exhibition { background: var(--ad-fill); }
 .ad-feed-artwork { background: var(--ad-fill-alt); }
+.ad-feed-tool { background: var(--ad-tool); }
 .ad-feed-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .ad-feed-body strong { color: var(--ad-ink); font-size: 13px; font-weight: 600; line-height: 1.4; }
 .ad-feed-body span { color: var(--ad-muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }

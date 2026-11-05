@@ -909,11 +909,20 @@ button { font-weight: 600; }
   --ad-btn-ink: #0a0a0b;
   --ad-input-bg: #101012;
   --ad-topbar-bg: rgba(10, 10, 11, 0.92);
+  --ad-sidebar-bg: #101013;
+  --ad-sidebar-w: 248px;
+  --ad-nav-active-bg: #1e1e22;
   min-height: 100vh;
   background: var(--ad-bg);
   color: var(--ad-ink);
   font-family: "DM Sans", "Helvetica Neue", Arial, sans-serif;
+  display: flex;
+  align-items: stretch;
 }
+
+/* Collapsed sidebar: a narrow icon-only rail. The width lives in a
+   variable so the sidebar and the content move together, smoothly. */
+html[data-admin-collapsed="true"] .ad-root { --ad-sidebar-w: 72px; }
 
 html[data-admin-theme="light"] .ad-root {
   --ad-bg: #f4f5f7;
@@ -935,9 +944,140 @@ html[data-admin-theme="light"] .ad-root {
   --ad-btn-ink: #ffffff;
   --ad-input-bg: #ffffff;
   --ad-topbar-bg: rgba(244, 245, 247, 0.92);
+  --ad-sidebar-bg: #ffffff;
+  --ad-nav-active-bg: #f0f0ee;
 }
 
-/* Minimal top bar — the only chrome on the standalone admin page. */
+/* Collapsible sidebar menu — the Admin's own menu (not the SANAA app
+   menu). Style: dark minimal dashboard sidebar — logo + title on top,
+   search field, grouped nav items with icons, active item highlighted,
+   account section pinned at the bottom. The hamburger in the top bar
+   collapses it to a narrow icon-only rail; the width is a variable, so
+   the content area widens smoothly with it. */
+.ad-sidebar {
+  flex: none;
+  width: var(--ad-sidebar-w);
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 12px 16px;
+  background: var(--ad-sidebar-bg);
+  border-right: 1px solid var(--ad-border);
+  transition: width 0.25s ease;
+  overflow: hidden;
+  z-index: 30;
+}
+.ad-sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px; }
+.ad-sidebar-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  background: var(--ad-card);
+  color: var(--ad-ink);
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+}
+.ad-sidebar-titles { display: flex; flex-direction: column; gap: 1px; min-width: 0; white-space: nowrap; }
+.ad-sidebar-titles strong { color: var(--ad-ink); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.ad-sidebar-titles span { color: var(--ad-muted); font-size: 12px; }
+.ad-sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  height: 36px;
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  background: var(--ad-input-bg);
+  color: var(--ad-muted);
+  margin-bottom: 14px;
+}
+.ad-sidebar-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ad-ink);
+  font-size: 13px;
+  font-family: inherit;
+}
+.ad-sidebar-search input::placeholder { color: var(--ad-muted); }
+.ad-sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; }
+.ad-sidebar-group {
+  padding: 10px 10px 6px;
+  color: var(--ad-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.ad-sidebar-empty { padding: 8px 10px; color: var(--ad-muted); font-size: 12px; }
+.ad-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ad-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ad-nav-item:hover { background: var(--ad-nav-active-bg); color: var(--ad-ink); }
+.ad-nav-active { background: var(--ad-nav-active-bg); color: var(--ad-ink); border-color: var(--ad-border); }
+.ad-nav-icon { flex: none; display: grid; place-items: center; width: 20px; height: 20px; }
+.ad-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.ad-nav-badge {
+  flex: none;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ad-track);
+  color: var(--ad-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.ad-nav-active .ad-nav-badge { background: var(--ad-card); color: var(--ad-ink); }
+.ad-sidebar-bottom { flex: none; display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--ad-border); padding-top: 10px; }
+
+/* Collapsed rail: icons only — labels, search, group titles and the
+   brand text disappear, badges hide, items centre on their icons. */
+html[data-admin-collapsed="true"] .ad-sidebar { padding-left: 10px; padding-right: 10px; }
+html[data-admin-collapsed="true"] .ad-sidebar-titles,
+html[data-admin-collapsed="true"] .ad-sidebar-search,
+html[data-admin-collapsed="true"] .ad-sidebar-group,
+html[data-admin-collapsed="true"] .ad-nav-label,
+html[data-admin-collapsed="true"] .ad-nav-badge,
+html[data-admin-collapsed="true"] .ad-sidebar-empty { display: none; }
+html[data-admin-collapsed="true"] .ad-sidebar-brand { justify-content: center; padding-left: 0; padding-right: 0; }
+html[data-admin-collapsed="true"] .ad-nav-item { justify-content: center; padding: 9px 0; }
+
+/* Backdrop for the mobile drawer — hidden on desktop. */
+.ad-sidebar-backdrop { display: none; }
+
+/* Content column next to the sidebar. */
+.ad-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Slim top bar — hamburger on the left, current section + user + theme
+   toggle on the right. */
 .ad-topbar {
   position: sticky;
   top: 0;
@@ -946,14 +1086,25 @@ html[data-admin-theme="light"] .ad-root {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 40px;
+  padding: 12px 28px;
   background: var(--ad-topbar-bg);
   border-bottom: 1px solid var(--ad-border);
   backdrop-filter: blur(8px);
 }
-.ad-topbar-brand { display: flex; align-items: baseline; gap: 10px; }
-.ad-topbar-mark { color: var(--ad-ink); font-family: "Fraunces", Georgia, serif; font-size: 20px; font-weight: 600; line-height: 1; }
-.ad-topbar-name { color: var(--ad-ink); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.ad-topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ad-hamburger {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ad-ink);
+  cursor: pointer;
+}
+.ad-hamburger:hover { background: var(--ad-card); }
+.ad-topbar-section { color: var(--ad-ink); font-size: 14px; font-weight: 700; white-space: nowrap; }
 .ad-topbar-right { display: flex; align-items: center; gap: 10px; }
 .ad-topbar-user { color: var(--ad-muted); font-size: 13px; font-weight: 600; }
 .ad-theme-toggle {
@@ -968,37 +1119,13 @@ html[data-admin-theme="light"] .ad-root {
   cursor: pointer;
 }
 .ad-theme-toggle:hover { background: var(--ad-card); }
-.ad-topbar-signout {
-  padding: 8px 14px;
-  border: 1px solid var(--ad-border);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--ad-muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.ad-topbar-signout:hover { color: var(--ad-ink); border-color: var(--ad-muted); }
 
-.ad-main { padding: 0 40px 48px; }
+.ad-main { padding: 0 28px 48px; }
 .ad-container { max-width: 1450px; margin: 0 auto; }
 .ad-hero { padding: 32px 0 8px; }
 .ad-eyebrow { color: var(--ad-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .ad-hero h1 { margin: 8px 0 0; color: var(--ad-ink); font-family: "DM Sans", "Helvetica Neue", Arial, sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
 .ad-hero p { margin: 6px 0 0; color: var(--ad-muted); font-size: 13px; }
-
-.ad-anchor-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 22px; }
-.ad-anchor-nav a {
-  padding: 8px 14px;
-  border: 1px solid var(--ad-border);
-  border-radius: 999px;
-  background: var(--ad-card);
-  color: var(--ad-muted);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-}
-.ad-anchor-nav a:hover { color: var(--ad-ink); border-color: var(--ad-muted); }
 
 .ad-section { scroll-margin-top: 76px; }
 .ad-section-head { margin: 28px 0 14px; }
@@ -1109,6 +1236,30 @@ html[data-admin-theme="light"] .ad-root {
   .ad-topbar { padding: 12px 16px; }
   .ad-main { padding: 0 16px 32px; }
   .ad-topbar-user { display: none; }
+  /* On small screens the sidebar is a slide-in drawer, not a rail:
+     closed (collapsed) it sits off-canvas, open it slides over the
+     content with a backdrop to dismiss it. */
+  .ad-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 248px;
+    transform: translateX(0);
+    transition: transform 0.25s ease;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+  }
+  html[data-admin-collapsed="true"] .ad-sidebar { transform: translateX(-105%); }
+  html[data-admin-collapsed="false"] .ad-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    border: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
 }
 @media (max-width: 520px) {
   .ad-grid-stats { grid-template-columns: 1fr; }

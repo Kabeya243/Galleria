@@ -284,6 +284,7 @@ export default async function AdminRoute({
       title="Hello, Kabeya"
       eyebrow="ADMIN · FOR THE OWNER ONLY"
       description={`${todayLabel} — a look at who joined, what was built, and what visitors viewed on SANAA.`}
+      counts={{ users: userCount, exhibitions: exhibitionCount, artworks: artworkCount }}
     >
       <div id="overview" className="ad-section">
         {/* Stat cards */}

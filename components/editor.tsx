@@ -47,6 +47,8 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const uploadRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<Artwork[][]>([]);
 
@@ -246,11 +248,21 @@ async function compressImage(file: File): Promise<File> {
     }
   }
 
-  function editTitle() {
-    const updatedTitle = window.prompt("Exhibition title", title);
-    if (!updatedTitle?.trim()) return;
-    setTitle(updatedTitle.trim().slice(0, 120));
-    setSaved(false);
+  // Inline rename (an input in the header): the old window.prompt opened a
+  // native dialog that automation — and some mobile browsers — cannot see
+  // or fill, so the title could never be set that way.
+  function startEditingTitle() {
+    setTitleDraft(title);
+    setEditingTitle(true);
+  }
+
+  function confirmTitle() {
+    const next = titleDraft.trim();
+    if (next) {
+      setTitle(next.slice(0, 120));
+      setSaved(false);
+    }
+    setEditingTitle(false);
   }
 
   function removeArtwork() {
@@ -357,8 +369,24 @@ async function compressImage(file: File): Promise<File> {
           <Link href="/" className="editor-back" aria-label="Back to dashboard"><ArrowLeft size={18} /></Link>
           <Link className="brand-lockup editor-brand" href="/"><span className="brand-mark">s.</span><span className="brand-name">SANAA</span></Link>
           <span className="editor-separator" />
-          <div className="editor-title"><strong>{title}</strong><span><i /> {saved ? "All changes saved" : "Unsaved changes"}</span></div>
-          <button className="subtle-edit-button" aria-label="Edit exhibition title" onClick={editTitle}><Settings2 size={14} /></button>
+          {editingTitle ? (
+            <input
+              className="editor-title-input"
+              value={titleDraft}
+              autoFocus
+              maxLength={120}
+              aria-label="Exhibition title"
+              onChange={(event) => setTitleDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") confirmTitle();
+                if (event.key === "Escape") setEditingTitle(false);
+              }}
+              onBlur={confirmTitle}
+            />
+          ) : (
+            <div className="editor-title"><strong>{title}</strong><span><i /> {saved ? "All changes saved" : "Unsaved changes"}</span></div>
+          )}
+          <button className="subtle-edit-button" aria-label={editingTitle ? "Save exhibition title" : "Edit exhibition title"} onClick={() => { if (editingTitle) confirmTitle(); else startEditingTitle(); }}>{editingTitle ? <Check size={14} /> : <Settings2 size={14} />}</button>
         </div>
         <div className="editor-top-actions">
           <ThemeToggle />

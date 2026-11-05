@@ -164,6 +164,8 @@ button { color: inherit; }
 .editor-separator { height: 24px; width: 1px; background: var(--border); margin: 0 4px; }
 .editor-title { display: flex; flex-direction: column; gap: 3px; }
 .editor-title strong { font-size: 10px; font-weight: 600; }
+.editor-title-input { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: inherit; font-size: 10px; font-weight: 600; padding: 5px 8px; min-width: 220px; outline: none; }
+.editor-title-input:focus { border-color: #d7ff32; }
 .editor-title span { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 8px; }
 .editor-title span i { width: 5px; height: 5px; background: #8d9b80; border-radius: 50%; }
 .subtle-edit-button { border: 0; background: transparent; padding: 4px; color: var(--muted); }

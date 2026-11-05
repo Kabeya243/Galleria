@@ -160,9 +160,9 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
       description: "Add a description to tell visitors about this work.",
       color: ["#8a9b88", "#bb8365", "#8796a9"][index % 3],
       accent: "#e5c7a0",
-      position: [(index - (artworkCount - 1) / 2) * spacing, 2.4, -depth / 2 + 0.28],
+      position: [(index - (artworkCount - 1) / 2) * spacing, 1.55, -depth / 2 + 0.28],
       rotation: 0,
-      scale: 0.8,
+      scale: 1,
       imageUrl,
       roomId: activeRoom.id,
     };
@@ -473,7 +473,7 @@ async function compressImage(file: File): Promise<File> {
                   <div className="property-section"><label>DIMENSIONS</label><input className="full-input" value={selected.dimensions} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: event.target.value }))} /></div>
                   <div className="property-section"><label>DESCRIPTION</label><textarea className="full-input property-textarea" value={selected.description} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, description: event.target.value }))} /></div>
                   <div className="property-section"><label>FRAME STYLE</label><button className="select-input">Natural oak <ChevronDown size={14} /></button></div>
-                  <div className="property-actions"><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 2.5, -5.72], rotation: 0, scale: 1 }))}><Sparkles size={14} /> Fit to wall</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
+                  <div className="property-actions"><button onClick={() => selected && updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 }))}><Sparkles size={14} /> Fit to wall</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
                 </>
               ) : (
                 <div className="room-properties">

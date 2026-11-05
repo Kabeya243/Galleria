@@ -143,12 +143,13 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
   return texture;
 }
 
-function GallerySpotlight({ x, y, z, targetZ }: { x: number; y: number; z: number; targetZ: number }) {
+function GallerySpotlight({ x, y, z, targetZ, targetPoint }: { x: number; y: number; z: number; targetZ: number; targetPoint?: [number, number, number] }) {
   const target = useMemo(() => new Object3D(), []);
   useEffect(() => {
-    target.position.set(x, 2.2, targetZ);
+    if (targetPoint) target.position.set(targetPoint[0], targetPoint[1], targetPoint[2]);
+    else target.position.set(x, 2.2, targetZ);
     return () => { target.removeFromParent(); };
-  }, [target, targetZ, x]);
+  }, [target, targetPoint, targetZ, x]);
 
   return (
     <>
@@ -170,15 +171,28 @@ function GallerySpotlight({ x, y, z, targetZ }: { x: number; y: number; z: numbe
   );
 }
 
-function LoadedArtwork({ imageUrl }: { imageUrl: string }) {
+function LoadedArtwork({ imageUrl, width, height }: { imageUrl: string; width: number; height: number }) {
   const texture = useTexture(imageUrl);
   texture.colorSpace = SRGBColorSpace;
   return (
     <mesh position={[0, 0, 0.083]}>
-      <planeGeometry args={[1.82, 2.12]} />
+      <planeGeometry args={[width, height]} />
       <meshBasicMaterial map={texture} />
     </mesh>
   );
+}
+
+// Real size in metres, parsed from the artwork's dimensions ("130 × 94 cm"),
+// so each work hangs on the wall at its true scale instead of in one fixed
+// frame. Falls back to the old fixed frame when the dimensions are missing
+// or unparsable, so older artworks keep rendering.
+function artworkSize(artwork: Artwork): { width: number; height: number } {
+  const match = artwork.dimensions?.match(/(\d+(?:[.,]\d+)?)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*cm/i);
+  if (!match) return { width: 1.82, height: 2.12 };
+  const width = Number(match[1].replace(",", ".")) / 100;
+  const height = Number(match[2].replace(",", ".")) / 100;
+  if (!(width > 0.1 && width < 10 && height > 0.1 && height < 10)) return { width: 1.82, height: 2.12 };
+  return { width, height };
 }
 
 function ArtworkFrame({
@@ -202,6 +216,7 @@ function ArtworkFrame({
   dragged?: React.RefObject<boolean>;
 }) {
   const [x, y, z] = artwork.position;
+  const { width, height } = artworkSize(artwork);
   return (
     <group
       position={[x, y, z]}
@@ -222,30 +237,30 @@ function ArtworkFrame({
       }}
     >
       <mesh>
-        <boxGeometry args={[2.05, 2.35, 0.12]} />
+        <boxGeometry args={[width + 0.2, height + 0.2, 0.12]} />
         <meshStandardMaterial color={selected ? "#aa7958" : "#c5b7a3"} />
       </mesh>
       {artwork.imageUrl ? (
-        <LoadedArtwork imageUrl={artwork.imageUrl} />
+        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} />
       ) : (
         <>
           <mesh position={[0, 0, 0.071]}>
-            <planeGeometry args={[1.82, 2.12]} />
+            <planeGeometry args={[width, height]} />
             <meshStandardMaterial color={artwork.color} />
           </mesh>
-          <mesh position={[-0.24, 0.34, 0.082]} rotation={[0, 0, -0.22]}>
-            <circleGeometry args={[0.48, 48]} />
+          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), 0.082]} rotation={[0, 0, -0.22]}>
+            <circleGeometry args={[0.48 * Math.min(width / 1.82, height / 2.12), 48]} />
             <meshStandardMaterial color={artwork.accent} />
           </mesh>
-          <mesh position={[0.28, -0.34, 0.084]} rotation={[0, 0, 0.12]}>
-            <planeGeometry args={[0.8, 0.32]} />
+          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), 0.084]} rotation={[0, 0, 0.12]}>
+            <planeGeometry args={[0.8 * (width / 1.82), 0.32 * (height / 2.12)]} />
             <meshStandardMaterial color="#d7c6a9" />
           </mesh>
         </>
       )}
       {selected && (
         <mesh position={[0, 0, -0.1]}>
-          <boxGeometry args={[2.2, 2.5, 0.02]} />
+          <boxGeometry args={[width + 0.35, height + 0.35, 0.02]} />
           <meshBasicMaterial color="#bc8056" wireframe />
         </mesh>
       )}
@@ -762,11 +777,32 @@ function GalleryRoom({
           <meshStandardMaterial color={room.sideWallColor} map={wallTexture} roughness={0.88} />
         </mesh>
       ))}
-      {room.spotlights && Array.from({ length: Math.max(2, Math.floor(width / 5)) }, (_, index) => {
-        const spots = Math.max(2, Math.floor(width / 5));
-        const x = -width / 2 + ((index + 1) * width) / (spots + 1);
-        return <GallerySpotlight key={index} x={x} y={height - 0.2} z={0} targetZ={wallZ + 1} />;
-      })}
+      {room.spotlights && (artworks.length > 0 ? (
+        // One ceiling spotlight per artwork, aimed at the work itself —
+        // from the ceiling, 1.5 m out from the wall, so every piece gets
+        // its own pool of light (back wall and side walls alike).
+        artworks.map((artwork) => {
+          const [ax, ay, az] = artwork.position;
+          const nx = Math.sin(artwork.rotation);
+          const nz = Math.cos(artwork.rotation);
+          return (
+            <GallerySpotlight
+              key={artwork.id}
+              x={ax + nx * 1.5}
+              y={height - 0.25}
+              z={az + nz * 1.5}
+              targetZ={az}
+              targetPoint={[ax, ay, az]}
+            />
+          );
+        })
+      ) : (
+        Array.from({ length: Math.max(2, Math.floor(width / 5)) }, (_, index) => {
+          const spots = Math.max(2, Math.floor(width / 5));
+          const x = -width / 2 + ((index + 1) * width) / (spots + 1);
+          return <GallerySpotlight key={index} x={x} y={height - 0.2} z={0} targetZ={wallZ + 1} />;
+        })
+      ))}
       {room.curatorialText && (
         <group position={[0, height - 0.65, wallZ + 0.14]}>
           <mesh position={[0, 0, -0.015]}>

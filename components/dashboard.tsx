@@ -2,22 +2,25 @@
 
 import Link from "next/link";
 import {
-  ArrowDownRight,
-  ArrowRight,
   ArrowUpRight,
-  Bell,
   Compass,
+  Eye,
   GalleryVerticalEnd,
   Image,
+  LayoutDashboard,
+  LogOut,
   Plus,
   Search,
-  Sparkles,
+  Settings2,
+  ShieldCheck,
+  Wrench,
 } from "lucide-react";
 import { useState } from "react";
-import Sidebar from "@/components/sidebar";
-import ThemeToggle from "@/components/theme-toggle";
+import styles from "./user-dashboard.module.css";
 
-type DashboardExhibition = {
+type StatDelta = { value: number; delta: string; tone: "up" | "flat" };
+
+type TopExhibition = {
   id: string;
   title: string;
   slug: string;
@@ -26,31 +29,45 @@ type DashboardExhibition = {
   artworkCount: number;
 };
 
-type DashboardArtwork = {
-  id: string;
-  title: string;
-  artist: string;
-  year: string;
-  color: string;
-  accent: string;
-  imageUrl: string | null;
-};
+type ChartDay = { label: string; full: string; count: number; isRecentWeek: boolean };
 
 export default function Dashboard({
   user,
-  exhibitions,
-  artworks,
-  artworkCount,
-  viewCount,
+  exhibitionCount,
+  stats,
+  chart,
+  chartTotal,
+  chartRange,
+  topExhibitions,
 }: {
   user: { name: string; email: string; isAdmin?: boolean };
-  exhibitions: DashboardExhibition[];
-  artworks: DashboardArtwork[];
-  artworkCount: number;
-  viewCount: number;
+  exhibitionCount: number;
+  stats: {
+    exhibitions: StatDelta;
+    artworks: StatDelta;
+    views: { value: number; note: string };
+    publicExhibitions: StatDelta;
+  };
+  chart: ChartDay[];
+  chartTotal: number;
+  chartRange: string;
+  topExhibitions: TopExhibition[];
 }) {
+  const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
-  const featured = exhibitions[0];
+  const firstName = user.name.split(" ")[0] || user.name;
+  const initials = user.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  const filteredExhibitions = topExhibitions.filter((exhibition) =>
+    exhibition.title.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  const maxCount = Math.max(1, ...chart.map((day) => day.count));
 
   async function createExhibition() {
     setCreating(true);
@@ -70,105 +87,215 @@ export default function Dashboard({
     }
   }
 
-  return (
-    <main className="app-shell">
-      <Sidebar user={user} active="overview" exhibitionCount={exhibitions.length} />
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.assign("/login");
+  }
 
-      <section className="dashboard-main">
-        <header className="topbar">
-          <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div>
-          <div className="topbar-actions">
-            <ThemeToggle />
-            <button className="icon-button" aria-label="Search"><Search size={17} /></button>
-            <button className="icon-button notification-button" aria-label="Notifications"><Bell size={17} /><i /></button>
-            <span className="topbar-divider" />
-            <button className="help-button">Need a hand? <ArrowUpRight size={14} /></button>
+  const statCards: {
+    label: string;
+    icon: React.ReactNode;
+    value: number;
+    delta: string;
+    tone: "up" | "flat";
+  }[] = [
+    {
+      label: "My exhibitions",
+      icon: <GalleryVerticalEnd size={16} />,
+      value: stats.exhibitions.value,
+      delta: stats.exhibitions.delta,
+      tone: stats.exhibitions.tone,
+    },
+    {
+      label: "My artworks",
+      icon: <Image size={16} />,
+      value: stats.artworks.value,
+      delta: stats.artworks.delta,
+      tone: stats.artworks.tone,
+    },
+    {
+      label: "Total visits",
+      icon: <Eye size={16} />,
+      value: stats.views.value,
+      delta: stats.views.note,
+      tone: "flat",
+    },
+    {
+      label: "Public exhibitions",
+      icon: <Compass size={16} />,
+      value: stats.publicExhibitions.value,
+      delta: stats.publicExhibitions.delta,
+      tone: stats.publicExhibitions.tone,
+    },
+  ];
+
+  return (
+    <div className={styles.shell}>
+      <aside className={styles.sidebar}>
+        <Link className={styles.brand} href="/" aria-label="SANAA home">
+          <span className={styles.brandMark}>s.</span>
+          <span className={styles.brandName}>SANAA</span>
+        </Link>
+
+        <nav className={styles.nav} aria-label="Dashboard navigation">
+          <Link className={`${styles.navItem} ${styles.navItemActive}`} href="/">
+            <LayoutDashboard size={17} /> <span>Dashboard</span>
+          </Link>
+          <Link className={styles.navItem} href="/exhibitions">
+            <GalleryVerticalEnd size={17} /> <span>My Exhibitions</span>
+            <span className={styles.navCount}>{exhibitionCount}</span>
+          </Link>
+          <Link className={styles.navItem} href="/tools/inventory">
+            <Image size={17} /> <span>My Artworks</span>
+          </Link>
+          <Link className={styles.navItem} href="/explore">
+            <Compass size={17} /> <span>Explore</span>
+          </Link>
+          <Link className={styles.navItem} href="/tools">
+            <Wrench size={17} /> <span>Tools</span>
+          </Link>
+          {user.isAdmin && (
+            <Link className={styles.navItem} href="/admin">
+              <ShieldCheck size={17} /> <span>Admin</span>
+            </Link>
+          )}
+          <Link className={styles.navItem} href="/settings">
+            <Settings2 size={17} /> <span>Settings</span>
+          </Link>
+        </nav>
+
+        <div className={styles.sidebarBottom}>
+          <button className={styles.signOut} onClick={signOut}>
+            <LogOut size={17} /> <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+
+      <main className={styles.main}>
+        <header className={styles.header}>
+          <div>
+            <h1>Hello, {firstName}!</h1>
+            <p className={styles.sub}>Here is an overview of your work on SANAA.</p>
+          </div>
+          <div className={styles.headerActions}>
+            <label className={styles.search}>
+              <Search size={16} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search your exhibitions…"
+                aria-label="Search your exhibitions"
+              />
+            </label>
+            <span className={styles.avatar} aria-hidden="true">
+              {initials}
+            </span>
+            <span className={styles.userName}>{user.name}</span>
+            <button className={styles.createButton} onClick={createExhibition} disabled={creating}>
+              <Plus size={16} /> {creating ? "Creating…" : "Create an exhibition"}
+            </button>
           </div>
         </header>
 
-        <div className="dashboard-content">
-          <section className="welcome-row">
-            <div>
-              <p className="eyebrow"><span className="status-dot" /> YOUR CREATIVE SPACE</p>
-              <h1>Welcome, {user.name}<span className="title-period">.</span></h1>
-              <p className="welcome-copy">A little space to bring your next big idea to life.</p>
-            </div>
-            <button className="primary-button" onClick={createExhibition} disabled={creating}><Plus size={17} /> {creating ? "Creating…" : "Create an exhibition"}</button>
-          </section>
-
-          <section className="featured-exhibition">
-            <div className="featured-copy">
-              <div className="featured-kicker"><span className="live-dot" /> {featured?.status === "public" ? "PUBLISHED EXHIBITION" : "YOUR SPACE, IN PROGRESS"}</div>
-              <h2>{featured ? <>{featured.title}</> : <>Every room holds<br />a new perspective.</>}</h2>
-              <p>{featured ? `${featured.artworkCount} artworks · ${featured.views} visitors. Keep curating your room and make it your own.` : "Shape a space around your work. Place your art, find your rhythm, and invite the world in."}</p>
-              <div className="featured-actions">
-                {featured
-                  ? <Link href={`/editor/${featured.id}`} className="light-button">Continue building <ArrowRight size={15} /></Link>
-                  : <button onClick={createExhibition} className="light-button">Create your first exhibition <ArrowRight size={15} /></button>}
-                {featured?.status === "public" && <Link href={`/exhibition/${featured.slug}`} className="text-button">Visit exhibition <ArrowUpRight size={14} /></Link>}
+        <section className={styles.stats} aria-label="Your statistics">
+          {statCards.map((card) => (
+            <article className={styles.statCard} key={card.label}>
+              <div className={styles.statLabel}>
+                <span>{card.label}</span>
+                <span className={styles.statIcon}>{card.icon}</span>
               </div>
-              <div className="featured-meta"><span><i className="meta-dot" /> {featured?.status === "public" ? "Published" : "Draft"}</span><span>·</span><span>{featured ? `${featured.artworkCount} artworks` : "Your first exhibition starts here"}</span></div>
-            </div>
-            <button onClick={() => featured ? window.location.assign(`/editor/${featured.id}`) : void createExhibition()} className="featured-visual" aria-label="Open exhibition editor">
-              <div className="visual-orbit orbit-one" /><div className="visual-orbit orbit-two" />
-              <div className="visual-sun" />
-              <div className="visual-frame frame-left"><div className="mini-art mini-one" /></div>
-              <div className="visual-frame frame-center"><div className="mini-art mini-two" /></div>
-              <div className="visual-frame frame-right"><div className="mini-art mini-three" /></div>
-              <span className="visual-room-tag">ROOM 01 — THE BEGINNING</span>
-              <span className="visual-open"><ArrowUpRight size={16} /></span>
-            </button>
-          </section>
-
-          <section className="stats-row" aria-label="Workspace statistics">
-            <article className="stat-card">
-              <div className="stat-label">Exhibitions <span className="stat-icon"><GalleryVerticalEnd size={15} /></span></div>
-              <div className="stat-value">{String(exhibitions.length).padStart(2, "0")} <span className="stat-trend"><ArrowUpRight size={13} /> Your spaces</span></div>
-              <div className="stat-foot"><span className="stat-bar"><i style={{ width: exhibitions.length ? "43%" : "0%" }} /></span><span>{exhibitions.filter((exhibition) => exhibition.status === "public").length} published</span></div>
+              <div className={styles.statValue}>{card.value}</div>
+              <div className={`${styles.statDelta} ${card.tone === "up" ? styles.deltaUp : styles.deltaFlat}`}>
+                {card.tone === "up" ? <ArrowUpRight size={13} /> : null}
+                {card.delta}
+              </div>
             </article>
-            <article className="stat-card">
-              <div className="stat-label">Artworks <span className="stat-icon"><Image size={15} /></span></div>
-              <div className="stat-value">{String(artworkCount).padStart(2, "0")} <span className="stat-trend"><ArrowUpRight size={13} /> Your collection</span></div>
-              <div className="stat-foot"><span className="stat-bar"><i style={{ width: artworkCount ? "68%" : "0%" }} /></span><span>Across your exhibitions</span></div>
-            </article>
-            <article className="stat-card">
-              <div className="stat-label">Visitors <span className="stat-icon"><Compass size={15} /></span></div>
-              <div className="stat-value">{viewCount} <span className="stat-trend"><ArrowUpRight size={13} /> All time</span></div>
-              <div className="stat-foot"><span className="stat-bar"><i style={{ width: viewCount ? "76%" : "0%" }} /></span><span>Exhibition visits</span></div>
-            </article>
-          </section>
+          ))}
+        </section>
 
-          <section className="artworks-section" id="artworks">
-            <div className="section-heading">
-              <div><p className="eyebrow">YOUR COLLECTION</p><h2>Recently added <span className="section-counter">{artworkCount}</span></h2></div>
-              <button onClick={createExhibition} className="view-all">Create an exhibition <ArrowRight size={14} /></button>
+        <section className={styles.card} aria-label="Your activity">
+          <div className={styles.cardHead}>
+            <div>
+              <h2>Your activity</h2>
+              <p className={styles.cardSub}>Artworks added per day · {chartRange}</p>
             </div>
-            <div className="artwork-grid">
-              {artworks.map((artwork) => (
-                <article className="artwork-card" key={artwork.id}>
-                  <div className="artwork-image" style={{ backgroundColor: `${artwork.color}22` }}>
-                    <div className="artwork-image-inner" style={artwork.imageUrl ? { backgroundImage: `url(${artwork.imageUrl})`, backgroundPosition: "center", backgroundSize: "cover" } : undefined}>{!artwork.imageUrl && <><span /><i /><b /></>}</div>
-                    <button className="artwork-open" aria-label={`Open ${artwork.title}`}><ArrowUpRight size={15} /></button>
-                  </div>
-                  <div className="artwork-details"><div><h3>{artwork.title}</h3><p>{artwork.artist}</p></div><span className="artwork-year">{artwork.year}</span></div>
-                </article>
-              ))}
-              <button onClick={createExhibition} className="add-artwork-card">
-                <span className="add-artwork-icon"><Plus size={19} /></span>
-                <strong>Add an artwork</strong>
-                <span>Grow your collection</span>
-              </button>
-            </div>
-          </section>
+            <strong className={styles.cardTotal}>
+              {chartTotal} <span>new in 14 days</span>
+            </strong>
+          </div>
+          <div className={styles.chart}>
+            {chart.map((day) => (
+              <div className={styles.barWrap} key={day.full} title={`${day.full}: ${day.count} artwork${day.count === 1 ? "" : "s"} added`}>
+                {day.count > 0 && <span className={styles.barValue}>{day.count}</span>}
+                <div
+                  className={`${styles.bar} ${day.isRecentWeek ? styles.barRecent : styles.barOlder} ${day.count === maxCount && day.count > 0 ? styles.barMax : ""}`}
+                  style={{ height: `${Math.max(day.count > 0 ? 6 : 2, (day.count / maxCount) * 100)}%` }}
+                />
+                <span className={styles.barLabel}>{day.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.chartLegend}>
+            <span><i className={`${styles.legendDot} ${styles.barRecent}`} /> Last 7 days</span>
+            <span><i className={`${styles.legendDot} ${styles.barOlder}`} /> Previous 7 days</span>
+          </div>
+        </section>
 
-          <section className="bottom-note" id="library">
-            <div className="note-icon"><Sparkles size={16} /></div>
-            <div><strong>Made for the way you see.</strong><span>Your gallery is a work in progress. Take your time with it.</span></div>
-            <span className="note-arrow"><ArrowDownRight size={17} /></span>
-          </section>
-          <footer className="dashboard-footer"><span>© 2026 SANAA Studio</span><span>Made for art, made for everyone.</span><span className="demo-label">YOUR WORKSPACE</span></footer>
-        </div>
-      </section>
-    </main>
+        <section className={styles.card} aria-label="Top exhibitions by visits">
+          <div className={styles.cardHead}>
+            <div>
+              <h2>Top exhibitions by visits</h2>
+              <p className={styles.cardSub}>Your most visited rooms</p>
+            </div>
+            <Link className={styles.cardLink} href="/exhibitions">
+              See all exhibitions
+            </Link>
+          </div>
+          {filteredExhibitions.length === 0 ? (
+            <p className={styles.empty}>
+              {topExhibitions.length === 0
+                ? "No exhibitions yet — create your first one to start."
+                : "No exhibitions match your search."}
+            </p>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Exhibition</th>
+                    <th>Status</th>
+                    <th>Artworks</th>
+                    <th>Visits</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredExhibitions.map((exhibition) => (
+                    <tr key={exhibition.id}>
+                      <td>
+                        <Link className={styles.tableTitle} href={`/editor/${exhibition.id}`}>
+                          {exhibition.title}
+                        </Link>
+                      </td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${exhibition.status === "public" ? styles.statusPublic : styles.statusDraft}`}>
+                          {exhibition.status === "public" ? "Public" : "Draft"}
+                        </span>
+                      </td>
+                      <td>{exhibition.artworkCount}</td>
+                      <td>{exhibition.views}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <footer className={styles.footer}>
+          <span>© 2026 SANAA Studio</span>
+          <span>Made for art, made for everyone.</span>
+        </footer>
+      </main>
+    </div>
   );
 }

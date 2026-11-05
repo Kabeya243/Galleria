@@ -2,11 +2,11 @@ import Link from "next/link";
 import AdminShell from "@/components/admin-shell";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Admin — Overview",
-  description: "Platform overview for the owner: users, exhibitions, artworks and visits.",
+  title: "Admin — SANAA",
+  description:
+    "The platform overview for the owner: users, exhibitions, artworks and visits — everything on one page.",
 };
 
 function formatBytes(bytes: number): string {
@@ -52,6 +52,7 @@ function deltaTone(now: number, prev: number): { text: string; tone: "up" | "dow
 }
 
 // Small sparkline from real daily counts — pure SVG, no chart library.
+// Colours come from the admin theme variables, so it follows dark/light.
 function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(...values, 1);
   const w = 140;
@@ -64,14 +65,37 @@ function Sparkline({ values }: { values: number[] }) {
   const line = points.join(" ");
   return (
     <svg className="ad-spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
-      <polygon points={`2,${h} ${line} ${w - 2},${h}`} fill="#f7f2e8" />
-      <polyline points={line} fill="none" stroke="#a67c37" strokeWidth="1.5" />
+      <polygon
+        points={`2,${h} ${line} ${w - 2},${h}`}
+        style={{ fill: "var(--ad-spark-fill)" }}
+      />
+      <polyline
+        points={line}
+        fill="none"
+        style={{ stroke: "var(--ad-spark-stroke)" }}
+        strokeWidth="1.5"
+      />
     </svg>
   );
 }
 
-export default async function AdminOverviewRoute() {
+function EmptyBox({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="ad-empty">
+      <strong>{title}</strong>
+      <p>{body}</p>
+    </div>
+  );
+}
+
+export default async function AdminRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const user = await requireAdmin();
+  const { q } = await searchParams;
+  const query = (q ?? "").trim();
   const now = new Date();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
@@ -88,6 +112,9 @@ export default async function AdminOverviewRoute() {
     countryGroups,
     roleGroups,
     storage,
+    allUsers,
+    allExhibitions,
+    allArtworks,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -133,6 +160,53 @@ export default async function AdminOverviewRoute() {
     db.user.groupBy({ by: ["country"], _count: { _all: true } }),
     db.user.groupBy({ by: ["role"], _count: { _all: true } }),
     db.$queryRaw<{ total: bigint }[]>`SELECT COALESCE(SUM(octet_length(data)), 0) AS total FROM "Upload"`,
+    db.user.findMany({
+      where: query
+        ? {
+            OR: [
+              { name: { contains: query, mode: "insensitive" } },
+              { email: { contains: query, mode: "insensitive" } },
+              { country: { contains: query, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        country: true,
+        createdAt: true,
+        _count: { select: { exhibitions: true } },
+      },
+    }),
+    db.exhibition.findMany({
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        views: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: { select: { name: true, email: true } },
+        _count: { select: { artworks: true } },
+      },
+    }),
+    db.artwork.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        medium: true,
+        dimensions: true,
+        year: true,
+        createdAt: true,
+        exhibition: { select: { title: true, status: true, owner: { select: { name: true } } } },
+      },
+    }),
   ]);
 
   const userCount = userDates.length;
@@ -211,272 +285,399 @@ export default async function AdminOverviewRoute() {
       eyebrow="ADMIN · FOR THE OWNER ONLY"
       description={`${todayLabel} — a look at who joined, what was built, and what visitors viewed on SANAA.`}
     >
-      {/* Stat cards */}
-      <div className="ad-grid-stats">
-        <div className="ad-card ad-stat">
-          <span className="ad-stat-label">Total users</span>
-          <strong className="ad-stat-value">{userCount}</strong>
-          <span className={`ad-stat-delta ad-delta-${usersDelta.tone}`}>{usersDelta.text}</span>
-          <span className="ad-stat-note">{usersThisWeek} new in the last 7 days</span>
-          <Sparkline values={signupDays.map((d) => d.count)} />
-        </div>
-        <div className="ad-card ad-stat">
-          <span className="ad-stat-label">Total exhibitions</span>
-          <strong className="ad-stat-value">{exhibitionCount}</strong>
-          <span className={`ad-stat-delta ad-delta-${exhibitionsDelta.tone}`}>{exhibitionsDelta.text}</span>
-          <span className="ad-stat-note">{publicExhibitions} public</span>
-          <Sparkline values={exhibitionDays.map((d) => d.count)} />
-        </div>
-        <div className="ad-card ad-stat">
-          <span className="ad-stat-label">Total artworks</span>
-          <strong className="ad-stat-value">{artworkCount}</strong>
-          <span className={`ad-stat-delta ad-delta-${artworksDelta.tone}`}>{artworksDelta.text}</span>
-          <span className="ad-stat-note">{artworksThisWeek} added in the last 7 days</span>
-          <Sparkline values={artworkDays.map((d) => d.count)} />
-        </div>
-        <div className="ad-card ad-stat">
-          <span className="ad-stat-label">Total visits</span>
-          <strong className="ad-stat-value">{views}</strong>
-          <span className="ad-stat-delta ad-delta-flat">All exhibitions, all time</span>
-          <span className="ad-stat-note">No daily visit history yet — visits are counted as a total only</span>
-        </div>
-      </div>
-
-      {/* Signups chart + activity feed */}
-      <div className="ad-layout-main">
-        <section className="ad-card">
-          <div className="ad-card-head">
-            <div>
-              <h2>Signups — last 14 days</h2>
-              <p className="ad-card-sub">New accounts per day</p>
-            </div>
-            <strong className="ad-card-total">
-              {signupsTotal} <span>new</span>
-            </strong>
+      <div id="overview" className="ad-section">
+        {/* Stat cards */}
+        <div className="ad-grid-stats">
+          <div className="ad-card ad-stat">
+            <span className="ad-stat-label">Total users</span>
+            <strong className="ad-stat-value">{userCount}</strong>
+            <span className={`ad-stat-delta ad-delta-${usersDelta.tone}`}>{usersDelta.text}</span>
+            <span className="ad-stat-note">{usersThisWeek} new in the last 7 days</span>
+            <Sparkline values={signupDays.map((d) => d.count)} />
           </div>
-          <div className="ad-bars">
-            {signupDays.map((d) => (
-              <div
-                key={d.date.toDateString()}
-                className="ad-bar-wrap"
-                title={`${d.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}: ${d.count} signup${d.count === 1 ? "" : "s"}`}
-              >
-                <span className="ad-bar-value">{d.count > 0 ? d.count : ""}</span>
-                <div
-                  className={`ad-bar${d.count === signupMax && d.count > 0 ? " ad-bar-max" : ""}`}
-                  style={{ height: `${d.count > 0 ? Math.max((d.count / signupMax) * 100, 7) : 2}%` }}
-                />
+          <div className="ad-card ad-stat">
+            <span className="ad-stat-label">Total exhibitions</span>
+            <strong className="ad-stat-value">{exhibitionCount}</strong>
+            <span className={`ad-stat-delta ad-delta-${exhibitionsDelta.tone}`}>{exhibitionsDelta.text}</span>
+            <span className="ad-stat-note">{publicExhibitions} public</span>
+            <Sparkline values={exhibitionDays.map((d) => d.count)} />
+          </div>
+          <div className="ad-card ad-stat">
+            <span className="ad-stat-label">Total artworks</span>
+            <strong className="ad-stat-value">{artworkCount}</strong>
+            <span className={`ad-stat-delta ad-delta-${artworksDelta.tone}`}>{artworksDelta.text}</span>
+            <span className="ad-stat-note">{artworksThisWeek} added in the last 7 days</span>
+            <Sparkline values={artworkDays.map((d) => d.count)} />
+          </div>
+          <div className="ad-card ad-stat">
+            <span className="ad-stat-label">Total visits</span>
+            <strong className="ad-stat-value">{views}</strong>
+            <span className="ad-stat-delta ad-delta-flat">All exhibitions, all time</span>
+            <span className="ad-stat-note">No daily visit history yet — visits are counted as a total only</span>
+          </div>
+        </div>
+
+        {/* Signups chart + activity feed */}
+        <div className="ad-layout-main">
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Signups — last 14 days</h2>
+                <p className="ad-card-sub">New accounts per day</p>
               </div>
-            ))}
-          </div>
-          <div className="ad-bar-labels">
-            {signupDays.map((d) => (
-              <span key={d.date.toDateString()}>{d.date.getDate()}</span>
-            ))}
-          </div>
-          <p className="ad-card-sub ad-chart-foot">
-            {signupDays[0].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} –{" "}
-            {signupDays[signupDays.length - 1].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-          </p>
-        </section>
-
-        <section className="ad-card">
-          <div className="ad-card-head">
-            <div>
-              <h2>Latest activity</h2>
-              <p className="ad-card-sub">Signups, exhibitions and artworks</p>
+              <strong className="ad-card-total">
+                {signupsTotal} <span>new</span>
+              </strong>
             </div>
-          </div>
-          {activity.length === 0 ? (
-            <div className={styles.emptyBox}>
-              <strong>Nothing yet.</strong>
-              <p>Activity appears here as soon as someone signs up or builds something.</p>
-            </div>
-          ) : (
-            <ul className="ad-feed">
-              {activity.map((item) => (
-                <li key={item.key}>
-                  <span className={`ad-feed-dot ad-feed-${item.kind}`} aria-hidden="true" />
-                  <div className="ad-feed-body">
-                    <strong>{item.title}</strong>
-                    <span>{item.sub}</span>
-                  </div>
-                  <span className="ad-feed-time">{relativeTime(item.at)}</span>
-                </li>
+            <div className="ad-bars">
+              {signupDays.map((d) => (
+                <div
+                  key={d.date.toDateString()}
+                  className="ad-bar-wrap"
+                  title={`${d.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}: ${d.count} signup${d.count === 1 ? "" : "s"}`}
+                >
+                  <span className="ad-bar-value">{d.count > 0 ? d.count : ""}</span>
+                  <div
+                    className={`ad-bar${d.count === signupMax && d.count > 0 ? " ad-bar-max" : ""}`}
+                    style={{ height: `${d.count > 0 ? Math.max((d.count / signupMax) * 100, 7) : 2}%` }}
+                  />
+                </div>
               ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      {/* Countries + roles */}
-      <div className="ad-layout-half">
-        <section className="ad-card">
-          <div className="ad-card-head">
-            <div>
-              <h2>Users by country</h2>
-              <p className="ad-card-sub">Where accounts are based</p>
             </div>
-          </div>
-          {countries.length === 0 ? (
-            <div className={styles.emptyBox}>
-              <strong>No users yet.</strong>
-              <p>Countries appear here once accounts sign up.</p>
-            </div>
-          ) : (
-            <ul className="ad-share">
-              {countries.map((c) => (
-                <li key={c.name}>
-                  <div className="ad-share-row">
-                    <span className="ad-share-name">{c.name}</span>
-                    <span className="ad-share-count">
-                      {c.count} · {userCount > 0 ? Math.round((c.count / userCount) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="ad-share-track">
-                    <div
-                      className="ad-share-fill"
-                      style={{ width: `${userCount > 0 ? Math.max((c.count / userCount) * 100, 2) : 0}%` }}
-                    />
-                  </div>
-                </li>
+            <div className="ad-bar-labels">
+              {signupDays.map((d) => (
+                <span key={d.date.toDateString()}>{d.date.getDate()}</span>
               ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="ad-card">
-          <div className="ad-card-head">
-            <div>
-              <h2>Users by role</h2>
-              <p className="ad-card-sub">What accounts do on SANAA</p>
             </div>
-          </div>
-          {roles.length === 0 ? (
-            <div className={styles.emptyBox}>
-              <strong>No users yet.</strong>
-              <p>Roles appear here once accounts sign up.</p>
-            </div>
-          ) : (
-            <ul className="ad-share">
-              {roles.map((r) => (
-                <li key={r.name}>
-                  <div className="ad-share-row">
-                    <span className="ad-share-name">{r.name}</span>
-                    <span className="ad-share-count">
-                      {r.count} · {userCount > 0 ? Math.round((r.count / userCount) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="ad-share-track">
-                    <div
-                      className="ad-share-fill ad-share-fill-gold"
-                      style={{ width: `${userCount > 0 ? Math.max((r.count / userCount) * 100, 2) : 0}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+            <p className="ad-card-sub ad-chart-foot">
+              {signupDays[0].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} –{" "}
+              {signupDays[signupDays.length - 1].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+            </p>
+          </section>
 
-      {/* Top exhibitions */}
-      <section className="ad-card ad-table-card">
-        <div className="ad-card-head">
-          <div>
-            <h2>Top exhibitions by visits</h2>
-            <p className="ad-card-sub">The most visited rooms on the platform</p>
-          </div>
-          <Link className="ad-card-link" href="/admin/exhibitions">
-            See all exhibitions
-          </Link>
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Latest activity</h2>
+                <p className="ad-card-sub">Signups, exhibitions and artworks</p>
+              </div>
+            </div>
+            {activity.length === 0 ? (
+              <EmptyBox
+                title="Nothing yet."
+                body="Activity appears here as soon as someone signs up or builds something."
+              />
+            ) : (
+              <ul className="ad-feed">
+                {activity.map((item) => (
+                  <li key={item.key}>
+                    <span className={`ad-feed-dot ad-feed-${item.kind}`} aria-hidden="true" />
+                    <div className="ad-feed-body">
+                      <strong>{item.title}</strong>
+                      <span>{item.sub}</span>
+                    </div>
+                    <span className="ad-feed-time">{relativeTime(item.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
-        {topExhibitions.length === 0 ? (
-          <div className={styles.emptyBox}>
-            <strong>No visits yet.</strong>
-            <p>Visits appear here once a public exhibition is opened.</p>
+
+        {/* Countries + roles */}
+        <div className="ad-layout-half">
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Users by country</h2>
+                <p className="ad-card-sub">Where accounts are based</p>
+              </div>
+            </div>
+            {countries.length === 0 ? (
+              <EmptyBox title="No users yet." body="Countries appear here once accounts sign up." />
+            ) : (
+              <ul className="ad-share">
+                {countries.map((c) => (
+                  <li key={c.name}>
+                    <div className="ad-share-row">
+                      <span className="ad-share-name">{c.name}</span>
+                      <span className="ad-share-count">
+                        {c.count} · {userCount > 0 ? Math.round((c.count / userCount) * 100) : 0}%
+                      </span>
+                    </div>
+                    <div className="ad-share-track">
+                      <div
+                        className="ad-share-fill"
+                        style={{ width: `${userCount > 0 ? Math.max((c.count / userCount) * 100, 2) : 0}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Users by role</h2>
+                <p className="ad-card-sub">What accounts do on SANAA</p>
+              </div>
+            </div>
+            {roles.length === 0 ? (
+              <EmptyBox title="No users yet." body="Roles appear here once accounts sign up." />
+            ) : (
+              <ul className="ad-share">
+                {roles.map((r) => (
+                  <li key={r.name}>
+                    <div className="ad-share-row">
+                      <span className="ad-share-name">{r.name}</span>
+                      <span className="ad-share-count">
+                        {r.count} · {userCount > 0 ? Math.round((r.count / userCount) * 100) : 0}%
+                      </span>
+                    </div>
+                    <div className="ad-share-track">
+                      <div
+                        className="ad-share-fill ad-share-fill-alt"
+                        style={{ width: `${userCount > 0 ? Math.max((r.count / userCount) * 100, 2) : 0}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {/* Top exhibitions */}
+        <section className="ad-card ad-table-card">
+          <div className="ad-card-head">
+            <div>
+              <h2>Top exhibitions by visits</h2>
+              <p className="ad-card-sub">The most visited rooms on the platform</p>
+            </div>
+            <a className="ad-card-link" href="#exhibitions">
+              See all exhibitions
+            </a>
           </div>
+          {topExhibitions.length === 0 ? (
+            <EmptyBox title="No visits yet." body="Visits appear here once a public exhibition is opened." />
+          ) : (
+            <div className="ad-table-wrap">
+              <table className="ad-table">
+                <thead>
+                  <tr>
+                    <th>Exhibition</th>
+                    <th>Owner</th>
+                    <th>Status</th>
+                    <th>Artworks</th>
+                    <th>Visits</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topExhibitions.map((exhibition) => (
+                    <tr key={exhibition.id}>
+                      <td>
+                        {exhibition.status === "public" ? (
+                          <Link href={`/exhibition/${exhibition.slug}`}>{exhibition.title}</Link>
+                        ) : (
+                          exhibition.title
+                        )}
+                      </td>
+                      <td>
+                        {exhibition.owner.name} ({exhibition.owner.email})
+                      </td>
+                      <td>{exhibition.status}</td>
+                      <td>{exhibition._count.artworks}</td>
+                      <td>{exhibition.views}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* Recent users */}
+        <section className="ad-card ad-table-card">
+          <div className="ad-card-head">
+            <div>
+              <h2>Recent users</h2>
+              <p className="ad-card-sub">The latest accounts to join</p>
+            </div>
+            <a className="ad-card-link" href="#users">
+              See all users
+            </a>
+          </div>
+          {recentUsers.length === 0 ? (
+            <EmptyBox title="No users yet." body="New registrations will appear here." />
+          ) : (
+            <div className="ad-table-wrap">
+              <table className="ad-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Country</th>
+                    <th>Role</th>
+                    <th>Exhibitions</th>
+                    <th>Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentUsers.map((account) => (
+                    <tr key={account.id}>
+                      <td>{account.name}</td>
+                      <td>{account.email}</td>
+                      <td>{account.country ?? "—"}</td>
+                      <td>{account.role ?? "—"}</td>
+                      <td>{account._count.exhibitions}</td>
+                      <td>{account.createdAt.toLocaleDateString("en-GB")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* All users */}
+      <section id="users" className="ad-section">
+        <div className="ad-section-head">
+          <h2>All users</h2>
+          <p>
+            {allUsers.length} {query ? `matching “${query}”` : "registered"} — who they are, what they do, where they
+            are based, and when they signed up.
+          </p>
+        </div>
+        <form className="ad-search" method="get" action="#users">
+          <input name="q" defaultValue={query} placeholder="Search by name, email or country…" aria-label="Search users" />
+          <button type="submit">Search</button>
+        </form>
+        {allUsers.length === 0 ? (
+          <EmptyBox title="No users match." body="Try a different search, or clear it to see everyone." />
         ) : (
-          <table className={styles.inventoryTable}>
-            <thead>
-              <tr>
-                <th>Exhibition</th>
-                <th>Owner</th>
-                <th>Status</th>
-                <th>Artworks</th>
-                <th>Visits</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topExhibitions.map((exhibition) => (
-                <tr key={exhibition.id}>
-                  <td>
-                    {exhibition.status === "public" ? (
-                      <Link href={`/exhibition/${exhibition.slug}`}>{exhibition.title}</Link>
-                    ) : (
-                      exhibition.title
-                    )}
-                  </td>
-                  <td>
-                    {exhibition.owner.name} ({exhibition.owner.email})
-                  </td>
-                  <td>{exhibition.status}</td>
-                  <td>{exhibition._count.artworks}</td>
-                  <td>{exhibition.views}</td>
+          <div className="ad-card ad-table-wrap">
+            <table className="ad-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Country</th>
+                  <th>Exhibitions</th>
+                  <th>Signed up</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {allUsers.map((account) => (
+                  <tr key={account.id}>
+                    <td>{account.name}</td>
+                    <td>{account.email}</td>
+                    <td>{account.role ?? "—"}</td>
+                    <td>{account.country ?? "—"}</td>
+                    <td>{account._count.exhibitions}</td>
+                    <td>{account.createdAt.toLocaleDateString("en-GB")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
-      {/* Recent users */}
-      <section className="ad-card ad-table-card">
-        <div className="ad-card-head">
-          <div>
-            <h2>Recent users</h2>
-            <p className="ad-card-sub">The latest accounts to join</p>
-          </div>
-          <Link className="ad-card-link" href="/admin/users">
-            See all users
-          </Link>
+      {/* All exhibitions */}
+      <section id="exhibitions" className="ad-section">
+        <div className="ad-section-head">
+          <h2>All exhibitions</h2>
+          <p>
+            {allExhibitions.length} exhibitions — who built it, whether it is public, how many works it holds and how
+            many visits it received.
+          </p>
         </div>
-        {recentUsers.length === 0 ? (
-          <div className={styles.emptyBox}>
-            <strong>No users yet.</strong>
-            <p>New registrations will appear here.</p>
-          </div>
+        {allExhibitions.length === 0 ? (
+          <EmptyBox title="No exhibitions yet." body="Exhibitions appear here as soon as someone creates one." />
         ) : (
-          <table className={styles.inventoryTable}>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Country</th>
-                <th>Role</th>
-                <th>Exhibitions</th>
-                <th>Joined</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentUsers.map((account) => (
-                <tr key={account.id}>
-                  <td>{account.name}</td>
-                  <td>{account.email}</td>
-                  <td>{account.country ?? "—"}</td>
-                  <td>{account.role ?? "—"}</td>
-                  <td>{account._count.exhibitions}</td>
-                  <td>{account.createdAt.toLocaleDateString("en-GB")}</td>
+          <div className="ad-card ad-table-wrap">
+            <table className="ad-table">
+              <thead>
+                <tr>
+                  <th>Exhibition</th>
+                  <th>Owner</th>
+                  <th>Status</th>
+                  <th>Artworks</th>
+                  <th>Visits</th>
+                  <th>Updated</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {allExhibitions.map((exhibition) => (
+                  <tr key={exhibition.id}>
+                    <td>
+                      {exhibition.status === "public" ? (
+                        <Link href={`/exhibition/${exhibition.slug}`}>{exhibition.title}</Link>
+                      ) : (
+                        exhibition.title
+                      )}
+                    </td>
+                    <td>
+                      {exhibition.owner.name} ({exhibition.owner.email})
+                    </td>
+                    <td>{exhibition.status}</td>
+                    <td>{exhibition._count.artworks}</td>
+                    <td>{exhibition.views}</td>
+                    <td>{exhibition.updatedAt.toLocaleDateString("en-GB")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* All artworks */}
+      <section id="artworks" className="ad-section">
+        <div className="ad-section-head">
+          <h2>All artworks</h2>
+          <p>{allArtworks.length} artworks — what it is, where it hangs, and who it belongs to.</p>
+        </div>
+        {allArtworks.length === 0 ? (
+          <EmptyBox title="No artworks yet." body="Artworks appear here as soon as someone adds one to an exhibition." />
+        ) : (
+          <div className="ad-card ad-table-wrap">
+            <table className="ad-table">
+              <thead>
+                <tr>
+                  <th>Artwork</th>
+                  <th>Medium</th>
+                  <th>Dimensions</th>
+                  <th>Year</th>
+                  <th>Exhibition</th>
+                  <th>Owner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allArtworks.map((artwork) => (
+                  <tr key={artwork.id}>
+                    <td>{artwork.title}</td>
+                    <td>{artwork.medium}</td>
+                    <td>{artwork.dimensions}</td>
+                    <td>{artwork.year}</td>
+                    <td>
+                      {artwork.exhibition.title} ({artwork.exhibition.status})
+                    </td>
+                    <td>{artwork.exhibition.owner.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
       <p className="ad-foot">
-        Legacy image storage in the database: {formatBytes(storageBytes)} (R2 is separate). ·{" "}
-        <Link href="/admin/artworks">See all artworks</Link>
+        Legacy image storage in the database: {formatBytes(storageBytes)} (R2 is separate).
       </p>
     </AdminShell>
   );

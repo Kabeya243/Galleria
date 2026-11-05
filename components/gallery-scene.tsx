@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Text, useTexture } from "@react-three/drei";
+import { OrbitControls, useTexture } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, PlaneGeometry, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
 import type { Artwork, FrameVariant } from "@/lib/demo-data";
@@ -461,6 +461,217 @@ function SheerPanel({ width, color }: { width: number; color: string }) {
   );
 }
 
+// --- Wall text without troika -------------------------------------------
+// Wall text used to render with drei's <Text> (troika-three-text), passing
+// a font FAMILY name ("DM Sans", "Fraunces") as the `font` prop. Troika
+// treats that string as a font FILE URL, and drei suspends rendering on
+// preloadFont until that font loads — the fetch of "DM Sans" can never
+// resolve, so the <Suspense> around the whole room unmounted the scene:
+// the viewport went uniformly cream (the canvas background colour) and no
+// control recovered it, while the red title never rendered at all. Wall
+// text now draws on a 2D canvas into a texture: the site's real webfonts
+// (already loaded for the page) draw directly, so there is no font
+// download, no suspend, and nothing that can blank the scene. The room's
+// curatorial text used the same troika component (its default font came
+// from a CDN, the same latent failure), so it draws the same way.
+
+// Pixel density of the wall-text canvas (pixels per metre of wall).
+const WALL_TEXT_PX_PER_M = 300;
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(test).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
+
+function wallTextFontFace(font: keyof typeof WALL_TEXT_FONTS, weight: number, px: number): string {
+  const spec = WALL_TEXT_FONTS[font];
+  const fallback = font === "serif" ? "Georgia, serif" : font === "mono" ? "monospace" : "sans-serif";
+  return `${weight} ${px}px "${spec.family}", ${fallback}`;
+}
+
+// Draw a wall-text element onto a canvas and return the texture plus the
+// height the text really takes (metres), so the plane fits the text
+// instead of the text being squeezed into an estimated box.
+function createWallTextTexture(element: RoomElement, widthM: number): { texture: CanvasTexture; heightM: number } | null {
+  if (typeof document === "undefined") return null;
+  const px = WALL_TEXT_PX_PER_M;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(2, Math.round(widthM * px));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const fontKey = element.font ?? "display";
+  const fontSpec = WALL_TEXT_FONTS[fontKey];
+  const align = element.align ?? "left";
+  const layout = element.layout ?? "stacked";
+  const titlePx = Math.max(8, element.fontSize * px);
+  const bodyPx = Math.max(6, (element.bodySize ?? 0.11) * px);
+  const titleLineH = element.fontSize * 1.08 * px;
+  const bodyLineH = (element.bodySize ?? 0.11) * 1.5 * px;
+  const gapPx = element.body ? 0.18 * px : 0;
+  const padX = 0.15 * px;
+  // Measure first (at a generous height), then size the canvas to what
+  // the text really takes — no clipping, no stretched empty space.
+  canvas.height = 8;
+  const titleLines = (element.title || "Wall text").split("\n").map((l) => l.trim()).filter(Boolean);
+  const titleRows = titleLines.length ? titleLines : ["Wall text"];
+  const setTitleFont = () => {
+    ctx.font = wallTextFontFace(fontKey, fontSpec.weight, titlePx);
+    try { ctx.letterSpacing = `${fontSpec.letterSpacing * titlePx}px`; } catch { /* older canvas: no letter-spacing */ }
+  };
+  const setBodyFont = () => {
+    ctx.font = wallTextFontFace(fontKey, 400, bodyPx);
+    try { ctx.letterSpacing = "0px"; } catch { /* older canvas */ }
+  };
+  const anchorX = align === "center" ? canvas.width / 2 : align === "right" ? canvas.width - padX : padX;
+  let bodyRows: string[] = [];
+  let titleWrapped: string[] = [];
+  let contentH: number;
+  if (layout === "side") {
+    setTitleFont();
+    titleWrapped = titleRows.flatMap((line) => wrapCanvasText(ctx, line, widthM * 0.55 * px - padX));
+    setBodyFont();
+    bodyRows = element.body ? wrapCanvasText(ctx, element.body, widthM * 0.36 * px) : [];
+    contentH = Math.max(titleWrapped.length * titleLineH, bodyRows.length * bodyLineH);
+  } else if (layout === "block") {
+    setTitleFont();
+    titleWrapped = wrapCanvasText(ctx, titleRows.join(" "), widthM * px - padX * 2);
+    setBodyFont();
+    bodyRows = element.body ? wrapCanvasText(ctx, element.body, widthM * px - padX * 2) : [];
+    contentH = titleWrapped.length * titleLineH + gapPx + bodyRows.length * bodyLineH;
+  } else {
+    setTitleFont();
+    titleWrapped = titleRows;
+    setBodyFont();
+    bodyRows = element.body ? wrapCanvasText(ctx, element.body, widthM * px - padX * 2) : [];
+    contentH = titleWrapped.length * titleLineH + gapPx + bodyRows.length * bodyLineH;
+  }
+  canvas.height = Math.max(2, Math.round(contentH));
+  // Resizing a canvas resets its context state, so set everything again.
+  ctx.textAlign = align;
+  ctx.textBaseline = "top";
+  const drawTitle = (lines: string[], x: number, yTop: number) => {
+    setTitleFont();
+    ctx.fillStyle = element.textColor;
+    ctx.textAlign = layout === "side" ? "left" : align;
+    lines.forEach((line, i) => ctx.fillText(line, x, yTop + i * titleLineH));
+  };
+  const drawBody = (lines: string[], x: number, yTop: number) => {
+    setBodyFont();
+    ctx.fillStyle = element.bodyColor;
+    ctx.textAlign = layout === "side" ? "left" : align;
+    lines.forEach((line, i) => ctx.fillText(line, x, yTop + i * bodyLineH));
+  };
+  if (layout === "side") {
+    drawTitle(titleWrapped, padX, 0);
+    if (bodyRows.length) drawBody(bodyRows, widthM * 0.64 * px, 0);
+  } else if (layout === "block") {
+    drawTitle(titleWrapped, anchorX, 0);
+    if (bodyRows.length) drawBody(bodyRows, anchorX, titleWrapped.length * titleLineH + gapPx);
+  } else {
+    drawTitle(titleWrapped, anchorX, 0);
+    if (bodyRows.length) drawBody(bodyRows, anchorX, titleWrapped.length * titleLineH + gapPx);
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.anisotropy = 4;
+  return { texture, heightM: canvas.height / px };
+}
+
+// A wall-text element as a flat transparent plane: the letters sit
+// straight on the wall, like the reference photo. The texture is redrawn
+// whenever the text or its typography changes, and once the webfonts
+// finish loading (the first paint may use a fallback face).
+function WallTextPlane({ element, widthM }: { element: RoomElement; widthM: number }) {
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    if (fonts) {
+      void fonts.load(`700 100px "DM Sans"`).catch(() => {});
+      void fonts.load(`600 100px "Fraunces"`).catch(() => {});
+      fonts.ready.then(() => { if (alive) setFontsReady(true); }).catch(() => {});
+    }
+    return () => { alive = false; };
+  }, []);
+  const drawn = useMemo(
+    () => createWallTextTexture(element, widthM),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [element.title, element.body, element.font, element.align, element.layout, element.fontSize, element.bodySize, element.textColor, element.bodyColor, widthM, fontsReady],
+  );
+  useEffect(() => () => { drawn?.texture.dispose(); }, [drawn]);
+  if (!drawn) return null;
+  return (
+    <mesh position={[0, 0, 0.02]}>
+      <planeGeometry args={[widthM, drawn.heightM]} />
+      <meshBasicMaterial map={drawn.texture} transparent toneMapped={false} />
+    </mesh>
+  );
+}
+
+// The room's curatorial text, drawn the same canvas way (it used the same
+// troika component). Centred, on a backing board in the room's wall colour.
+function CuratorialTextPlane({ text, maxWidthM, wallColor }: { text: string; maxWidthM: number; wallColor: string }) {
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    fonts?.ready.then(() => { if (alive) setFontsReady(true); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const drawn = useMemo(() => {
+    if (typeof document === "undefined") return null;
+    const px = WALL_TEXT_PX_PER_M;
+    const fontPx = 0.15 * px;
+    const lineH = 0.15 * 1.5 * px;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(2, Math.round(maxWidthM * px));
+    canvas.height = 8;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.font = `400 ${fontPx}px "DM Sans", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const lines = wrapCanvasText(ctx, text, maxWidthM * px - 0.3 * px);
+    canvas.height = Math.max(2, Math.round(lines.length * lineH));
+    ctx.font = `400 ${fontPx}px "DM Sans", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#252722";
+    lines.forEach((line, i) => ctx.fillText(line, canvas.width / 2, i * lineH));
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+    return { texture, heightM: canvas.height / px };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, maxWidthM, fontsReady]);
+  useEffect(() => () => { drawn?.texture.dispose(); }, [drawn]);
+  if (!drawn) return null;
+  return (
+    <group>
+      <mesh position={[0, 0, -0.015]}>
+        <planeGeometry args={[maxWidthM + 0.6, drawn.heightM + 0.3]} />
+        <meshBasicMaterial color={wallColor} />
+      </mesh>
+      <mesh position={[0, 0, 0.01]}>
+        <planeGeometry args={[maxWidthM, drawn.heightM]} />
+        <meshBasicMaterial map={drawn.texture} transparent toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
 // One placeable 3D element from the Elements palette, rendered in the room
 // like an artwork: clickable to select, draggable along its plane (floor,
 // wall or ceiling), resizable from the lime handle when selected.
@@ -677,113 +888,9 @@ function ElementMesh({
             <planeGeometry args={[wt.W + 0.2, wt.contentH + 0.3]} />
             <meshBasicMaterial transparent opacity={0} depthWrite={false} />
           </mesh>
-          {wt.layout === "side" ? (
-            <>
-              {wt.titleLines.map((line, i) => (
-                <Text
-                  key={i}
-                  font={wt.font.family}
-                  fontWeight={wt.font.weight}
-                  letterSpacing={wt.font.letterSpacing}
-                  fontSize={wt.titleSize}
-                  maxWidth={wt.W * 0.55}
-                  textAlign="left"
-                  anchorX="left"
-                  anchorY="middle"
-                  color={element.textColor}
-                  position={[-wt.W / 2 + 0.15, wt.top - wt.titleSize / 2 - i * wt.lineH, 0.02]}
-                >
-                  {line}
-                </Text>
-              ))}
-              {element.body && (
-                <Text
-                  font={wt.font.family}
-                  fontWeight={400}
-                  fontSize={wt.bodySize}
-                  maxWidth={wt.W * 0.36}
-                  lineHeight={1.5}
-                  textAlign="left"
-                  anchorX="left"
-                  anchorY="top"
-                  color={element.bodyColor}
-                  position={[wt.W * 0.14, wt.top, 0.02]}
-                >
-                  {element.body}
-                </Text>
-              )}
-            </>
-          ) : wt.layout === "block" ? (
-            <>
-              <Text
-                font={wt.font.family}
-                fontWeight={wt.font.weight}
-                letterSpacing={wt.font.letterSpacing}
-                fontSize={wt.titleSize}
-                maxWidth={wt.W - 0.3}
-                lineHeight={1.08}
-                textAlign={wt.align}
-                anchorX={wt.anchorX}
-                anchorY="top"
-                color={element.textColor}
-                position={[wt.xPos, wt.top, 0.02]}
-              >
-                {element.title || "Wall text"}
-              </Text>
-              {element.body && (
-                <Text
-                  font={wt.font.family}
-                  fontWeight={400}
-                  fontSize={wt.bodySize}
-                  maxWidth={wt.W - 0.3}
-                  lineHeight={1.5}
-                  textAlign={wt.align}
-                  anchorX={wt.anchorX}
-                  anchorY="top"
-                  color={element.bodyColor}
-                  position={[wt.xPos, wt.top - wt.titleH - wt.gap, 0.02]}
-                >
-                  {element.body}
-                </Text>
-              )}
-            </>
-          ) : (
-            <>
-              {wt.titleLines.map((line, i) => (
-                <Text
-                  key={i}
-                  font={wt.font.family}
-                  fontWeight={wt.font.weight}
-                  letterSpacing={wt.font.letterSpacing}
-                  fontSize={wt.titleSize}
-                  maxWidth={20}
-                  textAlign={wt.align}
-                  anchorX={wt.anchorX}
-                  anchorY="middle"
-                  color={element.textColor}
-                  position={[wt.xPos, wt.top - wt.titleSize / 2 - i * wt.lineH, 0.02]}
-                >
-                  {line}
-                </Text>
-              ))}
-              {element.body && (
-                <Text
-                  font={wt.font.family}
-                  fontWeight={400}
-                  fontSize={wt.bodySize}
-                  maxWidth={wt.W - 0.3}
-                  lineHeight={1.5}
-                  textAlign={wt.align}
-                  anchorX={wt.anchorX}
-                  anchorY="top"
-                  color={element.bodyColor}
-                  position={[wt.xPos, wt.top - wt.titleH - wt.gap, 0.02]}
-                >
-                  {element.body}
-                </Text>
-              )}
-            </>
-          )}
+          {/* Canvas-texture plane (see WallTextPlane): no troika, so adding
+              wall text can no longer suspend — and blank — the scene. */}
+          <WallTextPlane element={element} widthM={wt.W} />
         </group>
       )}
       {element.type === "plinth" && (
@@ -1726,20 +1833,9 @@ function GalleryRoom({
       ))}
       {room.curatorialText && (
         <group position={[0, height - 0.65, wallZ + 0.14]}>
-          <mesh position={[0, 0, -0.015]}>
-            <planeGeometry args={[Math.min(width - 1.5, 10), 0.8]} />
-            <meshBasicMaterial color={room.wallColor} />
-          </mesh>
-          <Text
-            fontSize={0.15}
-            maxWidth={Math.min(width - 2, 9)}
-            textAlign="center"
-            anchorX="center"
-            anchorY="middle"
-            color="#252722"
-          >
-            {room.curatorialText}
-          </Text>
+          {/* Canvas texture, like wall text: the old troika <Text> here
+              carried the same suspend-the-scene failure. */}
+          <CuratorialTextPlane text={room.curatorialText} maxWidthM={Math.min(width - 2, 9)} wallColor={room.wallColor} />
         </group>
       )}
       <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} />
@@ -2294,9 +2390,12 @@ export default function GalleryScene({
 
   const handleElementDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
     if (!editable || walking) return;
-    const element = (room.elements ?? []).find((item) => item.id === id);
+    // Elements live in every room, not just the active one (walk mode
+    // shows all rooms at once): find the room that holds this element.
+    const ownerRoom = sceneRooms.find((sceneRoom) => (sceneRoom.elements ?? []).some((item) => item.id === id)) ?? room;
+    const element = (ownerRoom.elements ?? []).find((item) => item.id === id);
     if (!element) return;
-    const layout = roomLayouts[room.layout];
+    const layout = roomLayouts[ownerRoom.layout];
     const planeKind = ELEMENT_PLANES[element.type];
     const position = new Vector3(element.x, element.y, element.z);
     let plane: Plane;

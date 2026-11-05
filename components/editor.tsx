@@ -144,6 +144,8 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  // Two-step inline confirm for removing a room (see removeRoom).
+  const [confirmingRemoveRoom, setConfirmingRemoveRoom] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<Artwork[][]>([]);
 
@@ -228,14 +230,19 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   }
 
   const selectedElement = useMemo(
-    () => activeRoom?.elements.find((element) => element.id === selectedElementId),
-    [activeRoom, selectedElementId],
+    // Elements live in every room, not just the active one: the inspector
+    // follows the selected element wherever it is.
+    () => rooms.flatMap((room) => room.elements).find((element) => element.id === selectedElementId),
+    [rooms, selectedElementId],
   );
   const currentElements = activeRoom?.elements ?? [];
 
   function updateElement(id: string, patch: Partial<RoomElement>) {
-    if (!activeRoom) return;
-    updateRoom(activeRoom.id, (room) => ({
+    // The element may live in any room, not just the active one — update
+    // the room that actually holds it.
+    const owner = rooms.find((room) => room.elements.some((element) => element.id === id)) ?? activeRoom;
+    if (!owner) return;
+    updateRoom(owner.id, (room) => ({
       ...room,
       elements: room.elements.map((element) => (element.id === id ? { ...element, ...patch } : element)),
     }));
@@ -249,26 +256,62 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     selectElement(element.id);
   }
 
-  function removeElement() {
-    if (!selectedElement || !activeRoom) return;
-    updateRoom(activeRoom.id, (room) => ({
+  // Delete works from the inspector, from the Elements list row, and from
+  // the keyboard — always in the room that actually holds the element,
+  // and it persists with the next save like every other edit.
+  function removeElementById(id: string) {
+    const owner = rooms.find((room) => room.elements.some((element) => element.id === id));
+    if (!owner) return;
+    updateRoom(owner.id, (room) => ({
       ...room,
-      elements: room.elements.filter((element) => element.id !== selectedElement.id),
+      elements: room.elements.filter((element) => element.id !== id),
     }));
-    setSelectedElementId(undefined);
+    setSelectedElementId((current) => (current === id ? undefined : current));
+  }
+
+  function removeElement() {
+    if (!selectedElement) return;
+    removeElementById(selectedElement.id);
   }
 
   function duplicateElement() {
-    if (!selectedElement || !activeRoom) return;
+    if (!selectedElement) return;
+    const owner = rooms.find((room) => room.elements.some((element) => element.id === selectedElement.id)) ?? activeRoom;
+    if (!owner) return;
     const copy: RoomElement = {
       ...selectedElement,
       id: crypto.randomUUID(),
       name: `${selectedElement.name} copy`.slice(0, 60),
-      x: Math.min(selectedElement.x + 1.5, roomLayouts[activeRoom.layout].width / 2 - 0.5),
+      x: Math.min(selectedElement.x + 1.5, roomLayouts[owner.layout].width / 2 - 0.5),
     };
-    updateRoom(activeRoom.id, (room) => ({ ...room, elements: [...room.elements, copy] }));
+    updateRoom(owner.id, (room) => ({ ...room, elements: [...room.elements, copy] }));
     selectElement(copy.id);
   }
+
+  // Delete key removes the selected element (or artwork) — the same
+  // delete the inspector button does, without reaching for the mouse.
+  // Never fires while typing in a field, and never while walking.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      if (walking) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
+      if (selectedElementId) {
+        event.preventDefault();
+        removeElementById(selectedElementId);
+      } else if (selectedId) {
+        event.preventDefault();
+        removeArtwork();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedElementId, selectedId, walking, rooms]);
+
+  // A room switch disarms a pending room removal — the second click must
+  // always remove the room the user is looking at.
+  useEffect(() => { setConfirmingRemoveRoom(false); }, [activeRoomId]);
 
   // Painting one wall: the colour is stored as an override on the room
   // (or on the partition wall itself), never on the other walls.
@@ -681,8 +724,16 @@ async function compressImage(file: File): Promise<File> {
 
   function removeRoom() {
     if (!activeRoom || rooms.length <= 1) return;
-    const artworksToRemove = artworks.filter((artwork) => artwork.roomId === activeRoom.id).length;
-    if (!window.confirm(`Remove "${activeRoom.name}" and its ${artworksToRemove} artwork${artworksToRemove === 1 ? "" : "s"}?`)) return;
+    // Two-step inline confirm: the old window.confirm was swallowed by
+    // automation and some mobile browsers, so the button silently did
+    // nothing. First click arms it, second click removes the room; the
+    // armed state clears when the room changes or after a few seconds.
+    if (!confirmingRemoveRoom) {
+      setConfirmingRemoveRoom(true);
+      window.setTimeout(() => setConfirmingRemoveRoom(false), 5000);
+      return;
+    }
+    setConfirmingRemoveRoom(false);
     const nextRooms = rooms.filter((room) => room.id !== activeRoom.id);
     const nextRoom = nextRooms[0];
     historyRef.current = [];
@@ -791,11 +842,14 @@ async function compressImage(file: File): Promise<File> {
                   const palette = ELEMENT_PALETTE.find((item) => item.type === element.type);
                   const Icon = palette?.icon ?? Box;
                   return (
-                    <button className={`asset-row ${selectedElementId === element.id ? "selected" : ""}`} key={element.id} onClick={() => selectElement(element.id)}>
-                      <span className="asset-thumb element-thumb"><Icon size={16} /></span>
-                      <span className="asset-copy"><strong>{element.name}</strong><small>{palette?.label ?? element.type}</small></span>
-                      {selectedElementId === element.id && <span className="selected-mark"><Check size={12} /></span>}
-                    </button>
+                    <div className="asset-row-wrap" key={element.id}>
+                      <button className={`asset-row ${selectedElementId === element.id ? "selected" : ""}`} onClick={() => selectElement(element.id)}>
+                        <span className="asset-thumb element-thumb"><Icon size={16} /></span>
+                        <span className="asset-copy"><strong>{element.name}</strong><small>{palette?.label ?? element.type}</small></span>
+                        {selectedElementId === element.id && <span className="selected-mark"><Check size={12} /></span>}
+                      </button>
+                      <button type="button" className="asset-row-delete" aria-label={`Delete ${element.name}`} title={`Delete ${element.name}`} onClick={() => removeElementById(element.id)}><Trash2 size={13} /></button>
+                    </div>
                   );
                 })}
                 {currentElements.length === 0 && (
@@ -965,7 +1019,7 @@ async function compressImage(file: File): Promise<File> {
                         <button className="add-partition-wall" type="button" onClick={addPartitionWall} disabled={activeRoom.partitionWalls.length >= 8}><Plus size={12} /> Add a partition wall</button>
                       </div>
                       <div className="property-section"><label>CURATORIAL TEXT ON WALL <span>{activeRoom.curatorialText.length}/300</span></label><textarea className="full-input property-textarea" maxLength={300} placeholder="Write the introduction visitors will read in this room." value={activeRoom.curatorialText} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, curatorialText: event.target.value }))} /></div>
-                      <button className="remove-room-button" onClick={removeRoom} disabled={rooms.length <= 1}><Trash2 size={13} /> Remove this room</button>
+                      <button className={`remove-room-button${confirmingRemoveRoom ? " confirming" : ""}`} onClick={removeRoom} disabled={rooms.length <= 1}><Trash2 size={13} /> {confirmingRemoveRoom ? `Click again to remove "${activeRoom.name}"` : "Remove this room"}</button>
                     </>}
                     <div className="property-section"><label>EXHIBITION DESCRIPTION</label><textarea className="full-input property-textarea" value={description} onChange={(event) => { setDescription(event.target.value); setSaved(false); }} /></div>
                 <div className="room-settings-note"><Sparkles size={15} /><span>Each gallery keeps its own layout, colours, ceiling and artworks.</span></div>

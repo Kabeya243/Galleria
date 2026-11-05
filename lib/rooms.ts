@@ -393,8 +393,12 @@ export type GalleryRoom = z.infer<typeof galleryRoomSchema>;
 
 // Apply a whole preset when the gallery layout changes in the editor: the
 // preset carries dimensions AND finishes, so switching galleries visibly
-// changes the room instead of only resizing the same grey box.
+// changes the room instead of only resizing the same grey box. Switching
+// also swaps the seeded furniture: the previous template's pieces leave
+// and the new template's pieces arrive as real elements the user can
+// move, rotate or delete, while pieces the user added by hand stay put.
 export function applyLayoutPreset(room: GalleryRoom, layout: RoomLayout): GalleryRoom {
+  if (room.layout === layout) return room;
   const preset = roomLayouts[layout];
   return {
     ...room,
@@ -409,14 +413,17 @@ export function applyLayoutPreset(room: GalleryRoom, layout: RoomLayout): Galler
     spotlights: preset.spotlights,
     floorType: inferFloorType(preset.floorTexture, preset.floorColor),
     partitionWalls: preset.partitions.map((wall) => ({ ...wall, id: crypto.randomUUID() })),
+    elements: [...room.elements.filter((element) => !element.seededFrom), ...seedElements(layout)],
   };
 }
 
 // Each photo room starts with its own furniture, as movable elements the
 // user can move, rotate or delete — so every room is unique like its
 // reference photo, while the Elements palette stays the same everywhere.
-// Older rooms and layout switches are untouched (only new rooms are seeded).
-function seedElements(layout: RoomLayout): RoomElement[] {
+// Seeding happens for new rooms (createGalleryRoom) and when the layout
+// is switched (applyLayoutPreset swaps the seeded set); rooms saved
+// before seeding existed keep exactly what they have.
+export function seedElements(layout: RoomLayout): RoomElement[] {
   const { width, depth } = roomLayouts[layout];
   const counts = new Map<string, number>();
   const make = (
@@ -432,6 +439,9 @@ function seedElements(layout: RoomLayout): RoomElement[] {
       id: crypto.randomUUID(),
       type,
       name: `${defaults.label} ${n}`,
+      // Marked with the template it came from, so a later layout switch
+      // can swap these pieces out without touching the user's own.
+      seededFrom: layout,
       x, y, z,
       rotation,
       scale: 1,

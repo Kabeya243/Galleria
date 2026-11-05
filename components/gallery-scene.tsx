@@ -1,9 +1,10 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Text, useTexture } from "@react-three/drei";
-import { useEffect, useMemo, useRef, Suspense } from "react";
-import { CanvasTexture, DoubleSide, MathUtils, Object3D, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from "three";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
 import type { Artwork } from "@/lib/demo-data";
 import { roomLayouts, type GalleryRoom } from "@/lib/rooms";
 
@@ -175,15 +176,26 @@ function LoadedArtwork({ imageUrl, width, height }: { imageUrl: string; width: n
   );
 }
 
+// Real dimensions in centimetres, parsed from the artwork's dimensions
+// field ("130 × 94 cm"). Null when the field is missing or unparsable.
+export function parseArtworkDimensions(dimensions: string): { widthCm: number; heightCm: number } | null {
+  const match = dimensions?.match(/(\d+(?:[.,]\d+)?)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*cm/i);
+  if (!match) return null;
+  const widthCm = Number(match[1].replace(",", "."));
+  const heightCm = Number(match[2].replace(",", "."));
+  if (!(widthCm > 0 && heightCm > 0)) return null;
+  return { widthCm, heightCm };
+}
+
 // Real size in metres, parsed from the artwork's dimensions ("130 × 94 cm"),
 // so each work hangs on the wall at its true scale instead of in one fixed
 // frame. Falls back to the old fixed frame when the dimensions are missing
 // or unparsable, so older artworks keep rendering.
 function artworkSize(artwork: Artwork): { width: number; height: number } {
-  const match = artwork.dimensions?.match(/(\d+(?:[.,]\d+)?)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*cm/i);
-  if (!match) return { width: 1.82, height: 2.12 };
-  const width = Number(match[1].replace(",", ".")) / 100;
-  const height = Number(match[2].replace(",", ".")) / 100;
+  const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
+  if (!parsed) return { width: 1.82, height: 2.12 };
+  const width = parsed.widthCm / 100;
+  const height = parsed.heightCm / 100;
   if (!(width > 0.1 && width < 10 && height > 0.1 && height < 10)) return { width: 1.82, height: 2.12 };
   return { width, height };
 }

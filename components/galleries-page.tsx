@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Eye, Footprints, PenLine } from "lucide-react";
+import { ArrowUpRight, Bell, Eye, Footprints, PenLine, Search } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
+import Sidebar from "@/components/sidebar";
+import ThemeToggle from "@/components/theme-toggle";
 import { createGalleryRoom, floorTextures, roomLayouts, wallTextures, type RoomLayout } from "@/lib/rooms";
 
 export type GalleryPresetCard = {
@@ -146,7 +148,15 @@ function RoomPreviewCanvas({ room }: { room: GalleryPresetCard }) {
   return <canvas ref={ref} width={640} height={400} className="gallery-card-preview" aria-label={`${room.label} finishes preview`} />;
 }
 
-export default function GalleriesPage({ rooms }: { rooms: GalleryPresetCard[] }) {
+export default function GalleriesPage({
+  rooms,
+  user,
+  ownExhibitionCount,
+}: {
+  rooms: GalleryPresetCard[];
+  user: { id: string; name: string; email: string } | null;
+  ownExhibitionCount: number;
+}) {
   const [selected, setSelected] = useState<RoomLayout>("cube");
   const [opening, setOpening] = useState<RoomLayout | null>(null);
   const [walking, setWalking] = useState(false);
@@ -194,19 +204,10 @@ export default function GalleriesPage({ rooms }: { rooms: GalleryPresetCard[] })
     }
   }
 
-  return (
-    <main className="galleries-page">
-      <header className="galleries-header">
-        <Link className="brand-lockup" href="/">
-          <span className="brand-mark">s.</span>
-          <span className="brand-name">SANAA</span>
-        </Link>
-        <nav className="galleries-nav">
-          <Link href="/">Workspace</Link>
-          <Link href="/login" className="galleries-signin">Sign in</Link>
-        </nav>
-      </header>
-
+  // The models only — the same content in both shells: a live 3D preview
+  // plus the ten room cards. Nothing else lives on this page.
+  const galleriesContent = (
+    <>
       <section className="galleries-intro">
         <p className="eyebrow">TEN ROOMS · ONE COLLECTION</p>
         <h1>Galleries<span className="title-period">.</span></h1>
@@ -252,6 +253,46 @@ export default function GalleriesPage({ rooms }: { rooms: GalleryPresetCard[] })
             </div>
           </article>
         ))}
+      </section>
+    </>
+  );
+
+  if (!user) {
+    return (
+      <main className="galleries-page">
+        <header className="galleries-header">
+          <Link className="brand-lockup" href="/">
+            <span className="brand-mark">s.</span>
+            <span className="brand-name">SANAA</span>
+          </Link>
+          <nav className="galleries-nav">
+            <Link href="/">Workspace</Link>
+            <Link href="/login" className="galleries-signin">Sign in</Link>
+          </nav>
+        </header>
+
+        {galleriesContent}
+      </main>
+    );
+  }
+
+  return (
+    <main className="app-shell">
+      <Sidebar user={user} active="galleries" exhibitionCount={ownExhibitionCount} />
+
+      <section className="dashboard-main">
+        <header className="topbar">
+          <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Galleries</strong></div>
+          <div className="topbar-actions">
+            <ThemeToggle />
+            <button className="icon-button" aria-label="Search"><Search size={17} /></button>
+            <button className="icon-button notification-button" aria-label="Notifications"><Bell size={17} /><i /></button>
+            <span className="topbar-divider" />
+            <button className="help-button">Need a hand? <ArrowUpRight size={14} /></button>
+          </div>
+        </header>
+
+        <div className="dashboard-content">{galleriesContent}</div>
       </section>
     </main>
   );

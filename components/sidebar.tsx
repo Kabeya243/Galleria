@@ -17,7 +17,7 @@ export default function Sidebar({
   exhibitionCount,
 }: {
   user: { name: string; email: string };
-  active: "overview" | "settings" | "galleries" | "explore";
+  active: "overview" | "settings" | "galleries" | "exhibitions" | "explore";
   exhibitionCount: number;
 }) {
   async function signOut() {
@@ -49,7 +49,7 @@ export default function Sidebar({
         <Link className={active === "galleries" ? "nav-item active" : "nav-item"} href="/galleries">
           <GalleryVerticalEnd size={17} /> Galleries
         </Link>
-        <Link className="nav-item" href="/editor">
+        <Link className={active === "exhibitions" ? "nav-item active" : "nav-item"} href="/exhibitions">
           <GalleryVerticalEnd size={17} /> Exhibitions
           <span className="nav-count">{exhibitionCount}</span>
         </Link>

@@ -9,6 +9,7 @@ import {
   Grid2X2,
   Image,
   Settings2,
+  ShieldCheck,
   Wrench,
 } from "lucide-react";
 
@@ -17,8 +18,10 @@ export default function Sidebar({
   active,
   exhibitionCount,
 }: {
-  user: { name: string; email: string };
-  active: "overview" | "settings" | "galleries" | "exhibitions" | "explore" | "tools";
+  // isAdmin is carried on the user object by getCurrentUser (lib/auth.ts);
+  // the Admin link only renders when it is true.
+  user: { name: string; email: string; isAdmin?: boolean };
+  active: "overview" | "settings" | "galleries" | "exhibitions" | "explore" | "tools" | "admin";
   exhibitionCount: number;
 }) {
   async function signOut() {
@@ -70,6 +73,11 @@ export default function Sidebar({
         <a className="nav-item" href="#help">
           <CircleHelp size={17} /> Help center
         </a>
+        {user.isAdmin && (
+          <Link className={active === "admin" ? "nav-item active" : "nav-item"} href="/admin">
+            <ShieldCheck size={17} /> Admin
+          </Link>
+        )}
         <Link className={active === "settings" ? "nav-item active" : "nav-item"} href="/settings">
           <Settings2 size={17} /> Settings
         </Link>

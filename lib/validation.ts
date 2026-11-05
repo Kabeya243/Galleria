@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isR2ImageUrl } from "@/lib/r2";
 import { galleryRoomSchema } from "@/lib/rooms";
 
 export const credentialsSchema = z.object({
@@ -65,7 +66,18 @@ const artworkSchema = z.object({
   ]),
   rotation: z.number().finite().min(-Math.PI * 8).max(Math.PI * 8),
   scale: z.number().finite().min(0.1).max(5),
-  imageUrl: z.string().regex(/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i).nullable().optional(),
+  // An artwork image is either a legacy database upload, a portfolio
+  // image, or a new R2 upload (public URL under the configured R2 base).
+  imageUrl: z
+    .string()
+    .refine(
+      (url) =>
+        /^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i.test(url) ||
+        isR2ImageUrl(url),
+      { message: "Invalid image URL." },
+    )
+    .nullable()
+    .optional(),
   roomId: z.string().min(1).max(64),
 });
 

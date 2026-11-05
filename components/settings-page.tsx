@@ -10,7 +10,7 @@ import { applyTheme, getStoredTheme, type ThemeChoice } from "@/lib/theme";
 export default function SettingsPage({
   user,
 }: {
-  user: { name: string; email: string; createdAt: string | null; exhibitionCount: number };
+  user: { name: string; email: string; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
 }) {
   const router = useRouter();
   const [theme, setTheme] = useState<ThemeChoice>("system");

@@ -36,6 +36,17 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE_NAME);
 }
 
+export function isAdminEmail(email: string): boolean {
+  // The admin area (CRM) is for the platform owner only — Kabeya. Access
+  // is decided by email, listed in the ADMIN_EMAILS environment variable
+  // (comma-separated, e.g. "kabeyailunga243@gmail.com").
+  const allowed = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  return allowed.includes(email.trim().toLowerCase());
+}
+
 export async function getCurrentUser() {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -54,10 +65,14 @@ export async function getCurrentUser() {
     return null;
   }
 
-  return db.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, name: true, role: true, country: true },
   });
+  if (!user) return null;
+  // Carried on the user object so every page can show the Admin link
+  // without threading a separate prop through the whole app.
+  return { ...user, isAdmin: isAdminEmail(user.email) };
 }
 
 export function toClientArtwork(artwork: {

@@ -168,15 +168,20 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   // required detail (title, colours, room, or a valid uploaded image).
   // Check here first, so the editor names the artwork and the missing
   // detail instead of failing with a cryptic error.
+  function isAllowedImageUrl(url: string): boolean {
+    if (/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i.test(url)) return true;
+    // New R2 uploads: a public URL under the configured R2 base. The base
+    // is a public CDN address, so it is exposed to the browser as well.
+    const r2Base = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? "").replace(/\/$/, "");
+    return Boolean(r2Base) && url.startsWith(`${r2Base}/uploads/`);
+  }
+
   function artworkSaveProblems(artwork: Artwork): string[] {
     const problems: string[] = [];
     if (!artwork.title.trim()) problems.push("a title");
     if (!/^#[0-9a-f]{6}$/i.test(artwork.color)) problems.push("a valid frame colour");
     if (!/^#[0-9a-f]{6}$/i.test(artwork.accent)) problems.push("a valid accent colour");
-    if (
-      artwork.imageUrl &&
-      !/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i.test(artwork.imageUrl)
-    ) {
+    if (artwork.imageUrl && !isAllowedImageUrl(artwork.imageUrl)) {
       problems.push("a re-uploaded image (this image link cannot be saved)");
     }
     if (!artwork.roomId) problems.push("a room");
@@ -296,35 +301,76 @@ async function compressImage(file: File): Promise<File> {
   return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
 }
 
+  // Upload straight to R2 via a presigned URL (no Vercel size cap).
+  // Returns the public URL, or null when R2 is not configured so the
+  // caller can fall back to the legacy database upload.
+  async function uploadToR2(file: File): Promise<string | null> {
+    const presign = await fetch("/api/uploads/presign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size }),
+    });
+    if (presign.status === 501) return null;
+    const text = await presign.text();
+    let signed: { uploadUrl?: string; publicUrl?: string; error?: string } = {};
+    try {
+      signed = text ? (JSON.parse(text) as typeof signed) : {};
+    } catch {
+      signed = {};
+    }
+    if (!presign.ok) throw new Error(signed.error ?? "Could not upload this image.");
+    if (!signed.uploadUrl || !signed.publicUrl) throw new Error("Could not upload this image.");
+    const put = await fetch(signed.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!put.ok) throw new Error("Could not upload this image.");
+    return signed.publicUrl;
+  }
+
   async function uploadArtwork(file?: File) {
     if (!file) return;
     setBusy(true);
     setUploadError(null);
     try {
       const uploadFile = await compressImage(file).catch(() => file);
-      const body = new FormData();
-      body.set("file", uploadFile);
-      const response = await fetch("/api/uploads", { method: "POST", body });
-      // Read as text first: an error page (e.g. Vercel's plain-text 413 for
-      // an oversized request) is not JSON and used to throw a cryptic
-      // "Unexpected end of JSON input" instead of a readable error.
-      const text = await response.text();
-      let result: { error?: string; url?: string } = {};
+      let url: string | null = null;
       try {
-        result = text ? (JSON.parse(text) as { error?: string; url?: string }) : {};
-      } catch {
-        result = {};
+        url = await uploadToR2(uploadFile);
+      } catch (error) {
+        // A real R2 failure (not "not configured"): surface it, do not
+        // silently fall back — the file may be too large for the legacy
+        // route anyway, and the user should know the upload failed.
+        throw error;
       }
-      if (!response.ok) {
-        throw new Error(
-          result.error ??
-            (response.status === 413
-              ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
-              : "Could not upload this image."),
-        );
+      if (!url) {
+        // R2 is not configured: legacy database upload.
+        const body = new FormData();
+        body.set("file", uploadFile);
+        const response = await fetch("/api/uploads", { method: "POST", body });
+        // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+        // an oversized request) is not JSON and used to throw a cryptic
+        // "Unexpected end of JSON input" instead of a readable error.
+        const text = await response.text();
+        let result: { error?: string; url?: string } = {};
+        try {
+          result = text ? (JSON.parse(text) as { error?: string; url?: string }) : {};
+        } catch {
+          result = {};
+        }
+        if (!response.ok) {
+          throw new Error(
+            result.error ??
+              (response.status === 413
+                ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
+                : "Could not upload this image."),
+          );
+        }
+        if (!result.url) throw new Error("Could not upload this image.");
+        url = result.url;
       }
-      if (!result.url) throw new Error("Could not upload this image.");
-      addArtwork(result.url);
+      addArtwork(url);
       if (uploadRef.current) uploadRef.current.value = "";
     } catch (error) {
       console.error("Could not upload artwork.", error);

@@ -154,7 +154,7 @@ export default function GalleriesPage({
   ownExhibitionCount,
 }: {
   rooms: GalleryPresetCard[];
-  user: { id: string; name: string; email: string } | null;
+  user: { id: string; name: string; email: string; isAdmin?: boolean } | null;
   ownExhibitionCount: number;
 }) {
   const [selected, setSelected] = useState<RoomLayout>("cube");

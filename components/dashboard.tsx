@@ -43,7 +43,7 @@ export default function Dashboard({
   artworkCount,
   viewCount,
 }: {
-  user: { name: string; email: string };
+  user: { name: string; email: string; isAdmin?: boolean };
   exhibitions: DashboardExhibition[];
   artworks: DashboardArtwork[];
   artworkCount: number;

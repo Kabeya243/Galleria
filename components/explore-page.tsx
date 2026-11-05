@@ -76,7 +76,7 @@ export default function ExplorePage({
   exhibitions,
   ownExhibitionCount,
 }: {
-  user: { id: string; name: string; email: string } | null;
+  user: { id: string; name: string; email: string; isAdmin?: boolean } | null;
   exhibitions: ExploreExhibition[];
   ownExhibitionCount: number;
 }) {

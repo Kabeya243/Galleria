@@ -14,7 +14,7 @@ export default function ToolsShell({
   description,
   children,
 }: {
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; email: string; isAdmin?: boolean };
   exhibitionCount: number;
   title: string;
   eyebrow: string;

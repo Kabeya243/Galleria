@@ -26,7 +26,7 @@ export default function ExhibitionsPage({
   user,
   exhibitions: initialExhibitions,
 }: {
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; email: string; isAdmin?: boolean };
   exhibitions: OwnExhibition[];
 }) {
   const [exhibitions, setExhibitions] = useState(initialExhibitions);

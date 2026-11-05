@@ -13,7 +13,7 @@ export default function AudiencePage({
   description,
   points,
 }: {
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; email: string; isAdmin?: boolean };
   exhibitionCount: number;
   title: string;
   eyebrow: string;

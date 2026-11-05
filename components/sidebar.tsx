@@ -17,7 +17,7 @@ export default function Sidebar({
   exhibitionCount,
 }: {
   user: { name: string; email: string };
-  active: "overview" | "settings" | "galleries";
+  active: "overview" | "settings" | "galleries" | "explore";
   exhibitionCount: number;
 }) {
   async function signOut() {
@@ -56,9 +56,9 @@ export default function Sidebar({
         <a className="nav-item" href="/#artworks">
           <Image size={17} /> Artworks
         </a>
-        <a className="nav-item" href="/#library">
+        <Link className={active === "explore" ? "nav-item active" : "nav-item"} href="/explore">
           <Compass size={17} /> Explore
-        </a>
+        </Link>
       </nav>
 
       <div className="sidebar-spacer" />

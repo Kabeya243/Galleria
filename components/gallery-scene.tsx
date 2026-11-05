@@ -67,19 +67,12 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
   } else if (style === "concrete") {
     context.fillStyle = "#f4f1ea";
     context.fillRect(0, 0, 256, 256);
-    // Board-formed concrete: a 2 x 2 grid of formwork panels with joints
-    // and tie holes, the signature of the reference room.
+    // Board-formed concrete: a 2 x 2 grid of formwork panels with joints.
+    // No tie holes: the black dots read as dirt on the wall, so the panels
+    // stay clean and the artworks hang on plain concrete.
     context.fillStyle = "#6b655a";
     context.fillRect(0, 127, 256, 3);
     context.fillRect(127, 0, 3, 256);
-    context.fillStyle = "#57524a";
-    for (const cx of [32, 96, 160, 224]) {
-      for (const cy of [32, 96, 160, 224]) {
-        context.beginPath();
-        context.arc(cx, cy, 4, 0, Math.PI * 2);
-        context.fill();
-      }
-    }
     let seed = 41;
     for (let i = 0; i < 950; i += 1) {
       seed = (seed * 16807) % 2147483647;

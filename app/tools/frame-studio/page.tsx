@@ -13,10 +13,15 @@ export const metadata = {
     "Frame your artworks — all 28 digitised styles with faithful previews, custom width, depth, material, matboard and glass, side-by-side comparison, and one-click save to the artwork.",
 };
 
-export default async function FrameStudioRoute() {
+export default async function FrameStudioRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ artworkId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("frame-studio", user.id);
+  const { artworkId } = await searchParams;
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({
@@ -56,6 +61,7 @@ export default async function FrameStudioRoute() {
         </div>
       ) : (
         <FrameStudio
+          initialArtworkId={artworkId}
           artworks={artworks.map((a) => ({
             id: a.id,
             title: a.title,

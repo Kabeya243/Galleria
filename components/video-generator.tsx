@@ -378,12 +378,22 @@ function buildDefaultShots(exhibition: VideoExhibition): Shot[] {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function VideoGenerator({ exhibitions }: { exhibitions: VideoExhibition[] }) {
-  const [exhibitionId, setExhibitionId] = useState(exhibitions[0]?.id ?? "");
+export default function VideoGenerator({
+  exhibitions,
+  initialExhibitionId,
+}: {
+  exhibitions: VideoExhibition[];
+  // Deep-link context (Art in Context step 10): open with this
+  // exhibition already selected instead of the newest one.
+  initialExhibitionId?: string;
+}) {
+  const initialExhibition =
+    exhibitions.find((item) => item.id === initialExhibitionId) ?? exhibitions[0];
+  const [exhibitionId, setExhibitionId] = useState(initialExhibition?.id ?? "");
   const exhibition = exhibitions.find((item) => item.id === exhibitionId) ?? exhibitions[0];
   const [format, setFormat] = useState<VideoFormat>("9:16");
   const [preset, setPreset] = useState<string>("standard");
-  const [shots, setShots] = useState<Shot[]>(() => (exhibitions[0] ? buildDefaultShots(exhibitions[0]) : []));
+  const [shots, setShots] = useState<Shot[]>(() => (initialExhibition ? buildDefaultShots(initialExhibition) : []));
   const [projectTitle, setProjectTitle] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

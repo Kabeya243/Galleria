@@ -275,8 +275,12 @@ function parseSavedSettings(data: Record<string, unknown>): EditSettings | null 
 
 export default function PhotographyLab({
   artworks,
+  initialArtworkId,
 }: {
   artworks: { id: string; title: string; medium: string; year: string; imageUrl: string }[];
+  // Deep-link context (Art in Context step 2): open with this artwork
+  // already loaded instead of waiting for the user to pick it.
+  initialArtworkId?: string;
 }) {
   const [source, setSource] = useState<Source | null>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
@@ -356,6 +360,14 @@ export default function PhotographyLab({
     },
     [loadSource],
   );
+
+  // Deep-link preselection: open with the linked artwork already loaded.
+  useEffect(() => {
+    if (initialArtworkId) pickArtwork(initialArtworkId);
+    // Run once on mount — the linked artwork is the starting point, and
+    // the user is free to pick another work afterwards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---- preview rendering ----------------------------------------------
   const previewSize = img

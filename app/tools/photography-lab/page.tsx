@@ -11,10 +11,15 @@ export const metadata = {
     "Clean up photos of your artworks — straighten, crop, fix the light and export a print-ready file. Your original is never changed.",
 };
 
-export default async function PhotographyLabRoute() {
+export default async function PhotographyLabRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ artworkId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("photography-lab", user.id);
+  const { artworkId } = await searchParams;
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({
@@ -38,6 +43,7 @@ export default async function PhotographyLabRoute() {
       description="Straighten a crooked shot, crop to the paper's edge, fix the light — and export a clean file for your catalogue or a jury. Nothing here touches your original photo: every edit is a setting, applied only when you export."
     >
       <PhotographyLab
+        initialArtworkId={artworkId}
         artworks={artworks.map((a) => ({
           id: a.id,
           title: a.title,

@@ -119,18 +119,24 @@ function captionFrom(art: PresentationArtwork | undefined): Pick<Slide, "capTitl
   };
 }
 
-function defaultDeck(userName: string, artworks: PresentationArtwork[]): Deck {
+function defaultDeck(
+  userName: string,
+  artworks: PresentationArtwork[],
+  initialTitle?: string,
+  initialCuratorialText?: string,
+): Deck {
+  const title = initialTitle?.trim() ? initialTitle : "Untitled presentation";
   return {
-    title: "Untitled presentation",
+    title,
     artistName: userName,
     type: "portfolio",
     coverArtworkId: artworks[0]?.id ?? "",
     bio: "",
-    curatorialText: "",
+    curatorialText: initialCuratorialText ?? "",
     projectDescription: "",
     exhibitionOverview: "",
     slides: [
-      { ...emptySlide("title"), heading: "Untitled presentation", text: userName },
+      { ...emptySlide("title"), heading: title, text: userName },
       { ...emptySlide("text"), heading: `About ${userName}`, text: "" },
     ],
   };
@@ -271,11 +277,17 @@ function SlideView({ slide, deck, artworks }: { slide: Slide; deck: Deck; artwor
 export default function PresentationDesigner({
   artworks,
   userName,
+  initialTitle,
+  initialCuratorialText,
 }: {
   artworks: PresentationArtwork[];
   userName: string;
+  // Deep-link context (Art in Context step 10): title the new deck after
+  // the exhibition the catalogue is being built for.
+  initialTitle?: string;
+  initialCuratorialText?: string;
 }) {
-  const [deck, setDeck] = useState<Deck>(() => defaultDeck(userName, artworks));
+  const [deck, setDeck] = useState<Deck>(() => defaultDeck(userName, artworks, initialTitle, initialCuratorialText));
   const [current, setCurrent] = useState(0);
   const [saved, setSaved] = useState<SavedPresentation[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);

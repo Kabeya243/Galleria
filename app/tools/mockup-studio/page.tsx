@@ -12,10 +12,15 @@ export const metadata = {
   description: "See your artwork on a real wall before you hang it — eight interiors, frames, lighting and print-ready exports.",
 };
 
-export default async function MockupStudioRoute() {
+export default async function MockupStudioRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ artworkId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("mockup-studio", user.id);
+  const { artworkId } = await searchParams;
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({
@@ -53,6 +58,7 @@ export default async function MockupStudioRoute() {
         </div>
       ) : (
         <MockupStudio
+          initialArtworkId={artworkId}
           artworks={artworks.map((a) => ({
             id: a.id,
             title: a.title,

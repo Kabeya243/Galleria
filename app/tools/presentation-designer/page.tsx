@@ -11,10 +11,23 @@ export const metadata = {
     "Build a professional art presentation — portfolio, gallery proposal or art-fair application — from your own artworks, then export it as a PDF.",
 };
 
-export default async function PresentationDesignerRoute() {
+export default async function PresentationDesignerRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ exhibitionId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("presentation-designer", user.id);
+  const { exhibitionId } = await searchParams;
+  // Deep-link context (Art in Context step 10): when the catalogue is
+  // started from an exhibition, title the deck after it.
+  const linkedExhibition = exhibitionId
+    ? await db.exhibition.findFirst({
+        where: { id: exhibitionId, ownerId: user.id },
+        select: { title: true, description: true },
+      })
+    : null;
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({
@@ -46,6 +59,8 @@ export default async function PresentationDesignerRoute() {
       <PresentationDesigner
         artworks={artworks.map((a) => ({ ...a, exhibitionTitle: a.exhibition.title }))}
         userName={user.name}
+        initialTitle={linkedExhibition?.title}
+        initialCuratorialText={linkedExhibition?.description ?? undefined}
       />
     </ToolsShell>
   );

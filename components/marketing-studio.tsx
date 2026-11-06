@@ -281,12 +281,28 @@ export default function MarketingStudio({
   userName,
   artworks,
   exhibitions,
+  initialExhibitionId,
+  initialArtworkId,
 }: {
   userName: string;
   artworks: MarketingArtwork[];
   exhibitions: MarketingExhibition[];
+  // Deep-link context (Art in Context step 10): open with this
+  // exhibition / artwork already selected instead of the newest ones.
+  initialExhibitionId?: string;
+  initialArtworkId?: string;
 }) {
-  const [cfg, setCfg] = useState<AssetConfig>(() => defaultConfig(userName, exhibitions, artworks));
+  const [cfg, setCfg] = useState<AssetConfig>(() => {
+    const base = defaultConfig(userName, exhibitions, artworks);
+    const linkedEx = exhibitions.find((e) => e.id === initialExhibitionId);
+    if (linkedEx) {
+      base.exhibitionId = linkedEx.id;
+      base.headline = linkedEx.title;
+      base.pressText = linkedEx.description ?? "";
+    }
+    if (initialArtworkId && artworks.some((a) => a.id === initialArtworkId)) base.artworkId = initialArtworkId;
+    return base;
+  });
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [imgError, setImgError] = useState<string | null>(null);
   const [imgLoading, setImgLoading] = useState(false);

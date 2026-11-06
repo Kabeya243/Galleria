@@ -47,11 +47,20 @@ type SavedFramePreset = {
 // and recess), compare up to 4 frames side by side, and save the chosen
 // frame straight onto the artwork — the same frame value the 3D editor
 // and the public exhibition read, so what you choose here is what hangs.
-export default function FrameStudio({ artworks }: { artworks: FrameStudioArtwork[] }) {
-  const [selectedId, setSelectedId] = useState(artworks[0]?.id ?? "");
+export default function FrameStudio({
+  artworks,
+  initialArtworkId,
+}: {
+  artworks: FrameStudioArtwork[];
+  // Deep-link context (Art in Context step 4): open with this artwork
+  // already selected instead of the first work in the library.
+  initialArtworkId?: string;
+}) {
+  const initialSelected = artworks.find((a) => a.id === initialArtworkId) ?? artworks[0];
+  const [selectedId, setSelectedId] = useState(initialSelected?.id ?? "");
   const selected = artworks.find((artwork) => artwork.id === selectedId) ?? artworks[0];
-  const [frameValue, setFrameValue] = useState(selected?.frame ?? "wood");
-  const [savedFrame, setSavedFrame] = useState(selected?.frame ?? "wood");
+  const [frameValue, setFrameValue] = useState(initialSelected?.frame ?? "wood");
+  const [savedFrame, setSavedFrame] = useState(initialSelected?.frame ?? "wood");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [customising, setCustomising] = useState(false);

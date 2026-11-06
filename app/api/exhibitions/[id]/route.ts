@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 import { getCurrentUser, toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
@@ -142,6 +142,45 @@ export async function PUT(request: Request, { params }: RouteContext) {
     console.error("Could not save exhibition.", error);
     return NextResponse.json({ error: "Could not save this exhibition." }, { status: 500 });
   }
+}
+
+// Update an exhibition's title / curatorial statement only — Art in
+// Context step 8 saves the show's wording to the real Exhibition row
+// without re-saving the whole room (the full PUT is the editor's path).
+export async function PATCH(request: Request, { params }: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Sign in to edit this exhibition." }, { status: 401 });
+  const { id } = await params;
+
+  let input: { title?: string; description?: string };
+  try {
+    input = z
+      .object({
+        title: z.string().trim().min(1).max(120).optional(),
+        description: z.string().max(2000).optional(),
+      })
+      .refine((data) => data.title !== undefined || data.description !== undefined)
+      .parse(await request.json());
+  } catch {
+    return NextResponse.json({ error: "That exhibition update is not valid." }, { status: 400 });
+  }
+
+  const existing = await db.exhibition.findFirst({ where: { id } });
+  if (!existing) return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+  if (existing.ownerId !== user.id && !(await canEditExhibition(user.id, id))) {
+    return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+  }
+
+  const updated = await db.exhibition.update({
+    where: { id },
+    data: {
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+    },
+  });
+  return NextResponse.json({
+    exhibition: { id: updated.id, title: updated.title, description: updated.description, status: updated.status, slug: updated.slug },
+  });
 }
 
 export async function DELETE(_request: Request, { params }: RouteContext) {

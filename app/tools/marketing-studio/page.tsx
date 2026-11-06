@@ -13,10 +13,15 @@ export const metadata = {
     "Generate exhibition marketing assets from your own artworks — posters, social graphics, invitation cards, press kits and announcements, with live preview and real-size PNG/JPEG export.",
 };
 
-export default async function MarketingStudioRoute() {
+export default async function MarketingStudioRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ exhibitionId?: string; artworkId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("marketing-studio", user.id);
+  const { exhibitionId, artworkId } = await searchParams;
   const [exhibitionCount, exhibitions, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.exhibition.findMany({
@@ -62,6 +67,8 @@ export default async function MarketingStudioRoute() {
       ) : (
         <MarketingStudio
           userName={user.name}
+          initialExhibitionId={exhibitionId}
+          initialArtworkId={artworkId}
           artworks={artworks.map((a) => ({ ...a, exhibitionTitle: a.exhibition.title }))}
           exhibitions={exhibitions}
         />

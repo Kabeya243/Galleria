@@ -388,8 +388,16 @@ const S: Record<string, CSSProperties> = {
 
 // --- component -------------------------------------------------------------
 
-export default function ColorIntelligence({ artworks }: { artworks: ColorArtwork[] }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+export default function ColorIntelligence({
+  artworks,
+  initialArtworkId,
+}: {
+  artworks: ColorArtwork[];
+  // Deep-link context (Art in Context step 3): open with this artwork
+  // already selected instead of waiting for the user to pick it.
+  initialArtworkId?: string;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(initialArtworkId ?? null);
   const [upload, setUpload] = useState<{ name: string; dataUrl: string } | null>(null);
   const [colors, setColors] = useState<ExtractedColor[] | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");

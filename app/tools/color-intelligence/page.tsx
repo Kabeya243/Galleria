@@ -11,10 +11,15 @@ export const metadata = {
     "Read the real colours in your artwork — dominant colours, harmonies, contrast and wall colours that let it shine.",
 };
 
-export default async function ColorIntelligenceRoute() {
+export default async function ColorIntelligenceRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ artworkId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("color-intelligence", user.id);
+  const { artworkId } = await searchParams;
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({
@@ -40,6 +45,7 @@ export default async function ColorIntelligenceRoute() {
       description="What colours actually live in your work? Pick one of your artworks — or upload an image — and read its real palette: dominant colours, harmonies, contrast and the wall colours that present it best."
     >
       <ColorIntelligence
+        initialArtworkId={artworkId}
         artworks={artworks.map((artwork) => ({
           id: artwork.id,
           title: artwork.title,

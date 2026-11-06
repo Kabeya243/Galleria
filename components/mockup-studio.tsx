@@ -802,10 +802,23 @@ function configFromSaved(data: Record<string, unknown>): MockupConfig {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function MockupStudio({ artworks }: { artworks: MockupArtwork[] }) {
+export default function MockupStudio({
+  artworks,
+  initialArtworkId,
+}: {
+  artworks: MockupArtwork[];
+  // Deep-link context (Art in Context step 5): open with this artwork
+  // already on the wall instead of the first work in the library.
+  initialArtworkId?: string;
+}) {
   const [cfg, setCfg] = useState<MockupConfig>(() => ({
     ...DEFAULT_CONFIG,
-    artworkIds: artworks.length > 0 ? [artworks[0].id] : [],
+    artworkIds:
+      initialArtworkId && artworks.some((a) => a.id === initialArtworkId)
+        ? [initialArtworkId]
+        : artworks.length > 0
+          ? [artworks[0].id]
+          : [],
   }));
   const [loaded, setLoaded] = useState<LoadedArt[]>([]);
   const [imgError, setImgError] = useState<string | null>(null);

@@ -14,10 +14,15 @@ export const metadata = {
     "Turn an exhibition into a shareable video: build a shot list of camera walks, artwork close-ups and title cards, then record the real 3D room in your browser to a .webm file — vertical, square or landscape.",
 };
 
-export default async function VideoGeneratorRoute() {
+export default async function VideoGeneratorRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ exhibitionId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("video-generator", user.id);
+  const { exhibitionId } = await searchParams;
   const exhibitions = await db.exhibition.findMany({
     where: { ownerId: user.id },
     include: { artworks: { orderBy: { createdAt: "asc" } } },
@@ -72,7 +77,7 @@ export default async function VideoGeneratorRoute() {
           </Link>
         </div>
       ) : (
-        <VideoGenerator exhibitions={serialised} />
+        <VideoGenerator exhibitions={serialised} initialExhibitionId={exhibitionId} />
       )}
     </ToolsShell>
   );

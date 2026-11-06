@@ -147,7 +147,7 @@ function RoomPreviewCanvas({ room }: { room: GalleryPresetCard }) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, h * 0.7 - 1, w, 2);
   }, [room]);
-  return <canvas ref={ref} width={640} height={400} className="gallery-card-preview" aria-label={`${room.label} finishes preview`} />;
+  return <canvas ref={ref} width={640} height={240} className="gallery-card-preview" aria-label={`${room.label} finishes preview`} />;
 }
 
 export default function GalleriesPage({
@@ -378,8 +378,7 @@ export default function GalleriesPage({
                 </button>
               </div>
               <p style={{ marginTop: 4, lineHeight: 1.5 }}>{room.description}</p>
-              <p style={{ marginTop: 6 }}>{room.width} × {room.depth} m · {room.height} m high</p>
-              <p className="gallery-card-finishes">{wallTextures[room.wallTexture]} walls · {floorTextures[room.floorTexture]} floor</p>
+              <p className="gallery-card-finishes" style={{ marginTop: 6 }}>{room.width} × {room.depth} m · {room.height} m high · {wallTextures[room.wallTexture]} walls · {floorTextures[room.floorTexture]} floor</p>
               <div className="gallery-card-actions">
                 <button onClick={() => viewIn3D(room.key)}><Eye size={14} /> View in 3D</button>
                 <button className="gallery-card-open" onClick={() => void openInEditor(room.key)} disabled={opening !== null}>

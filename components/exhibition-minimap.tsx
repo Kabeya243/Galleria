@@ -146,7 +146,7 @@ export default function ExhibitionMinimap({
                   onClick={() => onRoomChange(room.id)}
                   aria-current={room.id === activeRoomId ? "true" : undefined}
                 >
-                  {t("minimap", "room")} {room.name}
+                  {room.name}
                 </button>
                 <ul>
                   {artworks

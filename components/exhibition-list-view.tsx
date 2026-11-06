@@ -97,7 +97,7 @@ export default function ExhibitionListView({
                     {artwork.dimensions ? ` · ${artwork.dimensions}` : ""}
                   </p>
                   <p className="list-view-room">
-                    {t("minimap", "room")} {roomNameById.get(artwork.roomId) ?? ""}
+                    {roomNameById.get(artwork.roomId) ?? ""}
                   </p>
                   <button
                     ref={(el) => {

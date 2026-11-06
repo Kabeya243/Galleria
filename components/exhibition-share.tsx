@@ -78,7 +78,9 @@ export default function ExhibitionShare({
           <h2>{title}</h2>
           <label className="share-link-row">
             <Link2 size={14} aria-hidden="true" />
-            <input type="text" readOnly value={url} aria-label={t("share", "copyLink")} onFocus={(e) => e.target.select()} />
+            <div className="share-link-text" title={url} role="textbox" aria-readonly="true" aria-label={t("share", "copyLink")} tabIndex={0}>
+              {url}
+            </div>
             <button type="button" onClick={copyLink}>
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? t("share", "linkCopied") : t("share", "copyLink")}

@@ -325,6 +325,10 @@ function ContactDecal({ width, depth }: { width: number; depth: number }) {
 // were unclickable. The offset follows the canvas it is rendered in:
 // below the public topbar, below the editor's Add button, flush at the
 // top everywhere else (galleries viewer).
+// z-index: 1 only — just above the 3D canvas, strictly below every
+// dialog (topbar z-2, info card z-3, minimap z-4, list view z-5,
+// entry z-6, share panel inside the topbar). At z-20 it floated over
+// the share panel's close button and the top of the detail panel.
 function RenderQualityToggle({ quality, onChange, canvasClassName }: { quality: RenderQuality; onChange: (quality: RenderQuality) => void; canvasClassName?: string }) {
   const top = canvasClassName?.includes("public-gallery-canvas")
     ? 79
@@ -341,7 +345,7 @@ function RenderQualityToggle({ quality, onChange, canvasClassName }: { quality: 
         position: "absolute",
         top,
         right: 12,
-        zIndex: 20,
+        zIndex: 1,
         display: "flex",
         alignItems: "center",
         gap: 2,

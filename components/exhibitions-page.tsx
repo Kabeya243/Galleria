@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, ArrowUpRight, PenLine, Plus, Trash2 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
+import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import ThemeToggle from "@/components/theme-toggle";
+import type { RoomModelId } from "@/lib/rooms";
 import styles from "./public-home.module.css";
 
 // Exhibitions: ONLY the signed-in artist's own exhibitions — nothing else.
@@ -33,16 +35,23 @@ export default function ExhibitionsPage({
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   // Two-step inline confirm for deleting an exhibition (same pattern as
   // the editor's remove-room): first click arms, second confirms, and the
   // armed state clears after a few seconds.
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
-  async function createExhibition() {
+  // Feature 7: the title is mandatory and a room model is picked in the
+  // dialog — the POST no longer creates an "Untitled exhibition".
+  async function createExhibition(title: string, model: RoomModelId) {
     setCreating(true);
     setPageError(null);
     try {
-      const response = await fetch("/api/exhibitions", { method: "POST" });
+      const response = await fetch("/api/exhibitions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, model }),
+      });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not create an exhibition.");
       window.location.assign(`/editor/${result.exhibition.id}`);
@@ -50,6 +59,7 @@ export default function ExhibitionsPage({
       console.error("Could not create exhibition.", error);
       setPageError(error instanceof Error ? error.message : "Could not create an exhibition.");
       setCreating(false);
+      throw error;
     }
   }
 
@@ -104,17 +114,24 @@ export default function ExhibitionsPage({
               <h1>Your exhibitions<span className="title-period">.</span></h1>
               <p className="welcome-copy">Everything you are building — drafts and published rooms, in one place.</p>
             </div>
-            <button className="primary-button" onClick={createExhibition} disabled={creating}>
+            <button className="primary-button" onClick={() => setShowCreateDialog(true)} disabled={creating}>
               <Plus size={17} /> {creating ? "Creating…" : "Create a new exhibition"}
             </button>
           </section>
+
+          {showCreateDialog && (
+            <ExhibitionCreateDialog
+              onClose={() => setShowCreateDialog(false)}
+              onCreate={createExhibition}
+            />
+          )}
 
           <section className="galleries-grid" id="exhibitions">
             {exhibitions.length === 0 ? (
               <div className={styles.emptyState}>
                 <strong>No exhibitions yet.</strong>
                 <p>Your first room starts here — pick a gallery, hang your work, publish it.</p>
-                <button onClick={createExhibition} className="galleries-open-button" disabled={creating}>
+                <button onClick={() => setShowCreateDialog(true)} className="galleries-open-button" disabled={creating}>
                   Create a new exhibition <ArrowRight size={15} />
                 </button>
               </div>

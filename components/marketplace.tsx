@@ -51,7 +51,8 @@ export type MarketplaceListing = {
 
 export type MarketplaceInquiry = {
   id: string;
-  listingId: string;
+  // Null for an artist-contact message (no marketplace listing).
+  listingId: string | null;
   listingTitle: string;
   listingPrice: number | null;
   listingCurrency: string;

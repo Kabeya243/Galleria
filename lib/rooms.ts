@@ -783,6 +783,25 @@ export const roomLayouts = {
 
 export type RoomLayout = keyof typeof roomLayouts;
 
+// The four named room models offered when an exhibition is created
+// (feature 7). Each model is one of the 41 layouts, chosen for the
+// mood it gives the first room — the visitor can still switch layouts
+// and add rooms in the editor afterwards. Labels live in the i18n
+// dictionary (`create.model*`); the layout label is the room's own.
+export const ROOM_MODELS = [
+  { id: "minimalist", layout: "cube" },
+  { id: "classic", layout: "grand-hall" },
+  { id: "studio", layout: "totem-studio" },
+  { id: "outdoor", layout: "glass-pavilion" },
+] as const;
+
+export type RoomModelId = (typeof ROOM_MODELS)[number]["id"];
+
+export function roomModelLayout(modelId: string): RoomLayout {
+  const model = ROOM_MODELS.find((candidate) => candidate.id === modelId);
+  return (model?.layout ?? "cube") as RoomLayout;
+}
+
 const layoutKeys = Object.keys(roomLayouts) as [RoomLayout, ...RoomLayout[]];
 
 export const wallTextures = {

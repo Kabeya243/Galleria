@@ -13,10 +13,12 @@ function countRooms(value: string): number {
 }
 
 // Every published exhibition on the platform, newest first — the public
-// homepage visitors browse without an account, Artsteps-style.
+// homepage visitors browse without an account, Artsteps-style. Only
+// "public" visibility is listed: private-link shows never appear here,
+// and password-protected shows neither.
 async function findPublicExhibitions(): Promise<PublicHomeExhibition[]> {
   const exhibitions = await db.exhibition.findMany({
-    where: { status: "public" },
+    where: { status: "public", visibility: "public" },
     include: {
       owner: { select: { name: true } },
       _count: { select: { artworks: true } },
@@ -40,7 +42,7 @@ async function findPublicExhibitions(): Promise<PublicHomeExhibition[]> {
 // artworks that have an image — the real works, shown live in 3D.
 async function findFeaturedPreview(): Promise<FeaturedPreview | null> {
   const exhibition = await db.exhibition.findFirst({
-    where: { status: "public" },
+    where: { status: "public", visibility: "public" },
     include: {
       owner: { select: { name: true } },
       _count: { select: { artworks: true } },
@@ -155,6 +157,66 @@ export default async function HomePage() {
       artworkCount: exhibition._count.artworks,
     }));
 
+  // Creator visit statistics (feature 6): from VisitLog — exhibition-level
+  // rows only (artworkId null) for visits and duration, artwork rows for
+  // the most-viewed works. Country comes only from the Vercel geo header
+  // (x-vercel-ip-country); a missing country is never guessed.
+  const exhibitionIds = exhibitions.map((exhibition) => exhibition.id);
+  const [visitAggregate, topArtworkRows, topCountryRows] = await Promise.all([
+    db.visitLog.aggregate({
+      where: { exhibitionId: { in: exhibitionIds }, artworkId: null },
+      _count: { _all: true },
+      _avg: { durationSeconds: true },
+    }),
+    db.visitLog.groupBy({
+      by: ["artworkId"],
+      where: { exhibitionId: { in: exhibitionIds }, artworkId: { not: null } },
+      _count: { _all: true },
+      orderBy: { _count: { artworkId: "desc" } },
+      take: 5,
+    }),
+    db.visitLog.groupBy({
+      by: ["country"],
+      where: { exhibitionId: { in: exhibitionIds }, artworkId: null, country: { not: null } },
+      _count: { _all: true },
+      orderBy: { _count: { country: "desc" } },
+      take: 5,
+    }),
+  ]);
+  const topArtworkIds = topArtworkRows
+    .map((row) => row.artworkId)
+    .filter((id): id is string => id !== null);
+  const topArtworkDetails =
+    topArtworkIds.length > 0
+      ? await db.artwork.findMany({
+          where: { id: { in: topArtworkIds } },
+          select: { id: true, title: true, exhibition: { select: { title: true } } },
+        })
+      : [];
+  const visitStats = {
+    totalVisits: visitAggregate._count._all,
+    avgDurationSeconds:
+      visitAggregate._avg.durationSeconds != null
+        ? Math.round(visitAggregate._avg.durationSeconds)
+        : null,
+    topArtworks: topArtworkRows
+      .map((row) => {
+        const detail = topArtworkDetails.find((artwork) => artwork.id === row.artworkId);
+        if (!detail) return null;
+        return {
+          id: detail.id,
+          title: detail.title,
+          exhibitionTitle: detail.exhibition.title,
+          views: row._count._all,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null),
+    topCountries: topCountryRows.map((row) => ({
+      country: row.country ?? "Unknown",
+      visits: row._count._all,
+    })),
+  };
+
   return (
     <Dashboard
       user={user}
@@ -169,6 +231,7 @@ export default async function HomePage() {
       chartTotal={chartTotal}
       chartRange={chartRange}
       topExhibitions={topExhibitions}
+      visitStats={visitStats}
     />
   );
 }

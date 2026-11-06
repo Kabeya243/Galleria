@@ -1188,8 +1188,19 @@ export default function ArtInContext({
 
     const createExhibition = async () => {
       setGalleryMsg(null);
+      // The title is mandatory (feature 7). The wizard's own exhibition
+      // title (step 8) names the show when already entered; otherwise
+      // the first selected work names it — step 8 still lets the real
+      // title be set before the show is finished.
+      const title =
+        data.exhibitionDetails.title.trim() ||
+        (artworks[0] ? `${artworks[0].title} — Art in Context` : "Art in Context exhibition");
       try {
-        const res = await fetch("/api/exhibitions", { method: "POST" });
+        const res = await fetch("/api/exhibitions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        });
         if (!res.ok) throw new Error("Could not create the exhibition.");
         const { exhibition } = (await res.json()) as { exhibition: { id: string; title: string; slug: string; status: string; description: string } };
         setExhibitions((prev) => [{ id: exhibition.id, title: exhibition.title, slug: exhibition.slug, status: exhibition.status, description: exhibition.description, roomNames: ["Room 1"], artworks: [] }, ...prev]);

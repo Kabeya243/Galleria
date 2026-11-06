@@ -105,6 +105,33 @@ export function loadRenderQuality(): RenderQuality {
   return detectDefaultQuality();
 }
 
+// --- Automatic recommendation for the entry screen ----------------------
+// A device-aware recommendation, shown as "Recommended" next to the
+// quality choice before the visitor enters. It weighs the same signals
+// a visitor's hardware actually reports: a coarse pointer (touch) or
+// little memory drops the tier, a slow connection drops it further.
+// The visitor can always override it — this only picks the default.
+export function recommendQuality(): RenderQuality {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return "high";
+  try {
+    const nav = navigator as Navigator & {
+      deviceMemory?: number;
+      connection?: { effectiveType?: string; saveData?: boolean };
+    };
+    const coarse = window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+    const lowMemory = typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4;
+    const slowConnection =
+      nav.connection?.saveData === true ||
+      (typeof nav.connection?.effectiveType === "string" &&
+        ["slow-2g", "2g", "3g"].includes(nav.connection.effectiveType));
+    if (slowConnection || (coarse && lowMemory)) return "low";
+    if (coarse || lowMemory) return "medium";
+  } catch {
+    // Any signal unreadable — fall through to High.
+  }
+  return "high";
+}
+
 export function saveRenderQuality(quality: RenderQuality): void {
   if (typeof window === "undefined") return;
   try {

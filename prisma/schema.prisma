@@ -11,7 +11,10 @@ model User {
   id           String       @id @default(cuid())
   email        String       @unique
   name         String
-  passwordHash String
+  // Null for accounts created with Google sign-in (no password set).
+  passwordHash String?
+  // Google account id for accounts created or linked with Google sign-in.
+  googleId     String?      @unique
   // Chosen at signup: what the account does on SANAA (artist, curator,
   // gallery, collector, advisor, institution…) and where they are based.
   // Optional so accounts created before this field existed keep working.
@@ -46,6 +49,12 @@ model Exhibition {
   slug        String     @unique
   description String     @default("")
   status      String     @default("draft")
+  // Who can open a published exhibition: "public" (listed, open to
+  // everyone), "private-link" (published but never listed — only the
+  // direct URL opens it) or "password" (published, but a password is
+  // asked before entering). Drafts ignore this field.
+  visibility         String  @default("public")
+  accessPasswordHash String?
   roomColor   String     @default("#f5f2eb")
   rooms       String     @default("[{\"id\":\"room-main\",\"name\":\"Room 1\",\"layout\":\"cube\",\"wallColor\":\"#f5f2eb\",\"sideWallColor\":\"#e2ded6\",\"floorColor\":\"#3f3d3a\",\"ceilingColor\":\"#f5f2eb\",\"wallTexture\":\"plaster\",\"floorTexture\":\"stone\",\"ceilingTexture\":\"plaster\",\"spotlights\":true,\"partitionWalls\":[],\"curatorialText\":\"\"}]")
   views       Int        @default(0)
@@ -120,6 +129,10 @@ model VisitLog {
   country      String?
   device       String?
   referrer     String?
+  // Seconds the visitor spent in the exhibition, sent by the client
+  // when the visit ends (pagehide). Null when the browser never
+  // reported a duration — never invented.
+  durationSeconds Int?
   createdAt    DateTime @default(now())
 
   @@index([exhibitionId, day])
@@ -170,8 +183,13 @@ model Listing {
 // stored only so the seller can reply; nothing is shared elsewhere.
 model Inquiry {
   id         String   @id @default(cuid())
-  listingId  String
-  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  // Marketplace inquiry: the listing being asked about. Null for a
+  // "contact the artist" message sent from an artwork in an exhibition.
+  listingId  String?
+  listing    Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  // Artist-contact inquiry: the artwork and exhibition it came from.
+  artworkId    String?
+  exhibitionId String?
   buyerId    String?
   buyerName  String   @default("")
   buyerEmail String   @default("")
@@ -180,6 +198,8 @@ model Inquiry {
   createdAt  DateTime @default(now())
 
   @@index([listingId])
+  @@index([exhibitionId])
+  @@index([artworkId])
 }
 
 // Team collaboration (Phase 6). A team owns shared exhibition access

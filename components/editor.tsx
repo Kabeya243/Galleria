@@ -38,6 +38,7 @@ import {
   Upload,
 } from "lucide-react";
 import ElementThumbnail from "@/components/element-thumbnail";
+import ExhibitionPublishDialog, { type PublishVisibility } from "@/components/exhibition-publish-dialog";
 import FrameThumbnail from "@/components/frame-thumbnail";
 import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
 import LayersPanel, { type LayerArtwork, type LayerItemRef } from "@/components/layers-panel";
@@ -176,6 +177,10 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [description, setDescription] = useState("");
   const [slug, setSlug] = useState("");
   const [status, setStatus] = useState("draft");
+  // Who can open the published show (feature 8): "public", "private-link"
+  // or "password". Loaded with the exhibition; the publish dialog edits it.
+  const [visibility, setVisibility] = useState<PublishVisibility>("public");
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -241,6 +246,13 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
         setDescription(result.exhibition.description);
         setSlug(result.exhibition.slug);
         setStatus(result.exhibition.status);
+        if (
+          result.exhibition.visibility === "public" ||
+          result.exhibition.visibility === "private-link" ||
+          result.exhibition.visibility === "password"
+        ) {
+          setVisibility(result.exhibition.visibility);
+        }
         setSaved(true);
         setMultiSelected([]);
         // Artwork layer state (hidden / locked / group) has no columns
@@ -1381,18 +1393,35 @@ async function compressImage(file: File): Promise<File> {
     }
   }
 
-  async function publishExhibition() {
+  // Publishing (feature 8): a draft opens the visibility dialog; a
+  // published show unpublishes with the old toggle (no body). The dialog
+  // passes the chosen visibility (and password, when protected).
+  async function publishExhibition(nextVisibility?: PublishVisibility, password?: string) {
     if (!saved && !(await saveExhibition())) return;
     setBusy(true);
     try {
-      const response = await fetch(`/api/exhibitions/${exhibitionId}/publish`, { method: "POST" });
+      const response = await fetch(`/api/exhibitions/${exhibitionId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body:
+          nextVisibility === undefined
+            ? undefined
+            : JSON.stringify(
+                password === undefined
+                  ? { visibility: nextVisibility }
+                  : { visibility: nextVisibility, password },
+              ),
+      });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not publish this exhibition.");
       setStatus(result.status);
       setSlug(result.slug);
+      if (result.visibility) setVisibility(result.visibility);
+      setShowPublishDialog(false);
     } catch (error) {
       console.error("Could not publish exhibition.", error);
       setSaveError(error instanceof Error ? error.message : "Could not publish this exhibition.");
+      throw error;
     } finally {
       setBusy(false);
     }
@@ -1574,9 +1603,27 @@ async function compressImage(file: File): Promise<File> {
           <span className="saved-state"><span className={saved ? "save-indicator done" : "save-indicator"} />{autosaveState === "saving" ? "Saving…" : saved ? `Saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span>
           <button className="editor-secondary-button" onClick={() => void saveExhibition()} disabled={busy}><Save size={15} /> Save</button>
           {status === "public" && <Link className="editor-secondary-button" href={`/exhibition/${slug}`}><Eye size={15} /> Preview</Link>}
-          <button className="editor-publish-button" onClick={() => void publishExhibition()} disabled={busy}>{status === "public" ? "Unpublish" : "Publish"} <ArrowRight size={15} /></button>
+          <button
+            className="editor-publish-button"
+            onClick={() => {
+              // A published show unpublishes directly (toggle); a draft
+              // opens the visibility dialog (feature 8).
+              if (status === "public") void publishExhibition();
+              else setShowPublishDialog(true);
+            }}
+            disabled={busy}
+          >
+            {status === "public" ? "Unpublish" : "Publish"} <ArrowRight size={15} />
+          </button>
         </div>
       </header>
+      {showPublishDialog && (
+        <ExhibitionPublishDialog
+          currentVisibility={visibility}
+          onClose={() => setShowPublishDialog(false)}
+          onPublish={publishExhibition}
+        />
+      )}
       {saveError && (
         <div className="editor-error-banner" role="alert">
           <span>{saveError}</span>

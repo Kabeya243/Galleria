@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       where: { id: user.id },
       select: { passwordHash: true },
     });
-    if (!stored || !(await compare(input.currentPassword, stored.passwordHash))) {
+    if (!stored || !stored.passwordHash || !(await compare(input.currentPassword, stored.passwordHash))) {
       return NextResponse.json({ error: "Your current password is incorrect." }, { status: 401 });
     }
     if (input.currentPassword === input.newPassword) {

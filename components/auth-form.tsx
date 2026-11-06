@@ -3,7 +3,37 @@
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { USER_ROLES } from "@/lib/validation";
+import { USER_ROLES, passwordChecks } from "@/lib/validation";
+
+// "Continue with Google" (feature 9): a plain link to the OAuth start —
+// Google handles the sign-in, the callback signs the visitor in here.
+// The button is the same on login and register: Google creates the
+// account on first use.
+function GoogleButton() {
+  return (
+    <a className="auth-noir-google" href="/api/auth/google">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path
+          fill="#4285F4"
+          d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.2-2.1 3.7-5.1 3.7-8.8z"
+        />
+        <path
+          fill="#34A853"
+          d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.7-2.9c-1 .7-2.4 1.2-4.2 1.2-3.2 0-5.9-2.1-6.8-5.1L1.3 17.2C3.3 21.2 7.3 24 12 24z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M5.2 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.3 6.8C.5 8.4 0 10.1 0 12s.5 3.6 1.3 5.2l3.9-2.9z"
+        />
+        <path
+          fill="#EA4335"
+          d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.3 0 3.3 2.8 1.3 6.8l3.9 2.9c.9-2.9 3.6-5 6.8-5z"
+        />
+      </svg>
+      Continue with Google
+    </a>
+  );
+}
 
 export function AsteriskMark() {
   return (
@@ -29,6 +59,15 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const isRegister = mode === "register";
+  // Live password checklist (feature 9): each rule ticks off as the
+  // visitor types, using the same rules as the server schema.
+  const checks = passwordChecks(password);
+  const checklist = [
+    { ok: checks.length, label: "At least 10 characters" },
+    { ok: checks.lowercase, label: "A lowercase letter" },
+    { ok: checks.uppercase, label: "An uppercase letter" },
+    { ok: checks.number, label: "A number" },
+  ];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,6 +115,10 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         </Link>
         <div className="auth-noir-form-wrap">
           <h1>{isRegister ? "Create an account" : "Login"}</h1>
+          <GoogleButton />
+          <div className="auth-noir-divider" aria-hidden="true">
+            <span>or</span>
+          </div>
           <form onSubmit={handleSubmit}>
             {isRegister && (
               <div className="auth-noir-field">
@@ -195,7 +238,16 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                 </button>
               </div>
             </div>
-            {isRegister && (
+            {isRegister && password.length > 0 && (
+              <ul className="auth-noir-checklist" aria-live="polite">
+                {checklist.map((item) => (
+                  <li key={item.label} className={item.ok ? "auth-noir-check-ok" : ""}>
+                    <span aria-hidden="true">{item.ok ? "✓" : "○"}</span> {item.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {isRegister && password.length === 0 && (
               <p className="auth-noir-hint">
                 Use at least 10 characters, including an uppercase letter, a lowercase letter
                 and a number.

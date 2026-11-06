@@ -24,6 +24,11 @@ const bodySchema = z.object({
   exhibitionId: z.string().min(1).max(100).optional(),
   artworkId: z.string().min(1).max(100).optional(),
   identifyOnly: z.boolean().optional(),
+  // Seconds spent in the exhibition, sent by the client when the visit
+  // ends (pagehide / sendBeacon). Stored on the visit row this visitor
+  // opened most recently for the exhibition (within the last 3 hours) —
+  // never a new row, never invented.
+  durationSeconds: z.number().int().min(0).max(86400).optional(),
 });
 
 export async function POST(request: Request) {
@@ -35,6 +40,30 @@ export async function POST(request: Request) {
   // no-op identify call — that is the whole point of that call.
   const visitorKey = await getOrCreateVisitorKey();
   if (parsed.data.identifyOnly || !parsed.data.exhibitionId) {
+    return NextResponse.json({ ok: true });
+  }
+
+  // Visit duration: update the most recent visit row for this visitor
+  // and exhibition (opened within the last 3 hours). Keep the longest
+  // reported duration — a second pagehide must not shrink it.
+  if (typeof parsed.data.durationSeconds === "number" && !parsed.data.artworkId) {
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const latest = await db.visitLog.findFirst({
+      where: {
+        exhibitionId: parsed.data.exhibitionId,
+        visitorKey,
+        artworkId: null,
+        createdAt: { gte: threeHoursAgo },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, durationSeconds: true },
+    });
+    if (latest) {
+      const next = Math.max(latest.durationSeconds ?? 0, parsed.data.durationSeconds);
+      if (next !== latest.durationSeconds) {
+        await db.visitLog.update({ where: { id: latest.id }, data: { durationSeconds: next } });
+      }
+    }
     return NextResponse.json({ ok: true });
   }
 

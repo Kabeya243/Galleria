@@ -51,6 +51,31 @@ export const passwordChangeSchema = z.object({
     .regex(/[0-9]/, "Password must include a number."),
 });
 
+// --- Live password checks (registration form) ---------------------------
+// The same rules as registrationSchema, exposed as booleans so the form
+// can show each rule ticking off as the visitor types — no waiting for
+// the server round-trip to learn a password is too short.
+export type PasswordCheck = {
+  length: boolean;
+  lowercase: boolean;
+  uppercase: boolean;
+  number: boolean;
+};
+
+export function passwordChecks(password: string): PasswordCheck {
+  return {
+    length: password.length >= 10,
+    lowercase: /[a-z]/.test(password),
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+  };
+}
+
+export function isPasswordValid(password: string): boolean {
+  const checks = passwordChecks(password);
+  return checks.length && checks.lowercase && checks.uppercase && checks.number;
+}
+
 const artworkSchema = z.object({
   id: z.string().min(1).max(64),
   title: z.string().trim().min(1).max(120),

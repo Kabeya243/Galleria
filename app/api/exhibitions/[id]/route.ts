@@ -59,9 +59,13 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
   }
 
+  // The access password hash never leaves the server — the editor only
+  // needs the visibility, never the hash itself.
+  const { accessPasswordHash: _accessPasswordHash, ...exhibitionWithoutHash } = exhibition;
+  void _accessPasswordHash;
   return NextResponse.json({
     exhibition: {
-      ...exhibition,
+      ...exhibitionWithoutHash,
       rooms: parseGalleryRooms(exhibition.rooms),
       artworks: exhibition.artworks.map(toClientArtwork),
     },

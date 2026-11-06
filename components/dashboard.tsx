@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import Sidebar from "@/components/sidebar";
+import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
+import { useT } from "@/lib/i18n";
+import type { RoomModelId } from "@/lib/rooms";
 import {
   ArrowUpRight,
   Compass,
@@ -25,7 +28,22 @@ type TopExhibition = {
   artworkCount: number;
 };
 
+export type VisitStats = {
+  totalVisits: number;
+  avgDurationSeconds: number | null;
+  topArtworks: { id: string; title: string; exhibitionTitle: string; views: number }[];
+  topCountries: { country: string; visits: number }[];
+};
+
 type ChartDay = { label: string; full: string; count: number; isRecentWeek: boolean };
+
+function formatDuration(seconds: number | null): string {
+  if (seconds == null) return "—";
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+}
 
 export default function Dashboard({
   user,
@@ -35,6 +53,7 @@ export default function Dashboard({
   chartTotal,
   chartRange,
   topExhibitions,
+  visitStats,
 }: {
   user: { name: string; email: string; isAdmin?: boolean };
   exhibitionCount: number;
@@ -48,10 +67,13 @@ export default function Dashboard({
   chartTotal: number;
   chartRange: string;
   topExhibitions: TopExhibition[];
+  visitStats: VisitStats;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const firstName = user.name.split(" ")[0] || user.name;
   const initials = user.name
     .split(" ")
@@ -66,10 +88,16 @@ export default function Dashboard({
   );
   const maxCount = Math.max(1, ...chart.map((day) => day.count));
 
-  async function createExhibition() {
+  // Feature 7: the title is mandatory and a room model is picked in the
+  // dialog — the POST no longer creates an "Untitled exhibition".
+  async function createExhibition(title: string, model: RoomModelId) {
     setCreating(true);
     try {
-      const response = await fetch("/api/exhibitions", { method: "POST" });
+      const response = await fetch("/api/exhibitions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, model }),
+      });
       if (response.status === 401) {
         window.location.assign("/login");
         return;
@@ -81,6 +109,7 @@ export default function Dashboard({
       console.error("Could not create exhibition.", error);
       setCreateError(error instanceof Error ? error.message : "Could not create an exhibition.");
       setCreating(false);
+      throw error;
     }
   }
 
@@ -147,11 +176,18 @@ export default function Dashboard({
                 {initials}
               </span>
               <span className={styles.userName}>{user.name}</span>
-              <button className={styles.createButton} onClick={createExhibition} disabled={creating}>
+              <button className={styles.createButton} onClick={() => setShowCreateDialog(true)} disabled={creating}>
                 <Plus size={16} /> {creating ? "Creating…" : "Create an exhibition"}
               </button>
             </div>
           </div>
+
+          {showCreateDialog && (
+            <ExhibitionCreateDialog
+              onClose={() => setShowCreateDialog(false)}
+              onCreate={createExhibition}
+            />
+          )}
 
           {createError && (
             <div className="editor-error-banner" role="alert">
@@ -254,6 +290,68 @@ export default function Dashboard({
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </section>
+
+          {/* Creator visit statistics (feature 6): visits, average time,
+              most-viewed artworks and visitor countries, from VisitLog.
+              Full detail lives in the Visitor Analytics tool. */}
+          <section className={styles.card} aria-label={t("stats", "visitorStats")}>
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">{t("stats", "visits")}</span>
+                <h2>{t("stats", "visitorStats")}</h2>
+                <p className={styles.cardSub}>
+                  {t("stats", "visits")} · {visitStats.totalVisits} — {t("stats", "avgVisitTime")} ·{" "}
+                  {formatDuration(visitStats.avgDurationSeconds)}
+                </p>
+              </div>
+              <Link className="view-all" href="/tools/visitor-analytics">
+                {t("stats", "seeFullStats")}
+              </Link>
+            </div>
+            {visitStats.totalVisits === 0 ? (
+              <p className={styles.empty}>{t("stats", "noVisitsYet")}</p>
+            ) : (
+              <div className={styles.visitStatsGrid}>
+                <div>
+                  <h3 className={styles.visitStatsHeading}>{t("stats", "topArtworks")}</h3>
+                  {visitStats.topArtworks.length === 0 ? (
+                    <p className={styles.empty}>{t("stats", "noVisitsYet")}</p>
+                  ) : (
+                    <ul className={styles.visitStatsList}>
+                      {visitStats.topArtworks.map((artwork) => (
+                        <li key={artwork.id}>
+                          <span>
+                            {artwork.title}
+                            <small> — {artwork.exhibitionTitle}</small>
+                          </span>
+                          <strong>
+                            {artwork.views} {t("stats", "views")}
+                          </strong>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <h3 className={styles.visitStatsHeading}>{t("stats", "countries")}</h3>
+                  {visitStats.topCountries.length === 0 ? (
+                    <p className={styles.empty}>{t("stats", "noVisitsYet")}</p>
+                  ) : (
+                    <ul className={styles.visitStatsList}>
+                      {visitStats.topCountries.map((row) => (
+                        <li key={row.country}>
+                          <span>{row.country}</span>
+                          <strong>
+                            {row.visits} {t("stats", "views")}
+                          </strong>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             )}
           </section>

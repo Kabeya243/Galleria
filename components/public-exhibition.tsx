@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, List, Maximize2, Minimize2 } from "lucide-react";
 import { useProgress } from "@react-three/drei";
-import GalleryScene from "@/components/gallery-scene";
+import GalleryScene, { artworkStandPoint, type TeleportTarget } from "@/components/gallery-scene";
+import ArtworkDetailPanel from "@/components/artwork-detail-panel";
+import ExhibitionMinimap from "@/components/exhibition-minimap";
+import ExhibitionListView from "@/components/exhibition-list-view";
+import ExhibitionEntryScreen from "@/components/exhibition-entry-screen";
+import ExhibitionShare from "@/components/exhibition-share";
+import LanguageSwitcher from "@/components/language-switcher";
+import { loadRenderQuality, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
+import { useT } from "@/lib/i18n";
 import type { Artwork } from "@/lib/demo-data";
 import type { GalleryRoom } from "@/lib/rooms";
 
@@ -79,6 +87,52 @@ export default function PublicExhibition({
   const [speakingKey, setSpeakingKey] = useState<string | null>(null);
   const [a11yLang, setA11yLang] = useState<"en" | "fr">("en");
   const [ttsError, setTtsError] = useState<string | null>(null);
+  const t = useT();
+
+  // Entry screen + viewer options (features 2–5): render quality owned
+  // by this parent so the entry-screen choice actually applies, sound
+  // preference for the audio guide, list view, and the minimap teleport.
+  const [quality, setQuality] = useState<RenderQuality>("high");
+  const [soundOn, setSoundOn] = useState(true);
+  const [showListView, setShowListView] = useState(false);
+  const [teleportTarget, setTeleportTarget] = useState<TeleportTarget | null>(null);
+  const [shareUrl, setShareUrl] = useState("");
+  const teleportNonce = useRef(0);
+  useEffect(() => {
+    setQuality(loadRenderQuality());
+    try {
+      if (window.localStorage.getItem("sanaa-sound") === "off") setSoundOn(false);
+    } catch {
+      // Storage unavailable — sound stays on.
+    }
+    setShareUrl(window.location.href);
+  }, []);
+  function handleQualityChange(next: RenderQuality) {
+    setQuality(next);
+    saveRenderQuality(next);
+  }
+  function handleSoundChange(next: boolean) {
+    setSoundOn(next);
+    try {
+      window.localStorage.setItem("sanaa-sound", next ? "on" : "off");
+    } catch {
+      // Storage unavailable — the choice simply does not persist.
+    }
+    if (!next && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    setSpeakingKey(null);
+  }
+  // Teleport (minimap / list view): walk to the artwork's stand point,
+  // entering walk mode first when the visitor is still on the entry
+  // screen. The scene switches rooms itself when the artwork is in
+  // another room.
+  function handleTeleport(artwork: Artwork) {
+    const stand = artworkStandPoint(artwork);
+    teleportNonce.current += 1;
+    setSelected(artwork);
+    setShowListView(false);
+    setTeleportTarget({ roomId: artwork.roomId, ...stand, nonce: teleportNonce.current });
+    if (!walking) setWalking(true);
+  }
 
   // Anonymous visit tracking (see lib/visits.ts): the exhibition view
   // itself is logged server-side; this only makes sure the visitor
@@ -99,6 +153,41 @@ export default function PublicExhibition({
       body: JSON.stringify({ exhibitionId: exhibition.id, artworkId: selected.id }),
     }).catch(() => {});
   }, [selected, exhibition.id]);
+
+  // Visit duration (creator statistics): the time spent in the
+  // exhibition, reported once when the visit ends (tab closed, hidden
+  // or navigated away). sendBeacon survives pagehide; the server stores
+  // it on the visit row opened at entry, never a new row.
+  const visitStartRef = useRef(Date.now());
+  useEffect(() => {
+    function reportDuration() {
+      const seconds = Math.max(0, Math.round((Date.now() - visitStartRef.current) / 1000));
+      const payload = JSON.stringify({ exhibitionId: exhibition.id, durationSeconds: seconds });
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon("/api/visits", new Blob([payload], { type: "application/json" }));
+        } else {
+          fetch("/api/visits", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true,
+          }).catch(() => {});
+        }
+      } catch {
+        // Best-effort — a missed duration never disturbs the visit.
+      }
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") reportDuration();
+    }
+    window.addEventListener("pagehide", reportDuration);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", reportDuration);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [exhibition.id]);
   const [activeRoomId, setActiveRoomId] = useState(exhibition.rooms[0]?.id ?? "");
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
@@ -133,6 +222,12 @@ export default function PublicExhibition({
   // visitor's own device voices (browser speech synthesis). Stops any
   // speech when the panel closes.
   function speakAccessibility(key: string, text: string, language: "en" | "fr") {
+    // Sound is an entry-screen choice: with sound off, the audio guide
+    // stays silent instead of speaking over the visitor.
+    if (!soundOn) {
+      setTtsError(t("entry", "soundOff"));
+      return;
+    }
     if (!("speechSynthesis" in window)) {
       setTtsError("Text-to-speech is not available in this browser.");
       return;
@@ -177,7 +272,7 @@ export default function PublicExhibition({
   return (
     <main className="public-exhibition">
       <ExhibitionLoader />
-      {activeRoom && <GalleryScene
+      {activeRoom && !showListView && <GalleryScene
         artworks={exhibition.artworks}
         onSelect={(id) => setSelected(roomArtworks.find((artwork) => artwork.id === id))}
         className="public-gallery-canvas"
@@ -189,21 +284,29 @@ export default function PublicExhibition({
         input={movementKeys}
         onRoomChange={(id) => { setActiveRoomId(id); setSelected(undefined); }}
         resetSignal={walkReset}
+        quality={quality}
+        onQualityChange={handleQualityChange}
+        teleportTarget={teleportTarget}
       />}
       <header className="public-topbar">
         <Link href="/" className="public-back"><ArrowLeft size={16} /> SANAA</Link>
         <div className="public-title"><span>{exhibition.ownerName.toUpperCase()} PRESENTS</span><strong>{exhibition.title}</strong></div>
-        <button className="public-info-button" aria-label="Exhibition information" onClick={() => setShowInfo((value) => !value)}><Info size={17} /></button>
-        {accessibilityPack && (
-          <button
-            className="public-info-button"
-            aria-label="Accessibility and audio guide"
-            aria-pressed={showAccessibility}
-            onClick={() => { setShowAccessibility((value) => !value); setShowInfo(false); }}
-          >
-            <span aria-hidden style={{ fontSize: 15, fontWeight: 700, lineHeight: 1 }}>A</span>
-          </button>
-        )}
+        <div className="public-topbar-actions">
+          <LanguageSwitcher />
+          <button className="public-info-button" aria-label={t("listView", "listView")} aria-pressed={showListView} onClick={() => setShowListView((value) => !value)}><List size={16} /></button>
+          <ExhibitionShare title={exhibition.title} url={shareUrl || (typeof window !== "undefined" ? window.location.href : "")} />
+          <button className="public-info-button" aria-label="Exhibition information" onClick={() => setShowInfo((value) => !value)}><Info size={17} /></button>
+          {accessibilityPack && (
+            <button
+              className="public-info-button"
+              aria-label="Accessibility and audio guide"
+              aria-pressed={showAccessibility}
+              onClick={() => { setShowAccessibility((value) => !value); setShowInfo(false); }}
+            >
+              <span aria-hidden style={{ fontSize: 15, fontWeight: 700, lineHeight: 1 }}>A</span>
+            </button>
+          )}
+        </div>
       </header>
       {activeRoom && <div className="public-room-label"><span>ROOM {String(exhibition.rooms.indexOf(activeRoom) + 1).padStart(2, "0")}</span><i /> {activeRoom.name.toUpperCase()}</div>}
       {exhibition.rooms.length > 1 && <nav className="public-room-nav" aria-label="Exhibition rooms">
@@ -211,11 +314,39 @@ export default function PublicExhibition({
         {exhibition.rooms.map((room, index) => <button key={room.id} className={room.id === activeRoom?.id ? "active" : ""} onClick={() => changeRoom(index)}>{String(index + 1).padStart(2, "0")} <span>{room.name}</span></button>)}
         <button aria-label="Next room" onClick={() => changeRoom((exhibition.rooms.indexOf(activeRoom) + 1) % exhibition.rooms.length)}><ChevronRight size={15} /></button>
       </nav>}
-      {!walking && <div className="walk-start-card">
-        <span>WALK THROUGH THE EXHIBITION</span>
-        <p>Move freely around the room, explore the artworks and pass through the doors to continue.</p>
-        <button id="walk-start" onClick={() => setWalking(true)}>Enter the room</button>
-      </div>}
+      {!walking && !showListView && (
+        <ExhibitionEntryScreen
+          title={exhibition.title}
+          ownerName={exhibition.ownerName}
+          artworkCount={exhibition.artworks.length}
+          roomCount={exhibition.rooms.length}
+          quality={quality}
+          onQualityChange={handleQualityChange}
+          soundOn={soundOn}
+          onSoundChange={handleSoundChange}
+          onEnter={() => setWalking(true)}
+          onOpenListView={() => setShowListView(true)}
+        />
+      )}
+      {walking && !showListView && (
+        <ExhibitionMinimap
+          rooms={exhibition.rooms}
+          artworks={exhibition.artworks}
+          activeRoomId={activeRoom?.id ?? ""}
+          selectedArtworkId={selected?.id}
+          onTeleport={handleTeleport}
+          onRoomChange={(id) => { setActiveRoomId(id); setSelected(undefined); }}
+        />
+      )}
+      {showListView && (
+        <ExhibitionListView
+          artworks={exhibition.artworks}
+          rooms={exhibition.rooms}
+          exhibitionTitle={exhibition.title}
+          onViewIn3d={handleTeleport}
+          onClose={() => setShowListView(false)}
+        />
+      )}
       {walking && <div className="public-controls-hint"><span>CLICK THE FLOOR OR USE WASD / ARROWS TO WALK</span><i /> <span>DRAG TO LOOK</span><i /> <span>PASS THROUGH DOORS TO CHANGE ROOMS</span></div>}
       {walking && <button className="public-reset-view" onClick={() => { walkReset.current += 1; }}>↺ Entrance</button>}
       {walking && <div className="walk-pad" aria-label="Touch movement controls">
@@ -237,26 +368,23 @@ export default function PublicExhibition({
       </div>}
       <button className="public-fullscreen" aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void toggleFullscreen()}>{isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
       {fullscreenError && <p className="public-fullscreen-note" role="alert">{fullscreenError}</p>}
-      {(selected || showInfo) && (
+      {selected && !showListView && (
+        <ArtworkDetailPanel
+          artwork={selected}
+          exhibitionId={exhibition.id}
+          ownerName={exhibition.ownerName}
+          index={roomArtworks.indexOf(selected) + 1}
+          onClose={() => setSelected(undefined)}
+        />
+      )}
+      {showInfo && !selected && (
         <aside className="artwork-info-card">
-          <button className="info-close" onClick={() => { setSelected(undefined); setShowInfo(false); }} aria-label="Close information">×</button>
-          {selected ? (
-            <>
-              <span className="panel-kicker">ARTWORK {String(roomArtworks.indexOf(selected) + 1).padStart(2, "0")}</span>
-              <h1>{selected.title}</h1>
-              <p className="public-art-meta">{selected.year} <i /> {selected.medium} <i /> {selected.dimensions}</p>
-              <p>{selected.description}</p>
-              <a href="#artist">{selected.artist || exhibition.ownerName} <ArrowUpRight size={14} /></a>
-            </>
-          ) : (
-            <>
-              <span className="panel-kicker">ABOUT THIS EXHIBITION</span>
-              <h1>{exhibition.title}</h1>
-              <p className="public-art-meta">Curated by {exhibition.ownerName}</p>
-              <p>{exhibition.description || "A collection of artworks, brought together in a space of its own."}</p>
-              <span className="public-art-meta">{exhibition.artworks.length} artworks · {exhibition.rooms.length} rooms</span>
-            </>
-          )}
+          <button className="info-close" onClick={() => setShowInfo(false)} aria-label="Close information">×</button>
+          <span className="panel-kicker">ABOUT THIS EXHIBITION</span>
+          <h1>{exhibition.title}</h1>
+          <p className="public-art-meta">Curated by {exhibition.ownerName}</p>
+          <p>{exhibition.description || "A collection of artworks, brought together in a space of its own."}</p>
+          <span className="public-art-meta">{exhibition.artworks.length} artworks · {exhibition.rooms.length} rooms</span>
         </aside>
       )}
       {showAccessibility && accessibilityPack && (

@@ -9,7 +9,15 @@ export async function POST(request: Request) {
   try {
     const input = credentialsSchema.parse(await request.json());
     const user = await db.user.findUnique({ where: { email: input.email } });
-    if (!user || !(await compare(input.password, user.passwordHash))) {
+    // No password on file (Google sign-in account): password login can
+    // never match — the visitor must use Google sign-in instead.
+    if (user && !user.passwordHash) {
+      return NextResponse.json(
+        { error: "This account signs in with Google — use “Continue with Google” below." },
+        { status: 401 },
+      );
+    }
+    if (!user || !(await compare(input.password, user.passwordHash as string))) {
       return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
     }
     await createSession(user.id, { rememberMe: input.rememberMe ?? false });

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import PublicExhibition from "@/components/public-exhibition";
+import ExhibitionPasswordGate from "@/components/exhibition-password-gate";
 import { toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
@@ -8,6 +10,10 @@ import { logVisit, readVisitContext } from "@/lib/visits";
 
 type RouteProps = { params: Promise<{ slug: string }> };
 
+// A published exhibition, whatever its visibility: "public" (listed),
+// "private-link" (published, never listed — only the direct URL opens
+// it) or "password" (published, but a password is asked first). Drafts
+// never open here.
 async function findPublishedExhibition(slug: string) {
   return db.exhibition.findFirst({
     where: { slug, status: "public" },
@@ -22,9 +28,35 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
   const { slug } = await params;
   const exhibition = await findPublishedExhibition(slug);
   if (!exhibition) return { title: "Exhibition not found — SANAA" };
+  // A password-protected show keeps its title and description out of
+  // the page metadata — the link must not leak the show before the
+  // password is entered.
+  if (exhibition.visibility === "password") {
+    return { title: "Protected exhibition — SANAA" };
+  }
+  const description =
+    exhibition.description || `A virtual exhibition curated by ${exhibition.owner.name}.`;
+  // Open Graph + Twitter per exhibition, so a shared link unfurls with
+  // this show's own title, description and cover image. The image is
+  // the first artwork with one; without any image the tags still carry
+  // title and description (no broken image).
+  const firstImage = exhibition.artworks.find((artwork) => artwork.imageUrl)?.imageUrl ?? null;
+  const images = firstImage ? [{ url: firstImage, alt: exhibition.title }] : [];
   return {
     title: `${exhibition.title} — SANAA`,
-    description: exhibition.description || `A virtual exhibition curated by ${exhibition.owner.name}.`,
+    description,
+    openGraph: {
+      title: `${exhibition.title} — SANAA`,
+      description,
+      type: "website",
+      images,
+    },
+    twitter: {
+      card: images.length ? "summary_large_image" : "summary",
+      title: `${exhibition.title} — SANAA`,
+      description,
+      images: images.map((image) => image.url),
+    },
   };
 }
 
@@ -32,6 +64,16 @@ export default async function PublicExhibitionPage({ params }: RouteProps) {
   const { slug } = await params;
   const exhibition = await findPublishedExhibition(slug);
   if (!exhibition) notFound();
+
+  // Password-protected: the unlock cookie (set by /unlock after the
+  // password is checked) is the only way in — without it, the password
+  // screen shows and the works are never sent to the browser.
+  if (exhibition.visibility === "password") {
+    const store = await cookies();
+    if (!store.get(`sanaa_exh_${exhibition.id}`)) {
+      return <ExhibitionPasswordGate exhibitionId={exhibition.id} title={exhibition.title} />;
+    }
+  }
 
   await db.exhibition.update({
     where: { id: exhibition.id },

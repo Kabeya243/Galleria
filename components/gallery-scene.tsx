@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3 } from "three";
+import { ACESFilmicToneMapping, AdditiveBlending, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, surfacePBR, type RenderQuality } from "@/lib/render-quality";
@@ -610,8 +610,17 @@ function FramePhotoSkin({
         hTex.needsUpdate = true;
         const vTex = texture.clone();
         vTex.wrapS = RepeatWrapping;
-        vTex.repeat.set(uV, vRepeat);
-        vTex.offset.set(0, vOffset);
+        // Vertical bars: turn the texture 90 deg so the grain follows
+        // the moulding's length, as it does on the horizontal bars.
+        // The mesh is already turned 90 deg, so the strip's long axis
+        // (U, the grain) would otherwise run across the bar. Rotating
+        // the texture swaps U/V, so the repeat and the band offset swap
+        // with it: the band slice (vRepeat / vOffset) moves to U, the
+        // along-bar repeat (uV) moves to V.
+        vTex.center.set(0.5, 0.5);
+        vTex.rotation = Math.PI / 2;
+        vTex.repeat.set(vRepeat, uV);
+        vTex.offset.set(vOffset, 0);
         vTex.needsUpdate = true;
         return { key: li, skinZ, outerW, innerH, bandW, yTop, xSide, hTex, vTex };
       })
@@ -1807,14 +1816,16 @@ function ElementMesh({
             <meshStandardMaterial color={element.color} roughness={0.75} />
           </mesh>
           {/* Slim lever handle: a small rose and a horizontal lever in
-              dark bronze, at hand height on the right of the panel. */}
+              warm polished bronze, at hand height on the right of the
+              panel — clearly bronze (warm, metallic, light), never
+              near-black. */}
           <mesh position={[0.62, 1.05, 0.055]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.028, 0.028, 0.02, 16]} />
-            <meshStandardMaterial color="#3a3a36" metalness={0.75} roughness={0.35} />
+            <meshStandardMaterial color="#b08d57" metalness={0.9} roughness={0.28} envMapIntensity={1.2} />
           </mesh>
           <mesh position={[0.55, 1.05, 0.075]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.013, 0.013, 0.14, 12]} />
-            <meshStandardMaterial color="#3a3a36" metalness={0.75} roughness={0.35} />
+            <meshStandardMaterial color="#b08d57" metalness={0.9} roughness={0.28} envMapIntensity={1.2} />
           </mesh>
         </group>
       )}
@@ -2222,6 +2233,90 @@ function RoomFeatures({
       skyTarget.removeFromParent();
     };
   }, [skyTarget]);
+  // Skylight glazing (gallery-skylight only): a soft sky gradient for
+  // the verrière panel, so it reads as sky through glass — deeper blue
+  // at one end, pale near the horizon — not a flat white panel.
+  const skyTexture = useMemo(() => {
+    if (typeof document === "undefined") return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const gradient = ctx.createLinearGradient(0, 0, 0, 64);
+    gradient.addColorStop(0, "#7fb2e5");
+    gradient.addColorStop(0.55, "#a9c8e8");
+    gradient.addColorStop(1, "#dcebf7");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 64);
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    return texture;
+  }, []);
+  // Daylight pool (gallery-skylight only): a soft-edged bright
+  // rectangle that lands on the parquet under the verrière, the size
+  // of the skylight opening grown by the light's spread. A point
+  // spotlight alone projects a circular cone, so this decal gives the
+  // pool its rectangular read; the real spotlight underneath makes it
+  // bright. Additive, so it reads as light on the wood, not paint.
+  // The falloff is rectangular (distance to the inner rectangle's
+  // edge), not radial, so the pool keeps the skylight's shape.
+  const poolTexture = useMemo(() => {
+    if (typeof document === "undefined") return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 192;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const image = ctx.createImageData(256, 192);
+    const innerX0 = 34;
+    const innerX1 = 222;
+    const innerY0 = 26;
+    const innerY1 = 166;
+    const feather = 26;
+    for (let y = 0; y < 192; y += 1) {
+      for (let x = 0; x < 256; x += 1) {
+        const dx = x < innerX0 ? innerX0 - x : x > innerX1 ? x - innerX1 : 0;
+        const dy = y < innerY0 ? innerY0 - y : y > innerY1 ? y - innerY1 : 0;
+        const dist = Math.max(dx, dy);
+        const t = Math.max(0, Math.min(1, 1 - dist / feather));
+        const alpha = Math.round(0.85 * t * t * (3 - 2 * t) * 255);
+        const i = (y * 256 + x) * 4;
+        image.data[i] = 255;
+        image.data[i + 1] = 244;
+        image.data[i + 2] = 214;
+        image.data[i + 3] = alpha;
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    return texture;
+  }, []);
+  // Recessed spots (gallery-skylight only): their positions, in coffer
+  // centres, and one target each — straight down at the floor below the
+  // fixture, so each warm pool lands under its own spot.
+  const recessedSpots = useMemo(
+    () => [
+      { x: -5.4, z: -2.4 },
+      { x: 4.2, z: -2.4 },
+      { x: -5.4, z: 2.4 },
+      { x: 4.2, z: 2.4 },
+    ],
+    [],
+  );
+  const recessedTargets = useMemo(() => {
+    return recessedSpots.map(({ x, z }) => {
+      const target = new Object3D();
+      target.position.set(x, 0, z);
+      return target;
+    });
+  }, [recessedSpots]);
+  useEffect(() => {
+    return () => {
+      recessedTargets.forEach((target) => target.removeFromParent());
+    };
+  }, [recessedTargets]);
   if (layout === "cube") {
     // Ceiling track rails running the depth of the room, with spot heads.
     return (
@@ -2640,20 +2735,43 @@ function RoomFeatures({
           <boxGeometry args={[0.14, beamD + 0.04, skyZ1 - skyZ0]} />
           <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
         </mesh>
-        {/* Sky: a bright emissive panel at the top of the light well. */}
+        {/* Sky: a glazed verrière, not a flat white panel — a soft sky
+            gradient (deeper blue to pale) behind white muntins, so it
+            reads as a window with glass panes. The muntins sit just
+            below the panel, dividing it into six panes. */}
         <mesh position={[0, height - 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <planeGeometry args={[skyX1 - skyX0, skyZ1 - skyZ0]} />
-          <meshStandardMaterial color="#eef4ff" emissive="#dfe9ff" emissiveIntensity={1.2} side={DoubleSide} />
+          <meshStandardMaterial
+            map={skyTexture ?? undefined}
+            color="#ffffff"
+            emissive="#ffffff"
+            emissiveMap={skyTexture ?? undefined}
+            emissiveIntensity={1.1}
+            side={DoubleSide}
+          />
+        </mesh>
+        {[-0.6, 0.6].map((x) => (
+          <mesh key={`mull-v-${x}`} position={[x, height - 0.27, 0]}>
+            <boxGeometry args={[0.05, 0.03, skyZ1 - skyZ0]} />
+            <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
+          </mesh>
+        ))}
+        <mesh position={[0, height - 0.27, 0]}>
+          <boxGeometry args={[skyX1 - skyX0, 0.03, 0.05]} />
+          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
         </mesh>
         {/* Daylight: a real spotlight falling straight down through the
-            verrière, so a pool of daylight lands on the parquet. */}
+            verrière, so a pool of daylight lands on the parquet. Narrower
+            and much stronger than before (the old wide, soft cone washed
+            out against the ambient and left no distinct pool), with a
+            harder edge so the pool reads. */}
         <primitive object={skyTarget} />
         <spotLight
-          position={[0, height - 0.4, 0]}
+          position={[0, height - 0.3, 0]}
           target={skyTarget}
-          angle={0.55}
-          penumbra={0.75}
-          intensity={50}
+          angle={0.4}
+          penumbra={0.45}
+          intensity={180}
           distance={16}
           color="#e8f0ff"
           castShadow={shadows ?? true}
@@ -2664,6 +2782,52 @@ function RoomFeatures({
           shadow-camera-near={0.5}
           shadow-camera-far={16}
         />
+        {/* Rectangular daylight pool on the parquet, under the verrière:
+            the size of the skylight opening grown by the light's spread.
+            A point spotlight projects a circular cone, so this soft
+            decal gives the pool the skylight's rectangular shape; the
+            brightened spotlight above makes it real light. */}
+        {poolTexture && (
+          <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+            <planeGeometry args={[4.4, 3.0]} />
+            <meshBasicMaterial
+              map={poolTexture}
+              transparent
+              opacity={0.55}
+              blending={AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
+        {/* Recessed ceiling spots in the coffers: the room's "Ceiling
+            spotlights · Spot Warm" setting now has visible luminaires —
+            a dark housing ring and a warm glowing lens set into the
+            coffer ceiling, each with its own warm spotlight, so the
+            ceiling is never bare and warm pools land on the parquet.
+            They sit in coffer centres (never on a beam, never crossing
+            one), around the skylight. */}
+        {recessedSpots.map(({ x, z }, i) => (
+          <group key={`recessed-${x}-${z}`}>
+            <primitive object={recessedTargets[i]} />
+            <mesh position={[x, height - 0.26, z]}>
+              <cylinderGeometry args={[0.1, 0.1, 0.04, 20]} />
+              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
+            </mesh>
+            <mesh position={[x, height - 0.29, z]}>
+              <cylinderGeometry args={[0.065, 0.065, 0.02, 20]} />
+              <meshStandardMaterial color="#ffd9a0" emissive="#ffcf8a" emissiveIntensity={1.6} />
+            </mesh>
+            <spotLight
+              position={[x, height - 0.3, z]}
+              target={recessedTargets[i]}
+              angle={0.5}
+              penumbra={0.6}
+              intensity={28}
+              distance={9}
+              color="#ffd9a0"
+            />
+          </group>
+        ))}
       </group>
     );
   }
@@ -3568,6 +3732,31 @@ function ElementDropHandler({
   return null;
 }
 
+// Teleport target for the exhibition minimap (public viewer): a point
+// to walk to, in the target room's local coordinates, with the yaw to
+// face once there. `nonce` changes on every teleport request so the
+// same artwork can be re-targeted. The scene switches rooms first when
+// needed, then walks — never a blind jump through a wall.
+export type TeleportTarget = {
+  roomId: string;
+  x: number;
+  z: number;
+  yaw: number;
+  nonce: number;
+};
+
+/** Stand 2.2 m in front of an artwork and face it — the same geometry
+    as clicking the artwork in walk mode. Returns room-local coords. */
+export function artworkStandPoint(artwork: Artwork): { x: number; z: number; yaw: number } {
+  const nx = Math.sin(artwork.rotation);
+  const nz = Math.cos(artwork.rotation);
+  return {
+    x: artwork.position[0] + nx * 2.2,
+    z: artwork.position[2] + nz * 2.2,
+    yaw: Math.atan2(nx, nz),
+  };
+}
+
 export default function GalleryScene({
   artworks,
   selectedId,
@@ -3596,6 +3785,9 @@ export default function GalleryScene({
   showGrid,
   showMeasure,
   multiSelectedIds,
+  teleportTarget,
+  quality: controlledQuality,
+  onQualityChange,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -3610,6 +3802,13 @@ export default function GalleryScene({
   onFloorClick?: (point: Vector3) => void;
   walking?: boolean;
   resetSignal?: React.RefObject<number>;
+  // Minimap teleport (public viewer, walk mode): walk to this point.
+  teleportTarget?: TeleportTarget | null;
+  // Controlled render quality (public viewer entry screen): when the
+  // parent passes a quality, it owns the choice; otherwise the scene
+  // keeps its own state (editor, tools).
+  quality?: RenderQuality;
+  onQualityChange?: (quality: RenderQuality) => void;
   // Interior view: the camera starts inside the room and orbits from within,
   // so the visitor arrives directly in the gallery instead of looking at a
   // closed box from outside. The exterior (garden, doors, buildings) is a
@@ -3656,6 +3855,38 @@ export default function GalleryScene({
   const destination = useRef<Vector3 | null>(null);
   const lookYaw = useRef<number | null>(null);
   const dragged = useRef(false);
+  // Minimap teleport: a target in another room first switches rooms
+  // (the camera re-enters at that room's entrance), then the pending
+  // target is walked to once the room is active.
+  const pendingTeleport = useRef<TeleportTarget | null>(null);
+  const activeRoomIdRef = useRef(activeRoomId ?? room.id);
+  activeRoomIdRef.current = activeRoomId ?? room.id;
+  useEffect(() => {
+    if (!teleportTarget || !walkMode) return;
+    const targetRoomIndex = sceneRooms.findIndex((sceneRoom) => sceneRoom.id === teleportTarget.roomId);
+    if (targetRoomIndex < 0) return;
+    const worldX = offsets[targetRoomIndex] + teleportTarget.x;
+    if (teleportTarget.roomId === activeRoomIdRef.current) {
+      destination.current = new Vector3(worldX, 0, teleportTarget.z);
+      lookYaw.current = teleportTarget.yaw;
+      pendingTeleport.current = null;
+    } else {
+      pendingTeleport.current = teleportTarget;
+      onRoomChange?.(teleportTarget.roomId);
+    }
+    // Intentionally only on the teleport request (nonce), not on room
+    // changes — the room-change effect below picks up the pending target.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teleportTarget?.nonce]);
+  useEffect(() => {
+    const pending = pendingTeleport.current;
+    if (!pending || pending.roomId !== (activeRoomId ?? room.id)) return;
+    const targetRoomIndex = sceneRooms.findIndex((sceneRoom) => sceneRoom.id === pending.roomId);
+    if (targetRoomIndex < 0) return;
+    destination.current = new Vector3(offsets[targetRoomIndex] + pending.x, 0, pending.z);
+    lookYaw.current = pending.yaw;
+    pendingTeleport.current = null;
+  }, [activeRoomId, offsets, room.id, sceneRooms]);
   // Editor drag state: set on pointerdown on an artwork (or its resize
   // handle), read by DragHandler on every pointer move, cleared on
   // pointerup. While a drag is active the orbit controls stay off, so the
@@ -3670,15 +3901,22 @@ export default function GalleryScene({
   // Initialised to High for SSR, then corrected on mount from storage
   // so the server render never mismatches the client. Toggling
   // mid-session only flips light/env flags — the Canvas itself is never
-  // remounted, so walk mode, drags and selection keep working.
-  const [quality, setQuality] = useState<RenderQuality>("high");
+  // remounted, so walk mode, drags and selection keep working. When the
+  // parent controls the quality (public entry screen), its value wins.
+  const [internalQuality, setInternalQuality] = useState<RenderQuality>("high");
+  const quality = controlledQuality ?? internalQuality;
   useEffect(() => {
-    setQuality(loadRenderQuality());
-  }, []);
+    if (controlledQuality) return;
+    setInternalQuality(loadRenderQuality());
+  }, [controlledQuality]);
   const handleQualityChange = useCallback((next: RenderQuality) => {
-    setQuality(next);
+    if (onQualityChange) {
+      onQualityChange(next);
+    } else {
+      setInternalQuality(next);
+    }
     saveRenderQuality(next);
-  }, []);
+  }, [onQualityChange]);
   const qualityCfg = RENDER_QUALITY_CONFIG[quality];
 
   // Every selected id (primary + multi-selection): any of them may start

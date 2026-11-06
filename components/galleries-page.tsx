@@ -222,7 +222,13 @@ export default function GalleriesPage({
     setOpening(layout);
     setOpenError(null);
     try {
-      const createResponse = await fetch("/api/exhibitions", { method: "POST" });
+      const createResponse = await fetch("/api/exhibitions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // The title is mandatory (feature 7): the room's own label names
+        // the show, and the PUT below still seeds this layout's room.
+        body: JSON.stringify({ title: roomLayouts[layout].label }),
+      });
       if (createResponse.status === 401) {
         window.location.assign("/login");
         return;

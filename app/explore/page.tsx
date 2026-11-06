@@ -24,6 +24,7 @@ async function findOtherPublicExhibitions(viewerId?: string): Promise<ExploreExh
   const exhibitions = await db.exhibition.findMany({
     where: {
       status: "public",
+      visibility: "public",
       ...(viewerId ? { ownerId: { not: viewerId } } : {}),
     },
     include: {

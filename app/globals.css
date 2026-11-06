@@ -429,15 +429,14 @@ button { color: inherit; }
   .editor-properties-panel { padding-right: 11px; padding-left: 11px; }
 }
 @media (max-width: 850px) {
-  .sidebar { width: 60px; min-width: 60px; align-items: center; padding: 21px 8px 12px; }
-  .brand-name, .workspace-copy, .workspace-switcher > svg, .nav-section-label, .nav-item:not(.active)::after, .nav-item { font-size: 0; }
-  .workspace-switcher { margin-top: 28px; padding: 5px; border: 0; }
-  .workspace-avatar { width: 31px; height: 31px; }
-  .side-nav, .sidebar-bottom { width: 100%; justify-items: center; margin-top: 14px; }
-  .nav-item { width: 39px; height: 39px; min-height: 39px; justify-content: center; padding: 0; }
-  .nav-item svg { width: 17px; height: 17px; }
-  .nav-count, .profile-copy, .profile-chip > svg { display: none; }
-  .profile-chip { justify-content: center; width: 100%; }
+  /* The sidebar is a slide-over opened from the floating button in
+     components/sidebar.tsx — it no longer eats the screen as a narrow
+     icon rail on tablet and mobile. */
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 90; width: min(300px, 84vw); min-width: 0; height: 100vh; height: 100dvh; transform: translateX(-105%); transition: transform .25s ease; box-shadow: 0 0 40px rgba(20, 20, 20, .25); }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-nav-toggle { display: grid; }
+  .sidebar-backdrop { display: block; }
+  .nav-item { min-height: 44px; }
   .editor-workspace { grid-template-columns: 175px minmax(280px, 1fr); }
   .editor-properties-panel { display: none; }
   .featured-exhibition { grid-template-columns: 1fr 1fr; }
@@ -543,7 +542,6 @@ button { color: inherit; }
   .auth-form-panel { min-height: 100vh; padding: 35px 22px; }
   .auth-mobile-brand { display: inline-flex; margin-bottom: 48px; }
   .auth-form-wrap h1 { font-size: 24px; }
-  .sidebar { width: 49px; min-width: 49px; padding-right: 5px; padding-left: 5px; }
   .brand-mark { width: 26px; height: 26px; }
   .workspace-switcher { margin-top: 25px; }
   .topbar { height: 55px; padding: 0 15px; }
@@ -569,6 +567,9 @@ button { color: inherit; }
   .editor-back { width: 25px; }
   .editor-brand { display: none; }
   .editor-separator, .editor-title span, .subtle-edit-button, .saved-state, .editor-secondary-button:first-of-type { display: none; }
+  /* The title input is 220px wide by default — at 320px it would push
+     the Save / Publish buttons off-screen, so it shrinks here. */
+  .editor-title-input { min-width: 0; width: 96px; }
   .editor-title strong { max-width: 105px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
   .editor-top-actions { gap: 5px; }
   .editor-secondary-button, .editor-publish-button { height: 29px; padding: 0 7px; font-size: 8px; }
@@ -1297,4 +1298,39 @@ html[data-admin-collapsed="true"] .ad-nav-item { justify-content: center; paddin
 }
 @media (max-width: 520px) {
   .ad-grid-stats { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Navigation & IA (Phase 1): grouped sidebar, hub pages, mobile      */
+/* slide-over. Reuses the existing tokens and classes only — no new    */
+/* palette, fonts or restyle.                                         */
+/* ------------------------------------------------------------------ */
+
+/* The seven nav groups scroll inside the sidebar when they outgrow
+   the viewport, so the profile block at the bottom stays reachable. */
+.side-nav-groups { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* Group headers are links to the hub pages. They keep the section-label
+   look; the active area's header gets the same soft highlight as an
+   active nav item. */
+.nav-group-link { display: block; margin-top: 24px; margin-bottom: 11px; padding: 6px 10px; border-radius: 6px; }
+.nav-group-link:hover { color: var(--ink); }
+.nav-group-link.active { background: var(--accent-soft); color: var(--ink); }
+
+/* Hub cards that are not working tools: a plain, non-clickable block
+   with an honest status badge — never a fake button or a dead link. */
+.hub-dev-badge { display: inline-flex; align-items: center; width: fit-content; margin-top: auto; padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+
+/* Mobile navigation: a floating button (bottom-right, 48px touch
+   target) that opens the sidebar as a slide-over. Hidden on desktop,
+   where the sidebar is always visible. */
+.mobile-nav-toggle { display: none; position: fixed; right: 16px; bottom: 16px; z-index: 80; width: 48px; height: 48px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--ink); color: var(--paper); box-shadow: 0 4px 16px rgba(20, 20, 20, .25); cursor: pointer; }
+.mobile-nav-toggle:hover { background: #000; }
+.sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 85; border: 0; padding: 0; background: rgba(20, 20, 20, .45); cursor: pointer; }
+
+/* Hub card grids go down to one column on narrow phones, so nothing
+   overflows at 320px. */
+@media (max-width: 620px) {
+  .galleries-grid { grid-template-columns: 1fr; }
+  .galleries-nav a:not(.galleries-signin) { display: none; }
 }

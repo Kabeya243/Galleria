@@ -3,8 +3,10 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
-import { useEffect, useMemo, useRef, useState, Suspense } from "react";
-import { BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, PlaneGeometry, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { ACESFilmicToneMapping, BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, surfacePBR, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
 import { resolveFrameSpec, shadeHex } from "@/lib/demo-data";
 import type { FrameSpec, FrameTextureKind } from "@/lib/demo-data";
@@ -149,7 +151,7 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
   return texture;
 }
 
-function GallerySpotlight({ x, y, z, targetZ, targetPoint, color = "#fff0d6", intensity = 22, lightOn = true }: { x: number; y: number; z: number; targetZ: number; targetPoint?: [number, number, number]; color?: string; intensity?: number; lightOn?: boolean }) {
+function GallerySpotlight({ x, y, z, targetZ, targetPoint, color = "#fff0d6", intensity = 22, lightOn = true, castShadow = false, shadowMapSize = 1024 }: { x: number; y: number; z: number; targetZ: number; targetPoint?: [number, number, number]; color?: string; intensity?: number; lightOn?: boolean; castShadow?: boolean; shadowMapSize?: number }) {
   const target = useMemo(() => new Object3D(), []);
   useEffect(() => {
     if (targetPoint) target.position.set(targetPoint[0], targetPoint[1], targetPoint[2]);
@@ -169,6 +171,13 @@ function GallerySpotlight({ x, y, z, targetZ, targetPoint, color = "#fff0d6", in
           intensity={intensity}
           distance={14}
           color={color}
+          castShadow={castShadow}
+          shadow-mapSize-width={shadowMapSize}
+          shadow-mapSize-height={shadowMapSize}
+          shadow-bias={-0.0002}
+          shadow-normalBias={0.02}
+          shadow-camera-near={0.5}
+          shadow-camera-far={14}
         />
       )}
       <mesh position={[x, y + 0.02, z]}>
@@ -176,6 +185,143 @@ function GallerySpotlight({ x, y, z, targetZ, targetPoint, color = "#fff0d6", in
         <meshStandardMaterial color="#f4ead5" emissive="#f4ead5" emissiveIntensity={lightOn ? 0.65 : 0.25} />
       </mesh>
     </>
+  );
+}
+
+// --- Photorealism pass (Nov 2026) -----------------------------------------
+// The renderer is Three.js in the browser: ACES tone mapping, a locally
+// generated environment map (RoomEnvironment + PMREM — no external HDR
+// fetch), real-time PCFSoft shadows from the artwork spotlights, PBR
+// surfaces and cheap contact decals. The white-gallery UI is untouched;
+// only the 3D render quality changes.
+
+// ACESFilmic tone mapping + PCFSoft shadow maps, applied to the
+// renderer's GL context. Lives inside the Canvas so it can react when
+// the quality setting (and therefore the exposure) changes mid-session.
+function ToneMappingRig({ exposure }: { exposure: number }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.toneMapping = ACESFilmicToneMapping;
+    gl.toneMappingExposure = exposure;
+    gl.shadowMap.type = PCFSoftShadowMap;
+  }, [gl, exposure]);
+  return null;
+}
+
+// Environment lighting without any network fetch: three's RoomEnvironment
+// rendered once through a PMREM generator. Gives polished floors and
+// metal frames their reflections and lifts the ambient light, so the
+// flat ambientLight can be turned down while the env is on.
+function LocalEnvironment({ enabled, intensity }: { enabled: boolean; intensity: number }) {
+  const { gl, scene } = useThree();
+  useEffect(() => {
+    if (!enabled) {
+      scene.environment = null;
+      scene.environmentIntensity = 1;
+      return;
+    }
+    const pmrem = new PMREMGenerator(gl);
+    const envScene = new RoomEnvironment();
+    const renderTarget = pmrem.fromScene(envScene, 0.04);
+    scene.environment = renderTarget.texture;
+    scene.environmentIntensity = intensity;
+    return () => {
+      scene.environment = null;
+      scene.environmentIntensity = 1;
+      renderTarget.dispose();
+      pmrem.dispose();
+    };
+  }, [gl, scene, enabled, intensity]);
+  return null;
+}
+
+// Cheap contact shadow: a soft radial-gradient decal on the floor under
+// a freestanding element (plinth, bench, partition, vitrine, ...). Real
+// spot shadows do the heavy lifting; the decal only grounds the object
+// where the spots do not reach. One shared canvas texture for all decals.
+let contactDecalTexture: CanvasTexture | null = null;
+function getContactDecalTexture(): CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  if (contactDecalTexture) return contactDecalTexture;
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  const gradient = context.createRadialGradient(64, 64, 4, 64, 64, 62);
+  gradient.addColorStop(0, "rgba(0, 0, 0, 0.42)");
+  gradient.addColorStop(0.55, "rgba(0, 0, 0, 0.18)");
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 128, 128);
+  contactDecalTexture = new CanvasTexture(canvas);
+  return contactDecalTexture;
+}
+
+function ContactDecal({ width, depth }: { width: number; depth: number }) {
+  const texture = useMemo(() => getContactDecalTexture(), []);
+  if (!texture) return null;
+  return (
+    <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null} renderOrder={1}>
+      <planeGeometry args={[width, depth]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} />
+    </mesh>
+  );
+}
+
+// Render-quality switch (High / Medium / Low), overlaid on the viewer.
+// Rendered by GalleryScene itself so it appears in the editor, the
+// public exhibition and the galleries page without touching any of
+// those components. Inline styles only — the global stylesheet and the
+// white-gallery design are untouched.
+function RenderQualityToggle({ quality, onChange }: { quality: RenderQuality; onChange: (quality: RenderQuality) => void }) {
+  return (
+    <div
+      role="group"
+      aria-label="Render quality"
+      title="Render quality — High: shadows, reflections and environment lighting on. Medium: smaller shadow maps. Low: shadows and environment off."
+      style={{
+        position: "absolute",
+        top: 12,
+        right: 12,
+        zIndex: 20,
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+        padding: 3,
+        borderRadius: 999,
+        background: "rgba(255, 255, 255, 0.92)",
+        boxShadow: "0 1px 6px rgba(0, 0, 0, 0.14)",
+        fontSize: 11,
+        lineHeight: 1,
+        color: "#555550",
+        userSelect: "none",
+      }}
+    >
+      <span style={{ padding: "0 6px 0 8px", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 10 }}>Quality</span>
+      {RENDER_QUALITIES.map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={quality === option}
+          onClick={(event) => {
+            event.stopPropagation();
+            onChange(option);
+          }}
+          style={{
+            border: "none",
+            cursor: "pointer",
+            borderRadius: 999,
+            padding: "5px 9px",
+            fontSize: 11,
+            background: quality === option ? "#2b2b28" : "transparent",
+            color: quality === option ? "#ffffff" : "#555550",
+          }}
+        >
+          {RENDER_QUALITY_LABELS[option]}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -246,9 +392,9 @@ function useTiledFrameMaterial(spec: FrameSpec, repeatX: number, repeatY: number
 
 function FrameBar({ size, position, material }: { size: [number, number, number]; position: [number, number, number]; material: { map?: CanvasTexture; color: string; metalness: number; roughness: number; opacity?: number } }) {
   return (
-    <mesh position={position}>
+    <mesh position={position} castShadow>
       <boxGeometry args={size} />
-      <meshStandardMaterial map={material.map} color={material.color} metalness={material.metalness} roughness={material.roughness} transparent={material.opacity !== undefined && material.opacity < 1} opacity={material.opacity ?? 1} />
+      <meshStandardMaterial map={material.map} color={material.color} metalness={material.metalness} roughness={material.roughness} envMapIntensity={material.metalness > 0.5 ? 1.2 : 0.6} transparent={material.opacity !== undefined && material.opacity < 1} opacity={material.opacity ?? 1} />
     </mesh>
   );
 }
@@ -578,6 +724,7 @@ function WallWithOpening({
   highlight,
   onWallClick,
   dragged,
+  pbr,
 }: {
   x: number;
   depth: number;
@@ -591,12 +738,15 @@ function WallWithOpening({
   highlight?: boolean;
   onWallClick?: (wallId: WallId) => void;
   dragged?: React.RefObject<boolean>;
+  // PBR finish for the wall surface (from the room's wall texture).
+  pbr?: { roughness: number; envMapIntensity: number };
 }) {
   const wallThickness = 0.22;
   const materialProps = {
     color,
     map: texture,
-    roughness: 0.88,
+    roughness: pbr?.roughness ?? 0.88,
+    envMapIntensity: pbr?.envMapIntensity ?? 0.12,
     emissive: highlight ? "#a67c37" : "#000000",
     emissiveIntensity: highlight ? 0.16 : 0,
   } as const;
@@ -1114,6 +1264,7 @@ function ElementMesh({
   editable,
   onDragStart,
   onHoverChange,
+  quality,
 }: {
   element: RoomElement;
   room: GalleryRoom;
@@ -1126,10 +1277,12 @@ function ElementMesh({
   editable?: boolean;
   onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
   onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
+  quality?: RenderQuality;
 }) {
   const { height } = roomLayouts[room.layout];
   const interactive = editable && !walkable;
   const plane = ELEMENT_PLANES[element.type];
+  const qualityCfg = RENDER_QUALITY_CONFIG[quality ?? "high"];
   // Wall-text geometry: title lines + body, laid out per the element's
   // layout choice. The panel is the text itself (no backing board — the
   // letters sit straight on the wall, like the reference photo).
@@ -1222,6 +1375,12 @@ function ElementMesh({
         onDragStart?.(element.id, "move", event);
       }}
     >
+      {/* Contact decal: grounds freestanding furniture on the floor
+          where the ceiling spots do not reach. Wall/ceiling pieces
+          (plane !== "floor") stand on nothing, so they get none. */}
+      {qualityCfg.contactDecals && plane === "floor" && (
+        <ContactDecal width={Math.max(1.2, outline.size[0] * 0.9)} depth={Math.max(1.0, outline.size[2] * 0.9)} />
+      )}
       {element.type === "partition" && (
         <group>
           {/* Small feet, then a base plinth, then the wall panel — the
@@ -1404,6 +1563,13 @@ function ElementMesh({
                   intensity={18}
                   distance={12}
                   color={element.color}
+                  castShadow={qualityCfg.trackLightShadows}
+                  shadow-mapSize-width={512}
+                  shadow-mapSize-height={512}
+                  shadow-bias={-0.0002}
+                  shadow-normalBias={0.02}
+                  shadow-camera-near={0.5}
+                  shadow-camera-far={12}
                 />
               </group>
             );
@@ -2085,6 +2251,7 @@ function GalleryRoom({
   showGrid,
   showMeasure,
   multiSelectedIds,
+  quality,
 }: {
   room: GalleryRoom;
   offsetX: number;
@@ -2114,6 +2281,8 @@ function GalleryRoom({
   // 3D builder (editor): extra ids of a multi-selection, so every
   // selected item shows its outline and resize handle.
   multiSelectedIds?: string[];
+  // Photorealism: render-quality tier driving shadows, env and decals.
+  quality?: RenderQuality;
 }) {
   const { width, depth, height } = roomLayouts[room.layout];
   const wallZ = -depth / 2;
@@ -2125,6 +2294,12 @@ function GalleryRoom({
   const rightColor = paint.right ?? room.sideWallColor;
   const frontColor = paint.front ?? room.sideWallColor;
   const lights = LIGHT_PRESETS[room.lightType ?? "spot-warm"];
+  // Photorealism: PBR finishes per surface (the procedural canvas
+  // textures stay the colour maps) and the quality tier's shadow sizes.
+  const qualityCfg = RENDER_QUALITY_CONFIG[quality ?? "high"];
+  const floorPBR = surfacePBR(room.floorTexture, "floor");
+  const wallPBR = surfacePBR(room.wallTexture, "wall");
+  const ceilingPBR = surfacePBR(room.ceilingTexture, "ceiling");
   const wallHighlight = (wallId: string) => selectedWallId === wallId;
   const handleWallClick = (wallId: WallId | string) => {
     if (!editable || !onWallSelect || dragged?.current) return;
@@ -2172,7 +2347,7 @@ function GalleryRoom({
     <group position={[offsetX, 0, 0]}>
       <mesh position={[0, height - 0.12, roomDepthCenter]} receiveShadow>
         <boxGeometry args={[width, 0.24, roomDepth]} />
-        <meshStandardMaterial color={room.ceilingColor} map={ceilingTexture} roughness={0.9} />
+        <meshStandardMaterial color={room.ceilingColor} map={ceilingTexture} roughness={ceilingPBR.roughness} envMapIntensity={ceilingPBR.envMapIntensity} />
       </mesh>
       <mesh
         position={[0, -0.09, roomDepthCenter]}
@@ -2184,12 +2359,12 @@ function GalleryRoom({
         }}
       >
         <boxGeometry args={[width, 0.18, roomDepth]} />
-        <meshStandardMaterial attach="material-0" color={room.floorColor} roughness={0.9} />
-        <meshStandardMaterial attach="material-1" color={room.floorColor} roughness={0.9} />
-        <meshStandardMaterial attach="material-2" color={room.floorColor} map={floorTexture} roughness={0.9} />
-        <meshStandardMaterial attach="material-3" color={room.floorColor} roughness={0.9} />
-        <meshStandardMaterial attach="material-4" color={room.floorColor} roughness={0.9} />
-        <meshStandardMaterial attach="material-5" color={room.floorColor} roughness={0.9} />
+        <meshStandardMaterial attach="material-0" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
+        <meshStandardMaterial attach="material-1" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
+        <meshStandardMaterial attach="material-2" color={room.floorColor} map={floorTexture} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
+        <meshStandardMaterial attach="material-3" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
+        <meshStandardMaterial attach="material-4" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
+        <meshStandardMaterial attach="material-5" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
       </mesh>
       <mesh
         position={[0, height / 2, wallZ]}
@@ -2201,7 +2376,7 @@ function GalleryRoom({
         }}
       >
         <boxGeometry args={[width, height, 0.25]} />
-        <meshStandardMaterial color={backColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("back") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("back") ? 0.16 : 0} />
+        <meshStandardMaterial color={backColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("back") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("back") ? 0.16 : 0} />
       </mesh>
       <WallWithOpening
         x={-width / 2}
@@ -2214,6 +2389,7 @@ function GalleryRoom({
         highlight={wallHighlight("left")}
         onWallClick={editable ? handleWallClick : undefined}
         dragged={dragged}
+        pbr={wallPBR}
       />
       <WallWithOpening
         x={width / 2}
@@ -2226,6 +2402,7 @@ function GalleryRoom({
         highlight={wallHighlight("right")}
         onWallClick={editable ? handleWallClick : undefined}
         dragged={dragged}
+        pbr={wallPBR}
       />
       {isCurved ? (
         <mesh
@@ -2238,7 +2415,7 @@ function GalleryRoom({
           }}
         >
           <cylinderGeometry args={[curveRadius, curveRadius, height, 64, 1, true, -curveHalfAngle, curveHalfAngle * 2]} />
-          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} side={DoubleSide} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} side={DoubleSide} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
       ) : entrance ? (
         <group position={[0, 0, depth / 2]}>
@@ -2252,7 +2429,7 @@ function GalleryRoom({
             }}
           >
             <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
           </mesh>
           <mesh
             position={[(width + 1.65) / 4, height / 2, 0]}
@@ -2264,11 +2441,11 @@ function GalleryRoom({
             }}
           >
             <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
           </mesh>
           <mesh position={[0, (height + 2.5) / 2, 0]} receiveShadow>
             <boxGeometry args={[1.65, height - 2.5, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} />
           </mesh>
         </group>
       ) : (
@@ -2282,7 +2459,7 @@ function GalleryRoom({
           }}
         >
           <boxGeometry args={[width, height, 0.22]} />
-          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={0.88} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
       )}
       {room.partitionWalls.map((wall) => (
@@ -2302,7 +2479,7 @@ function GalleryRoom({
               ? [wall.length, height - 0.25, 0.18]
               : [0.18, height - 0.25, wall.length]}
           />
-          <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={0.88} emissive={wallHighlight(wall.id) ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
+          <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight(wall.id) ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
         </mesh>
       ))}
       {room.spotlights && (artworks.length > 0 ? (
@@ -2326,6 +2503,8 @@ function GalleryRoom({
               color={lights.spotColor}
               intensity={lights.spotIntensity}
               lightOn={room.lightType !== "ambient"}
+              castShadow={qualityCfg.shadows}
+              shadowMapSize={qualityCfg.spotShadowMapSize}
             />
           );
         })
@@ -2333,7 +2512,7 @@ function GalleryRoom({
         Array.from({ length: Math.max(2, Math.floor(width / 5)) }, (_, index) => {
           const spots = Math.max(2, Math.floor(width / 5));
           const x = -width / 2 + ((index + 1) * width) / (spots + 1);
-          return <GallerySpotlight key={index} x={x} y={height - 0.2} z={0} targetZ={wallZ + 1} color={lights.spotColor} intensity={lights.spotIntensity} lightOn={room.lightType !== "ambient"} />;
+          return <GallerySpotlight key={index} x={x} y={height - 0.2} z={0} targetZ={wallZ + 1} color={lights.spotColor} intensity={lights.spotIntensity} lightOn={room.lightType !== "ambient"} castShadow={qualityCfg.shadows} shadowMapSize={qualityCfg.spotShadowMapSize} />;
         })
       ))}
       {room.curatorialText && (
@@ -2359,6 +2538,7 @@ function GalleryRoom({
           editable={editable}
           onDragStart={onElementDragStart}
           onHoverChange={onElementHover}
+          quality={quality}
         />
       ))}
     </group>
@@ -2928,6 +3108,22 @@ export default function GalleryScene({
   const [dragCursor, setDragCursor] = useState<string | null>(null);
   const [hoveredArtwork, setHoveredArtwork] = useState<{ id: string; cursor: string } | null>(null);
 
+  // Photorealism: render-quality tier (High / Medium / Low), persisted
+  // per user in localStorage. Defaults to Medium on touch devices.
+  // Initialised to High for SSR, then corrected on mount from storage
+  // so the server render never mismatches the client. Toggling
+  // mid-session only flips light/env flags — the Canvas itself is never
+  // remounted, so walk mode, drags and selection keep working.
+  const [quality, setQuality] = useState<RenderQuality>("high");
+  useEffect(() => {
+    setQuality(loadRenderQuality());
+  }, []);
+  const handleQualityChange = useCallback((next: RenderQuality) => {
+    setQuality(next);
+    saveRenderQuality(next);
+  }, []);
+  const qualityCfg = RENDER_QUALITY_CONFIG[quality];
+
   // Every selected id (primary + multi-selection): any of them may start
   // a drag, and the editor moves the rest of the selection with it.
   const selectedIdSet = useMemo(
@@ -3066,6 +3262,7 @@ export default function GalleryScene({
         lookYaw.current = yaw;
       } : undefined}
       dragged={dragged}
+      quality={quality}
       // In walk mode the visitor stays inside: shared walls keep the single
       // door wall (no doubled wall, so no z-fighting), the outer ends are
       // solid and the front stays closed, so no void or box exterior is
@@ -3087,6 +3284,20 @@ export default function GalleryScene({
   // The active room's light mood drives the scene's ambient and
   // directional light (the per-artwork spots follow it inside GalleryRoom).
   const sceneLights = LIGHT_PRESETS[room.lightType ?? "spot-warm"];
+  // Directional shadow frustum: covers the whole multi-room span in
+  // walk mode, centred on the rooms. High quality only — one more
+  // 2048 px map is cheap, but the frustum is wide, so the shadows it
+  // throws are soft by design.
+  const dirTarget = useMemo(() => new Object3D(), []);
+  const roomSpan = useMemo(() => {
+    const minX = Math.min(...sceneRooms.map((sceneRoom, index) => offsets[index] - roomLayouts[sceneRoom.layout].width / 2));
+    const maxX = Math.max(...sceneRooms.map((sceneRoom, index) => offsets[index] + roomLayouts[sceneRoom.layout].width / 2));
+    return { centerX: (minX + maxX) / 2, halfSpan: (maxX - minX) / 2 };
+  }, [sceneRooms, offsets]);
+  useEffect(() => {
+    dirTarget.position.set(roomSpan.centerX, 0, 0);
+    return () => { dirTarget.removeFromParent(); };
+  }, [dirTarget, roomSpan]);
   // Drag vs click: a pointer that moved more than a few pixels is an
   // orbit drag, not a click — walls and artworks must not select then.
   const dragStartPoint = useRef<{ x: number; y: number } | null>(null);
@@ -3094,7 +3305,7 @@ export default function GalleryScene({
   return (
     <div
       className={`${className ?? "gallery-canvas"}${walkMode && walking ? " is-walking" : ""}`}
-      style={{ cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? hoveredElement?.cursor ?? undefined }}
+      style={{ position: "relative", cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? hoveredElement?.cursor ?? undefined }}
       onPointerDown={(event) => {
         dragStartPoint.current = { x: event.clientX, y: event.clientY };
         dragged.current = false;
@@ -3107,10 +3318,32 @@ export default function GalleryScene({
       }}
       onPointerUp={() => { dragStartPoint.current = null; }}
     >
-      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={[1, 1.6]} shadows>
+      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={qualityCfg.dpr} shadows>
         <color attach="background" args={[room.wallColor]} />
-        <ambientLight intensity={sceneLights.ambient} />
-        <directionalLight position={[-3, 8, 4]} intensity={sceneLights.directional} color={sceneLights.directionalColor} />
+        {/* The environment map carries part of the ambient light while
+            it is on, so the flat ambient is turned down to match — the
+            room's light mood (warm/cool/ambient) still drives the result. */}
+        <ambientLight intensity={qualityCfg.env ? sceneLights.ambient * 0.6 : sceneLights.ambient} />
+        <directionalLight
+          position={[roomSpan.centerX - 3, 8, 4]}
+          target={dirTarget}
+          intensity={sceneLights.directional}
+          color={sceneLights.directionalColor}
+          castShadow={qualityCfg.directionalShadows}
+          shadow-mapSize-width={qualityCfg.directionalShadowMapSize}
+          shadow-mapSize-height={qualityCfg.directionalShadowMapSize}
+          shadow-bias={-0.0002}
+          shadow-normalBias={0.03}
+          shadow-camera-near={0.5}
+          shadow-camera-far={60}
+          shadow-camera-left={-roomSpan.halfSpan - 4}
+          shadow-camera-right={roomSpan.halfSpan + 4}
+          shadow-camera-top={12}
+          shadow-camera-bottom={-12}
+        />
+        <primitive object={dirTarget} />
+        <ToneMappingRig exposure={qualityCfg.exposure} />
+        <LocalEnvironment enabled={qualityCfg.env} intensity={qualityCfg.envIntensity} />
         {sceneRooms.map((sceneRoom, index) => <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={sceneLights.pointIntensity} color={sceneLights.pointColor} />)}
         {/* Artwork textures load through Suspense so a slow image suspends
             only the artworks — never the whole room or page. */}
@@ -3152,6 +3385,7 @@ export default function GalleryScene({
           />
         )}
       </Canvas>
+      <RenderQualityToggle quality={quality} onChange={handleQualityChange} />
     </div>
   );
 }

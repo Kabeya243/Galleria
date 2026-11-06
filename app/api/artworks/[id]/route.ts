@@ -43,3 +43,22 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   await db.artwork.update({ where: { id }, data: { frame: input.frame } });
   return NextResponse.json({ ok: true, frame: input.frame });
 }
+
+// Delete one artwork — the Collection Manager's bulk delete. Ownership
+// runs through the exhibition, as above. Deleting an artwork removes it
+// from its exhibition; any SavedWork rows that reference it (collection
+// records, frame presets) are left in place and simply stop matching.
+export async function DELETE(request: Request, { params }: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Sign in to delete an artwork." }, { status: 401 });
+  const { id } = await params;
+
+  const artwork = await db.artwork.findFirst({
+    where: { id, exhibition: { ownerId: user.id } },
+    select: { id: true },
+  });
+  if (!artwork) return NextResponse.json({ error: "Artwork not found." }, { status: 404 });
+
+  await db.artwork.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

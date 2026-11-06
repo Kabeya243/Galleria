@@ -5,11 +5,11 @@ import { db } from "@/lib/db";
 
 // Persistence API for the Creative Studio tools (Mockup Studio, Color
 // Intelligence, Photography Lab, Presentation Designer, Certificate
-// Studio, Frame Studio presets). One endpoint, `kind` distinguishes the
-// tool; `data` is the tool-specific configuration as JSON. All rows are
-// scoped to the signed-in user.
+// Studio, Frame Studio presets, Collection Manager, Exhibition Planner).
+// One endpoint, `kind` distinguishes the tool; `data` is the tool-specific
+// configuration as JSON. All rows are scoped to the signed-in user.
 
-const KINDS = ["mockup", "palette", "photo-edit", "presentation", "certificate", "frame-preset", "exhibition-version"] as const;
+const KINDS = ["mockup", "palette", "photo-edit", "presentation", "certificate", "frame-preset", "exhibition-version", "collection-record", "exhibition-plan", "accessibility-pack", "education-pack"] as const;
 
 const saveSchema = z.object({
   kind: z.enum(KINDS),

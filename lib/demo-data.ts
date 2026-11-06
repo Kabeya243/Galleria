@@ -120,7 +120,7 @@ const flat = (spec: Omit<FrameSpec, "width" | "depth" | "recess" | "floatGap" | 
 });
 export const FRAME_VARIANTS = {
   none: flat({ label: "No frame", color: "#000000", metalness: 0, roughness: 1, width: 0, depth: 0 }),
-  wood: flat({ label: "Wood", color: "#9c7c54", metalness: 0, roughness: 0.75, texture: "wood" }),
+  wood: flat({ label: "Wood", color: "#9c7c54", metalness: 0, roughness: 0.75, texture: "wood", photo: "/frames/wood-box.png" }),
   metal: flat({ label: "Metal", color: "#9a9a98", metalness: 0.85, roughness: 0.35 }),
   gold: flat({ label: "Gold", color: "#a67c37", metalness: 0.9, roughness: 0.3, texture: "gold-brushed" }),
   black: flat({ label: "Black", color: "#141414", metalness: 0.1, roughness: 0.6, texture: "black-matte" }),

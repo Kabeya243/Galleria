@@ -1463,46 +1463,39 @@ function VrCameraTour({ target, active }: { target: [number, number, number] | n
             </p>
           </section>
 
-          {/* Unreal Engine — Pixel Streaming: integration point, not connected */}
-          <section style={cardStyle} aria-label="Unreal Engine Pixel Streaming">
+          {/* Unreal Engine — Pixel Streaming: PAID, not part of the free stack */}
+          <section style={cardStyle} aria-label="Unreal Engine Pixel Streaming — paid, not part of the free stack">
             <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>8 · Unreal Engine — Pixel Streaming</h2>
-            <p style={{ fontSize: 12, lineHeight: 1.6, background: "#f6f1ea", border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
-              <strong>Integration point — not connected, not a working demo.</strong> Nothing on this page streams
-              Unreal, and no stream URL is wired in yet. This section documents what that step would honestly require,
-              so it is planned, not promised.
+            <p style={{ fontSize: 12, lineHeight: 1.6, background: "#fbe9e7", border: "1px solid #d98a7a", borderRadius: 6, padding: 10 }}>
+              <strong>PAID — not part of the free stack.</strong> Pixel Streaming is NOT the path SANAA uses. It
+              requires a paid GPU cloud server running while visitors watch — an ongoing cost, not a free tool. Nothing
+              on this page streams Unreal, and no stream URL is wired in. This section exists only as a labelled
+              integration point, for completeness.
             </p>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
-              Unreal Engine does <strong>not</strong> run natively in a browser the way Three.js does. A web page
-              cannot just load an Unreal scene. Delivering Unreal quality to a browser means <strong>Pixel
-              Streaming</strong>: the packaged Unreal application runs on a remote GPU server and streams its rendered
-              frames (and audio) to the visitor&apos;s browser as video over WebRTC, with mouse / keyboard / touch input
-              travelling back. The visitor needs only a modern browser — no install, no graphics card of their own. The
-              other web route is a downloadable packaged app, not a web page at all.
+              Unreal Engine does <strong>not</strong> run natively in a browser the way Three.js does. Pixel Streaming
+              is how Unreal quality reaches a browser anyway: the packaged Unreal application runs on a remote GPU
+              server and streams its rendered frames to the visitor&apos;s browser as video over WebRTC, with input
+              travelling back. The visitor needs only a modern browser — but somebody pays for the GPU server the whole
+              time the stream is up.
             </p>
-            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>What Pixel Streaming really requires</h3>
+            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>What Pixel Streaming really requires (paid)</h3>
             <ul style={{ fontSize: 12, lineHeight: 1.8, margin: "0 0 12px", paddingLeft: 18 }}>
               <li>An Epic Games developer account, and the gallery built as an Unreal Engine project with the Pixel Streaming plugin enabled and packaged.</li>
               <li>A GPU cloud server to run it on — for example an AWS, Azure or GCP GPU instance (Epic publishes an official Pixel Streaming solution in the Azure Marketplace). The server runs while visitors are watching, so this is an <strong>ongoing cost</strong>, priced by the cloud provider — no price is stated here because it depends on the instance, region and hours used.</li>
               <li>A signalling server (the plugin ships a Node.js one) plus STUN / TURN servers so the stream can reach visitors behind home routers — see Epic&apos;s Pixel Streaming documentation at dev.epicgames.com.</li>
               <li>At scale, a matchmaker / load balancer so several visitors each get their own running instance — one stream is one running Unreal app.</li>
             </ul>
-            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>Setup steps, when the time comes</h3>
-            <ol style={{ fontSize: 12, lineHeight: 1.8, margin: "0 0 12px", paddingLeft: 18 }}>
-              <li>Build the gallery in Unreal Engine from the manifest above (section 7), RealityCapture / RealityScan models of the real space, and Fab assets for dressing.</li>
-              <li>Enable the Pixel Streaming plugin, package the project, and test the stream locally first.</li>
-              <li>Deploy the packaged app to a GPU server with the signalling server, and confirm the stream URL.</li>
-              <li>Only then wire that stream URL into SANAA as an embedded player — a future step, not part of this tool yet.</li>
-            </ol>
-            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>The practical path today — no streaming needed</h3>
+            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>The primary path — free, offline, no streaming</h3>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
-              True-to-life (&laquo; vraie réalité &raquo;) does not have to wait for a server. Use Twinmotion / Unreal
-              Engine <strong>offline</strong> to produce photorealistic renders and assets — RealityCapture / RealityScan
-              scans of real spaces and objects, Fab assets for furniture and dressing, the JSON manifest above for the
-              exact room dimensions — and feed those renders and models back into this web platform, which already shows
-              them in Three.js. That is the free-tools-first decision: RealityCapture is free under $1M annual revenue
-              and Fab has free assets, while Pixel Streaming is a paid server cost — so streaming stays a later option,
-              not the starting point. Streaming is the later step, only if the gallery must be interactive in the browser at
-              Unreal quality, and only once the GPU server cost is budgeted.
+              This is the path SANAA actually uses, and it needs no server at all: scan real spaces and objects with
+              RealityCapture / RealityScan (free under $1M annual revenue), dress the scene with Fab&apos;s free assets,
+              build the exact room from the JSON manifest above (section 7), and produce photorealistic renders and
+              models in Twinmotion / Unreal Engine <strong>offline</strong> — then feed those renders and .glb models
+              back into this web platform, which already shows them in Three.js. Streaming is only ever a later step,
+              if the gallery must be interactive in the browser at Unreal quality <em>and</em> the GPU server cost is
+              budgeted. If that day comes: build in Unreal from the manifest, enable the Pixel Streaming plugin,
+              package, deploy to a GPU server with the signalling server, and only then wire the stream URL in here.
             </p>
             <p style={{ fontSize: 11, color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
               Reference: Epic&apos;s official Pixel Streaming deployment in Azure —{" "}

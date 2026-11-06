@@ -17,6 +17,9 @@ export const ASSET_LICENSES = [
   "CC BY 4.0",
   "CC BY-SA 4.0",
   "CC BY-NC 4.0",
+  "Fab Standard — Personal",
+  "Fab Standard — Professional",
+  "Fab Standard — tier not confirmed",
   "Royalty-free (check terms)",
   "All rights reserved",
   "Unknown — do not use commercially",
@@ -24,7 +27,30 @@ export const ASSET_LICENSES = [
 
 export type AssetLicense = (typeof ASSET_LICENSES)[number];
 
-export const ASSET_SOURCES = ["upload", "image-to-3d", "reference-link", "manual"] as const;
+/** Licences a Fab listing can carry (Epic's Fab docs: "Creative Commons
+ *  Attribution (CC-BY) (Free)" and "Standard (Free or For Sale)"). The
+ *  Standard License has Personal / Professional price tiers — Professional
+ *  applies once the buyer has generated more than $100,000 USD gross
+ *  revenue from commercial activity in the last 12 months. The two tiers
+ *  grant the same scope of rights; the tier is about which price applies.
+ *  "Free" on Fab does not mean "usable for anything": always read the
+ *  licence on the listing itself. */
+export const FAB_LICENSES: AssetLicense[] = [
+  "Fab Standard — Personal",
+  "Fab Standard — Professional",
+  "Fab Standard — tier not confirmed",
+  "CC BY 4.0",
+];
+
+/** Fab Standard License does not require attribution ("You are not
+ *  required to give credit to the publisher you acquired the Fab asset
+ *  from", Fab EULA); CC-BY does — appropriate credit, a link to the
+ *  licence, and an indication of changes. */
+export function fabLicenseRequiresAttribution(license: AssetLicense): boolean {
+  return license.startsWith("CC BY");
+}
+
+export const ASSET_SOURCES = ["upload", "image-to-3d", "reference-link", "manual", "fab"] as const;
 export type AssetSource = (typeof ASSET_SOURCES)[number];
 
 export const ASSET_KINDS = ["model", "texture", "image", "reference"] as const;
@@ -53,6 +79,18 @@ export interface Asset3DRecord {
   depthStrength?: number;
   sourceUrl?: string;
   notes?: string;
+  // --- Fab catalogue fields (source "fab" only). SANAA catalogues the
+  // metadata and links out to fab.com — it never copies, hotlinks or
+  // re-hosts Fab files, and there is no public Fab download API. ---
+  /** "free" = listed free on Fab; "paid" = requires purchase. Paid assets
+   *  are labelled PAID in the UI and are never included by default. */
+  price?: "free" | "paid";
+  /** Price as shown on the Fab listing, e.g. "$12.00" (paid only). */
+  priceAmount?: string;
+  /** File format as listed on Fab, e.g. GLB, FBX, OBJ, USD. */
+  format?: string;
+  /** Triangle / polygon count, when the listing states one. */
+  polyCount?: number;
 }
 
 export const MAX_ASSET_FILE_BYTES = 50 * 1024 * 1024; // 50 MB, same as R2 uploads
@@ -306,9 +344,9 @@ export const EXTERNAL_PROVIDER_SLOTS: {
     label: "RealityCapture / RealityScan (Epic Games)",
     envVars: [],
     docs: "https://www.realityscan.com",
-    note: "Desktop photogrammetry: build a true 3D model from a set of overlapping photos. Processing happens on your own machine — there is no cloud API and no API key to paste into SANAA. Models built this way are imported back here as .glb.",
+    note: "Desktop photogrammetry: build a true 3D model from a set of overlapping photos. Processing happens on your own machine — there is no cloud API and no API key to paste into SANAA. Models built this way are imported back here as .glb. A step-by-step workflow guide is in the Image-to-3D tab.",
     setup:
-      "Setup required — not connected. 1) Sign in with an Epic Games account and install RealityScan (the current name for RealityCapture since version 2.0, June 2025) from the Epic Games Launcher onto a Windows PC — there is a headless Linux build for command-line processing, but no macOS version. 2) It is free for individuals and companies under $1M annual gross revenue; above that it is a paid seat licence (check realityscan.com for current pricing). 3) Workflow: export your photos from SANAA, align and reconstruct them in RealityScan (desktop app or its CLI), export the model as .glb, then import that .glb here. No credential is ever pasted into SANAA — the licence lives in your Epic account and the software on your machine.",
+      "Setup required — not connected. 1) Sign in with an Epic Games account and install RealityScan (the current name for RealityCapture since version 2.0, June 2025) from the Epic Games Launcher onto a Windows PC — there is a headless Linux build for command-line processing, but no macOS version. 2) It is free for individuals and companies under $1M annual gross revenue; above that it is a paid seat licence (check realityscan.com/license for the current threshold and price). 3) Workflow: export your photos from SANAA, align and reconstruct them in RealityScan (desktop app or its CLI), export the model as .glb, then import that .glb here. No credential is ever pasted into SANAA — the licence lives in your Epic account and the software on your machine.",
   },
 ];
 

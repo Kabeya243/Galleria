@@ -9,10 +9,12 @@ import {
   ASSET_LICENSES,
   ASSET_SOURCES,
   EXTERNAL_PROVIDER_SLOTS,
+  FAB_LICENSES,
   IMAGE3D_MODES,
   MARKETPLACE_REFERENCES,
   MAX_ASSET_FILE_BYTES,
   PUBLIC_DOMAIN_REFERENCES,
+  fabLicenseRequiresAttribution,
   formatBytes,
   getImage3DProvider,
   localApproximationProvider,
@@ -209,6 +211,23 @@ export default function ImageTo3D() {
   // Manual add form
   const [form, setForm] = useState({ name: "", creator: "", license: "CC0 — Public Domain" as AssetLicense, attribution: "", sourceUrl: "", notes: "" });
 
+  // Fab catalogue form — metadata only, link out. The licence is required
+  // and never assumed; paid assets are labelled PAID and never included
+  // by default.
+  const [fabForm, setFabForm] = useState({
+    url: "",
+    name: "",
+    creator: "",
+    license: "" as AssetLicense | "",
+    attribution: "",
+    price: "free" as "free" | "paid",
+    priceAmount: "",
+    format: "GLB",
+    polyCount: "",
+    notes: "",
+  });
+  const [fabError, setFabError] = useState<string | null>(null);
+
   // GLB import state
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [modelScene, setModelScene] = useState<THREE.Group | null>(null);
@@ -316,6 +335,54 @@ export default function ImageTo3D() {
     };
     await saveAsset(record, record.name);
     setForm({ name: "", creator: "", license: "CC0 — Public Domain", attribution: "", sourceUrl: "", notes: "" });
+  }
+
+  async function addFabAsset() {
+    setFabError(null);
+    const url = fabForm.url.trim();
+    if (!url || !/fab\.com/i.test(url)) {
+      setFabError("Paste the Fab asset page URL (a fab.com link). SANAA catalogues the metadata and links out — it never downloads or re-hosts the file.");
+      return;
+    }
+    if (!fabForm.name.trim()) {
+      setFabError("Give the asset a title first — copy it from the Fab listing.");
+      return;
+    }
+    if (!fabForm.license) {
+      setFabError("Choose the licence exactly as shown on the Fab listing. Never assume an asset is free to use — “free” on Fab does not mean usable for anything.");
+      return;
+    }
+    if (fabForm.price === "paid" && !fabForm.priceAmount.trim()) {
+      setFabError("This asset is paid — record its price as shown on the Fab listing.");
+      return;
+    }
+    if (fabForm.license && fabLicenseRequiresAttribution(fabForm.license) && !fabForm.attribution.trim()) {
+      setFabError("This licence is CC-BY: attribution is required. Paste the credit text the listing asks for (creator name, link to the licence, note of any changes).");
+      return;
+    }
+    const polyCount = fabForm.polyCount.trim() ? Number(fabForm.polyCount.replace(/[^0-9]/g, "")) : undefined;
+    if (fabForm.polyCount.trim() && (!polyCount || Number.isNaN(polyCount))) {
+      setFabError("Poly count must be a number (triangles), or leave it blank if the listing does not state one.");
+      return;
+    }
+    const record: Asset3DRecord = {
+      kind: "model",
+      source: "fab",
+      name: fabForm.name.trim(),
+      creator: fabForm.creator.trim() || "Unknown",
+      license: fabForm.license,
+      attribution: fabForm.attribution.trim(),
+      downloadDate: new Date().toISOString().slice(0, 10),
+      sourceUrl: url,
+      price: fabForm.price,
+      priceAmount: fabForm.price === "paid" ? fabForm.priceAmount.trim() : undefined,
+      format: fabForm.format,
+      polyCount,
+      notes: fabForm.notes.trim() || undefined,
+      mode: "reference",
+    };
+    await saveAsset(record, record.name);
+    setFabForm({ url: "", name: "", creator: "", license: "", attribution: "", price: "free", priceAmount: "", format: "GLB", polyCount: "", notes: "" });
   }
 
   // --- GLB import ----------------------------------------------------------
@@ -516,10 +583,30 @@ export default function ImageTo3D() {
                     <img src={asset.data.fileDataUrl} alt={asset.title} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 4, marginBottom: 10 }} />
                   )}
                   <h3 style={{ margin: "0 0 4px", fontSize: 15 }}>{asset.title}</h3>
+                  {asset.data.source === "fab" && (
+                    <p style={{ margin: "0 0 6px" }}>
+                      {asset.data.price === "paid" ? (
+                        <span style={{ display: "inline-block", background: "#fbe9e7", color: "#8f1d1d", border: "1px solid #d98a7a", borderRadius: 4, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>
+                          PAID{asset.data.priceAmount ? ` — ${asset.data.priceAmount}` : ""} · requires purchase, not included by default
+                        </span>
+                      ) : (
+                        <span style={{ display: "inline-block", background: "#e8f3e8", color: "#1e5c1e", border: "1px solid #9cc79c", borderRadius: 4, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>
+                          FREE on Fab — check the licence before use
+                        </span>
+                      )}
+                    </p>
+                  )}
                   <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
                     {asset.data.kind} · {asset.data.source} · {asset.data.creator}
                     <br />
                     Licence: {asset.data.license}
+                    {asset.data.source === "fab" && asset.data.format && (
+                      <>
+                        <br />
+                        Format: {asset.data.format}
+                        {asset.data.polyCount ? ` · ${asset.data.polyCount.toLocaleString()} triangles` : ""}
+                      </>
+                    )}
                     <br />
                     {asset.data.fileName ? `${asset.data.fileName}${asset.data.fileSizeBytes ? ` · ${formatBytes(asset.data.fileSizeBytes)}` : ""}` : "No file attached"}
                     <br />
@@ -574,6 +661,68 @@ export default function ImageTo3D() {
             </p>
             <button className="galleries-open-button" disabled={busy} onClick={() => void addManualAsset()}>
               {busy ? "Saving…" : "Add to library"}
+            </button>
+          </div>
+
+          <div className="property-section">
+            <label>CATALOGUE A FAB ASSET — METADATA ONLY, LINK OUT</label>
+            <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
+              Fab (fab.com) is Epic Games&apos; marketplace for 3D models, textures, materials and environments. Browse
+              and acquire each asset on Fab itself — SANAA records the listing&apos;s metadata and links back to it. It
+              never copies, hotlinks or re-hosts Fab files, and there is no public Fab download API. Prefer Fab&apos;s
+              FREE assets: use the price filter on fab.com. A paid asset is labelled PAID here and is never included by
+              default. &ldquo;Free&rdquo; does not mean usable for anything — the licence on the listing decides.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+              <input className="full-input" placeholder="Fab asset URL — fab.com/… *" value={fabForm.url} onChange={(event) => setFabForm({ ...fabForm, url: event.target.value })} aria-label="Fab asset URL" />
+              <input className="full-input" placeholder="Asset title (from the listing) *" value={fabForm.name} onChange={(event) => setFabForm({ ...fabForm, name: event.target.value })} aria-label="Fab asset title" />
+              <input className="full-input" placeholder="Creator / author" value={fabForm.creator} onChange={(event) => setFabForm({ ...fabForm, creator: event.target.value })} aria-label="Fab asset creator" />
+              <select
+                className="full-input"
+                value={fabForm.license}
+                onChange={(event) => setFabForm({ ...fabForm, license: event.target.value as AssetLicense | "" })}
+                aria-label="Fab licence — required"
+              >
+                <option value="">Licence (from the listing) — required *</option>
+                {FAB_LICENSES.map((license) => (
+                  <option key={license} value={license}>
+                    {license}
+                  </option>
+                ))}
+              </select>
+              <select className="full-input" value={fabForm.price} onChange={(event) => setFabForm({ ...fabForm, price: event.target.value as "free" | "paid" })} aria-label="Price on Fab">
+                <option value="free">FREE on Fab</option>
+                <option value="paid">PAID — requires purchase</option>
+              </select>
+              {fabForm.price === "paid" && (
+                <input className="full-input" placeholder="Price as listed, e.g. $12.00 *" value={fabForm.priceAmount} onChange={(event) => setFabForm({ ...fabForm, priceAmount: event.target.value })} aria-label="Price as listed" />
+              )}
+              <select className="full-input" value={fabForm.format} onChange={(event) => setFabForm({ ...fabForm, format: event.target.value })} aria-label="Format">
+                {["GLB", "glTF", "FBX", "OBJ", "USD", "Other / varies"].map((format) => (
+                  <option key={format} value={format}>
+                    {format}
+                  </option>
+                ))}
+              </select>
+              <input className="full-input" placeholder="Poly count (triangles), if stated" value={fabForm.polyCount} onChange={(event) => setFabForm({ ...fabForm, polyCount: event.target.value })} aria-label="Poly count" inputMode="numeric" />
+              <input className="full-input" placeholder="Attribution text (required for CC-BY)" value={fabForm.attribution} onChange={(event) => setFabForm({ ...fabForm, attribution: event.target.value })} aria-label="Attribution" />
+              <input className="full-input" placeholder="Notes" value={fabForm.notes} onChange={(event) => setFabForm({ ...fabForm, notes: event.target.value })} aria-label="Fab notes" />
+            </div>
+            <p style={{ margin: "8px 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
+              Licence rules, from Epic&apos;s Fab docs: the Fab Standard License (Personal / Professional tiers — Professional
+              once you have generated more than $100,000 USD gross revenue from commercial activity in the last 12
+              months) allows commercial use in a work but not reselling or redistributing the asset on its own, and does
+              not require attribution. CC-BY is free but requires credit, a link to the licence, and a note of any
+              changes. When in doubt, pick &ldquo;Fab Standard — tier not confirmed&rdquo; and check the listing before
+              using the asset.
+            </p>
+            {fabError && (
+              <p role="alert" style={{ margin: "0 0 8px", color: "#a33", fontSize: 12 }}>
+                {fabError}
+              </p>
+            )}
+            <button className="galleries-open-button" disabled={busy} onClick={() => void addFabAsset()}>
+              {busy ? "Saving…" : "Catalogue Fab asset"}
             </button>
           </div>
 
@@ -894,6 +1043,80 @@ export default function ImageTo3D() {
                 </li>
               ))}
             </ul>
+          </div>
+
+          <div className="property-section">
+            <label>PHOTOGRAMMETRY WORKFLOW — REALITYCAPTURE / REALITYSCAN (FREE)</label>
+            <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, background: "#f6f1ea", border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
+              <strong>Runs OUTSIDE the browser, on your own computer.</strong> Nothing in this workflow is simulated
+              inside SANAA: you photograph a real space or object, RealityScan (Epic Games&apos; desktop
+              photogrammetry app, formerly RealityCapture — renamed at version 2.0, June 2025) rebuilds it into a 3D
+              model on your machine, and you import the finished .glb back here. RealityScan is free for students,
+              educators and individuals / businesses under $1M USD annual gross revenue; above that it is a paid seat
+              per user per year — the licensing page is the price of record. It runs on 64-bit Windows, and on Linux
+              for command-line workflows only (no macOS version). Install it from the Epic Games Launcher (Unreal
+              Engine section) with an Epic Games account. There is also RealityScan Mobile, a free phone app for iOS
+              and Android that captures and processes on the device.
+            </p>
+            <ol style={{ margin: "0 0 12px", paddingLeft: 20, fontSize: 12, lineHeight: 1.8, display: "grid", gap: 12 }}>
+              <li>
+                <strong>1 · Photograph the space or object.</strong> Walk around the subject and photograph it from
+                every angle — front, back, top, sides and diagonals, at several heights. A small object typically takes
+                dozens of photos; a whole gallery room takes many more. Every point of the subject should appear in at
+                least two photos, and consecutive shots should overlap by about 60–80% (Epic&apos;s Capturing Reality
+                team recommends up to 80% overlap in every direction). Light it evenly and diffusely — an overcast day
+                outdoors, or soft even light indoors — and keep the light constant while you shoot. Avoid hard shadows,
+                reflections, shiny or transparent surfaces, and anything moving. Use sharp, well-exposed photos at low
+                ISO with no motion blur; a fixed focal length helps, and the subject should fill most of the frame.
+                What to photograph: a real gallery space (walls, floor, openings) or a single artwork / object you want
+                as a 3D model.
+              </li>
+              <li>
+                <strong>2 · Process in RealityScan (desktop).</strong> Import the photos, then run <em>Align</em> — the
+                software finds where each photo was taken — then reconstruct the mesh and calculate the texture. Check
+                the alignment first: if the photos split into separate unaligned groups, add more overlapping shots of
+                the gaps and align again. This is the heavy step and it is GPU-accelerated (NVIDIA, and AMD since
+                version 2.2), so it runs on a machine with a real graphics card. A headless command-line build exists
+                for scripted processing on Windows or Linux.
+              </li>
+              <li>
+                <strong>3 · Simplify the mesh for the web.</strong> A raw scan has millions of triangles — far too
+                many for a browser. In RealityScan, go to SCENE 3D / TOOLS → <em>Simplify</em> and set an absolute
+                target triangle count; it creates a new simplified model and keeps the original. Then <em>retexture</em>{" "}
+                the simplified model: a simplified model must be retextured before its textures can be exported with
+                it. Aim for a file well under SANAA&apos;s 50 MB import limit.
+              </li>
+              <li>
+                <strong>4 · Export mesh + textures as GLB / glTF.</strong> Export → Model &amp; Point Cloud → Binary
+                GL Transmission Format (.glb), with &ldquo;Export textures&rdquo; on. GLB is one file with the textures
+                embedded, which is why SANAA imports it directly. (RealityScan also exports OBJ, FBX, USD, PLY, STL
+                and more — GLB is the web-ready choice.) RealityScan Mobile exports GLB directly on Android, and USDZ
+                / OBJ on iOS.
+              </li>
+              <li>
+                <strong>5 · Import the GLB into SANAA.</strong> Open the &ldquo;Import .glb / .gltf&rdquo; tab above,
+                choose the exported .glb (max 50 MB), preview it with orbit controls, adjust scale, rotation and tint,
+                then save it to your asset library. The library keeps the name, file details and transform — keep the
+                original .glb file on disk and re-attach it to preview again.
+              </li>
+            </ol>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+              Sources: Epic&apos;s RealityScan pages —{" "}
+              <a href="https://www.realityscan.com" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                realityscan.com ↗
+              </a>{" "}
+              ·{" "}
+              <a href="https://www.realityscan.com/license" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                Licensing (price of record) ↗
+              </a>{" "}
+              ·{" "}
+              <a href="https://rshelp.capturingreality.com/en-US/tools/export.htm" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                Model export help ↗
+              </a>
+              . Capture guidance (overlap, lighting, coverage) follows Epic&apos;s Capturing Reality team
+              recommendations in the Epic Developer Community forums; where Epic gives no exact number — such as how
+              many photos a room needs — this guide says so instead of inventing one.
+            </p>
           </div>
         </div>
       )}

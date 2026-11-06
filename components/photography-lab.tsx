@@ -298,6 +298,9 @@ export default function PhotographyLab({
   const [saving, setSaving] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // Two-step inline confirm for deleting a saved edit (same pattern as
+  // the exhibitions list): first click arms, second confirms, auto-disarms.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -667,10 +670,10 @@ export default function PhotographyLab({
   }, []);
 
   const deleteSaved = useCallback(async (id: string, title: string) => {
-    if (!window.confirm(`Delete the saved edit “${title}”? This cannot be undone.`)) return;
     try {
       const res = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error("delete failed");
+      setConfirmDeleteId(null);
       setSaved((list) => list.filter((e) => e.id !== id));
     } catch {
       setNotice("Could not delete that edit.");
@@ -1047,8 +1050,23 @@ export default function PhotographyLab({
                         >
                           Rename
                         </button>
-                        <button type="button" className="plab-link" onClick={() => void deleteSaved(entry.id, entry.title)}>
-                          Delete
+                        <button
+                          type="button"
+                          className="plab-link"
+                          onClick={() => {
+                            if (confirmDeleteId === entry.id) {
+                              setConfirmDeleteId(null);
+                              void deleteSaved(entry.id, entry.title);
+                            } else {
+                              setConfirmDeleteId(entry.id);
+                              window.setTimeout(
+                                () => setConfirmDeleteId((current) => (current === entry.id ? null : current)),
+                                10000,
+                              );
+                            }
+                          }}
+                        >
+                          {confirmDeleteId === entry.id ? "Click again to delete" : "Delete"}
                         </button>
                       </>
                     )}

@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import {
+  Aperture,
   Archive,
   ArrowRight,
   Calculator,
   FileText,
   Gem,
+  Image,
   LayoutGrid,
   Palette,
   Presentation,
@@ -50,6 +52,30 @@ const TOOLS = [
     icon: FileText,
     title: "Documents",
     description: "Certificates of authenticity, labels and artwork sheets, ready to print.",
+  },
+  {
+    href: "/tools/mockup-studio",
+    icon: Image,
+    title: "Mockup Studio",
+    description: "See your work on a real wall before you hang it — interiors, frames, lighting and print-ready exports.",
+  },
+  {
+    href: "/tools/photography-lab",
+    icon: Aperture,
+    title: "Photography Lab",
+    description: "Clean up artwork photos — crop, straighten, correct light and colour, and export print-ready files.",
+  },
+  {
+    href: "/tools/color-intelligence",
+    icon: Palette,
+    title: "Color Intelligence",
+    description: "Read the colours in a work — palettes, harmonies and contrast — and find the right wall for it.",
+  },
+  {
+    href: "/tools/presentation-designer",
+    icon: Presentation,
+    title: "Presentation Designer",
+    description: "Build a presentation for a buyer, a gallery or a jury — slides from your own artworks, ready to share.",
   },
 ] as const;
 

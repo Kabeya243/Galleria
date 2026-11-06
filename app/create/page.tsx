@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Boxes, Calculator, GalleryVerticalEnd, Wrench } from "lucide-react";
+import { Aperture, Boxes, Calculator, Frame, GalleryVerticalEnd, Image, Palette, Presentation, Wrench } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -37,6 +37,41 @@ const CARDS: HubCard[] = [
     icon: Calculator,
     title: "Price your work",
     description: "Work out a fair price for a piece, from your hours, your materials and its size.",
+    status: "ready",
+  },
+  {
+    href: "/exhibitions",
+    icon: Frame,
+    title: "Frame Studio",
+    description: "Frames for your artworks — digitised styles, custom controls and presets, inside the 3D editor.",
+    status: "ready",
+  },
+  {
+    href: "/tools/mockup-studio",
+    icon: Image,
+    title: "Mockup Studio",
+    description: "See your work on a real wall before you hang it — interiors, frames, lighting and print-ready exports.",
+    status: "ready",
+  },
+  {
+    href: "/tools/photography-lab",
+    icon: Aperture,
+    title: "Photography Lab",
+    description: "Clean up artwork photos — crop, straighten, correct light and colour, and export print-ready files.",
+    status: "ready",
+  },
+  {
+    href: "/tools/color-intelligence",
+    icon: Palette,
+    title: "Color Intelligence",
+    description: "Read the colours in a work — palettes, harmonies and contrast — and find the right wall for it.",
+    status: "ready",
+  },
+  {
+    href: "/tools/presentation-designer",
+    icon: Presentation,
+    title: "Presentation Designer",
+    description: "Build a presentation for a buyer, a gallery or a jury — slides from your own artworks, ready to share.",
     status: "ready",
   },
 ];

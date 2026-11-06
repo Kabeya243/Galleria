@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import ToolsShell from "@/components/tools-shell";
 import PresentationDesigner from "@/components/presentation-designer";
 import { getCurrentUser } from "@/lib/auth";
-import { logToolUse, type ToolSlug } from "@/lib/tool-use";
+import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
@@ -14,10 +14,7 @@ export const metadata = {
 export default async function PresentationDesignerRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  // "presentation-designer" is not in TOOL_SLUGS yet (lib/tool-use.ts is
-  // owned by another agent), so cast to keep the usage log without
-  // touching that file.
-  await logToolUse("presentation-designer" as ToolSlug, user.id);
+  await logToolUse("presentation-designer", user.id);
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({

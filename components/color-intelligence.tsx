@@ -404,6 +404,9 @@ export default function ColorIntelligence({ artworks }: { artworks: ColorArtwork
   const [saving, setSaving] = useState(false);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // Two-step inline confirm for deleting a saved palette (same pattern as
+  // the exhibitions list): first click arms, second confirms, auto-disarms.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [loadedSaved, setLoadedSaved] = useState<SavedPalette | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [comparePalettes, setComparePalettes] = useState<Record<string, ExtractedColor[]>>({});
@@ -572,8 +575,8 @@ export default function ColorIntelligence({ artworks }: { artworks: ColorArtwork
 
   const deleteSaved = useCallback(
     async (id: string) => {
-      if (!window.confirm("Delete this saved palette?")) return;
       await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      setConfirmDeleteId(null);
       if (loadedSaved?.id === id) setLoadedSaved(null);
       await loadSaved();
     },
@@ -1176,8 +1179,23 @@ export default function ColorIntelligence({ artworks }: { artworks: ColorArtwork
                     >
                       Rename
                     </button>
-                    <button type="button" style={S.ghostButton} onClick={() => void deleteSaved(item.id)}>
-                      Delete
+                    <button
+                      type="button"
+                      style={S.ghostButton}
+                      onClick={() => {
+                        if (confirmDeleteId === item.id) {
+                          setConfirmDeleteId(null);
+                          void deleteSaved(item.id);
+                        } else {
+                          setConfirmDeleteId(item.id);
+                          window.setTimeout(
+                            () => setConfirmDeleteId((current) => (current === item.id ? null : current)),
+                            10000,
+                          );
+                        }
+                      }}
+                    >
+                      {confirmDeleteId === item.id ? "Click again to delete" : "Delete"}
                     </button>
                   </span>
                 </div>

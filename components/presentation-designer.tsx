@@ -286,6 +286,9 @@ export default function PresentationDesigner({
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // Two-step inline confirm for deleting a saved presentation (same pattern
+  // as the exhibitions list): first click arms, second confirms, auto-disarms.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const deckRef = useRef(deck);
   deckRef.current = deck;
@@ -468,11 +471,11 @@ export default function PresentationDesigner({
 
   const doDelete = useCallback(
     async (id: string, title: string) => {
-      if (!window.confirm(`Delete the saved presentation “${title}”?`)) return;
       try {
         const res = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
         if (!res.ok) throw new Error("Could not delete this presentation.");
         if (loadedId === id) setLoadedId(null);
+        setConfirmDeleteId(null);
         await refreshSaved();
         setSaveMsg(`Deleted “${title}”.`);
       } catch {
@@ -893,8 +896,23 @@ export default function PresentationDesigner({
                       >
                         Rename
                       </button>
-                      <button type="button" className="pd-link-button pd-danger" onClick={() => void doDelete(row.id, row.title)}>
-                        Delete
+                      <button
+                        type="button"
+                        className="pd-link-button pd-danger"
+                        onClick={() => {
+                          if (confirmDeleteId === row.id) {
+                            setConfirmDeleteId(null);
+                            void doDelete(row.id, row.title);
+                          } else {
+                            setConfirmDeleteId(row.id);
+                            window.setTimeout(
+                              () => setConfirmDeleteId((current) => (current === row.id ? null : current)),
+                              10000,
+                            );
+                          }
+                        }}
+                      >
+                        {confirmDeleteId === row.id ? "Click again to delete" : "Delete"}
                       </button>
                     </>
                   )}

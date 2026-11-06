@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import ColorIntelligence from "@/components/color-intelligence";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
-import { logToolUse, type ToolSlug } from "@/lib/tool-use";
+import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
@@ -14,10 +14,7 @@ export const metadata = {
 export default async function ColorIntelligenceRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  // NOTE: "color-intelligence" is not in TOOL_SLUGS yet (lib/tool-use.ts is
-  // owned by another workstream); the cast keeps logging working until the
-  // slug is added there.
-  await logToolUse("color-intelligence" as ToolSlug, user.id);
+  await logToolUse("color-intelligence", user.id);
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({

@@ -3,7 +3,6 @@ import PhotographyLab from "@/components/photography-lab";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { logToolUse } from "@/lib/tool-use";
-import type { ToolSlug } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
@@ -15,9 +14,7 @@ export const metadata = {
 export default async function PhotographyLabRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  // "photography-lab" is a Phase 2 tool; the slug is logged here and will be
-  // added to TOOL_SLUGS with the hub update — the cast keeps the build green.
-  await logToolUse("photography-lab" as ToolSlug, user.id);
+  await logToolUse("photography-lab", user.id);
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({

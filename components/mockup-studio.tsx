@@ -819,6 +819,9 @@ export default function MockupStudio({ artworks }: { artworks: MockupArtwork[] }
   const [saving, setSaving] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // Two-step inline confirm for deleting a saved mockup (same pattern as
+  // the exhibitions list): first click arms, second confirms, auto-disarms.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const previewRef = useRef<HTMLCanvasElement | null>(null);
   const imgCache = useRef(new Map<string, HTMLImageElement>());
@@ -1027,11 +1030,11 @@ export default function MockupStudio({ artworks }: { artworks: MockupArtwork[] }
   }, [renameValue, refreshSaved]);
 
   const doDelete = useCallback(async (id: string, title: string) => {
-    if (!window.confirm(`Delete the saved mockup “${title}”?`)) return;
     try {
       const res = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Could not delete this mockup.");
       if (loadedId === id) setLoadedId(null);
+      setConfirmDeleteId(null);
       await refreshSaved();
       setSaveMsg(`Deleted “${title}”.`);
     } catch {
@@ -1379,7 +1382,23 @@ export default function MockupStudio({ artworks }: { artworks: MockupArtwork[] }
                         >
                           Rename
                         </button>
-                        <button type="button" onClick={() => void doDelete(row.id, row.title)}>Delete</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirmDeleteId === row.id) {
+                              setConfirmDeleteId(null);
+                              void doDelete(row.id, row.title);
+                            } else {
+                              setConfirmDeleteId(row.id);
+                              window.setTimeout(
+                                () => setConfirmDeleteId((current) => (current === row.id ? null : current)),
+                                10000,
+                              );
+                            }
+                          }}
+                        >
+                          {confirmDeleteId === row.id ? "Click again to delete" : "Delete"}
+                        </button>
                       </>
                     )}
                   </div>

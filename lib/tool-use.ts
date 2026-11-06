@@ -23,6 +23,27 @@ export const TOOL_SLUGS = [
   "for-curators",
   "for-galleries",
   "for-collectors",
+  // Phase 4 — Exhibition Management
+  "collection-manager",
+  "exhibition-planner",
+  "visitor-analytics",
+  "accessibility-studio",
+  "education-studio",
+  // Phase 5 — Intelligence and Automation
+  "ai-architect",
+  "artwork-intelligence",
+  "ai-assistant",
+  "image-to-3d",
+  "video-generator",
+  // Phase 6 — Professional Ecosystem
+  "website-builder",
+  "marketing-studio",
+  "print-studio",
+  "marketplace",
+  "teams",
+  "digital-twin",
+  // Phase 7 — Art in Context
+  "art-in-context",
 ] as const;
 
 export type ToolSlug = (typeof TOOL_SLUGS)[number];
@@ -42,6 +63,27 @@ export const TOOL_LABELS: Record<ToolSlug, string> = {
   "for-curators": "For Curators",
   "for-galleries": "For Galleries",
   "for-collectors": "For Collectors",
+  // Phase 4 — Exhibition Management
+  "collection-manager": "Collection Manager",
+  "exhibition-planner": "Exhibition Planner",
+  "visitor-analytics": "Visitor Analytics",
+  "accessibility-studio": "Accessibility & Audio Guide Studio",
+  "education-studio": "Art Education Studio",
+  // Phase 5 — Intelligence and Automation
+  "ai-architect": "AI Exhibition Architect",
+  "artwork-intelligence": "Artwork Intelligence",
+  "ai-assistant": "AI Creative Assistant",
+  "image-to-3d": "Image-to-3D & Asset Library",
+  "video-generator": "Exhibition Video Generator",
+  // Phase 6 — Professional Ecosystem
+  "website-builder": "Artist Website Builder",
+  "marketing-studio": "Marketing Studio",
+  "print-studio": "Print Production Studio",
+  marketplace: "Marketplace",
+  teams: "Teams & Collaboration",
+  "digital-twin": "Digital Twin, VR & AR",
+  // Phase 7 — Art in Context
+  "art-in-context": "Art in Context",
 };
 
 // Record one tool page load. Logging must never break the tool page, so a

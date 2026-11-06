@@ -1361,32 +1361,49 @@ async function compressImage(file: File): Promise<File> {
   return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
 }
 
-  // Upload straight to R2 via a presigned URL (no Vercel size cap).
+  // Upload to R2 through the server proxy (/api/uploads/r2). The browser
+  // used to PUT straight to R2 via a presigned URL, but the bucket has no
+  // CORS policy, so the browser's preflight fails and fetch rejects with
+  // "Failed to fetch" — that is the error users kept seeing on every image
+  // upload. The bytes now go through this same-origin route and the server
+  // puts them in R2, so no CORS is involved. Trade-off: Vercel caps the
+  // body at 4.5 MB (the editor compresses first), and an oversized file
+  // gets a clear message. Once a CORS policy is set on the bucket, the
+  // presigned direct upload can be re-enabled to lift the cap.
   // Returns the public URL, or null when R2 is not configured so the
   // caller can fall back to the legacy database upload.
   async function uploadToR2(file: File): Promise<string | null> {
-    const presign = await fetch("/api/uploads/presign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size }),
-    });
-    if (presign.status === 501) return null;
-    const text = await presign.text();
-    let signed: { uploadUrl?: string; publicUrl?: string; error?: string } = {};
+    const body = new FormData();
+    body.set("file", file);
+    let response: Response;
     try {
-      signed = text ? (JSON.parse(text) as typeof signed) : {};
+      response = await fetch("/api/uploads/r2", { method: "POST", body });
     } catch {
-      signed = {};
+      // A network failure (not an HTTP error): never surface the raw
+      // browser "Failed to fetch" — say what happened in plain words.
+      throw new Error("Could not reach the server to upload this image. Check your connection and try again.");
     }
-    if (!presign.ok) throw new Error(signed.error ?? "Could not upload this image.");
-    if (!signed.uploadUrl || !signed.publicUrl) throw new Error("Could not upload this image.");
-    const put = await fetch(signed.uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
-    if (!put.ok) throw new Error("Could not upload this image.");
-    return signed.publicUrl;
+    if (response.status === 501) return null;
+    // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+    // an oversized request) is not JSON and used to throw a cryptic
+    // "Unexpected end of JSON input" instead of a readable error.
+    const text = await response.text();
+    let result: { error?: string; url?: string } = {};
+    try {
+      result = text ? (JSON.parse(text) as typeof result) : {};
+    } catch {
+      result = {};
+    }
+    if (!response.ok) {
+      throw new Error(
+        result.error ??
+          (response.status === 413
+            ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
+            : "Could not upload this image."),
+      );
+    }
+    if (!result.url) throw new Error("Could not upload this image.");
+    return result.url;
   }
 
   // Upload one image file and return its public URL (R2 when configured,

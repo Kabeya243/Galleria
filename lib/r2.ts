@@ -3,8 +3,13 @@ import { S3Client } from "@aws-sdk/client-s3";
 // Cloudflare R2 (S3-compatible) object storage for artwork images.
 // Images used to live in Postgres (the Upload table), which bloated the
 // database and, worse, forced every upload through Vercel's 4.5 MB request
-// body limit. New uploads go straight to R2 via a presigned URL, so the
-// browser talks to R2 directly and there is no size cap from Vercel.
+// body limit. New uploads go to R2 through the server proxy
+// (/api/uploads/r2): the bucket has no CORS policy, so the browser cannot
+// PUT to R2 directly — the preflight fails and fetch rejects with
+// "Failed to fetch". The proxy keeps the 4.5 MB cap (the editor compresses
+// first), but the upload works. The presigned direct upload
+// (/api/uploads/presign) is kept and can be re-enabled once a CORS policy
+// is set on the bucket, which lifts the cap entirely.
 // Older images stay in the database and keep serving from /api/uploads/*.
 //
 // Required environment variables (Vercel: Production + Preview):

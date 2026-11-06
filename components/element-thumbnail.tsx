@@ -117,6 +117,39 @@ export default function ElementThumbnail({ type, size = 26 }: { type: ElementTyp
           <path d="M39 8 C 37 18, 41 28, 39 43" fill="none" stroke="#9db8c0" strokeWidth="1.5" />
         </>
       )}
+      {type === "column" && (
+        <>
+          <rect x="14" y="40" width="20" height="4" fill="#ddd5c2" stroke={stroke} strokeWidth="1.2" />
+          <rect x="15" y="36" width="18" height="4" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <rect x="17" y="8" width="14" height="28" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <line x1="21" y1="8" x2="21" y2="36" stroke="#d8d2c4" strokeWidth="1" />
+          <line x1="27" y1="8" x2="27" y2="36" stroke="#d8d2c4" strokeWidth="1" />
+          <rect x="15" y="4" width="18" height="4" fill={fill} stroke={stroke} strokeWidth="1.2" />
+        </>
+      )}
+      {type === "platform" && (
+        <>
+          <polygon points="6,28 24,20 42,28 42,34 6,34" fill="#e8e2d4" stroke={stroke} strokeWidth="1.2" />
+          <rect x="6" y="28" width="36" height="8" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <rect x="10" y="36" width="28" height="5" fill="#ddd5c2" stroke={stroke} strokeWidth="1" />
+        </>
+      )}
+      {type === "stairs" && (
+        <>
+          <rect x="8" y="34" width="32" height="8" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <rect x="14" y="26" width="26" height="8" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <rect x="20" y="18" width="20" height="8" fill="#e8e2d4" stroke={stroke} strokeWidth="1.2" />
+          <rect x="26" y="10" width="14" height="8" fill="#e8e2d4" stroke={stroke} strokeWidth="1.2" />
+        </>
+      )}
+      {type === "arch" && (
+        <>
+          <rect x="10" y="18" width="6" height="26" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <rect x="32" y="18" width="6" height="26" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <path d="M10 20 A 14 14 0 0 1 38 20 L 38 26 A 14 14 0 0 0 10 26 Z" fill={fill} stroke={stroke} strokeWidth="1.2" />
+          <path d="M16 44 L 16 22 A 8 8 0 0 1 32 22 L 32 44" fill="none" stroke="#d8d2c4" strokeWidth="1" />
+        </>
+      )}
     </svg>
   );
 }

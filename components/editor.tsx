@@ -11,31 +11,40 @@ import {
   Copy,
   Expand,
   Eye,
+  EyeOff,
   Footprints,
   Grid2X2,
+  Group,
+  History,
   Info,
+  Layers,
   Lightbulb,
+  Lock,
   Minus,
   Move,
   Paintbrush,
   Plus,
   Redo2,
   RotateCw,
+  Ruler,
   Save,
   Settings2,
   Sparkles,
   Trash2,
   Undo2,
+  Ungroup,
+  Unlock,
   Upload,
 } from "lucide-react";
 import ElementThumbnail from "@/components/element-thumbnail";
 import FrameThumbnail from "@/components/frame-thumbnail";
 import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
+import LayersPanel, { type LayerArtwork, type LayerItemRef } from "@/components/layers-panel";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
-import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, lightTypes, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
+import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, lightTypes, parseGalleryRooms, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 
 // The Elements palette: every placeable object. Each row shows a
 // faithful thumbnail (components/element-thumbnail.tsx) and can be
@@ -54,6 +63,10 @@ const ELEMENT_PALETTE: { type: ElementType; label: string }[] = [
   { type: "shelf", label: "Display shelf" },
   { type: "desk", label: "Desk & chair" },
   { type: "curtain", label: "Sheer curtain" },
+  { type: "column", label: "Column" },
+  { type: "platform", label: "Platform · low stage" },
+  { type: "stairs", label: "Stairs" },
+  { type: "arch", label: "Arch · doorway" },
 ];
 
 // Paint swatches for one wall (plus the colour picker for any colour).
@@ -121,15 +134,36 @@ function NumberField({
 }
 
 export default function Editor({ exhibitionId }: { exhibitionId: string }) {
-  const [artworks, setArtworks] = useState<Artwork[]>([]);
+  const [artworks, setArtworks] = useState<LayerArtwork[]>([]);
   const [rooms, setRooms] = useState<GalleryRoom[]>([]);
   const [activeRoomId, setActiveRoomId] = useState("");
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
   const [selectedId, setSelectedId] = useState<string>();
-  const [panelTab, setPanelTab] = useState<"artworks" | "elements">("artworks");
+  const [panelTab, setPanelTab] = useState<"artworks" | "elements" | "layers">("artworks");
   const [selectedElementId, setSelectedElementId] = useState<string>();
   const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
+  // 3D builder: 0.5 m floor grid (drags snap to 0.25 m while it is on),
+  // measurement guides, and the stage-settings toggle (shows the room
+  // settings panel — the same UI the inspector falls back to).
+  const [showGrid, setShowGrid] = useState(false);
+  const [showMeasure, setShowMeasure] = useState(false);
+  const [showStageSettings, setShowStageSettings] = useState(false);
+  // Multi-selection: everything selected beyond the primary artwork /
+  // element (Shift/Ctrl-click in 3D or in the Layers panel).
+  const [multiSelected, setMultiSelected] = useState<LayerItemRef[]>([]);
+  // Autosave: 5 s after the last edit, unless a save is already running.
+  const [autosaveState, setAutosaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const saveInFlightRef = useRef(false);
+  const autosaveTimerRef = useRef<number | null>(null);
+  // Version history: the last 10 saves, via /api/saved-work
+  // (kind "exhibition-version"). Restoring replaces the editor state
+  // and marks the exhibition unsaved.
+  type SavedVersion = { id: string; title: string; createdAt: string; data: { exhibitionId?: string; title?: string; description?: string; rooms?: GalleryRoom[]; artworks?: LayerArtwork[]; savedAt?: string } };
+  const [history, setHistory] = useState<SavedVersion[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [confirmingRestoreId, setConfirmingRestoreId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [title, setTitle] = useState("Untitled exhibition");
   const [description, setDescription] = useState("");
@@ -171,7 +205,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   // description), so Ctrl+Z covers artworks, elements and room settings
   // alike. One snapshot per discrete action — never per keystroke (see
   // beginEdit/endEdit below).
-  type EditorSnapshot = { artworks: Artwork[]; rooms: GalleryRoom[]; title: string; description: string };
+  type EditorSnapshot = { artworks: LayerArtwork[]; rooms: GalleryRoom[]; title: string; description: string };
   const historyRef = useRef<{ past: EditorSnapshot[]; future: EditorSnapshot[] }>({ past: [], future: [] });
   const [, setHistoryTick] = useState(0);
   const latestRef = useRef({ artworks, rooms, title, description });
@@ -201,6 +235,12 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
         setSlug(result.exhibition.slug);
         setStatus(result.exhibition.status);
         setSaved(true);
+        setMultiSelected([]);
+        // Artwork layer state (hidden / locked / group) has no columns
+        // in the artwork table, so it is not in the main save — it comes
+        // back from the latest version snapshot, if one exists.
+        void overlayLayerStateFromLatestVersion();
+        void loadHistory();
       } catch (error) {
         console.error("Could not load exhibition.", error);
         if (!active) return;
@@ -220,6 +260,14 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   );
   const activeRoom = rooms.find((room) => room.id === activeRoomId) ?? rooms[0];
   const currentArtworks = artworks.filter((artwork) => artwork.roomId === activeRoom?.id);
+  const activeRoomDims = activeRoom ? roomLayouts[activeRoom.layout] : null;
+  // Hidden items stay in the exhibition but are not rendered in 3D.
+  const visibleArtworks = currentArtworks.filter((artwork) => !artwork.hidden);
+  const sceneRooms = useMemo(
+    () => rooms.map((room) => ({ ...room, elements: (room.elements ?? []).filter((element) => !element.hidden) })),
+    [rooms],
+  );
+  const sceneRoom = activeRoom ? sceneRooms.find((room) => room.id === activeRoom.id) ?? activeRoom : undefined;
 
   function snapshot() {
     const current = latestRef.current;
@@ -329,30 +377,278 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     setSaved(false);
   }
 
-  // Selection is exclusive: picking an artwork clears any element or wall,
-  // and vice versa, so the inspector always shows one thing.
-  function selectArtwork(id: string | undefined) {
+  // The full selection: the primary artwork / element plus everything
+  // added with Shift/Ctrl-click. The inspector shows the primary item;
+  // Delete, Group and dragging act on the whole selection.
+  const selectionRefs: LayerItemRef[] = useMemo(() => {
+    const primary: LayerItemRef | null = selectedId
+      ? { kind: "artwork", id: selectedId }
+      : selectedElementId
+        ? { kind: "element", id: selectedElementId }
+        : null;
+    return primary ? [primary, ...multiSelected] : [...multiSelected];
+  }, [selectedId, selectedElementId, multiSelected]);
+  const selectionRef = useRef(selectionRefs);
+  useEffect(() => { selectionRef.current = selectionRefs; });
+
+  // Selection is exclusive unless Shift/Ctrl/Cmd is held: picking an
+  // artwork clears any element or wall, and vice versa, so the inspector
+  // always shows one thing. An additive click toggles one item in or out
+  // of the multi-selection. Picking a grouped item selects its whole
+  // group, so the group moves together.
+  function toggleSelectionRef(ref: LayerItemRef) {
+    if (selectedId === ref.id || selectedElementId === ref.id) {
+      // Removing the primary item promotes the first extra item.
+      const [next, ...rest] = multiSelected;
+      if (next) {
+        if (next.kind === "artwork") {
+          setSelectedId(next.id);
+          setSelectedElementId(undefined);
+        } else {
+          setSelectedElementId(next.id);
+          setSelectedId(undefined);
+        }
+        setMultiSelected(rest);
+      } else {
+        setSelectedId(undefined);
+        setSelectedElementId(undefined);
+      }
+      return;
+    }
+    if (multiSelected.some((item) => item.kind === ref.kind && item.id === ref.id)) {
+      setMultiSelected((current) => current.filter((item) => !(item.kind === ref.kind && item.id === ref.id)));
+      return;
+    }
+    if (!selectedId && !selectedElementId) {
+      if (ref.kind === "artwork") setSelectedId(ref.id);
+      else setSelectedElementId(ref.id);
+      return;
+    }
+    setMultiSelected((current) => [...current, ref]);
+  }
+
+  function groupMembers(groupId: string, except: LayerItemRef): LayerItemRef[] {
+    const members: LayerItemRef[] = [];
+    for (const artwork of artworks) {
+      if (artwork.groupId === groupId && artwork.id !== except.id) members.push({ kind: "artwork", id: artwork.id });
+    }
+    for (const room of rooms) {
+      for (const element of room.elements) {
+        if (element.groupId === groupId && element.id !== except.id) members.push({ kind: "element", id: element.id });
+      }
+    }
+    return members;
+  }
+
+  function groupIdOfRef(ref: LayerItemRef): string | undefined {
+    if (ref.kind === "artwork") return artworks.find((item) => item.id === ref.id)?.groupId;
+    return rooms.flatMap((room) => room.elements).find((item) => item.id === ref.id)?.groupId;
+  }
+
+  function selectArtwork(id: string | undefined, additive = false) {
+    if (id === undefined) {
+      setSelectedId(undefined);
+      setMultiSelected([]);
+      return;
+    }
+    const artwork = artworks.find((item) => item.id === id);
+    if (artwork && artwork.roomId !== activeRoomId) setActiveRoomId(artwork.roomId);
+    if (additive) {
+      toggleSelectionRef({ kind: "artwork", id });
+      return;
+    }
     setSelectedId(id);
     setSelectedElementId(undefined);
     setSelectedWallId(null);
+    setShowStageSettings(false);
+    setMultiSelected(artwork?.groupId ? groupMembers(artwork.groupId, { kind: "artwork", id }) : []);
   }
 
-  function selectElement(id: string | undefined) {
+  function selectElement(id: string | undefined, additive = false) {
+    if (id === undefined) {
+      setSelectedElementId(undefined);
+      setMultiSelected([]);
+      return;
+    }
+    const element = rooms.flatMap((room) => room.elements).find((item) => item.id === id);
+    const owner = rooms.find((room) => room.elements.some((item) => item.id === id));
+    if (owner && owner.id !== activeRoomId) setActiveRoomId(owner.id);
+    if (additive) {
+      toggleSelectionRef({ kind: "element", id });
+      return;
+    }
     setSelectedElementId(id);
     setSelectedId(undefined);
     setSelectedWallId(null);
+    setShowStageSettings(false);
+    setMultiSelected(element?.groupId ? groupMembers(element.groupId, { kind: "element", id }) : []);
   }
 
   function selectWall(id: string | null) {
     setSelectedWallId(id);
     setSelectedId(undefined);
     setSelectedElementId(undefined);
+    setMultiSelected([]);
+    setShowStageSettings(false);
   }
 
   function clearSelection() {
     setSelectedId(undefined);
     setSelectedElementId(undefined);
     setSelectedWallId(null);
+    setMultiSelected([]);
+  }
+
+  // The Layers panel selects by ref and switches to the item's room.
+  function selectLayerItem(ref: LayerItemRef, additive: boolean) {
+    if (ref.kind === "artwork") selectArtwork(ref.id, additive);
+    else selectElement(ref.id, additive);
+  }
+
+  function toggleHidden(ref: LayerItemRef) {
+    snapshot();
+    if (ref.kind === "artwork") {
+      setArtworks((current) => current.map((artwork) => (artwork.id === ref.id ? { ...artwork, hidden: !artwork.hidden } : artwork)));
+    } else {
+      const element = rooms.flatMap((room) => room.elements).find((item) => item.id === ref.id);
+      if (element) updateElement(ref.id, { hidden: !element.hidden });
+    }
+    setSaved(false);
+  }
+
+  function toggleLocked(ref: LayerItemRef) {
+    snapshot();
+    if (ref.kind === "artwork") {
+      setArtworks((current) => current.map((artwork) => (artwork.id === ref.id ? { ...artwork, locked: !artwork.locked } : artwork)));
+    } else {
+      const element = rooms.flatMap((room) => room.elements).find((item) => item.id === ref.id);
+      if (element) updateElement(ref.id, { locked: !element.locked });
+    }
+    setSaved(false);
+  }
+
+  // Delete removes the whole selection — artworks and elements alike.
+  function deleteSelection() {
+    const refs = selectionRefs;
+    if (refs.length === 0) return;
+    snapshot();
+    const artworkIds = new Set(refs.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
+    const elementIds = new Set(refs.filter((ref) => ref.kind === "element").map((ref) => ref.id));
+    if (artworkIds.size > 0) setArtworks((current) => current.filter((artwork) => !artworkIds.has(artwork.id)));
+    if (elementIds.size > 0) {
+      setRooms((current) => current.map((room) => ({ ...room, elements: room.elements.filter((element) => !elementIds.has(element.id)) })));
+    }
+    clearSelection();
+    setSaved(false);
+  }
+
+  function groupSelection() {
+    const refs = selectionRefs;
+    if (refs.length < 2) return;
+    snapshot();
+    const groupId = crypto.randomUUID();
+    const artworkIds = new Set(refs.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
+    const elementIds = new Set(refs.filter((ref) => ref.kind === "element").map((ref) => ref.id));
+    if (artworkIds.size > 0) setArtworks((current) => current.map((artwork) => (artworkIds.has(artwork.id) ? { ...artwork, groupId } : artwork)));
+    if (elementIds.size > 0) {
+      setRooms((current) => current.map((room) => ({ ...room, elements: room.elements.map((element) => (elementIds.has(element.id) ? { ...element, groupId } : element)) })));
+    }
+    setSaved(false);
+  }
+
+  function ungroupSelection() {
+    const groupIds = new Set(selectionRefs.map((ref) => groupIdOfRef(ref)).filter((id): id is string => Boolean(id)));
+    if (groupIds.size === 0) return;
+    snapshot();
+    setArtworks((current) => current.map((artwork) => (artwork.groupId && groupIds.has(artwork.groupId) ? { ...artwork, groupId: undefined } : artwork)));
+    setRooms((current) => current.map((room) => ({
+      ...room,
+      elements: room.elements.map((element) => (element.groupId && groupIds.has(element.groupId) ? { ...element, groupId: undefined } : element)),
+    })));
+    setSaved(false);
+  }
+
+  // Grid snapping: while the grid is on, dragged positions snap to
+  // 0.25 m steps (the grid itself is drawn every 0.5 m).
+  function snap025(value: number) {
+    return Math.round(value / 0.25) * 0.25;
+  }
+  function snapIfGrid(value: number) {
+    return showGrid ? snap025(value) : value;
+  }
+
+  // The 3D scene's update path for artwork drags: locked artworks do not
+  // move, the dragged artwork snaps to the grid when it is on, and the
+  // rest of the selection — plus every other member of the dragged
+  // artwork's group — follows by the same delta. The dragged artwork
+  // keeps its wall auto-rotate (same rule as updateArtwork).
+  function handleSceneArtworkUpdate(id: string, patch: { position?: [number, number, number]; scale?: number }) {
+    const selectedArtworkIds = new Set(selectionRef.current.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
+    setArtworks((current) => {
+      const dragged = current.find((artwork) => artwork.id === id);
+      if (!dragged || dragged.locked) return current;
+      if (patch.scale !== undefined) {
+        return current.map((artwork) => (artwork.id === id ? { ...artwork, scale: patch.scale as number } : artwork));
+      }
+      if (!patch.position) return current;
+      const target: [number, number, number] = [snapIfGrid(patch.position[0]), snapIfGrid(patch.position[1]), snapIfGrid(patch.position[2])];
+      const delta: [number, number, number] = [target[0] - dragged.position[0], target[1] - dragged.position[1], target[2] - dragged.position[2]];
+      return current.map((artwork) => {
+        if (artwork.id === id) {
+          let next: LayerArtwork = { ...artwork, position: target };
+          if (activeRoom && artwork.roomId === activeRoom.id) {
+            const before = wallsForArtwork(artwork, activeRoom);
+            const after = wallsForArtwork(next, activeRoom);
+            const beforeKey = before[0]?.key;
+            const match = after.find((wall) => wall.key === beforeKey) ?? after[0];
+            if (match && beforeKey !== match.key) next = { ...next, rotation: match.rotation };
+          }
+          return next;
+        }
+        const follows = artwork.roomId === dragged.roomId
+          && (selectedArtworkIds.has(artwork.id) || (dragged.groupId !== undefined && artwork.groupId === dragged.groupId));
+        if (!follows || artwork.locked) return artwork;
+        return {
+          ...artwork,
+          position: [snapIfGrid(artwork.position[0] + delta[0]), snapIfGrid(artwork.position[1] + delta[1]), snapIfGrid(artwork.position[2] + delta[2])],
+        };
+      });
+    });
+    setSaved(false);
+  }
+
+  // Same rules for element drags: locked elements do not move, the
+  // dragged element snaps when the grid is on, the selection and the
+  // group follow by the same delta (within the same room).
+  function handleSceneElementUpdate(id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) {
+    const selectedElementIds = new Set(selectionRef.current.filter((ref) => ref.kind === "element").map((ref) => ref.id));
+    setRooms((currentRooms) => {
+      const owner = currentRooms.find((room) => room.elements.some((element) => element.id === id));
+      if (!owner) return currentRooms;
+      const dragged = owner.elements.find((element) => element.id === id);
+      if (!dragged || dragged.locked) return currentRooms;
+      if (patch.scale !== undefined) {
+        return currentRooms.map((room) => (room.id === owner.id
+          ? { ...room, elements: room.elements.map((element) => (element.id === id ? { ...element, scale: patch.scale as number } : element)) }
+          : room));
+      }
+      if (patch.x === undefined && patch.y === undefined && patch.z === undefined) return currentRooms;
+      const target = { x: snapIfGrid(patch.x ?? dragged.x), y: snapIfGrid(patch.y ?? dragged.y), z: snapIfGrid(patch.z ?? dragged.z) };
+      const delta = { x: target.x - dragged.x, y: target.y - dragged.y, z: target.z - dragged.z };
+      return currentRooms.map((room) => (room.id === owner.id
+        ? {
+            ...room,
+            elements: room.elements.map((element) => {
+              if (element.id === id) return { ...element, ...target };
+              const follows = selectedElementIds.has(element.id)
+                || (dragged.groupId !== undefined && element.groupId === dragged.groupId);
+              if (!follows || element.locked) return element;
+              return { ...element, x: snapIfGrid(element.x + delta.x), y: snapIfGrid(element.y + delta.y), z: snapIfGrid(element.z + delta.z) };
+            }),
+          }
+        : room));
+    });
+    setSaved(false);
   }
 
   // --- Frame Studio ---------------------------------------------------
@@ -568,31 +864,32 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
       id: crypto.randomUUID(),
       name: `${selectedElement.name} copy`.slice(0, 60),
       x: Math.min(selectedElement.x + 1.5, roomLayouts[owner.layout].width / 2 - 0.5),
+      // A copy starts ungrouped, visible and unlocked.
+      hidden: false,
+      locked: false,
+      groupId: undefined,
     };
     updateRoom(owner.id, (room) => ({ ...room, elements: [...room.elements, copy] }));
     selectElement(copy.id);
   }
 
-  // Delete key removes the selected element (or artwork) — the same
-  // delete the inspector button does, without reaching for the mouse.
-  // Never fires while typing in a field, and never while walking.
+  // Delete key removes the whole selection (artworks and elements) —
+  // the same delete the inspector button does, without reaching for the
+  // mouse. Never fires while typing in a field, and never while walking.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Delete" && event.key !== "Backspace") return;
       if (walking) return;
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
-      if (selectedElementId) {
+      if (selectionRefs.length > 0) {
         event.preventDefault();
-        removeElementById(selectedElementId);
-      } else if (selectedId) {
-        event.preventDefault();
-        removeArtwork();
+        deleteSelection();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedElementId, selectedId, walking, rooms]);
+  }, [selectionRefs, walking]);
 
   // Ctrl+Z / Cmd+Z undoes one real action (artworks, elements, room
   // settings); Ctrl+Shift+Z / Ctrl+Y redoes it. Never fires while typing
@@ -619,7 +916,37 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walking]);
 
-  // A room switch disarms a pending room removal — the second click must
+  // Measurement readouts for the inspector: the selected artwork's
+  // centre height and its distances to the neighbours on the same wall,
+  // centre to centre and edge to edge, computed from the real positions.
+  function neighbourMeasurements(artwork: LayerArtwork): { name: string; direction: string; centreCm: number; gapCm: number }[] {
+    if (!activeRoom) return [];
+    const key = wallsForArtwork(artwork, activeRoom)[0]?.key;
+    if (!key) return [];
+    const along = key === "left" || key === "right"
+      ? (item: Artwork) => item.position[2]
+      : (item: Artwork) => item.position[0];
+    const sameWall = artworks
+      .filter((item) => item.roomId === artwork.roomId && item.id !== artwork.id && wallsForArtwork(item, activeRoom)[0]?.key === key)
+      .sort((a, b) => along(a) - along(b));
+    const position = along(artwork);
+    const widthOf = (item: Artwork) => {
+      const parsed = parseArtworkDimensions(item.dimensions ?? "");
+      return ((parsed?.widthCm ?? 182) / 100) * item.scale;
+    };
+    const neighbours: { name: string; direction: string; centreCm: number; gapCm: number }[] = [];
+    const before = [...sameWall].reverse().find((item) => along(item) < position);
+    const after = sameWall.find((item) => along(item) > position);
+    for (const [other, direction] of [[before, "before it"], [after, "after it"]] as const) {
+      if (!other) continue;
+      const centreCm = Math.round(Math.abs(along(other) - position) * 100);
+      const gapCm = Math.max(0, Math.round((centreCm - ((widthOf(artwork) + widthOf(other)) / 2) * 100)));
+      neighbours.push({ name: other.title, direction, centreCm, gapCm });
+    }
+    return neighbours;
+  }
+
+  // The room switch disarms a pending room removal — the second click must
   // always remove the room the user is looking at.
   useEffect(() => { setConfirmingRemoveRoom(false); }, [activeRoomId]);
 
@@ -715,16 +1042,18 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     return problems;
   }
 
-  async function saveExhibition() {
+  async function saveExhibition(options?: { autosave?: boolean }) {
+    const autosave = options?.autosave === true;
     setSaveError(null);
     if (!title.trim()) {
-      setSaveError("Give the exhibition a title before saving.");
+      if (!autosave) setSaveError("Give the exhibition a title before saving.");
       return false;
     }
     const incomplete = artworks
       .map((artwork, index) => ({ artwork, index, problems: artworkSaveProblems(artwork) }))
       .filter((item) => item.problems.length > 0);
     if (incomplete.length > 0) {
+      if (autosave) return false;
       const first = incomplete[0];
       const label = first.artwork.title.trim() || `Artwork ${first.index + 1}`;
       setSaveError(
@@ -735,6 +1064,8 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
       setSelectedId(first.artwork.id);
       return false;
     }
+    if (saveInFlightRef.current) return false;
+    saveInFlightRef.current = true;
     setBusy(true);
     try {
       const response = await fetch(`/api/exhibitions/${exhibitionId}`, {
@@ -770,13 +1101,148 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
         );
       }
       setSaved(true);
+      setAutosaveState("saved");
+      setLastSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      // Every save — manual or autosave — keeps a version snapshot, so
+      // the last 10 saves can be restored from the History panel.
+      void recordVersionSnapshot();
       return true;
     } catch (error) {
       console.error("Could not save exhibition.", error);
-      setSaveError(error instanceof Error ? error.message : "Could not save this exhibition.");
+      if (!autosave) setSaveError(error instanceof Error ? error.message : "Could not save this exhibition.");
       return false;
     } finally {
+      saveInFlightRef.current = false;
       setBusy(false);
+    }
+  }
+
+  // Autosave: 5 s after the last edit, debounced. Never while a save is
+  // already in flight, and never while the exhibition is already saved.
+  const savedRef = useRef(saved);
+  useEffect(() => { savedRef.current = saved; });
+  useEffect(() => {
+    if (loading || loadFailed || saved) return;
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => { void runAutosave(); }, 5000);
+    return () => {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    };
+  }, [artworks, rooms, title, description, saved, loading, loadFailed]);
+
+  async function runAutosave() {
+    if (saveInFlightRef.current || savedRef.current || loading || loadFailed) return;
+    setAutosaveState("saving");
+    const ok = await saveExhibition({ autosave: true });
+    if (!ok) {
+      // Validation failed (e.g. an artwork still misses a title): stay
+      // unsaved and quiet — the manual Save button explains the problem.
+      setAutosaveState("idle");
+    }
+  }
+
+  // --- Version history (light) ----------------------------------------
+  // Snapshots live in /api/saved-work as kind "exhibition-version", one
+  // per save, titled with the exhibition title and the time. Only the
+  // last 10 are kept; older ones are deleted when the list refreshes.
+  async function recordVersionSnapshot() {
+    const current = latestRef.current;
+    const when = new Date();
+    try {
+      await fetch("/api/saved-work", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "exhibition-version",
+          title: `${current.title} · ${when.toLocaleDateString([], { day: "2-digit", month: "short" })} ${when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+          data: {
+            exhibitionId,
+            title: current.title,
+            description: current.description,
+            rooms: current.rooms,
+            artworks: current.artworks,
+            savedAt: when.toISOString(),
+          },
+        }),
+      });
+      await loadHistory();
+    } catch (error) {
+      console.error("Could not record a version snapshot.", error);
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const response = await fetch("/api/saved-work?kind=exhibition-version");
+      if (!response.ok) return;
+      const result = (await response.json()) as { saved: { id: string; title: string; createdAt: string; data: SavedVersion["data"] }[] };
+      const versions = (result.saved ?? []).filter((row) => row.data?.exhibitionId === exhibitionId);
+      setHistory(versions.slice(0, 10));
+      const extra = versions.slice(10);
+      if (extra.length > 0) {
+        await Promise.all(extra.map((row) => fetch(`/api/saved-work?id=${encodeURIComponent(row.id)}`, { method: "DELETE" }).catch(() => undefined)));
+      }
+    } catch (error) {
+      console.error("Could not load version history.", error);
+    }
+  }
+
+  function restoreVersion(version: SavedVersion) {
+    const data = version.data;
+    if (!Array.isArray(data.rooms) || !Array.isArray(data.artworks)) return;
+    snapshot();
+    setTitle(data.title ?? title);
+    setDescription(data.description ?? "");
+    try {
+      setRooms(parseGalleryRooms(JSON.stringify(data.rooms)));
+    } catch {
+      setRooms(data.rooms);
+    }
+    setArtworks(data.artworks);
+    setSaved(false);
+    setShowHistory(false);
+    setConfirmingRestoreId(null);
+    clearSelection();
+  }
+
+  // Artwork layer state has no columns in the artwork table, so the main
+  // save drops it — the latest version snapshot carries it instead, and
+  // it is overlaid here by id after the exhibition loads. Only fields
+  // the snapshot actually has are applied, so an old snapshot never
+  // clears a newer value.
+  async function overlayLayerStateFromLatestVersion() {
+    try {
+      const response = await fetch("/api/saved-work?kind=exhibition-version");
+      if (!response.ok) return;
+      const result = (await response.json()) as { saved: { data: SavedVersion["data"] }[] };
+      const latest = (result.saved ?? []).find((row) => row.data?.exhibitionId === exhibitionId);
+      if (!latest) return;
+      const layerById = new Map<string, { hidden?: boolean; locked?: boolean; groupId?: string }>();
+      const collect = (id: string, hidden?: boolean, locked?: boolean, groupId?: string) => {
+        const layer: { hidden?: boolean; locked?: boolean; groupId?: string } = {};
+        if (hidden !== undefined) layer.hidden = hidden;
+        if (locked !== undefined) layer.locked = locked;
+        if (groupId !== undefined) layer.groupId = groupId;
+        if (Object.keys(layer).length > 0) layerById.set(id, layer);
+      };
+      for (const artwork of latest.data.artworks ?? []) collect(artwork.id, artwork.hidden, artwork.locked, artwork.groupId);
+      for (const room of latest.data.rooms ?? []) {
+        for (const element of room.elements ?? []) collect(element.id, element.hidden, element.locked, element.groupId);
+      }
+      if (layerById.size === 0) return;
+      setArtworks((current) => current.map((artwork) => {
+        const layer = layerById.get(artwork.id);
+        return layer ? { ...artwork, ...layer } : artwork;
+      }));
+      setRooms((current) => current.map((room) => ({
+        ...room,
+        elements: room.elements.map((element) => {
+          const layer = layerById.get(element.id);
+          return layer ? { ...element, ...layer } : element;
+        }),
+      })));
+    } catch (error) {
+      console.error("Could not restore layer state from the latest version.", error);
     }
   }
 
@@ -804,7 +1270,7 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     };
     snapshot();
     setArtworks((current) => [...current, artwork]);
-    setSelectedId(artwork.id);
+    selectArtwork(artwork.id);
     setSaved(false);
   }
 
@@ -947,20 +1413,25 @@ async function compressImage(file: File): Promise<File> {
     snapshot();
     setArtworks((current) => current.filter((artwork) => artwork.id !== selected.id));
     setSelectedId(undefined);
+    setMultiSelected([]);
     setSaved(false);
   }
 
   function duplicateArtwork() {
     if (!selected) return;
-    const copy: Artwork = {
+    const copy: LayerArtwork = {
       ...selected,
       id: crypto.randomUUID(),
       title: `${selected.title} copy`.slice(0, 120),
       position: [selected.position[0] + 1.5, selected.position[1], selected.position[2]],
+      // A copy starts ungrouped, visible and unlocked.
+      hidden: false,
+      locked: false,
+      groupId: undefined,
     };
     snapshot();
     setArtworks((current) => [...current, copy]);
-    setSelectedId(copy.id);
+    selectArtwork(copy.id);
     setSaved(false);
   }
 
@@ -1034,6 +1505,7 @@ async function compressImage(file: File): Promise<File> {
     setRooms((current) => [...current, room]);
     setActiveRoomId(room.id);
     setSelectedId(undefined);
+    setMultiSelected([]);
     setSaved(false);
   }
 
@@ -1058,6 +1530,7 @@ async function compressImage(file: File): Promise<File> {
     setSelectedId(artworks.find((artwork) => artwork.roomId === nextRoom.id)?.id);
     setSelectedElementId(undefined);
     setSelectedWallId(null);
+    setMultiSelected([]);
     setSaved(false);
   }
 
@@ -1085,13 +1558,13 @@ async function compressImage(file: File): Promise<File> {
               onBlur={confirmTitle}
             />
           ) : (
-            <div className="editor-title"><strong>{title}</strong><span><i /> {saved ? "All changes saved" : "Unsaved changes"}</span></div>
+            <div className="editor-title"><strong>{title}</strong><span><i /> {autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
           )}
           <button className="subtle-edit-button" aria-label={editingTitle ? "Save exhibition title" : "Edit exhibition title"} onClick={() => { if (editingTitle) confirmTitle(); else startEditingTitle(); }}>{editingTitle ? <Check size={14} /> : <Settings2 size={14} />}</button>
         </div>
         <div className="editor-top-actions">
           <ThemeToggle />
-          <span className="saved-state"><span className={saved ? "save-indicator done" : "save-indicator"} />{saved ? "Saved" : "Unsaved changes"}</span>
+          <span className="saved-state"><span className={saved ? "save-indicator done" : "save-indicator"} />{autosaveState === "saving" ? "Saving…" : saved ? `Saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span>
           <button className="editor-secondary-button" onClick={() => void saveExhibition()} disabled={busy}><Save size={15} /> Save</button>
           {status === "public" && <Link className="editor-secondary-button" href={`/exhibition/${slug}`}><Eye size={15} /> Preview</Link>}
           <button className="editor-publish-button" onClick={() => void publishExhibition()} disabled={busy}>{status === "public" ? "Unpublish" : "Publish"} <ArrowRight size={15} /></button>
@@ -1127,6 +1600,7 @@ async function compressImage(file: File): Promise<File> {
           <div className="panel-tabs">
             <button className={panelTab === "artworks" ? "active" : ""} onClick={() => setPanelTab("artworks")}>Artworks <span>{currentArtworks.length}</span></button>
             <button className={panelTab === "elements" ? "active" : ""} onClick={() => setPanelTab("elements")}>Elements <span>{currentElements.length}</span></button>
+            <button className={panelTab === "layers" ? "active" : ""} onClick={() => setPanelTab("layers")} title="Layers — rooms, artworks and elements with visibility and lock"><Layers size={12} /> Layers <span>{artworks.length + rooms.reduce((count, room) => count + room.elements.length, 0)}</span></button>
           </div>
           {panelTab === "artworks" ? (
             <>
@@ -1144,7 +1618,7 @@ async function compressImage(file: File): Promise<File> {
               <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
               <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>
             </>
-          ) : (
+          ) : panelTab === "elements" ? (
             <>
               <div className="element-palette">
                 {ELEMENT_PALETTE.map(({ type, label }) => (
@@ -1173,6 +1647,17 @@ async function compressImage(file: File): Promise<File> {
                 )}
               </div>
             </>
+          ) : (
+            <LayersPanel
+              rooms={rooms}
+              artworks={artworks}
+              activeRoomId={activeRoom?.id ?? ""}
+              selected={selectionRefs}
+              onActivateRoom={(id) => { setActiveRoomId(id); clearSelection(); }}
+              onSelectItem={selectLayerItem}
+              onToggleHidden={toggleHidden}
+              onToggleLocked={toggleLocked}
+            />
           )}
           <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — double-click an artwork, an element or a wall.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — double-click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — switch on the footprints button, then WASD to move and drag to look.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. Double-click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
         </aside>
@@ -1194,27 +1679,83 @@ async function compressImage(file: File): Promise<File> {
             </div>
             <div className="stage-room-name"><span /> {activeRoom?.name.toUpperCase() ?? "ROOM"} <ChevronDown size={13} /></div>
             <div className="tool-group">
-              <button className="tool-button" aria-label="Toggle grid"><Grid2X2 size={16} /></button>
-              <button className="tool-button" aria-label="Toggle stage settings"><Settings2 size={16} /></button>
+              <button className={`tool-button${showGrid ? " active" : ""}`} aria-label="Toggle grid" aria-pressed={showGrid} title="Toggle grid — 0.5 m grid; drags snap to 0.25 m" onClick={() => setShowGrid((value) => !value)}><Grid2X2 size={16} /></button>
+              <button className={`tool-button${showMeasure ? " active" : ""}`} aria-label="Measure" aria-pressed={showMeasure} title="Measure — distances between neighbouring artworks" onClick={() => setShowMeasure((value) => !value)}><Ruler size={16} /></button>
+              <button className={`tool-button${showStageSettings ? " active" : ""}`} aria-label="Toggle stage settings" aria-pressed={showStageSettings} title="Stage settings — room dimensions, walls, floor and ceiling" onClick={() => { const next = !showStageSettings; setShowStageSettings(next); if (next) clearSelection(); }}><Settings2 size={16} /></button>
+              <button className={`tool-button${showHistory ? " active" : ""}`} aria-label="Version history" aria-pressed={showHistory} title="Version history — the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><History size={16} /></button>
               <button className="tool-button" aria-label="Fullscreen" onClick={() => document.querySelector(".scene-wrap")?.requestFullscreen()}><Expand size={16} /></button>
             </div>
           </div>
+          {(selectionRefs.length > 1 || (selectionRefs.length === 1 && groupIdOfRef(selectionRefs[0]) !== undefined)) && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderBottom: "1px solid var(--border)", background: "var(--surface-3)", color: "var(--ink)", fontSize: "9px" }}>
+              <span>{selectionRefs.length} item{selectionRefs.length === 1 ? "" : "s"} selected</span>
+              <button type="button" disabled={selectionRefs.length < 2} title="Group the selected items so they move together" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: selectionRefs.length < 2 ? "default" : "pointer", opacity: selectionRefs.length < 2 ? 0.45 : 1 }} onClick={groupSelection}><Group size={12} /> Group</button>
+              <button type="button" disabled={!selectionRefs.some((ref) => groupIdOfRef(ref) !== undefined)} title="Ungroup the selected items" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={ungroupSelection}><Ungroup size={12} /> Ungroup</button>
+              {selectionRefs.length > 1 && (
+                <button type="button" title="Delete all selected items" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--danger, #b3261e)", fontSize: "9px", cursor: "pointer" }} onClick={deleteSelection}><Trash2 size={12} /> Delete</button>
+              )}
+              <span style={{ color: "var(--muted)" }}>Shift-click in 3D or in Layers adds to the selection; dragging moves all selected items together.</span>
+            </div>
+          )}
           <div className="scene-wrap">
-            {activeRoom && <GalleryScene artworks={currentArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={activeRoom} rooms={rooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} editable onArtworkUpdate={(id, patch) => updateArtwork(id, (artwork) => ({ ...artwork, ...patch }))} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={(id, patch) => updateElement(id, patch)} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} />}
+            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} editable onArtworkUpdate={handleSceneArtworkUpdate} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
             <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
           </div>
-          <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLayouts[activeRoom.layout].label : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks</span><span>100%</span></div>
+          <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLayouts[activeRoom.layout].label : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks{showGrid ? <><span className="status-dot-separator">·</span> Grid on — drags snap to 0.25 m</> : null}</span><span>{autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
         </section>
 
         <aside className="editor-properties-panel">
           <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="More properties"><Info size={15} /></button></div>
+          {showHistory && (
+            <div className="property-section">
+              <label>VERSION HISTORY <span>LAST 10 SAVES</span></label>
+              <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                Every save — manual or autosave — keeps a snapshot. Restoring replaces what is in the editor now and marks the exhibition unsaved.
+              </p>
+              {history.length === 0 && <p style={{ margin: 0, color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No snapshots yet — save the exhibition to create one.</p>}
+              {history.map((version) => (
+                <div key={version.id} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink)", fontSize: "9px" }}>{version.title}</span>
+                  <span style={{ color: "var(--muted)", fontSize: "8px", whiteSpace: "nowrap" }}>{new Date(version.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  <button
+                    type="button"
+                    style={{ padding: "3px 7px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: confirmingRestoreId === version.id ? "var(--danger, #b3261e)" : "var(--ink)", fontSize: "8px", cursor: "pointer", whiteSpace: "nowrap" }}
+                    onClick={() => {
+                      if (confirmingRestoreId === version.id) restoreVersion(version);
+                      else {
+                        setConfirmingRestoreId(version.id);
+                        window.setTimeout(() => setConfirmingRestoreId((current) => (current === version.id ? null : current)), 10000);
+                      }
+                    }}
+                  >
+                    {confirmingRestoreId === version.id ? "Click again to restore" : "Restore"}
+                  </button>
+                </div>
+              ))}
+              <div className="property-actions"><button type="button" onClick={() => setShowHistory(false)}>Close history</button></div>
+            </div>
+          )}
           {selected ? (
             <>
               <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
               <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Position ${axis}`} step="0.1" value={selected.position[index]} {...editSessionProps} onCommit={(next) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = next; return { ...artwork, position }; })} /></div>)}</div></div>
+              {showMeasure && (
+                <div className="property-section"><label>MEASUREMENTS <span>FROM REAL POSITIONS</span></label>
+                  <p style={{ margin: "0 0 6px", color: "var(--ink)", fontSize: "9px" }}>Centre height: {Math.round(selected.position[1] * 100)} cm</p>
+                  {neighbourMeasurements(selected).length === 0 ? (
+                    <p style={{ margin: 0, color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No neighbours on this wall — hang another artwork on the same wall to see distances.</p>
+                  ) : (
+                    neighbourMeasurements(selected).map((neighbour) => (
+                      <p key={neighbour.name} style={{ margin: "0 0 6px", color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>
+                        {neighbour.name} ({neighbour.direction}): {neighbour.centreCm} cm centre to centre · {neighbour.gapCm} cm gap
+                      </p>
+                    ))
+                  )}
+                </div>
+              )}
               <div className="property-section"><label>DIMENSIONS <span>CM</span></label><div className="coordinate-row">{(["Width", "Height"] as const).map((label, index) => {
                 const parsed = parseArtworkDimensions(selected.dimensions ?? "");
                 const current = parsed ?? { widthCm: 182, heightCm: 212 };
@@ -1356,7 +1897,7 @@ async function compressImage(file: File): Promise<File> {
                       )}
                     </div>
                   )}
-                  <div className="property-actions"><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 })); }}><Sparkles size={14} /> Fit to wall</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
+                  <div className="property-actions"><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 })); }}><Sparkles size={14} /> Fit to wall</button><button aria-label={selected.hidden ? "Show artwork in 3D" : "Hide artwork in 3D"} title={selected.hidden ? "Show in 3D" : "Hide in 3D"} onClick={() => toggleHidden({ kind: "artwork", id: selected.id })}>{selected.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button><button aria-label={selected.locked ? "Unlock artwork" : "Lock artwork"} title={selected.locked ? "Unlock (allow dragging)" : "Lock (cannot be dragged)"} onClick={() => toggleLocked({ kind: "artwork", id: selected.id })}>{selected.locked ? <Lock size={14} /> : <Unlock size={14} />}</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
                 </>
               ) : selectedElement ? (
                 <>
@@ -1370,8 +1911,8 @@ async function compressImage(file: File): Promise<File> {
                   })}</div></div>
                   <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => { snapshot(); updateElement(selectedElement.id, { rotation: selectedElement.rotation - Math.PI / 12 }); }}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selectedElement.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => { snapshot(); updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 }); }}><RotateCw size={15} /></button></div></div>
                   <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Element scale" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min="0.25" max="3" step="0.05" value={selectedElement.scale} onChange={(event) => updateElement(selectedElement.id, { scale: Number(event.target.value) })} /><span>{Math.round(selectedElement.scale * 100)}%</span></div></div>
-                  {(selectedElement.type === "partition" || selectedElement.type === "shelf" || selectedElement.type === "track-light" || selectedElement.type === "wall-text") && (
-                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "RAIL LENGTH" : selectedElement.type === "wall-text" ? "TEXT WIDTH" : "LENGTH"} <span>METERS</span></label><div className="range-control"><input aria-label="Element length in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={selectedElement.type === "track-light" ? 1 : 0.5} max={selectedElement.type === "partition" || selectedElement.type === "wall-text" ? 12 : 6} step="0.5" value={selectedElement.length} onChange={(event) => updateElement(selectedElement.id, { length: Number(event.target.value) })} /><span>{selectedElement.length} m</span></div></div>
+                  {(selectedElement.type === "partition" || selectedElement.type === "shelf" || selectedElement.type === "track-light" || selectedElement.type === "wall-text" || selectedElement.type === "platform" || selectedElement.type === "stairs" || selectedElement.type === "arch") && (
+                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "RAIL LENGTH" : selectedElement.type === "wall-text" ? "TEXT WIDTH" : selectedElement.type === "platform" || selectedElement.type === "stairs" || selectedElement.type === "arch" ? "WIDTH" : "LENGTH"} <span>METERS</span></label><div className="range-control"><input aria-label="Element length in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={selectedElement.type === "track-light" ? 1 : 0.5} max={selectedElement.type === "partition" || selectedElement.type === "wall-text" ? 12 : 6} step="0.5" value={selectedElement.length} onChange={(event) => updateElement(selectedElement.id, { length: Number(event.target.value) })} /><span>{selectedElement.length} m</span></div></div>
                   )}
                   {selectedElement.type === "plinth" && (
                     <div className="property-section"><label>HEIGHT</label><select className="full-input" {...editSessionProps} value={selectedElement.variant} onChange={(event) => updateElement(selectedElement.id, { variant: event.target.value })}>{PLINTH_VARIANTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
@@ -1395,7 +1936,7 @@ async function compressImage(file: File): Promise<File> {
                   ) : (
                     <div className="property-section"><label>{selectedElement.type === "track-light" ? "LIGHT COLOUR" : "COLOUR"}</label><div className="room-color-control"><input type="color" aria-label="Element colour" {...editSessionProps} value={selectedElement.color} onChange={(event) => updateElement(selectedElement.id, { color: event.target.value })} /><span>{selectedElement.color}</span></div></div>
                   )}
-                  <div className="property-actions"><button aria-label="Duplicate element" onClick={duplicateElement}><Copy size={14} /></button><button className="delete-action" aria-label="Delete element" onClick={removeElement}><Trash2 size={14} /></button></div>
+                  <div className="property-actions"><button aria-label={selectedElement.hidden ? "Show element in 3D" : "Hide element in 3D"} title={selectedElement.hidden ? "Show in 3D" : "Hide in 3D"} onClick={() => toggleHidden({ kind: "element", id: selectedElement.id })}>{selectedElement.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button><button aria-label={selectedElement.locked ? "Unlock element" : "Lock element"} title={selectedElement.locked ? "Unlock (allow dragging)" : "Lock (cannot be dragged)"} onClick={() => toggleLocked({ kind: "element", id: selectedElement.id })}>{selectedElement.locked ? <Lock size={14} /> : <Unlock size={14} />}</button><button aria-label="Duplicate element" onClick={duplicateElement}><Copy size={14} /></button><button className="delete-action" aria-label="Delete element" onClick={removeElement}><Trash2 size={14} /></button></div>
                 </>
               ) : selectedWallId ? (
                 <>
@@ -1410,6 +1951,11 @@ async function compressImage(file: File): Promise<File> {
               ) : (
                 <div className="room-properties">
                     <p>Shape this room and its walls.</p>
+                    {activeRoomDims && (
+                      <p style={{ margin: "0 0 4px", color: "var(--ink)", fontSize: "9px", lineHeight: 1.6 }}>
+                        {activeRoomDims.width} × {activeRoomDims.depth} m · walls {activeRoomDims.height} m high · floor {Math.round(activeRoomDims.width * activeRoomDims.depth)} m²
+                      </p>
+                    )}
                     {activeRoom && <>
                       <div className="property-section"><label>ROOM NAME</label><input className="full-input" {...editSessionProps} value={activeRoom.name} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, name: event.target.value.slice(0, 60) }))} /></div>
                       <div className="property-section"><label>GALLERY</label><select className="full-input" {...editSessionProps} value={activeRoom.layout} onChange={(event) => updateRoom(activeRoom.id, (room) => applyLayoutPreset(room, event.target.value as RoomLayout))}>{Object.entries(roomLayouts).map(([layout, details]) => <option key={layout} value={layout}>{details.label} · {details.width} × {details.depth} m</option>)}</select></div>

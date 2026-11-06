@@ -448,7 +448,9 @@ function ArtworkFrame({
 }: {
   artwork: Artwork;
   selected: boolean;
-  onSelect?: (id: string) => void;
+  // Second argument: Shift/Ctrl/Cmd was held — the editor adds the
+  // artwork to the multi-selection instead of replacing it.
+  onSelect?: (id: string, additive?: boolean) => void;
   // In walk mode a click walks up to the artwork instead of just selecting
   // it: stand 2.2 m in front of it, facing it. The click still selects the
   // artwork, so its details stay visible in the inspector / info card.
@@ -497,7 +499,7 @@ function ArtworkFrame({
       onDoubleClick={(event) => {
         event.stopPropagation();
         if (walkable || dragged?.current) return;
-        onSelect?.(artwork.id);
+        onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
         if (!interactive) return;
@@ -903,6 +905,202 @@ function CuratorialTextPlane({ text, maxWidthM, wallColor }: { text: string; max
   );
 }
 
+// --- 3D builder: grid overlay + measurement guides --------------------
+// A 0.5 m grid on the floor (editor only, toggled from the toolbar).
+// When it is on, dragged artworks and elements snap to 0.25 m steps —
+// the snapping itself happens in the editor's scene-update handlers.
+function FloorGrid({ width, depth }: { width: number; depth: number }) {
+  const positions = useMemo(() => {
+    const pts: number[] = [];
+    const step = 0.5;
+    const nx = Math.round(width / step);
+    const nz = Math.round(depth / step);
+    for (let i = 0; i <= nx; i += 1) {
+      const x = -width / 2 + i * step;
+      pts.push(x, 0.02, -depth / 2, x, 0.02, depth / 2);
+    }
+    for (let j = 0; j <= nz; j += 1) {
+      const z = -depth / 2 + j * step;
+      pts.push(-width / 2, 0.02, z, width / 2, 0.02, z);
+    }
+    return new Float32Array(pts);
+  }, [width, depth]);
+  return (
+    <lineSegments>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <lineBasicMaterial color="#a67c37" transparent opacity={0.45} />
+    </lineSegments>
+  );
+}
+
+// A small canvas-texture label (same approach as the wall text: no
+// troika, so a label can never suspend the scene). White pill, gold
+// border, dark text — the site's own colours.
+function MeasureLabel({
+  text,
+  position,
+  rotation,
+}: {
+  text: string;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+}) {
+  const drawn = useMemo(() => {
+    if (typeof document === "undefined") return null;
+    const canvas = document.createElement("canvas");
+    const measure = canvas.getContext("2d");
+    if (!measure) return null;
+    const fontPx = 44;
+    measure.font = `600 ${fontPx}px "DM Sans", sans-serif`;
+    const widthPx = Math.ceil(measure.measureText(text).width) + 30;
+    canvas.width = widthPx;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.font = `600 ${fontPx}px "DM Sans", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fdfdfc";
+    ctx.fillRect(0, 0, widthPx, 64);
+    ctx.strokeStyle = "#a67c37";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(1.5, 1.5, widthPx - 3, 61);
+    ctx.fillStyle = "#252722";
+    ctx.fillText(text, widthPx / 2, 34);
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+    return { texture, widthM: widthPx / 300, heightM: 64 / 300 };
+  }, [text]);
+  useEffect(() => () => { drawn?.texture.dispose(); }, [drawn]);
+  if (!drawn) return null;
+  return (
+    <mesh position={position} rotation={rotation}>
+      <planeGeometry args={[drawn.widthM, drawn.heightM]} />
+      <meshBasicMaterial map={drawn.texture} transparent toneMapped={false} side={DoubleSide} />
+    </mesh>
+  );
+}
+
+type MeasureWall = "back" | "front" | "left" | "right";
+
+// Which wall an artwork hangs on, from its position (same 0.28 m inset
+// and 0.45 m tolerance as the editor's wallsForArtwork).
+function measureWallKey(artwork: Artwork, width: number, depth: number): MeasureWall | null {
+  const [x, , z] = artwork.position;
+  const inset = 0.28;
+  const distances: [MeasureWall, number][] = [
+    ["back", Math.abs(z - (-depth / 2 + inset))],
+    ["front", Math.abs(z - (depth / 2 - inset))],
+    ["left", Math.abs(x - (-width / 2 + inset))],
+    ["right", Math.abs(x - (width / 2 - inset))],
+  ];
+  distances.sort((a, b) => a[1] - b[1]);
+  return distances[0][1] <= 0.45 ? distances[0][0] : null;
+}
+
+// Dimension lines + labels between neighbouring artworks on the same
+// wall, and a vertical centre-height line for the selected artwork.
+// Every distance is computed from the real positions — nothing here is
+// hardcoded.
+function MeasurementGuides({
+  artworks,
+  selectedId,
+  width,
+  depth,
+}: {
+  artworks: Artwork[];
+  selectedId?: string;
+  width: number;
+  depth: number;
+}) {
+  const guides = useMemo(() => {
+    const byWall = new Map<MeasureWall, Artwork[]>();
+    for (const artwork of artworks) {
+      const wall = measureWallKey(artwork, width, depth);
+      if (!wall) continue;
+      const list = byWall.get(wall) ?? [];
+      list.push(artwork);
+      byWall.set(wall, list);
+    }
+    const lines: number[] = [];
+    const labels: { text: string; position: [number, number, number]; rotation: [number, number, number] }[] = [];
+    const wallOffset = 0.45; // in front of the wall, clear of the frames
+    for (const [wall, list] of byWall) {
+      const along = wall === "back" || wall === "front"
+        ? (artwork: Artwork) => artwork.position[0]
+        : (artwork: Artwork) => artwork.position[2];
+      const sorted = [...list].sort((a, b) => along(a) - along(b));
+      const rotation: [number, number, number] = wall === "front" ? [0, Math.PI, 0] : wall === "left" ? [0, Math.PI / 2, 0] : wall === "right" ? [0, -Math.PI / 2, 0] : [0, 0, 0];
+      for (let i = 0; i + 1 < sorted.length; i += 1) {
+        const a = sorted[i];
+        const b = sorted[i + 1];
+        const aAlong = along(a);
+        const bAlong = along(b);
+        const centreCm = Math.round(Math.abs(bAlong - aAlong) * 100);
+        const y = (a.position[1] + b.position[1]) / 2;
+        // The dimension line runs between the two centres, 0.45 m out
+        // from the wall; short ticks mark each end.
+        const at = (v: number): [number, number, number] => {
+          if (wall === "back") return [v, y, -depth / 2 + 0.28 + wallOffset];
+          if (wall === "front") return [v, y, depth / 2 - 0.28 - wallOffset];
+          if (wall === "left") return [-width / 2 + 0.28 + wallOffset, y, v];
+          return [width / 2 - 0.28 - wallOffset, y, v];
+        };
+        const p1 = at(aAlong);
+        const p2 = at(bAlong);
+        const mid = at((aAlong + bAlong) / 2);
+        lines.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+        const tick = 0.09;
+        if (wall === "back" || wall === "front") {
+          lines.push(p1[0], p1[1] - tick, p1[2], p1[0], p1[1] + tick, p1[2]);
+          lines.push(p2[0], p2[1] - tick, p2[2], p2[0], p2[1] + tick, p2[2]);
+        } else {
+          lines.push(p1[0], p1[1] - tick, p1[2], p1[0], p1[1] + tick, p1[2]);
+          lines.push(p2[0], p2[1] - tick, p2[2], p2[0], p2[1] + tick, p2[2]);
+        }
+        labels.push({ text: `${centreCm} cm`, position: [mid[0], mid[1] + 0.22, mid[2]], rotation });
+      }
+    }
+    // Centre height of the selected artwork: a vertical line from the
+    // floor to its centre, 0.45 m out from its wall, labelled in cm.
+    const selectedArtwork = artworks.find((artwork) => artwork.id === selectedId);
+    if (selectedArtwork) {
+      const wall = measureWallKey(selectedArtwork, width, depth);
+      if (wall) {
+        const [x, y, z] = selectedArtwork.position;
+        const rotation: [number, number, number] = wall === "front" ? [0, Math.PI, 0] : wall === "left" ? [0, Math.PI / 2, 0] : wall === "right" ? [0, -Math.PI / 2, 0] : [0, 0, 0];
+        const base: [number, number, number] =
+          wall === "back" ? [x, 0, -depth / 2 + 0.28 + wallOffset]
+          : wall === "front" ? [x, 0, depth / 2 - 0.28 - wallOffset]
+          : wall === "left" ? [-width / 2 + 0.28 + wallOffset, 0, z]
+          : [width / 2 - 0.28 - wallOffset, 0, z];
+        lines.push(base[0], 0, base[2], base[0], y, base[2]);
+        labels.push({ text: `${Math.round(y * 100)} cm`, position: [base[0], y / 2, base[2]], rotation });
+      }
+    }
+    return { lines: new Float32Array(lines), labels };
+  }, [artworks, selectedId, width, depth]);
+  if (guides.lines.length === 0 && guides.labels.length === 0) return null;
+  return (
+    <group>
+      {guides.lines.length > 0 && (
+        <lineSegments>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[guides.lines, 3]} />
+          </bufferGeometry>
+          <lineBasicMaterial color="#a67c37" transparent opacity={0.9} />
+        </lineSegments>
+      )}
+      {guides.labels.map((label, index) => (
+        <MeasureLabel key={`${label.text}-${index}`} text={label.text} position={label.position} rotation={label.rotation} />
+      ))}
+    </group>
+  );
+}
+
 // One placeable 3D element from the Elements palette, rendered in the room
 // like an artwork: clickable to select, draggable along its plane (floor,
 // wall or ceiling), resizable from the lime handle when selected.
@@ -920,7 +1118,9 @@ function ElementMesh({
   element: RoomElement;
   room: GalleryRoom;
   selected: boolean;
-  onSelect?: (id: string) => void;
+  // Second argument: Shift/Ctrl/Cmd was held — the editor adds the
+  // element to the multi-selection instead of replacing it.
+  onSelect?: (id: string, additive?: boolean) => void;
   walkable?: boolean;
   dragged?: React.RefObject<boolean>;
   editable?: boolean;
@@ -967,7 +1167,15 @@ function ElementMesh({
             ? { size: [element.length + 0.2, 1.3, 0.5], y: 0, handle: [element.length / 2 + 0.18, 0.4, 0.12] }
             : element.type === "curtain"
               ? { size: [element.length + 0.2, 2.9, 0.3], y: 1.4, handle: [element.length / 2 + 0.18, 1.4, 0.12] }
-              : { size: [1.7, 1.7, 1.3], y: 0.7, handle: [0.85, 0.65, 0.2] };
+              : element.type === "column"
+                ? { size: [1.1, height, 1.1], y: height / 2, handle: [0.55, height / 2, 0.2] }
+                : element.type === "platform"
+                  ? { size: [element.length + 0.3, 0.6, 2.3], y: 0.15, handle: [element.length / 2 + 0.18, 0.3, 0.2] }
+                  : element.type === "stairs"
+                    ? { size: [element.length + 0.3, 1.3, 1.5], y: 0.5, handle: [element.length / 2 + 0.18, 0.6, 0.2] }
+                    : element.type === "arch"
+                      ? { size: [element.length + 0.3, 2.9, 0.5], y: 1.3, handle: [element.length / 2 + 0.18, 1.3, 0.2] }
+                      : { size: [1.7, 1.7, 1.3], y: 0.7, handle: [0.85, 0.65, 0.2] };
   // Track-light spot targets (three heads, aimed down and into the room).
   const trackTargets = useMemo(() => [new Object3D(), new Object3D(), new Object3D()], []);
   useEffect(() => {
@@ -996,7 +1204,7 @@ function ElementMesh({
         event.stopPropagation();
         if (dragged?.current) return;
         if (!editable) return;
-        onSelect?.(element.id);
+        onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
         if (!interactive) return;
@@ -1265,6 +1473,66 @@ function ElementMesh({
             </mesh>
           ))}
           <SheerPanel width={element.length} color={element.color} />
+        </group>
+      )}
+      {element.type === "column" && (
+        <group>
+          {/* Floor-to-ceiling column: square base, tapered shaft, capital. */}
+          <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.7, 0.12, 0.7]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
+          <mesh position={[0, 0.12 + (height - 0.3) / 2, 0]} castShadow>
+            <cylinderGeometry args={[0.26, 0.3, height - 0.3, 24]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
+          <mesh position={[0, height - 0.09, 0]} castShadow>
+            <boxGeometry args={[0.7, 0.18, 0.7]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
+        </group>
+      )}
+      {element.type === "platform" && (
+        <group>
+          {/* Low stage: a 25 cm platform, `length` wide, 2 m deep. */}
+          <mesh position={[0, 0.125, 0]} castShadow receiveShadow>
+            <boxGeometry args={[element.length, 0.25, 2]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
+          <mesh position={[0, 0.26, 0]}>
+            <boxGeometry args={[element.length + 0.06, 0.02, 2.06]} />
+            <meshStandardMaterial color="#d8d2c4" roughness={0.85} />
+          </mesh>
+        </group>
+      )}
+      {element.type === "stairs" && (
+        <group>
+          {/* Four steps, 25 cm each: 1 m high, 1.2 m deep, `length` wide,
+              rising toward the back of the room. */}
+          {[0, 1, 2, 3].map((step) => {
+            const stepHeight = 0.25 * (step + 1);
+            return (
+              <mesh key={step} position={[0, stepHeight / 2, 0.45 - step * 0.3]} castShadow receiveShadow>
+                <boxGeometry args={[element.length, stepHeight, 0.3]} />
+                <meshStandardMaterial color={element.color} roughness={0.85} />
+              </mesh>
+            );
+          })}
+        </group>
+      )}
+      {element.type === "arch" && (
+        <group>
+          {/* Doorway arch: two posts and a semicircular top spanning them. */}
+          {[-1, 1].map((side) => (
+            <mesh key={side} position={[side * (element.length / 2 - 0.15), 1.15, 0]} castShadow>
+              <boxGeometry args={[0.3, 2.3, 0.3]} />
+              <meshStandardMaterial color={element.color} roughness={0.85} />
+            </mesh>
+          ))}
+          <mesh position={[0, 2.3, 0]} castShadow>
+            <torusGeometry args={[element.length / 2 - 0.15, 0.15, 12, 32, Math.PI]} />
+            <meshStandardMaterial color={element.color} roughness={0.85} />
+          </mesh>
         </group>
       )}
       {selected && (
@@ -1826,12 +2094,15 @@ function GalleryRoom({
   onElementHover,
   selectedWallId,
   onWallSelect,
+  showGrid,
+  showMeasure,
+  multiSelectedIds,
 }: {
   room: GalleryRoom;
   offsetX: number;
   artworks: Artwork[];
   selectedId?: string;
-  onSelect?: (id: string) => void;
+  onSelect?: (id: string, additive?: boolean) => void;
   walkable: boolean;
   onFloorClick?: (point: Vector3) => void;
   onWalkTo?: (point: Vector3, yaw: number) => void;
@@ -1844,11 +2115,17 @@ function GalleryRoom({
   onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
   // Elements (editor): selection, drag and wall painting.
   selectedElementId?: string;
-  onSelectElement?: (id: string) => void;
+  onSelectElement?: (id: string, additive?: boolean) => void;
   onElementDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
   onElementHover?: (hover: { id: string; cursor: string } | null) => void;
   selectedWallId?: string | null;
   onWallSelect?: (wallId: WallId | string) => void;
+  // 3D builder (editor): 0.5 m floor grid and measurement guides.
+  showGrid?: boolean;
+  showMeasure?: boolean;
+  // 3D builder (editor): extra ids of a multi-selection, so every
+  // selected item shows its outline and resize handle.
+  multiSelectedIds?: string[];
 }) {
   const { width, depth, height } = roomLayouts[room.layout];
   const wallZ = -depth / 2;
@@ -1889,7 +2166,7 @@ function GalleryRoom({
         <ArtworkFrame
           key={artwork.id}
           artwork={artwork}
-          selected={artwork.id === selectedId}
+          selected={artwork.id === selectedId || (multiSelectedIds ?? []).includes(artwork.id)}
           onSelect={onSelect}
           walkable={walkable}
           onWalkTo={onWalkTo}
@@ -1900,7 +2177,7 @@ function GalleryRoom({
           onHoverChange={onHoverChange}
         />
       )),
-    [artworks, dragged, editable, offsetX, onDragStart, onHoverChange, onSelect, onWalkTo, selectedId, walkable],
+    [artworks, dragged, editable, multiSelectedIds, offsetX, onDragStart, onHoverChange, onSelect, onWalkTo, selectedId, walkable],
   );
 
   return (
@@ -2079,13 +2356,15 @@ function GalleryRoom({
         </group>
       )}
       <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} />
+      {showGrid && <FloorGrid width={width} depth={depth} />}
+      {showMeasure && <MeasurementGuides artworks={artworks} selectedId={selectedId} width={width} depth={depth} />}
       {artworkNodes}
       {(room.elements ?? []).map((element) => (
         <ElementMesh
           key={element.id}
           element={element}
           room={room}
-          selected={element.id === selectedElementId}
+          selected={element.id === selectedElementId || (multiSelectedIds ?? []).includes(element.id)}
           onSelect={onSelectElement}
           walkable={walkable}
           dragged={dragged}
@@ -2589,10 +2868,13 @@ export default function GalleryScene({
   onEditStart,
   onEditEnd,
   onElementDrop,
+  showGrid,
+  showMeasure,
+  multiSelectedIds,
 }: {
   artworks: Artwork[];
   selectedId?: string;
-  onSelect?: (id: string) => void;
+  onSelect?: (id: string, additive?: boolean) => void;
   className?: string;
   room: GalleryRoom;
   rooms?: GalleryRoom[];
@@ -2614,7 +2896,7 @@ export default function GalleryScene({
   onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
   // Editor only: elements (furniture, partition walls, vitrines, ...).
   selectedElementId?: string;
-  onSelectElement?: (id: string) => void;
+  onSelectElement?: (id: string, additive?: boolean) => void;
   onElementUpdate?: (id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) => void;
   // Editor only: wall painting — the wall clicked in the 3D view.
   selectedWallId?: string | null;
@@ -2625,6 +2907,11 @@ export default function GalleryScene({
   onEditEnd?: () => void;
   // Editor only: an element dropped from the palette onto the room.
   onElementDrop?: (type: ElementType, point: { x: number; y: number; z: number }) => void;
+  // 3D builder (editor): 0.5 m floor grid, measurement guides, and the
+  // extra ids of a multi-selection (any selected item may start a drag).
+  showGrid?: boolean;
+  showMeasure?: boolean;
+  multiSelectedIds?: string[];
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   const offsets = useMemo(() => {
@@ -2653,10 +2940,17 @@ export default function GalleryScene({
   const [dragCursor, setDragCursor] = useState<string | null>(null);
   const [hoveredArtwork, setHoveredArtwork] = useState<{ id: string; cursor: string } | null>(null);
 
+  // Every selected id (primary + multi-selection): any of them may start
+  // a drag, and the editor moves the rest of the selection with it.
+  const selectedIdSet = useMemo(
+    () => new Set([selectedId, selectedElementId, ...(multiSelectedIds ?? [])].filter((id): id is string => Boolean(id))),
+    [selectedId, selectedElementId, multiSelectedIds],
+  );
+
   const handleDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
     if (!editable || walking) return;
     const artwork = artworks.find((item) => item.id === id);
-    if (!artwork || artwork.id !== selectedId) return;
+    if (!artwork || !selectedIdSet.has(artwork.id)) return;
     onEditStart?.();
     const { width, height } = artworkSize(artwork);
     const layout = roomLayouts[room.layout];
@@ -2710,7 +3004,7 @@ export default function GalleryScene({
     // shows all rooms at once): find the room that holds this element.
     const ownerRoom = sceneRooms.find((sceneRoom) => (sceneRoom.elements ?? []).some((item) => item.id === id)) ?? room;
     const element = (ownerRoom.elements ?? []).find((item) => item.id === id);
-    if (!element || element.id !== selectedElementId) return;
+    if (!element || !selectedIdSet.has(element.id)) return;
     onEditStart?.();
     const layout = roomLayouts[ownerRoom.layout];
     const planeKind = ELEMENT_PLANES[element.type];
@@ -2771,6 +3065,9 @@ export default function GalleryScene({
       onElementHover={setHoveredElement}
       selectedWallId={selectedWallId}
       onWallSelect={onWallSelect}
+      showGrid={showGrid}
+      showMeasure={showMeasure}
+      multiSelectedIds={multiSelectedIds}
       onFloorClick={walkMode ? (point) => {
         destination.current = new Vector3(point.x, 0, point.z);
         lookYaw.current = null;

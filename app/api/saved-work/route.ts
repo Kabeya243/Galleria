@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 // tool; `data` is the tool-specific configuration as JSON. All rows are
 // scoped to the signed-in user.
 
-const KINDS = ["mockup", "palette", "photo-edit", "presentation", "certificate", "frame-preset"] as const;
+const KINDS = ["mockup", "palette", "photo-edit", "presentation", "certificate", "frame-preset", "exhibition-version"] as const;
 
 const saveSchema = z.object({
   kind: z.enum(KINDS),

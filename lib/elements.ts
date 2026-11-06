@@ -3,7 +3,9 @@ import { z } from "zod";
 // Every placeable object in the Elements palette. The first seven are the
 // core set; the rest come from Kabeya's reference photos of real galleries
 // (movable partition walls on feet, long block bench, plinths, vitrine,
-// ceiling track lights, display shelves, desk & chair, sheer curtains).
+// ceiling track lights, display shelves, desk & chair, sheer curtains),
+// plus the architectural pieces (column, low stage, stairs, doorway
+// arch) added for the 3D builder.
 export const elementTypes = [
   "partition",
   "chair",
@@ -18,6 +20,10 @@ export const elementTypes = [
   "shelf",
   "desk",
   "curtain",
+  "column",
+  "platform",
+  "stairs",
+  "arch",
 ] as const;
 
 export type ElementType = (typeof elementTypes)[number];
@@ -40,6 +46,10 @@ export const ELEMENT_PLANES: Record<ElementType, "floor" | "wall" | "ceiling"> =
   shelf: "wall",
   desk: "floor",
   curtain: "wall",
+  column: "floor",
+  platform: "floor",
+  stairs: "floor",
+  arch: "floor",
 };
 
 export const roomElementSchema = z.object({
@@ -73,6 +83,19 @@ export const roomElementSchema = z.object({
   layout: z.enum(["stacked", "side", "block"]).default("stacked"),
   bodySize: z.number().min(0.02).max(0.5).default(0.11),
   bodyColor: z.string().regex(/^#[\da-f]{6}$/i).default("#3a3a36"),
+  // Layers & grouping (3D builder): a hidden element is not rendered in
+  // the 3D view, a locked element cannot be dragged, and elements sharing
+  // a groupId move together. These fields live on the element, so they
+  // travel with the rooms JSON through the exhibition save — no schema
+  // change needed. They are optional (absent = visible / unlocked) so
+  // rooms saved before them, and the template seeder in lib/rooms.ts,
+  // keep validating unchanged. Artworks carry the same three fields in
+  // the editor (see components/editor.tsx); the artwork table has no
+  // columns for them, so theirs persist through the version-history
+  // snapshot instead.
+  hidden: z.boolean().optional(),
+  locked: z.boolean().optional(),
+  groupId: z.string().max(64).optional(),
 });
 
 export type RoomElement = z.infer<typeof roomElementSchema>;
@@ -143,6 +166,10 @@ export const ELEMENT_DEFAULTS: Record<ElementType, ElementDefaults> = {
   shelf: { label: "Display shelf", color: "#f5f2eb", length: 2, y: 1.7, wallOffset: 0.2 },
   desk: { label: "Desk & chair", color: "#8a6a45", length: 1, y: 0, wallOffset: 0 },
   curtain: { label: "Sheer curtain", color: "#ffffff", length: 2.4, y: 0, wallOffset: 0.16 },
+  column: { label: "Column", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
+  platform: { label: "Platform · low stage", color: "#e8e4da", length: 3, y: 0, wallOffset: 0 },
+  stairs: { label: "Stairs", color: "#f5f2eb", length: 2, y: 0, wallOffset: 0 },
+  arch: { label: "Arch · doorway", color: "#f5f2eb", length: 2, y: 0, wallOffset: 0 },
 };
 
 // A new element, placed sensibly for its type: floor pieces near the
@@ -185,5 +212,8 @@ export function createElement(
     layout: "stacked",
     bodySize: 0.11,
     bodyColor: "#3a3a36",
+    hidden: false,
+    locked: false,
+    groupId: undefined,
   };
 }

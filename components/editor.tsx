@@ -32,8 +32,8 @@ import ElementThumbnail from "@/components/element-thumbnail";
 import FrameThumbnail from "@/components/frame-thumbnail";
 import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
 import ThemeToggle from "@/components/theme-toggle";
-import type { Artwork, FrameVariant } from "@/lib/demo-data";
-import { FRAME_VARIANTS } from "@/lib/demo-data";
+import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
+import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, lightTypes, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 
@@ -150,6 +150,22 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [showGuide, setShowGuide] = useState(false);
   // Two-step inline confirm for removing a room (see removeRoom).
   const [confirmingRemoveRoom, setConfirmingRemoveRoom] = useState(false);
+  // Frame Studio (artwork inspector): saved custom frame presets, the
+  // customise panel, and compare mode.
+  type SavedFramePreset = { id: string; title: string; data: Record<string, unknown>; artworkId: string | null; createdAt: string; updatedAt: string };
+  const [framePresets, setFramePresets] = useState<SavedFramePreset[]>([]);
+  const [framePresetsLoaded, setFramePresetsLoaded] = useState(false);
+  const [framePresetsLoading, setFramePresetsLoading] = useState(false);
+  const [framePresetsError, setFramePresetsError] = useState<string | null>(null);
+  const [presetName, setPresetName] = useState("");
+  const [presetMessage, setPresetMessage] = useState<string | null>(null);
+  const [presetBusy, setPresetBusy] = useState(false);
+  const [customisingFrame, setCustomisingFrame] = useState(false);
+  const [comparingFrames, setComparingFrames] = useState(false);
+  const [compareFrames, setCompareFrames] = useState<string[]>([]);
+  const [renamingPresetId, setRenamingPresetId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [confirmDeletePresetId, setConfirmDeletePresetId] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   // Undo history: full editor snapshots (artworks + rooms + title +
   // description), so Ctrl+Z covers artworks, elements and room settings
@@ -338,6 +354,138 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
     setSelectedElementId(undefined);
     setSelectedWallId(null);
   }
+
+  // --- Frame Studio ---------------------------------------------------
+  // The editable configuration behind the selected artwork's frame. A
+  // "none" frame customises from plain wood, since there is no frame
+  // to customise.
+  const frameConfig: FrameConfig | null = selected
+    ? (() => {
+        const config = effectiveFrameConfig(selected.frame);
+        return config.base === "none" ? { ...config, base: "wood" } : config;
+      })()
+    : null;
+
+  function applyFrameValue(value: string, takeSnapshot = true) {
+    if (!selected) return;
+    if (takeSnapshot) snapshot();
+    updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: value }));
+  }
+
+  function applyFrameConfig(config: FrameConfig) {
+    const encoded = encodeFrameConfig(config);
+    if (encoded) applyFrameValue(encoded);
+  }
+
+  // A control change: merge the patch into the current configuration and
+  // store it encoded on the artwork, so the 3D frame, the thumbnail and
+  // the saved exhibition all see the same frame. Sliders snapshot once
+  // on pointer down (beginEdit), so this never snapshots per tick.
+  function updateFrameConfig(patch: Partial<FrameConfig>) {
+    if (!selected || !frameConfig) return;
+    const encoded = encodeFrameConfig({ ...frameConfig, ...patch });
+    if (encoded) updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: encoded }));
+  }
+
+  async function loadFramePresets() {
+    setFramePresetsLoading(true);
+    setFramePresetsError(null);
+    try {
+      const response = await fetch("/api/saved-work?kind=frame-preset");
+      if (!response.ok) throw new Error(response.status === 401 ? "Sign in to save frame presets." : "Could not load your frame presets.");
+      const result = (await response.json()) as { saved: SavedFramePreset[] };
+      setFramePresets(result.saved ?? []);
+      setFramePresetsLoaded(true);
+    } catch (error) {
+      setFramePresetsError(error instanceof Error ? error.message : "Could not load your frame presets.");
+    } finally {
+      setFramePresetsLoading(false);
+    }
+  }
+
+  // Load the saved presets once an artwork is selected — the Frame
+  // Studio lives in the artwork inspector.
+  const selectedArtworkId = selected?.id;
+  useEffect(() => {
+    if (selectedArtworkId && !framePresetsLoaded && !framePresetsLoading) void loadFramePresets();
+  }, [selectedArtworkId, framePresetsLoaded, framePresetsLoading]);
+
+  async function saveFramePreset() {
+    if (!selected || !frameConfig) return;
+    const name = presetName.trim();
+    if (!name) {
+      setPresetMessage("Give the preset a name first.");
+      return;
+    }
+    setPresetBusy(true);
+    setPresetMessage(null);
+    try {
+      const response = await fetch("/api/saved-work", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "frame-preset", title: name, data: frameConfig, artworkId: selected.id }),
+      });
+      if (!response.ok) throw new Error(response.status === 401 ? "Sign in to save frame presets." : "Could not save this preset.");
+      setPresetName("");
+      setPresetMessage(`Saved “${name}”.`);
+      setFramePresetsLoaded(false);
+      await loadFramePresets();
+    } catch (error) {
+      setPresetMessage(error instanceof Error ? error.message : "Could not save this preset.");
+    } finally {
+      setPresetBusy(false);
+    }
+  }
+
+  async function renameFramePreset(id: string) {
+    const title = renameDraft.trim();
+    if (!title) {
+      setPresetMessage("Give the preset a name first.");
+      return;
+    }
+    setPresetBusy(true);
+    try {
+      const response = await fetch("/api/saved-work", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, title }),
+      });
+      if (!response.ok) throw new Error("Could not rename this preset.");
+      setRenamingPresetId(null);
+      await loadFramePresets();
+    } catch (error) {
+      setPresetMessage(error instanceof Error ? error.message : "Could not rename this preset.");
+    } finally {
+      setPresetBusy(false);
+    }
+  }
+
+  async function deleteFramePreset(id: string) {
+    setPresetBusy(true);
+    try {
+      const response = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Could not delete this preset.");
+      setConfirmDeletePresetId(null);
+      await loadFramePresets();
+    } catch (error) {
+      setPresetMessage(error instanceof Error ? error.message : "Could not delete this preset.");
+    } finally {
+      setPresetBusy(false);
+    }
+  }
+
+  function toggleCompareFrame(value: string) {
+    setCompareFrames((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : current.length >= 4 ? current : [...current, value],
+    );
+  }
+
+  function compareFrameLabel(value: string): string {
+    const custom = parseFrameConfig(value);
+    if (custom) return `${FRAME_VARIANTS[custom.base]?.label ?? custom.base} · custom`;
+    return FRAME_VARIANTS[value as FrameVariant]?.label ?? value;
+  }
+  // --- /Frame Studio --------------------------------------------------
 
   const selectedElement = useMemo(
     // Elements live in every room, not just the active one: the inspector
@@ -1088,18 +1236,126 @@ async function compressImage(file: File): Promise<File> {
                   <div className="property-section"><label>MEDIUM</label><input className="full-input" {...editSessionProps} value={selected.medium} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, medium: event.target.value }))} /></div>
                   <div className="property-section"><label>DIMENSIONS</label><input className="full-input" {...editSessionProps} value={selected.dimensions} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: event.target.value }))} /></div>
                   <div className="property-section"><label>DESCRIPTION</label><textarea className="full-input property-textarea" {...editSessionProps} value={selected.description} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, description: event.target.value }))} /></div>
-                  <div className="property-section"><label>FRAME</label><div className="frame-options">{(Object.keys(FRAME_VARIANTS) as FrameVariant[]).map((variant) => (
-                    <button
-                      key={variant}
-                      type="button"
-                      className={`frame-option${(selected.frame ?? "wood") === variant ? " selected" : ""}`}
-                      aria-pressed={(selected.frame ?? "wood") === variant}
-                      onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: variant })); }}
-                    >
-                      <FrameThumbnail variant={variant} />
-                      {FRAME_VARIANTS[variant].label}
-                    </button>
-                  ))}</div></div>
+                  <div className="property-section"><label>FRAME</label><div className="frame-options">{(Object.keys(FRAME_VARIANTS) as FrameVariant[]).map((variant) => {
+                    const isCurrent = !comparingFrames && (selected.frame ?? "wood") === variant;
+                    const inCompare = compareFrames.includes(variant);
+                    return (
+                      <button
+                        key={variant}
+                        type="button"
+                        className={`frame-option${isCurrent || inCompare ? " selected" : ""}`}
+                        aria-pressed={isCurrent || inCompare}
+                        title={comparingFrames ? (inCompare ? `Remove ${FRAME_VARIANTS[variant].label} from the comparison` : `Add ${FRAME_VARIANTS[variant].label} to the comparison (up to 4)`) : `Frame this artwork in ${FRAME_VARIANTS[variant].label}`}
+                        onClick={() => {
+                          if (comparingFrames) { toggleCompareFrame(variant); return; }
+                          snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: variant }));
+                        }}
+                      >
+                        <FrameThumbnail variant={variant} />
+                        {FRAME_VARIANTS[variant].label}
+                        {inCompare && <span>· in compare</span>}
+                      </button>
+                    );
+                  })}</div>
+                  {isCustomFrame(selected.frame) && frameConfig && (
+                    <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                      Custom frame — based on {FRAME_VARIANTS[frameConfig.base]?.label ?? frameConfig.base}.{" "}
+                      <button type="button" style={{ padding: 0, border: 0, background: "none", color: "var(--accent)", fontSize: "8px", textDecoration: "underline", cursor: "pointer" }} onClick={() => applyFrameValue(frameConfig.base)}>Reset to the built-in style</button>
+                    </p>
+                  )}
+                  {comparingFrames && (
+                    <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                      Comparing — click frames in the grid above to add or remove them (up to 4), then apply one below.
+                    </p>
+                  )}
+                  <div className="property-actions">
+                    <button type="button" onClick={() => setCustomisingFrame((value) => !value)}>{customisingFrame ? "Hide frame controls" : "Customise this frame"}</button>
+                    <button type="button" aria-pressed={comparingFrames} onClick={() => { setComparingFrames((value) => !value); if (comparingFrames) setCompareFrames([]); }}>{comparingFrames ? "Done comparing" : "Compare frames"}</button>
+                  </div></div>
+                  <div className="property-section"><label>FRAME PRESETS</label>
+                    <div className="frame-options">{FRAME_PRESETS.map((preset) => (
+                      <button key={preset.name} type="button" className="frame-option" title={preset.description} onClick={() => applyFrameConfig(preset.config)}>
+                        <FrameThumbnail variant={preset.config.base} config={preset.config} />
+                        {preset.name}
+                      </button>
+                    ))}</div>
+                    {framePresetsLoading && <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px" }}>Loading your presets…</p>}
+                    {framePresetsError && <p style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>{framePresetsError} <button type="button" style={{ padding: 0, border: 0, background: "none", color: "var(--accent)", fontSize: "8px", textDecoration: "underline", cursor: "pointer" }} onClick={() => void loadFramePresets()}>Retry</button></p>}
+                    {!framePresetsLoading && !framePresetsError && framePresets.length === 0 && (
+                      <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No saved presets yet — customise a frame below and save it with a name.</p>
+                    )}
+                    {!framePresetsLoading && !framePresetsError && framePresets.length > 0 && (
+                      <div style={{ marginTop: "8px" }}>
+                        {framePresets.map((preset) => {
+                          const config = parseSavedFrameConfig(preset.data);
+                          const encoded = encodeFrameConfig(config);
+                          const inCompare = encoded !== null && compareFrames.includes(encoded);
+                          return (
+                            <div key={preset.id} style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+                              {renamingPresetId === preset.id ? (
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  <input className="full-input" style={{ flex: 1 }} aria-label="Preset name" value={renameDraft} onChange={(event) => setRenameDraft(event.target.value.slice(0, 60))} onKeyDown={(event) => { if (event.key === "Enter") void renameFramePreset(preset.id); }} />
+                                  <button type="button" style={{ padding: "0 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--ink)", fontSize: "8px", cursor: "pointer" }} disabled={presetBusy} onClick={() => void renameFramePreset(preset.id)}>Save</button>
+                                  <button type="button" style={{ padding: "0 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--muted)", fontSize: "8px", cursor: "pointer" }} onClick={() => setRenamingPresetId(null)}>Cancel</button>
+                                </div>
+                              ) : (
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink)", fontSize: "9px", fontWeight: 600 }}>{preset.title}</span>
+                                  <button type="button" style={{ padding: "3px 7px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--ink)", fontSize: "8px", cursor: "pointer" }} onClick={() => applyFrameConfig(config)}>Apply</button>
+                                  <button type="button" aria-pressed={inCompare} style={{ padding: "3px 7px", border: `1px solid ${inCompare ? "var(--accent)" : "var(--border)"}`, borderRadius: "3px", background: "var(--surface-3)", color: "var(--muted)", fontSize: "8px", cursor: "pointer" }} onClick={() => { setComparingFrames(true); if (encoded) toggleCompareFrame(encoded); }}>{inCompare ? "In compare" : "Compare"}</button>
+                                  <button type="button" style={{ padding: "3px 7px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--muted)", fontSize: "8px", cursor: "pointer" }} onClick={() => { setRenamingPresetId(preset.id); setRenameDraft(preset.title); }}>Rename</button>
+                                  <button type="button" style={{ padding: "3px 7px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--danger, #b3261e)", fontSize: "8px", cursor: "pointer" }} onClick={() => { if (confirmDeletePresetId === preset.id) void deleteFramePreset(preset.id); else setConfirmDeletePresetId(preset.id); }}>{confirmDeletePresetId === preset.id ? "Click again to delete" : "Delete"}</button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {presetMessage && <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{presetMessage}</p>}
+                  </div>
+                  {customisingFrame && frameConfig && (
+                    <>
+                      <div className="property-section"><label>OUTER BORDER WIDTH <span>{Math.round(frameConfig.width * 100)} CM</span></label><div className="range-control"><input aria-label="Frame outer border width in centimetres" type="range" min="0.02" max="0.25" step="0.005" value={frameConfig.width} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateFrameConfig({ width: Number(event.target.value) })} /><span>{Math.round(frameConfig.width * 100)} cm</span></div></div>
+                      <div className="property-section"><label>DEPTH <span>{Math.round(frameConfig.depth * 100)} CM</span></label><div className="range-control"><input aria-label="Frame depth in centimetres" type="range" min="0.05" max="0.3" step="0.005" value={frameConfig.depth} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateFrameConfig({ depth: Number(event.target.value) })} /><span>{Math.round(frameConfig.depth * 100)} cm</span></div></div>
+                      <div className="property-section"><label>MATERIAL</label><select className="full-input" aria-label="Frame material" {...editSessionProps} value={frameConfig.material} onChange={(event) => updateFrameConfig({ material: event.target.value as FrameMaterial })}>{(Object.keys(FRAME_MATERIAL_LABELS) as FrameMaterial[]).map((material) => <option key={material} value={material}>{FRAME_MATERIAL_LABELS[material]}</option>)}</select></div>
+                      <div className="property-section"><label>COLOUR</label><div className="room-color-control"><input type="color" aria-label="Frame colour" {...editSessionProps} value={frameConfig.color} onChange={(event) => updateFrameConfig({ color: event.target.value })} /><span>{frameConfig.color}</span></div></div>
+                      <div className="property-section"><label>FINISH</label><select className="full-input" aria-label="Frame finish" {...editSessionProps} value={frameConfig.finish} onChange={(event) => updateFrameConfig({ finish: event.target.value as FrameFinish })}>{(Object.keys(FRAME_FINISH_LABELS) as FrameFinish[]).map((finish) => <option key={finish} value={finish}>{FRAME_FINISH_LABELS[finish]}</option>)}</select></div>
+                      <div className="property-section"><label>WOOD-GRAIN INTENSITY <span>{Math.round(frameConfig.grain * 100)}%</span></label><div className="range-control"><input aria-label="Wood-grain intensity" type="range" min="0" max="1" step="0.05" value={frameConfig.grain} disabled={frameConfig.material !== "wood"} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateFrameConfig({ grain: Number(event.target.value) })} /><span>{Math.round(frameConfig.grain * 100)}%</span></div>{frameConfig.material !== "wood" && <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: "8px" }}>Wood grain applies to wood frames.</p>}</div>
+                      <div className="property-section"><label>EDGE PROFILE</label><select className="full-input" aria-label="Frame edge profile" {...editSessionProps} value={frameConfig.profile} onChange={(event) => updateFrameConfig({ profile: event.target.value as FrameProfile })}>{(Object.keys(FRAME_PROFILE_LABELS) as FrameProfile[]).map((profile) => <option key={profile} value={profile}>{FRAME_PROFILE_LABELS[profile]}</option>)}</select></div>
+                      <div className="property-section"><label>INNER BORDER WIDTH <span>{Math.round(frameConfig.innerBorder * 1000)} MM</span></label><div className="range-control"><input aria-label="Inner border width in millimetres" type="range" min="0" max="0.03" step="0.001" value={frameConfig.innerBorder} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateFrameConfig({ innerBorder: Number(event.target.value) })} /><span>{Math.round(frameConfig.innerBorder * 1000)} mm</span></div></div>
+                      <div className="property-section"><label>MATBOARD WIDTH <span>{Math.round(frameConfig.matWidth * 100)} CM</span></label><div className="range-control"><input aria-label="Matboard width in centimetres" type="range" min="0" max="0.3" step="0.005" value={frameConfig.matWidth} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateFrameConfig({ matWidth: Number(event.target.value) })} /><span>{Math.round(frameConfig.matWidth * 100)} cm</span></div></div>
+                      <div className="property-section"><label>MATBOARD COLOUR</label><div className="room-color-control"><input type="color" aria-label="Matboard colour" {...editSessionProps} value={frameConfig.matColor} onChange={(event) => updateFrameConfig({ matColor: event.target.value })} /><span>{frameConfig.matColor}</span></div></div>
+                      <div className="property-section"><label>GLASS</label><select className="full-input" aria-label="Glass type" {...editSessionProps} value={frameConfig.glass} onChange={(event) => updateFrameConfig({ glass: event.target.value as FrameGlass })}>{(Object.keys(FRAME_GLASS_LABELS) as FrameGlass[]).map((glass) => <option key={glass} value={glass}>{FRAME_GLASS_LABELS[glass]}</option>)}</select></div>
+                      <div className="property-section"><label>FLOAT GAP <span>{Math.round(frameConfig.floatGap * 100)} CM</span></label><div className="range-control"><input aria-label="Float gap in centimetres" type="range" min="0" max="0.2" step="0.005" value={frameConfig.floatGap} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateFrameConfig({ floatGap: Number(event.target.value) })} /><span>{Math.round(frameConfig.floatGap * 100)} cm</span></div><p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: "8px" }}>How far the artwork floats inside the frame.</p></div>
+                      <div className="property-section"><label>RECESS <span>{Math.round(frameConfig.recess * 100)} CM</span></label><div className="range-control"><input aria-label="Artwork recess in centimetres" type="range" min="0" max="0.15" step="0.005" value={frameConfig.recess} {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} onChange={(event) => updateFrameConfig({ recess: Number(event.target.value) })} /><span>{Math.round(frameConfig.recess * 100)} cm</span></div><p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: "8px" }}>How far behind the front face the artwork sits.</p></div>
+                      <div className="property-section"><label>SAVE AS PRESET</label><input className="full-input" aria-label="Preset name" value={presetName} onChange={(event) => setPresetName(event.target.value.slice(0, 60))} placeholder="Preset name, e.g. Warm walnut" /><div className="property-actions"><button type="button" disabled={presetBusy} onClick={() => void saveFramePreset()}>{presetBusy ? "Saving…" : "Save this frame as a preset"}</button></div>{presetMessage && <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{presetMessage}</p>}</div>
+                    </>
+                  )}
+                  {comparingFrames && (
+                    <div className="property-section"><label>COMPARE FRAMES <span>{compareFrames.length}/4</span></label>
+                      {compareFrames.length === 0 ? (
+                        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No frames selected yet. Click frames in the grid above — or Compare on a saved preset — to add up to 4 here.</p>
+                      ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", marginTop: "8px" }}>
+                          {compareFrames.map((value) => {
+                            const custom = parseFrameConfig(value);
+                            const variant = custom ? custom.base : (value as FrameVariant);
+                            return (
+                              <div key={value} style={{ minWidth: 0, border: "1px solid var(--border)", borderRadius: "3px", padding: "6px", background: "var(--surface-3)" }}>
+                                <FrameThumbnail variant={variant} config={custom} imageUrl={selected.imageUrl} artworkColor={selected.color} width={120} height={90} />
+                                <div style={{ marginTop: "6px", color: "var(--ink)", fontSize: "8px", fontWeight: 600, lineHeight: 1.4 }}>{compareFrameLabel(value)}</div>
+                                <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                                  <button type="button" style={{ flex: 1, padding: "4px 6px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "8px", cursor: "pointer" }} onClick={() => applyFrameValue(value)}>Apply</button>
+                                  <button type="button" aria-label={`Remove ${compareFrameLabel(value)} from the comparison`} style={{ padding: "4px 6px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--muted)", fontSize: "8px", cursor: "pointer" }} onClick={() => toggleCompareFrame(value)}>Remove</button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="property-actions"><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 })); }}><Sparkles size={14} /> Fit to wall</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
                 </>
               ) : selectedElement ? (

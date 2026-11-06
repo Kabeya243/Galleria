@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { isR2ImageUrl } from "@/lib/r2";
 import { galleryRoomSchema } from "@/lib/rooms";
+import { FRAME_VARIANTS } from "@/lib/demo-data";
+import type { FrameVariant } from "@/lib/demo-data";
 
 export const credentialsSchema = z.object({
   email: z.string().trim().email().max(254).transform((email) => email.toLowerCase()),
@@ -66,8 +68,17 @@ const artworkSchema = z.object({
   ]),
   rotation: z.number().finite().min(-Math.PI * 8).max(Math.PI * 8),
   scale: z.number().finite().min(0.1).max(5),
-  // Frame finish around the artwork in the 3D room.
-  frame: z.enum(["none", "wood", "metal", "gold", "black", "white", "wood-box", "gold-velvet", "gold-classic", "gold-baroque", "yellow-lacquer", "black-gold-cream", "black-cream", "gold-museum", "black-box"]).default("wood"),
+  // Frame finish around the artwork in the 3D room: any built-in
+  // variant, or a custom Frame Studio configuration encoded as
+  // "custom:<base64url JSON>" (see lib/demo-data.ts). The encoded form
+  // is validated as a string here; the renderer falls back to wood for
+  // anything it cannot decode, so a bad value never breaks the room.
+  frame: z
+    .union([
+      z.enum(Object.keys(FRAME_VARIANTS) as [FrameVariant, ...FrameVariant[]]),
+      z.string().regex(/^custom:[A-Za-z0-9_-]{1,2000}={0,2}$/),
+    ])
+    .default("wood"),
   // An artwork image is either a legacy database upload, a portfolio
   // image, or a new R2 upload (public URL under the configured R2 base).
   imageUrl: z

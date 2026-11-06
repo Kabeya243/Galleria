@@ -5,8 +5,8 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, Plane, PlaneGeometry, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
-import type { Artwork, FrameVariant } from "@/lib/demo-data";
-import { FRAME_VARIANTS } from "@/lib/demo-data";
+import type { Artwork } from "@/lib/demo-data";
+import { resolveFrameSpec, shadeHex } from "@/lib/demo-data";
 import type { FrameSpec, FrameTextureKind } from "@/lib/demo-data";
 import { beadStripTexture, frameTileTexture, matTexture } from "@/lib/frame-textures";
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
@@ -219,7 +219,7 @@ function artworkSize(artwork: Artwork): { width: number; height: number } {
 // wide museum frame or a shadow box never hangs half off the wall.
 export function frameOuterSize(artwork: Artwork): { width: number; height: number } {
   const { width, height } = artworkSize(artwork);
-  const spec = FRAME_VARIANTS[artwork.frame ?? "wood"] ?? FRAME_VARIANTS.wood;
+  const spec = resolveFrameSpec(artwork.frame);
   if (artwork.frame === "none") return { width, height };
   const extra = (spec.width + Math.max(spec.floatGap, spec.mat?.width ?? 0)) * 2;
   return { width: width + extra, height: height + extra };
@@ -230,13 +230,13 @@ export function frameOuterSize(artwork: Artwork): { width: number; height: numbe
 // unmount only drops the GPU copy.
 function useTiledFrameMaterial(spec: FrameSpec, repeatX: number, repeatY: number) {
   const material = useMemo(() => {
-    const tile = frameTileTexture(spec.texture);
+    const tile = frameTileTexture(spec.texture, { grain: spec.grain });
     const map = tile?.clone();
     if (map) {
       map.repeat.set(Math.max(1, repeatX), Math.max(1, repeatY));
       map.needsUpdate = true;
     }
-    return { map, color: tile ? "#ffffff" : spec.color, metalness: spec.metalness, roughness: spec.roughness };
+    return { map, color: tile ? "#ffffff" : spec.color, metalness: spec.metalness, roughness: spec.roughness, opacity: spec.opacity };
   }, [spec, repeatX, repeatY]);
   useEffect(() => () => {
     material.map?.dispose();
@@ -244,11 +244,79 @@ function useTiledFrameMaterial(spec: FrameSpec, repeatX: number, repeatY: number
   return material;
 }
 
-function FrameBar({ size, position, material }: { size: [number, number, number]; position: [number, number, number]; material: { map?: CanvasTexture; color: string; metalness: number; roughness: number } }) {
+function FrameBar({ size, position, material }: { size: [number, number, number]; position: [number, number, number]; material: { map?: CanvasTexture; color: string; metalness: number; roughness: number; opacity?: number } }) {
   return (
     <mesh position={position}>
       <boxGeometry args={size} />
-      <meshStandardMaterial map={material.map} color={material.color} metalness={material.metalness} roughness={material.roughness} />
+      <meshStandardMaterial map={material.map} color={material.color} metalness={material.metalness} roughness={material.roughness} transparent={material.opacity !== undefined && material.opacity < 1} opacity={material.opacity ?? 1} />
+    </mesh>
+  );
+}
+
+// The edge profile of a frame bar, drawn as a strip along the bar's
+// inner front edge: a step down toward the artwork, a 45° chamfer, a
+// rounded bead, or a dark scooped channel. `horizontal` runs the strip
+// along X (top/bottom bars); vertical bars run it along Y. `sign` picks
+// which side of the opening the bar sits on.
+function ProfileStrip({ horizontal, sign, openingW, openingH, spec, material }: {
+  horizontal: boolean;
+  sign: 1 | -1;
+  openingW: number;
+  openingH: number;
+  spec: FrameSpec;
+  material: { map?: CanvasTexture; color: string; metalness: number; roughness: number; opacity?: number };
+}) {
+  const profile = spec.profile ?? "flat";
+  if (profile === "flat") return null;
+  const w = spec.width;
+  const d = spec.depth;
+  const barZ = -0.06 + d / 2;
+  const frontZ = -0.06 + d;
+  const length = horizontal ? openingW : openingH;
+  if (profile === "stepped") {
+    // A step down: a shallower bar on the inner half of the frame.
+    const size: [number, number, number] = horizontal ? [length, w * 0.45, d * 0.55] : [w * 0.45, length, d * 0.55];
+    const position: [number, number, number] = horizontal
+      ? [0, sign * (openingH / 2 + w * 0.22), barZ - d * 0.12]
+      : [sign * (openingW / 2 + w * 0.22), 0, barZ - d * 0.12];
+    return <FrameBar size={size} position={position} material={material} />;
+  }
+  if (profile === "bevelled") {
+    // A 45° chamfer plane between the front face and the inner edge.
+    const size: [number, number, number] = horizontal ? [length, w * 0.55, 0.025] : [w * 0.55, length, 0.025];
+    const position: [number, number, number] = horizontal
+      ? [0, sign * (openingH / 2 + w * 0.1), frontZ - w * 0.1]
+      : [sign * (openingW / 2 + w * 0.1), 0, frontZ - w * 0.1];
+    const rotation: [number, number, number] = horizontal ? [Math.PI / 4, 0, 0] : [0, Math.PI / 4, 0];
+    return (
+      <mesh position={position} rotation={rotation}>
+        <boxGeometry args={size} />
+        <meshStandardMaterial color={spec.color} metalness={spec.metalness} roughness={spec.roughness} />
+      </mesh>
+    );
+  }
+  if (profile === "rounded") {
+    // A half-round bead along the inner front edge.
+    const position: [number, number, number] = horizontal
+      ? [0, sign * (openingH / 2 + w * 0.05), frontZ - w * 0.05]
+      : [sign * (openingW / 2 + w * 0.05), 0, frontZ - w * 0.05];
+    const rotation: [number, number, number] = horizontal ? [0, 0, Math.PI / 2] : [0, 0, 0];
+    return (
+      <mesh position={position} rotation={rotation}>
+        <cylinderGeometry args={[w * 0.22, w * 0.22, length, 16]} />
+        <meshStandardMaterial color={spec.color} metalness={spec.metalness} roughness={spec.roughness} />
+      </mesh>
+    );
+  }
+  // Scooped: a dark recessed channel along the inner edge.
+  const size: [number, number, number] = horizontal ? [length, w * 0.5, 0.02] : [w * 0.5, length, 0.02];
+  const position: [number, number, number] = horizontal
+    ? [0, sign * (openingH / 2 + w * 0.25), frontZ - 0.015]
+    : [sign * (openingW / 2 + w * 0.25), 0, frontZ - 0.015];
+  return (
+    <mesh position={position}>
+      <boxGeometry args={size} />
+      <meshStandardMaterial color={shadeHex(spec.color, 0.55)} metalness={0} roughness={0.9} />
     </mesh>
   );
 }
@@ -312,6 +380,23 @@ function FrameAssembly({ width, height, spec, selected }: { width: number; heigh
       <FrameBar size={[outerW, w, d]} position={[0, -openingH / 2 - w / 2, barZ]} material={topMaterial} />
       <FrameBar size={[w, openingH, d]} position={[-openingW / 2 - w / 2, 0, barZ]} material={sideMaterial} />
       <FrameBar size={[w, openingH, d]} position={[openingW / 2 + w / 2, 0, barZ]} material={sideMaterial} />
+      {/* Edge profile along each bar's inner front edge. */}
+      {(spec.profile ?? "flat") !== "flat" && (
+        <group>
+          <ProfileStrip horizontal sign={1} openingW={openingW} openingH={openingH} spec={spec} material={topMaterial} />
+          <ProfileStrip horizontal sign={-1} openingW={openingW} openingH={openingH} spec={spec} material={topMaterial} />
+          <ProfileStrip horizontal={false} sign={-1} openingW={openingW} openingH={openingH} spec={spec} material={sideMaterial} />
+          <ProfileStrip horizontal={false} sign={1} openingW={openingW} openingH={openingH} spec={spec} material={sideMaterial} />
+        </group>
+      )}
+      {/* Glass over the artwork: a faint sheen, strongest for clear
+          glass, barely there for non-reflective, in between for museum. */}
+      {spec.glass && spec.glass !== "none" && (
+        <mesh position={[0, 0, artZ + 0.012]}>
+          <planeGeometry args={[openingW, openingH]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={spec.glass === "clear" ? 0.07 : spec.glass === "non-reflective" ? 0.03 : 0.05} depthWrite={false} />
+        </mesh>
+      )}
       {/* Mat between frame and artwork. */}
       {spec.mat && (
         <mesh position={[0, 0, artZ - 0.01]}>
@@ -381,9 +466,10 @@ function ArtworkFrame({
   const { width, height } = artworkSize(artwork);
   const interactive = editable && !walkable;
   // The frame finish chosen in the inspector (wood, metal, gold, black,
-  // white, or none). "None" hangs the print frameless on the wall.
-  const frameVariant: FrameVariant = artwork.frame ?? "wood";
-  const frame = FRAME_VARIANTS[frameVariant] ?? FRAME_VARIANTS.wood;
+  // white, or none) or a custom Frame Studio configuration encoded in
+  // the frame value. "None" hangs the print frameless on the wall.
+  const frameValue = artwork.frame ?? "wood";
+  const frame = resolveFrameSpec(frameValue);
   // Full framed size on the wall, for the selection outline and the
   // resize handle (wide frames and mats stick out past the artwork).
   const frameOuter = frameOuterSize(artwork);
@@ -429,22 +515,22 @@ function ArtworkFrame({
         onDragStart?.(artwork.id, "move", event);
       }}
     >
-      {frameVariant !== "none" && <FrameAssembly width={width} height={height} spec={frame} selected={selected} />}
+      {frameValue !== "none" && <FrameAssembly width={width} height={height} spec={frame} selected={selected} />}
       {/* Frameless prints sit almost flat on the wall; framed works sit at
           the frame's front face, recessed inside a shadow box. */}
       {artwork.imageUrl ? (
-        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={frameVariant === "none" ? 0.02 : -0.06 + frame.depth - frame.recess + 0.005} />
+        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={frameValue === "none" ? 0.02 : -0.06 + frame.depth - frame.recess + 0.005} />
       ) : (
         <>
-          <mesh position={[0, 0, frameVariant === "none" ? 0.012 : -0.06 + frame.depth - frame.recess + 0.005]}>
+          <mesh position={[0, 0, frameValue === "none" ? 0.012 : -0.06 + frame.depth - frame.recess + 0.005]}>
             <planeGeometry args={[width, height]} />
             <meshStandardMaterial color={artwork.color} />
           </mesh>
-          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), frameVariant === "none" ? 0.022 : -0.06 + frame.depth - frame.recess + 0.015]} rotation={[0, 0, -0.22]}>
+          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), frameValue === "none" ? 0.022 : -0.06 + frame.depth - frame.recess + 0.015]} rotation={[0, 0, -0.22]}>
             <circleGeometry args={[0.48 * Math.min(width / 1.82, height / 2.12), 48]} />
             <meshStandardMaterial color={artwork.accent} />
           </mesh>
-          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), frameVariant === "none" ? 0.024 : -0.06 + frame.depth - frame.recess + 0.017]} rotation={[0, 0, 0.12]}>
+          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), frameValue === "none" ? 0.024 : -0.06 + frame.depth - frame.recess + 0.017]} rotation={[0, 0, 0.12]}>
             <planeGeometry args={[0.8 * (width / 1.82), 0.32 * (height / 2.12)]} />
             <meshStandardMaterial color="#d7c6a9" />
           </mesh>

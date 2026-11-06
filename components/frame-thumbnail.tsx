@@ -1,15 +1,31 @@
 "use client";
 
-import { FRAME_VARIANTS } from "@/lib/demo-data";
-import type { FrameVariant } from "@/lib/demo-data";
+import { FRAME_VARIANTS, specFromFrameConfig } from "@/lib/demo-data";
+import type { FrameConfig, FrameVariant } from "@/lib/demo-data";
 
 // A small faithful preview of a frame style: the same border width,
 // mat, trim and motif the 3D render uses, drawn as SVG so the user can
-// see the frame before choosing it. The artwork in the middle is a
-// neutral placeholder — the frame is the subject.
-export default function FrameThumbnail({ variant }: { variant: FrameVariant }) {
-  const spec = FRAME_VARIANTS[variant] ?? FRAME_VARIANTS.wood;
-  const key = variant;
+// see the frame before choosing it. Accepts either a built-in variant
+// or a custom Frame Studio configuration, and optionally the artwork's
+// own image instead of the neutral placeholder — the compare view uses
+// the same drawing at a larger size, so what is compared is what hangs.
+export default function FrameThumbnail({
+  variant,
+  config,
+  imageUrl,
+  artworkColor,
+  width = 48,
+  height = 36,
+}: {
+  variant: FrameVariant;
+  config?: FrameConfig | null;
+  imageUrl?: string | null;
+  artworkColor?: string;
+  width?: number;
+  height?: number;
+}) {
+  const spec = config ? specFromFrameConfig(config) : FRAME_VARIANTS[variant] ?? FRAME_VARIANTS.wood;
+  const key = config ? `custom-${config.base}-${config.width}-${config.color.replace("#", "")}` : variant;
   const fw = Math.min(10, Math.max(0, 1.5 + spec.width * 45)); // frame band, px
   const mw = spec.mat ? Math.min(9, Math.max(0, 1 + spec.mat.width * 28)) : 0; // mat, px
   const fg = Math.min(5, spec.floatGap * 30); // float gap, px
@@ -33,9 +49,23 @@ export default function FrameThumbnail({ variant }: { variant: FrameVariant }) {
   for (let x = opening.x + 2.5; x < opening.x + opening.w - 1; x += 3.4) beadTop.push(x);
   const beadSide: number[] = [];
   for (let y = opening.y + 2.5; y < opening.y + opening.h - 1; y += 3.4) beadSide.push(y);
+  const isWood = spec.texture === "wood" || spec.texture === "oak" || spec.texture === "walnut" || spec.texture === "mahogany";
+  const isBrushed = spec.texture === "gold-brushed" || spec.texture === "silver-brushed" || spec.texture === "aluminium-brushed";
+  const glassOpacity = spec.glass === "clear" ? 0.14 : spec.glass === "non-reflective" ? 0.05 : spec.glass === "museum" ? 0.09 : 0;
+  // The inner-edge line that hints at the bar's edge profile.
+  const profileStroke =
+    spec.profile === "stepped"
+      ? "rgba(255,255,255,0.55)"
+      : spec.profile === "bevelled"
+        ? "rgba(0,0,0,0.4)"
+        : spec.profile === "rounded"
+          ? "rgba(255,255,255,0.35)"
+          : spec.profile === "scooped"
+            ? "rgba(0,0,0,0.5)"
+            : null;
 
   return (
-    <svg width={48} height={36} viewBox="0 0 48 36" aria-hidden="true">
+    <svg width={width} height={height} viewBox="0 0 48 36" aria-hidden="true">
       <defs>
         <linearGradient id={`${fillId}-gold`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#e8c96a" />
@@ -57,10 +87,15 @@ export default function FrameThumbnail({ variant }: { variant: FrameVariant }) {
           <stop offset="0.5" stopColor="#cfc0a0" />
           <stop offset="1" stopColor="#b3a284" />
         </linearGradient>
+        <linearGradient id={`${fillId}-glass`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ffffff" stopOpacity={glassOpacity} />
+          <stop offset="0.45" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity={glassOpacity * 0.6} />
+        </linearGradient>
         <pattern id={`${fillId}-wood`} width="14" height="7" patternUnits="userSpaceOnUse">
-          <rect width="14" height="7" fill="#8a6242" />
-          <path d="M0 2 Q 7 0 14 2" stroke="#5f4128" strokeWidth="0.8" fill="none" opacity="0.7" />
-          <path d="M0 5 Q 7 7 14 5" stroke="#a97c50" strokeWidth="0.8" fill="none" opacity="0.7" />
+          <rect width="14" height="7" fill={spec.color} />
+          <path d="M0 2 Q 7 0 14 2" stroke="#000000" strokeWidth="0.8" fill="none" opacity="0.28" />
+          <path d="M0 5 Q 7 7 14 5" stroke="#ffffff" strokeWidth="0.8" fill="none" opacity="0.22" />
         </pattern>
         <pattern id={`${fillId}-carved`} width="10" height="10" patternUnits="userSpaceOnUse">
           <rect width="10" height="10" fill="#a67c37" />
@@ -70,18 +105,25 @@ export default function FrameThumbnail({ variant }: { variant: FrameVariant }) {
         </pattern>
         <pattern id={`${fillId}-brushed`} width="10" height="4" patternUnits="userSpaceOnUse">
           <rect width="10" height="4" fill={spec.color} />
-          <line x1="0" y1="1" x2="10" y2="1" stroke="#e8c96a" strokeWidth="0.7" opacity="0.6" />
-          <line x1="0" y1="3" x2="10" y2="3" stroke="#8a6d1f" strokeWidth="0.7" opacity="0.6" />
+          <line x1="0" y1="1" x2="10" y2="1" stroke="#ffffff" strokeWidth="0.7" opacity="0.5" />
+          <line x1="0" y1="3" x2="10" y2="3" stroke="#000000" strokeWidth="0.7" opacity="0.35" />
         </pattern>
         <pattern id={`${fillId}-matte`} width="6" height="6" patternUnits="userSpaceOnUse">
           <rect width="6" height="6" fill="#1c1c1c" />
           <circle cx="1.5" cy="1.5" r="0.5" fill="#333333" />
           <circle cx="4.5" cy="4.5" r="0.5" fill="#000000" />
         </pattern>
+        <clipPath id={`${fillId}-art-clip`}>
+          <rect x={art.x} y={art.y} width={art.w} height={art.h} />
+        </clipPath>
       </defs>
-      {variant === "none" ? (
+      {variant === "none" && !config ? (
         <>
-          <rect x={4} y={3} width={40} height={30} fill={`url(#${fillId}-art)`} />
+          {imageUrl ? (
+            <image href={imageUrl} x={4} y={3} width={40} height={30} preserveAspectRatio="xMidYMid slice" />
+          ) : (
+            <rect x={4} y={3} width={40} height={30} fill={`url(#${fillId}-art)`} />
+          )}
           <rect x={4} y={3} width={40} height={30} fill="none" stroke="#999" strokeWidth="0.8" strokeDasharray="3 2" />
         </>
       ) : (
@@ -92,11 +134,11 @@ export default function FrameThumbnail({ variant }: { variant: FrameVariant }) {
             width={ow}
             height={oh}
             fill={
-              spec.texture === "wood"
+              isWood
                 ? `url(#${fillId}-wood)`
                 : spec.texture === "gold-carved"
                   ? `url(#${fillId}-carved)`
-                  : spec.texture === "gold-brushed"
+                  : isBrushed
                     ? `url(#${fillId}-brushed)`
                     : spec.texture === "yellow-gloss"
                       ? `url(#${fillId}-yellow)`
@@ -104,10 +146,14 @@ export default function FrameThumbnail({ variant }: { variant: FrameVariant }) {
                         ? `url(#${fillId}-black)`
                         : spec.texture === "black-matte"
                           ? `url(#${fillId}-matte)`
-                          : spec.color
+                          : spec.texture === "acrylic"
+                            ? spec.color
+                            : spec.color
             }
-            stroke="#00000033"
+            fillOpacity={spec.texture === "acrylic" ? 0.45 : 1}
+            stroke={spec.texture === "acrylic" ? "#ffffff" : "#00000033"}
             strokeWidth="0.5"
+            strokeDasharray={spec.texture === "acrylic" ? "2 1.5" : undefined}
           />
           {/* Mat, or the dark tray a floated work hangs against. */}
           {spec.mat ? (
@@ -136,12 +182,32 @@ export default function FrameThumbnail({ variant }: { variant: FrameVariant }) {
           {spec.trim && (spec.trim.at === "mat" || spec.trim.at === "both") && (
             <rect x={opening.x + trimW / 2} y={opening.y + trimW / 2} width={opening.w - trimW} height={opening.h - trimW} fill="none" stroke={spec.trim.color} strokeWidth={trimW} />
           )}
-          {/* Artwork. */}
-          <rect x={art.x} y={art.y} width={art.w} height={art.h} fill={`url(#${fillId}-art)`} />
-          <circle cx={art.x + art.w * 0.32} cy={art.y + art.h * 0.36} r={Math.min(art.w, art.h) * 0.16} fill="#8a7a5c" opacity="0.55" />
-          <rect x={art.x + art.w * 0.55} y={art.y + art.h * 0.6} width={art.w * 0.3} height={art.h * 0.14} fill="#d7c6a9" opacity="0.8" />
+          {/* Edge profile hint: a line just inside the frame band. */}
+          {profileStroke && (
+            <rect x={opening.x} y={opening.y} width={opening.w} height={opening.h} fill="none" stroke={profileStroke} strokeWidth="1.2" rx={spec.profile === "rounded" ? 1 : 0} />
+          )}
+          {/* Artwork: the real image when available, else the placeholder. */}
+          {imageUrl ? (
+            <g clipPath={`url(#${fillId}-art-clip)`}>
+              <image href={imageUrl} x={art.x} y={art.y} width={art.w} height={art.h} preserveAspectRatio="xMidYMid slice" />
+            </g>
+          ) : (
+            <>
+              <rect x={art.x} y={art.y} width={art.w} height={art.h} fill={artworkColor ?? `url(#${fillId}-art)`} />
+              {!artworkColor && (
+                <>
+                  <circle cx={art.x + art.w * 0.32} cy={art.y + art.h * 0.36} r={Math.min(art.w, art.h) * 0.16} fill="#8a7a5c" opacity="0.55" />
+                  <rect x={art.x + art.w * 0.55} y={art.y + art.h * 0.6} width={art.w * 0.3} height={art.h * 0.14} fill="#d7c6a9" opacity="0.8" />
+                </>
+              )}
+            </>
+          )}
           {spec.trim && (spec.trim.at === "artwork" || spec.trim.at === "both") && (
             <rect x={art.x - trimW / 2} y={art.y - trimW / 2} width={art.w + trimW} height={art.h + trimW} fill="none" stroke={spec.trim.color} strokeWidth={trimW} />
+          )}
+          {/* Glass: a faint diagonal sheen over the artwork. */}
+          {glassOpacity > 0 && (
+            <rect x={art.x} y={art.y} width={art.w} height={art.h} fill={`url(#${fillId}-glass)`} />
           )}
         </>
       )}

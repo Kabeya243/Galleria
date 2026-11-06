@@ -40,32 +40,63 @@ function grainLines(ctx: CanvasRenderingContext2D, size: number, dark: string, l
   ctx.globalAlpha = 1;
 }
 
+// One wood tile: base colour, dark and light grain lines, and a few
+// darker knots. `grain` (0–1) sets how strong the grain reads — the
+// Frame Studio grain control drives it.
+function drawWood(ctx: CanvasRenderingContext2D, size: number, base: string, dark: string, light: string, grain: number) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+  grainLines(ctx, size, dark, light, Math.round(8 + grain * 52));
+  for (let i = 0; i < Math.round(grain * 4); i += 1) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    ctx.strokeStyle = dark;
+    ctx.globalAlpha = 0.4 + grain * 0.2;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 7 + Math.random() * 5, 4 + Math.random() * 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawBrushedMetal(ctx: CanvasRenderingContext2D, size: number, base: string, dark: string, light: string) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+  grainLines(ctx, size, dark, light, 70);
+  const sheen = ctx.createLinearGradient(0, 0, 0, size);
+  sheen.addColorStop(0, "rgba(255,255,255,0.16)");
+  sheen.addColorStop(0.5, "rgba(255,255,255,0)");
+  sheen.addColorStop(1, "rgba(0,0,0,0.14)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(0, 0, size, size);
+}
+
 const tileCache = new Map<string, CanvasTexture | undefined>();
 
 // One square tile of the frame material, cached per kind. Bars clone it
 // and set their own repeat, so the grain / carving scales with the bar.
-export function frameTileTexture(kind: FrameTextureKind): CanvasTexture | undefined {
-  const cached = tileCache.get(kind);
-  if (cached !== undefined || tileCache.has(kind)) return cached;
+// `options.grain` (0–1) strengthens or softens the wood grain; `options`
+// are part of the cache key, so a custom grain never pollutes the
+// built-in tile. Acrylic has no tile — its bars render semi-transparent.
+export function frameTileTexture(kind: FrameTextureKind, options?: { grain?: number }): CanvasTexture | undefined {
+  const grain = options?.grain ?? 0.6;
+  const key = `${kind}:${kind === "wood" || kind === "oak" || kind === "walnut" || kind === "mahogany" ? grain.toFixed(2) : ""}`;
+  const cached = tileCache.get(key);
+  if (cached !== undefined || tileCache.has(key)) return cached;
   let texture: CanvasTexture | undefined;
   if (kind === "wood") {
-    texture = makeTile((ctx, size) => {
-      ctx.fillStyle = "#8a6242";
-      ctx.fillRect(0, 0, size, size);
-      grainLines(ctx, size, "#5f4128", "#a97c50", 46);
-      // A few darker knots.
-      for (let i = 0; i < 3; i += 1) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        ctx.strokeStyle = "#5f4128";
-        ctx.globalAlpha = 0.5;
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.ellipse(x, y, 7 + Math.random() * 5, 4 + Math.random() * 3, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    });
+    texture = makeTile((ctx, size) => drawWood(ctx, size, "#8a6242", "#5f4128", "#a97c50", grain));
+  } else if (kind === "oak") {
+    texture = makeTile((ctx, size) => drawWood(ctx, size, "#c8a06a", "#a37f4e", "#e0c090", Math.max(0.15, grain * 0.6)));
+  } else if (kind === "walnut") {
+    texture = makeTile((ctx, size) => drawWood(ctx, size, "#4a3226", "#2e1d13", "#6b4a34", grain));
+  } else if (kind === "mahogany") {
+    texture = makeTile((ctx, size) => drawWood(ctx, size, "#6e2f24", "#4a1d15", "#8f4636", grain));
+  } else if (kind === "silver-brushed") {
+    texture = makeTile((ctx, size) => drawBrushedMetal(ctx, size, "#c8c8c8", "#9a9a9a", "#e8e8e8"));
+  } else if (kind === "aluminium-brushed") {
+    texture = makeTile((ctx, size) => drawBrushedMetal(ctx, size, "#9aa0a3", "#6e7477", "#c0c5c8"));
   } else if (kind === "gold-brushed") {
     texture = makeTile((ctx, size) => {
       ctx.fillStyle = "#c9a227";
@@ -149,7 +180,7 @@ export function frameTileTexture(kind: FrameTextureKind): CanvasTexture | undefi
   } else {
     texture = undefined;
   }
-  tileCache.set(kind, texture);
+  tileCache.set(key, texture);
   return texture;
 }
 

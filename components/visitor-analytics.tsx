@@ -169,67 +169,74 @@ export default function VisitorAnalytics({
         </button>
       </div>
 
-      {!hasVisits ? (
-        <div className={styles.emptyBox}>
+      {/* The chart and totals always render — with no history they show
+          empty axes and zeros, so the page never looks broken before
+          the first visit. Only the breakdowns (artworks, devices,
+          sources, countries) wait for real visits. */}
+      {!hasVisits && (
+        <div className={styles.emptyBox} style={{ marginBottom: 24 }}>
           <strong>No visits yet for “{selectedTitle}”.</strong>
           <p>
-            Visits are counted from the day this page ships: every time someone opens the public exhibition, one
-            anonymous visit is logged, and opening an artwork&apos;s details counts towards its views. Share the
-            exhibition link and the numbers will appear here.
+            Visit history starts from when per-day visit tracking was added (November 2026): earlier visits only
+            count towards the exhibition&apos;s total views, not this chart. Every time someone opens the public
+            exhibition, one anonymous visit is logged, and opening an artwork&apos;s details counts towards its views.
+            Share the exhibition link and the numbers will appear here.
           </p>
         </div>
-      ) : (
-        <>
-          <div className={styles.summaryRow}>
-            {totals.map((t) => (
-              <div key={t.label}>
-                <strong>{t.value}</strong>
-                <span>{t.label}</span>
-              </div>
-            ))}
+      )}
+
+      <div className={styles.summaryRow}>
+        {totals.map((t) => (
+          <div key={t.label}>
+            <strong>{t.value}</strong>
+            <span>{t.label}</span>
           </div>
+        ))}
+      </div>
 
-          <section style={{ marginBottom: 32 }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Visits — last 30 days</h2>
-            <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
-              One bar per day. The number above a bar is that day&apos;s visits; unique visitors count each anonymous
-              visitor once per day.
-            </p>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 140 }}>
-              {daily.map((d) => (
-                <div
-                  key={d.date}
-                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}
-                  title={`${prettyDate(d.date)}: ${d.visits} visit${d.visits === 1 ? "" : "s"}, ${d.unique} unique`}
-                >
-                  <span style={{ fontSize: 10, color: "var(--muted)" }}>{d.visits > 0 ? d.visits : ""}</span>
-                  <div
-                    style={{
-                      width: "100%",
-                      maxWidth: 22,
-                      height: `${d.visits > 0 ? Math.max((d.visits / maxDaily) * 100, 6) : 1.5}%`,
-                      background: d.visits === maxDaily && d.visits > 0 ? "#a67c37" : "var(--ink)",
-                      opacity: d.visits > 0 ? 0.85 : 0.25,
-                      borderRadius: "2px 2px 0 0",
-                    }}
-                  />
-                </div>
-              ))}
+      <section style={{ marginBottom: 32 }}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Visits — last 30 days</h2>
+        <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
+          One bar per day. The number above a bar is that day&apos;s visits; unique visitors count each anonymous
+          visitor once per day.
+        </p>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 140 }}>
+          {daily.map((d) => (
+            <div
+              key={d.date}
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}
+              title={`${prettyDate(d.date)}: ${d.visits} visit${d.visits === 1 ? "" : "s"}, ${d.unique} unique`}
+            >
+              <span style={{ fontSize: 10, color: "var(--muted)" }}>{d.visits > 0 ? d.visits : ""}</span>
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: 22,
+                  height: `${d.visits > 0 ? Math.max((d.visits / maxDaily) * 100, 6) : 1.5}%`,
+                  background: d.visits === maxDaily && d.visits > 0 ? "#a67c37" : "var(--ink)",
+                  opacity: d.visits > 0 ? 0.85 : 0.25,
+                  borderRadius: "2px 2px 0 0",
+                }}
+              />
             </div>
-            <div style={{ display: "flex", gap: 3, marginTop: 6 }}>
-              {daily.map((d, i) => (
-                <span key={d.date} style={{ flex: 1, textAlign: "center", fontSize: 10, color: "var(--muted)" }}>
-                  {i % 5 === 0 ? new Date(`${d.date}T00:00:00Z`).getUTCDate() : ""}
-                </span>
-              ))}
-            </div>
-            <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 12 }}>
-              {prettyDate(daily[0]?.date ?? "")} – {prettyDate(daily[daily.length - 1]?.date ?? "")}
-              {" · "}
-              {uniqueVisitors30} unique visitor{uniqueVisitors30 === 1 ? "" : "s"} in the period
-            </p>
-          </section>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 3, marginTop: 6 }}>
+          {daily.map((d, i) => (
+            <span key={d.date} style={{ flex: 1, textAlign: "center", fontSize: 10, color: "var(--muted)" }}>
+              {i % 5 === 0 ? new Date(`${d.date}T00:00:00Z`).getUTCDate() : ""}
+            </span>
+          ))}
+        </div>
+        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 12 }}>
+          {prettyDate(daily[0]?.date ?? "")} – {prettyDate(daily[daily.length - 1]?.date ?? "")}
+          {" · "}
+          {uniqueVisitors30} unique visitor{uniqueVisitors30 === 1 ? "" : "s"} in the period
+        </p>
+      </section>
 
+      {hasVisits && (
+        <>
           <section style={{ marginBottom: 32 }}>
             <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Most viewed artworks</h2>
             <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>

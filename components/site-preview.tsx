@@ -260,7 +260,7 @@ export default function SitePreview({
       {/* Galleries */}
       {config.showGalleries && shownExhibitions.length > 0 && (
         <div style={{ padding: "8px 28px 40px" }}>
-          {shownExhibitions.map((ex) => (
+          {shownExhibitions.map((ex, exIndex) => (
             <div key={ex.id} style={{ marginTop: 32 }}>
               <h2 style={{ ...headingStyle(theme), fontSize: 26, margin: "0 0 6px", fontWeight: 600 }}>{ex.title}</h2>
               {ex.description && <p style={{ color: theme.muted, fontSize: 14, lineHeight: 1.6, margin: "0 0 18px" }}>{ex.description}</p>}
@@ -268,11 +268,11 @@ export default function SitePreview({
                 <p style={{ color: theme.muted, fontSize: 14 }}>No artworks in this exhibition yet.</p>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${theme.galleryCols}, 1fr)`, gap: 20 }}>
-                  {ex.artworks.map((art) => (
+                  {ex.artworks.map((art, artIndex) => (
                     <figure key={art.id} style={{ margin: 0 }}>
                       {art.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={art.imageUrl} alt={art.title} style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: theme.surface }} loading="lazy" />
+                        <img src={art.imageUrl} alt={art.title} style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: theme.surface }} loading={exIndex === 0 && artIndex < theme.galleryCols ? "eager" : "lazy"} />
                       ) : (
                         <div style={{ width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${art.color}, ${art.accent})` }} />
                       )}

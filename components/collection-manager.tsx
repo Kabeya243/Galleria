@@ -533,7 +533,7 @@ export default function CollectionManager({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((a) => {
+              {filtered.map((a, index) => {
                 const rec = recordFor(a.id).data;
                 const isOpen = openId === a.id;
                 return (
@@ -550,7 +550,7 @@ export default function CollectionManager({
                       <button type="button" className="cm-title-btn" onClick={() => openDetail(a.id)} aria-expanded={isOpen}>
                         {a.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={a.imageUrl} alt="" className="cm-thumb" loading="lazy" />
+                          <img src={a.imageUrl} alt="" className="cm-thumb" loading={index < 8 ? "eager" : "lazy"} />
                         ) : (
                           <span className="cm-thumb cm-thumb-blank" aria-hidden="true" />
                         )}

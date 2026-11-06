@@ -3316,10 +3316,19 @@ export default function GalleryScene({
   // orbit drag, not a click — walls and artworks must not select then.
   const dragStartPoint = useRef<{ x: number; y: number } | null>(null);
 
+  // NOTE: this div's positioning comes ONLY from its className
+  // (public-gallery-canvas / editor-canvas are position:absolute with
+  // inset:0; galleries-viewer-canvas / gallery-canvas are relative
+  // with 100% size). Never set position inline here: commit 9b74de7
+  // added position:"relative" inline, which overrode the absolute
+  // classes, so the public exhibition (and editor) canvas collapsed
+  // to a short strip instead of filling the viewport. The quality
+  // toggle is absolutely positioned inside this div, and absolute
+  // counts as positioned, so it stays anchored in every context.
   return (
     <div
       className={`${className ?? "gallery-canvas"}${walkMode && walking ? " is-walking" : ""}`}
-      style={{ position: "relative", cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? hoveredElement?.cursor ?? undefined }}
+      style={{ cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? hoveredElement?.cursor ?? undefined }}
       onPointerDown={(event) => {
         dragStartPoint.current = { x: event.clientX, y: event.clientY };
         dragged.current = false;

@@ -114,10 +114,17 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
     // Stone concrete (Stone Gallery floor): the reference room's
     // mottled concrete — large soft dark and light blotches over a
     // warm grey base, no formwork joints, no panel lines. Drawn in
-    // near-white so the floor colour tints it. Seeded. Values are the
+    // the REFERENCE's own colours (base #b5b0a5, dark blotches
+    // 70,65,58, light blotches 235,230,220), not near-white: the
+    // material colour #b5b0a5 multiplies this map, so a near-white
+    // base renders the floor as pale cream under SANAA's lights
+    // (hemisphere + ambient + directional + five point lights is
+    // about twice the reference's light), while the reference's own
+    // colours multiplied by the floor colour land as the warm dark
+    // brown-grey concrete of the original. Seeded. Values are the
     // reference's, halved for this 256 px tile (the reference uses a
     // 512 px tile): 700 blotches of radius 6–70.
-    context.fillStyle = "#f4f1ea";
+    context.fillStyle = "#b5b0a5";
     context.fillRect(0, 0, 256, 256);
     let seed = 31;
     const rand = () => {
@@ -128,8 +135,8 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
       const dark = rand() < 0.5;
       const alpha = 0.03 + rand() * 0.07;
       context.fillStyle = dark
-        ? `rgba(99, 94, 89, ${alpha.toFixed(3)})`
-        : `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+        ? `rgba(70, 65, 58, ${alpha.toFixed(3)})`
+        : `rgba(235, 230, 220, ${alpha.toFixed(3)})`;
       const r = 3 + rand() * 32;
       context.beginPath();
       context.arc(rand() * 256, rand() * 256, r, 0, Math.PI * 2);

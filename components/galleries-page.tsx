@@ -6,7 +6,7 @@ import { Eye, Footprints, PenLine, Search, Star } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
-import { ceilingTextures, createGalleryRoom, floorTextures, roomCategories, roomLayouts, wallTextures, type RoomCategory, type RoomLayout } from "@/lib/rooms";
+import { ceilingTextures, createGalleryRoom, floorTextures, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, type RoomCategory, type RoomLayout } from "@/lib/rooms";
 
 export type GalleryPresetCard = {
   key: RoomLayout;
@@ -218,16 +218,23 @@ export default function GalleriesPage({
 
   // Existing flow, unchanged: create an exhibition, give its first room
   // this layout, then open the editor. Signed-out visitors go to /login.
+  // The model is passed to the create call, so the API seeds exactly
+  // what the Create flow seeds — for the Stone Gallery, the two rooms
+  // with its seven artworks. The PUT below then only re-seeds the
+  // single room for the other models; for Stone it is skipped, because
+  // it would overwrite the two rooms with one blank room and no
+  // artworks ("Open in editor" used to open a blank single room).
   async function openInEditor(layout: RoomLayout) {
     setOpening(layout);
     setOpenError(null);
     try {
+      const model = ROOM_MODELS.find((candidate) => candidate.layout === layout)?.id;
       const createResponse = await fetch("/api/exhibitions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // The title is mandatory (feature 7): the room's own label names
         // the show, and the PUT below still seeds this layout's room.
-        body: JSON.stringify({ title: roomLayouts[layout].label }),
+        body: JSON.stringify({ title: roomLayouts[layout].label, model }),
       });
       if (createResponse.status === 401) {
         window.location.assign("/login");
@@ -235,19 +242,21 @@ export default function GalleriesPage({
       }
       const created = await createResponse.json();
       if (!createResponse.ok) throw new Error(created.error ?? "Could not create an exhibition.");
-      const room = createGalleryRoom(0, layout);
-      const saveResponse = await fetch(`/api/exhibitions/${created.exhibition.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: roomLayouts[layout].label,
-          description: "",
-          rooms: [room],
-          artworks: [],
-        }),
-      });
-      const saved = await saveResponse.json();
-      if (!saveResponse.ok) throw new Error(saved.error ?? "Could not prepare this room.");
+      if (layout !== "stone-gallery") {
+        const room = createGalleryRoom(0, layout);
+        const saveResponse = await fetch(`/api/exhibitions/${created.exhibition.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: roomLayouts[layout].label,
+            description: "",
+            rooms: [room],
+            artworks: [],
+          }),
+        });
+        const saved = await saveResponse.json();
+        if (!saveResponse.ok) throw new Error(saved.error ?? "Could not prepare this room.");
+      }
       window.location.assign(`/editor/${created.exhibition.id}`);
     } catch (error) {
       console.error("Could not open this room in the editor.", error);

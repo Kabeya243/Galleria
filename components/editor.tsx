@@ -38,9 +38,10 @@ import {
   Upload,
 } from "lucide-react";
 import ElementThumbnail from "@/components/element-thumbnail";
+import ExhibitionMinimap from "@/components/exhibition-minimap";
 import ExhibitionPublishDialog, { type PublishVisibility } from "@/components/exhibition-publish-dialog";
 import FrameThumbnail from "@/components/frame-thumbnail";
-import GalleryScene, { parseArtworkDimensions } from "@/components/gallery-scene";
+import GalleryScene, { artworkStandPoint, parseArtworkDimensions, type TeleportTarget } from "@/components/gallery-scene";
 import LayersPanel, { type LayerArtwork, type LayerItemRef } from "@/components/layers-panel";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
@@ -152,6 +153,12 @@ export default function Editor({
   const [activeRoomId, setActiveRoomId] = useState("");
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
+  // Floor-plan teleport (minimap): a target in another room first
+  // switches rooms, then walks to the artwork's stand point — the
+  // same mechanism as the public viewer. Clicking a dot also enters
+  // walk mode, so the plan works from the edit view too.
+  const [teleportTarget, setTeleportTarget] = useState<TeleportTarget | null>(null);
+  const teleportNonce = useRef(0);
   const [selectedId, setSelectedId] = useState<string>();
   const [panelTab, setPanelTab] = useState<"artworks" | "elements" | "layers">("artworks");
   const [selectedElementId, setSelectedElementId] = useState<string>();
@@ -527,6 +534,17 @@ export default function Editor({
     setSelectedElementId(undefined);
     setSelectedWallId(null);
     setMultiSelected([]);
+  }
+
+  // Floor-plan teleport (minimap): walk to the artwork's stand point,
+  // entering walk mode first when the editor is still in the edit
+  // view. The scene switches rooms itself when the artwork is in
+  // another room (see the teleport effect in GalleryScene).
+  function handleTeleport(artwork: Artwork) {
+    const stand = artworkStandPoint(artwork);
+    teleportNonce.current += 1;
+    setTeleportTarget({ roomId: artwork.roomId, ...stand, nonce: teleportNonce.current });
+    if (!walking) setWalking(true);
   }
 
   // The Layers panel selects by ref and switches to the item's room.
@@ -1755,7 +1773,7 @@ async function compressImage(file: File): Promise<File> {
               onToggleLocked={toggleLocked}
             />
           )}
-          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — double-click an artwork, an element or a wall.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — double-click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — switch on the footprints button, then WASD to move and drag to look.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. Double-click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
+          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — double-click an artwork, an element or a wall.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — double-click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — switch on the footprints button, then WASD to move and drag to look.</li><li><strong>Floor plan</strong> — open the plan at the bottom left to jump between rooms and artworks.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. Double-click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
         </aside>
 
         <section className="editor-stage">
@@ -1800,7 +1818,22 @@ async function compressImage(file: File): Promise<File> {
             </div>
           )}
           <div className="scene-wrap">
-            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} editable onArtworkUpdate={handleSceneArtworkUpdate} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
+            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} editable onArtworkUpdate={handleSceneArtworkUpdate} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
+            {/* Floor plan + teleport (the same minimap as the public
+                viewer): the rooms stacked along Z with their names and
+                one dot per artwork. Clicking a room switches to it;
+                clicking a dot walks to that artwork (entering walk mode
+                first). Collapsible, so it never covers the room when
+                closed — the plan navigation the Stone Gallery split
+                relies on, now in the editor too. */}
+            <ExhibitionMinimap
+              rooms={sceneRooms}
+              artworks={artworks}
+              activeRoomId={activeRoom?.id ?? ""}
+              selectedArtworkId={selectedId}
+              onTeleport={handleTeleport}
+              onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }}
+            />
             <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up" aria-label="Move selected artwork up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down" aria-label="Move selected artwork down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale" aria-label="Increase scale of selected artwork"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale" aria-label="Decrease scale of selected artwork"><Minus size={14} /></button></div>

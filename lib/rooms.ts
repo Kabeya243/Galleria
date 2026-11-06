@@ -706,7 +706,7 @@ const legacyLayouts: Record<string, RoomLayout> = {
 export function parseGalleryRooms(value: string): GalleryRoom[] {
   const raw: unknown = JSON.parse(value);
   const migrated = Array.isArray(raw)
-    ? raw.map((room) => {
+    ? raw.map((room, index, list) => {
         if (!room || typeof room !== "object") return room;
         const next = { ...(room as Record<string, unknown>) };
         if (typeof next.layout === "string" && next.layout in legacyLayouts) {
@@ -717,6 +717,36 @@ export function parseGalleryRooms(value: string): GalleryRoom[] {
         // instead of failing validation, so the exhibition still opens.
         if (typeof next.layout === "string" && !(next.layout in roomLayouts)) {
           next.layout = "cube";
+        }
+        // A Stone Gallery pair saved by the split's first version: the
+        // front room kept the single "stone-gallery" layout (20 × 24 m)
+        // instead of "stone-gallery-front" (20 × 13 m), so it displayed
+        // 20×24 m / 480 m², sat at z = 0 instead of +5.5, pushed the
+        // back half beside it along X, and never switched rooms at the
+        // arch (every Stone check keys on "stone-gallery-front"). A
+        // lone "stone-gallery" room — saved before the split, no back
+        // half after it — is untouched. The pair shape itself is the
+        // fingerprint of the buggy creation (the back half is hidden
+        // from the layout picker, so it can only come from the route).
+        if (next.layout === "stone-gallery") {
+          const following = list[index + 1];
+          if (
+            following &&
+            typeof following === "object" &&
+            (following as Record<string, unknown>).layout === "stone-gallery-back"
+          ) {
+            next.layout = "stone-gallery-front";
+            // Same finishes (the two presets are identical) — only the
+            // arch moves, from the single room's middle (local z = −1)
+            // to the front half's back edge (local z = −6.5, global
+            // z = −1), where it is the shared boundary. The seeded
+            // artworks already use front-half local coordinates, so
+            // they land on the right walls once the room does.
+            next.partitionWalls = roomLayouts["stone-gallery-front"].partitions.map((wall) => ({
+              ...wall,
+              id: crypto.randomUUID(),
+            }));
+          }
         }
         // Rooms saved before floor types / light types / elements existed:
         // fill them in from what the room already looks like.

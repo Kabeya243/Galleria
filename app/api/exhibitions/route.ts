@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   const hiddenLayouts = await getHiddenRoomLayouts();
   const layout = hiddenLayouts.includes(requestedLayout) ? "cube" : requestedLayout;
 
-  const frontRoom = createGalleryRoom(0, layout);
+  const frontRoom = createGalleryRoom(0, layout === "stone-gallery" ? "stone-gallery-front" : layout);
   // The Stone Gallery is TWO rooms: the front (entrance) half and the
   // back half behind the arched dividing wall, created together from
   // the one "stone" model. The plan is the reference room's own — the
@@ -66,7 +66,14 @@ export async function POST(request: Request) {
   // between them. Both halves get the Stone concrete floor (the preset
   // infers floorType "stone-concrete" from floorTexture
   // "stone-concrete") and the arched dividing wall as a real partition
-  // in the front room.
+  // in the front room. The front room MUST be "stone-gallery-front",
+  // not the single "stone-gallery" layout: every Stone check in the
+  // scene (room offsets, the arch-crossing room switch, the hidden
+  // shared walls, the split ceiling lights) keys on the half layouts,
+  // and the inspector reads the layout's dimensions — a front room
+  // saved as "stone-gallery" displays 20×24 m, sits at z = 0, pushes
+  // the back half beside it along X and never switches rooms at the
+  // arch.
   const rooms = layout === "stone-gallery"
     ? [frontRoom, createGalleryRoom(1, "stone-gallery-back")]
     : [frontRoom];

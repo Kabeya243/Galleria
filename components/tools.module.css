@@ -185,6 +185,11 @@
   margin-bottom: 24px;
 }
 
+/* Phase 8: tables scroll horizontally inside their card instead of
+   breaking the page on a narrow phone. Wrap the <table> in this div. */
+.tableScroll { overflow-x: auto; }
+.tableScroll .inventoryTable { min-width: 560px; }
+
 .summaryRow div {
   display: flex;
   flex-direction: column;
@@ -367,4 +372,14 @@
   display: block;
   height: 1px;
   background: #1a1a1a;
+}
+
+/* Phase 8 — phones: single-column tool forms, tighter certificate and
+   contact padding, and 16px form text so iOS does not zoom on focus. */
+@media (max-width: 620px) {
+  .calculatorForm { grid-template-columns: 1fr; }
+  .certificate { padding: 28px 18px; }
+  .contactForm { padding: 14px; }
+  .field input,
+  .field select { font-size: 16px; }
 }

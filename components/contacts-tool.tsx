@@ -110,7 +110,8 @@ export default function ContactsTool() {
           <p>Add the people around your work — collectors, curators, galleries, advisors.</p>
         </div>
       ) : (
-        <table className={styles.inventoryTable}>
+        <div className={styles.tableScroll}>
+          <table className={styles.inventoryTable}>
           <thead>
             <tr>
               <th>Name</th>
@@ -139,7 +140,8 @@ export default function ContactsTool() {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
       <p className={styles.resultNote}>Saved in this browser only — they do not sync to your account yet.</p>
     </div>

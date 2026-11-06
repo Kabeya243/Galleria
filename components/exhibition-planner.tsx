@@ -430,7 +430,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
                     <input type="checkbox" checked={on} onChange={() => toggleArtwork(a)} />
                     {a.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={a.imageUrl} alt="" className="ep-thumb" />
+                      <img src={a.imageUrl} alt="" className="ep-thumb" loading="lazy" />
                     ) : (
                       <span className="ep-thumb ep-thumb-blank" aria-hidden="true" />
                     )}
@@ -501,7 +501,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
                   <span className="ep-seq-num">{i + 1}</span>
                   {a.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={a.imageUrl} alt="" className="ep-thumb ep-thumb-lg" />
+                    <img src={a.imageUrl} alt="" className="ep-thumb ep-thumb-lg" loading="lazy" />
                   ) : (
                     <span className="ep-thumb ep-thumb-lg ep-thumb-blank" aria-hidden="true" />
                   )}

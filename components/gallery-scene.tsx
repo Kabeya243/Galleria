@@ -274,15 +274,29 @@ function ContactDecal({ width, depth }: { width: number; depth: number }) {
 // public exhibition and the galleries page without touching any of
 // those components. Inline styles only — the global stylesheet and the
 // white-gallery design are untouched.
-function RenderQualityToggle({ quality, onChange }: { quality: RenderQuality; onChange: (quality: RenderQuality) => void }) {
+//
+// Placement (Phase 8): the pill must never cover another control. At
+// top:12 it sat on top of the public exhibition's info button (the
+// 67px topbar overlays the canvas) and on top of the editor's
+// "Add artwork" button (top:14, right:14 in the same corner), so both
+// were unclickable. The offset follows the canvas it is rendered in:
+// below the public topbar, below the editor's Add button, flush at the
+// top everywhere else (galleries viewer).
+function RenderQualityToggle({ quality, onChange, canvasClassName }: { quality: RenderQuality; onChange: (quality: RenderQuality) => void; canvasClassName?: string }) {
+  const top = canvasClassName?.includes("public-gallery-canvas")
+    ? 79
+    : canvasClassName?.includes("editor-canvas")
+      ? 56
+      : 12;
   return (
     <div
+      className="render-quality-toggle"
       role="group"
       aria-label="Render quality"
       title="Render quality — High: shadows, reflections and environment lighting on. Medium: smaller shadow maps. Low: shadows and environment off."
       style={{
         position: "absolute",
-        top: 12,
+        top,
         right: 12,
         zIndex: 20,
         display: "flex",
@@ -298,7 +312,7 @@ function RenderQualityToggle({ quality, onChange }: { quality: RenderQuality; on
         userSelect: "none",
       }}
     >
-      <span style={{ padding: "0 6px 0 8px", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 10 }}>Quality</span>
+      <span className="rq-label" style={{ padding: "0 6px 0 8px", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 10 }}>Quality</span>
       {RENDER_QUALITIES.map((option) => (
         <button
           key={option}
@@ -3385,7 +3399,7 @@ export default function GalleryScene({
           />
         )}
       </Canvas>
-      <RenderQualityToggle quality={quality} onChange={handleQualityChange} />
+      <RenderQualityToggle quality={quality} onChange={handleQualityChange} canvasClassName={className} />
     </div>
   );
 }

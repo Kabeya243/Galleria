@@ -580,7 +580,7 @@ export default function ImageTo3D() {
                 <article key={asset.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 14, background: "var(--surface-3)" }}>
                   {asset.data.fileDataUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={asset.data.fileDataUrl} alt={asset.title} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 4, marginBottom: 10 }} />
+                    <img src={asset.data.fileDataUrl} alt={asset.title} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 4, marginBottom: 10 }} loading="lazy" />
                   )}
                   <h3 style={{ margin: "0 0 4px", fontSize: 15 }}>{asset.title}</h3>
                   {asset.data.source === "fab" && (

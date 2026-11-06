@@ -23,6 +23,7 @@ import {
   Minus,
   Move,
   Paintbrush,
+  PanelLeft,
   Plus,
   Redo2,
   RotateCw,
@@ -149,6 +150,11 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [showGrid, setShowGrid] = useState(false);
   const [showMeasure, setShowMeasure] = useState(false);
   const [showStageSettings, setShowStageSettings] = useState(false);
+  // Phase 8: on small screens the left panel floats over the canvas
+  // (see globals.css) — this collapses it so the canvas is fully
+  // usable. Desktop is unaffected: the toggle button is hidden there
+  // and the panel is always visible.
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(true);
   // Multi-selection: everything selected beyond the primary artwork /
   // element (Shift/Ctrl-click in 3D or in the Layers panel).
   const [multiSelected, setMultiSelected] = useState<LayerItemRef[]>([]);
@@ -1581,7 +1587,7 @@ async function compressImage(file: File): Promise<File> {
 
       {!loadFailed && (
       <div className="editor-workspace">
-        <aside className="editor-assets-panel">
+        <aside className={`editor-assets-panel${mobilePanelOpen ? "" : " assets-collapsed"}`}>
           <div className="panel-heading"><div><span className="panel-kicker">YOUR EXHIBITION</span><h1>Build your space</h1></div><button className="tiny-icon-button" aria-label="Editor help" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={16} /></button></div>
           <div className="room-list">
             {rooms.map((room, index) => (
@@ -1665,7 +1671,10 @@ async function compressImage(file: File): Promise<File> {
         <section className="editor-stage">
           <div className="stage-toolbar">
             <div className="tool-group">
-              <button className="tool-button active" aria-label="Select and move"><Move size={16} /></button>
+              {/* Phase 8: was a dead button (no onClick) — select/move is
+                  the default drag mode, so this exits walk mode back
+                  to it instead of doing nothing. */}
+              <button className="tool-button active" aria-label="Select and move" aria-pressed={!walking} title="Select and move — drag artworks to move them" onClick={() => setWalking(false)}><Move size={16} /></button>
               <button className="tool-button" aria-label="Rotate selected artwork or element" onClick={() => {
                 snapshot();
                 if (selected) updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }));
@@ -1679,6 +1688,9 @@ async function compressImage(file: File): Promise<File> {
             </div>
             <div className="stage-room-name"><span /> {activeRoom?.name.toUpperCase() ?? "ROOM"} <ChevronDown size={13} /></div>
             <div className="tool-group">
+              {/* Phase 8: collapses the floating build panel on small
+                  screens. Hidden on desktop via globals.css. */}
+              <button className="tool-button mobile-panel-toggle" aria-label={mobilePanelOpen ? "Hide build panel" : "Show build panel"} aria-expanded={mobilePanelOpen} title={mobilePanelOpen ? "Hide build panel" : "Show build panel"} onClick={() => setMobilePanelOpen((value) => !value)}><PanelLeft size={16} /></button>
               <button className={`tool-button${showGrid ? " active" : ""}`} aria-label="Toggle grid" aria-pressed={showGrid} title="Toggle grid — 0.5 m grid; drags snap to 0.25 m" onClick={() => setShowGrid((value) => !value)}><Grid2X2 size={16} /></button>
               <button className={`tool-button${showMeasure ? " active" : ""}`} aria-label="Measure" aria-pressed={showMeasure} title="Measure — distances between neighbouring artworks" onClick={() => setShowMeasure((value) => !value)}><Ruler size={16} /></button>
               <button className={`tool-button${showStageSettings ? " active" : ""}`} aria-label="Toggle stage settings" aria-pressed={showStageSettings} title="Stage settings — room dimensions, walls, floor and ceiling" onClick={() => { const next = !showStageSettings; setShowStageSettings(next); if (next) clearSelection(); }}><Settings2 size={16} /></button>
@@ -1701,14 +1713,14 @@ async function compressImage(file: File): Promise<File> {
             {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} editable onArtworkUpdate={handleSceneArtworkUpdate} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
             <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
-            <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale"><Minus size={14} /></button></div>
+            <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up" aria-label="Move selected artwork up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down" aria-label="Move selected artwork down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale" aria-label="Increase scale of selected artwork"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale" aria-label="Decrease scale of selected artwork"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
           </div>
           <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLayouts[activeRoom.layout].label : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks{showGrid ? <><span className="status-dot-separator">·</span> Grid on — drags snap to 0.25 m</> : null}</span><span>{autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
         </section>
 
         <aside className="editor-properties-panel">
-          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="More properties"><Info size={15} /></button></div>
+          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="Version history" aria-expanded={showHistory} aria-pressed={showHistory} title="Version history — the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><Info size={15} /></button></div>
           {showHistory && (
             <div className="property-section">
               <label>VERSION HISTORY <span>LAST 10 SAVES</span></label>

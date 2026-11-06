@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Bell, Search } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import styles from "./public-home.module.css";
@@ -125,10 +125,9 @@ export default function ExplorePage({
           <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Explore</strong></div>
           <div className="topbar-actions">
             <ThemeToggle />
-            <button className="icon-button" aria-label="Search"><Search size={17} /></button>
-            <button className="icon-button notification-button" aria-label="Notifications"><Bell size={17} /><i /></button>
-            <span className="topbar-divider" />
-            <button className="help-button">Need a hand? <ArrowUpRight size={14} /></button>
+            {/* Phase 8: the Search / Notifications / Help buttons were
+                dead — no handler, no backend — so they were removed.
+                The working exhibition search is on the dashboard. */}
           </div>
         </header>
 

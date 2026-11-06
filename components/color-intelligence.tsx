@@ -710,7 +710,7 @@ export default function ColorIntelligence({
                   aria-pressed={active}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artwork.imageUrl} alt={artwork.title} style={S.artworkThumb} />
+                  <img src={artwork.imageUrl} alt={artwork.title} style={S.artworkThumb} loading="lazy" />
                   <span style={{ ...S.artworkBody, display: "block" }}>
                     <span style={{ ...S.artworkTitle, display: "block" }}>{artwork.title}</span>
                     <span style={{ ...S.artworkMeta, display: "block" }}>

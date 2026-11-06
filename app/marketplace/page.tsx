@@ -143,7 +143,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
               <Link href={`/marketplace/${listing.id}`} className="gallery-card-preview-button" aria-label={listing.title}>
                 {listing.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={listing.imageUrl} alt={listing.title} className="mp-browse-image" />
+                  <img src={listing.imageUrl} alt={listing.title} className="mp-browse-image" loading="lazy" />
                 ) : (
                   <div className="mp-browse-image mp-browse-image-empty">
                     <span>No image</span>

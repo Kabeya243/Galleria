@@ -503,7 +503,7 @@ export default function AiArchitect({
                   >
                     {artwork.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={artwork.imageUrl} alt={artwork.title} style={S.thumb} />
+                      <img src={artwork.imageUrl} alt={artwork.title} style={S.thumb} loading="lazy" />
                     ) : (
                       <span style={{ ...S.thumb, background: artwork.color ?? "#b8a184", display: "block" }} />
                     )}
@@ -762,7 +762,7 @@ export default function AiArchitect({
                       <figure key={a.id} style={{ margin: 0 }}>
                         {a.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={a.imageUrl} alt={a.title} style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 8, background: "#fff" }} />
+                          <img src={a.imageUrl} alt={a.title} style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 8, background: "#fff" }} loading="lazy" />
                         ) : (
                           <span style={{ display: "block", width: "100%", height: 150, borderRadius: 8, background: a.color ?? "#b8a184" }} />
                         )}

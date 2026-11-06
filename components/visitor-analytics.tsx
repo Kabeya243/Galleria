@@ -242,7 +242,8 @@ export default function VisitorAnalytics({
                 <p>Visitors have opened the exhibition, but nobody has opened an artwork&apos;s details so far.</p>
               </div>
             ) : (
-              <table className={styles.inventoryTable}>
+              <div className={styles.tableScroll}>
+                <table className={styles.inventoryTable}>
                 <thead>
                   <tr>
                     <th>Artwork</th>
@@ -259,7 +260,8 @@ export default function VisitorAnalytics({
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </section>
 

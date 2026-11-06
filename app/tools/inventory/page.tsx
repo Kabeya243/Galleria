@@ -65,7 +65,8 @@ export default async function InventoryRoute() {
           </Link>
         </div>
       ) : (
-        <table className={styles.inventoryTable}>
+        <div className={styles.tableScroll}>
+          <table className={styles.inventoryTable}>
           <thead>
             <tr>
               <th>Title</th>
@@ -90,7 +91,8 @@ export default async function InventoryRoute() {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
     </ToolsShell>
   );

@@ -724,7 +724,7 @@ export default function ArtInContext({
                 }}
               >
                 {art.imageUrl ? (
-                  <img src={art.imageUrl} alt={art.title} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
+                  <img src={art.imageUrl} alt={art.title} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} loading="lazy" />
                 ) : (
                   <div style={{ height: 130, background: art.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12 }}>No image</div>
                 )}
@@ -1089,7 +1089,7 @@ export default function ArtInContext({
         return (
           <div style={{ display: "flex", gap: spacing, justifyContent: "center", flexWrap: "wrap" }}>
             {chosen.map((a) => (
-              <img key={a.id} src={a.imageUrl ?? undefined} alt={a.title} style={imgBox(layout === "diptych" ? 190 : 140)} />
+              <img key={a.id} src={a.imageUrl ?? undefined} alt={a.title} style={imgBox(layout === "diptych" ? 190 : 140)} loading="lazy" />
             ))}
           </div>
         );
@@ -1098,7 +1098,7 @@ export default function ArtInContext({
         return (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 150px)", gap: spacing, justifyContent: "center" }}>
             {chosen.map((a) => (
-              <img key={a.id} src={a.imageUrl ?? undefined} alt={a.title} style={imgBox(150)} />
+              <img key={a.id} src={a.imageUrl ?? undefined} alt={a.title} style={imgBox(150)} loading="lazy" />
             ))}
           </div>
         );
@@ -1107,7 +1107,7 @@ export default function ArtInContext({
       return (
         <div style={{ display: "flex", gap: spacing, alignItems: "flex-end", justifyContent: "center", flexWrap: "wrap" }}>
           {chosen.map((a, i) => (
-            <img key={a.id} src={a.imageUrl ?? undefined} alt={a.title} style={imgBox(i % 2 === 0 ? 170 : 120)} />
+            <img key={a.id} src={a.imageUrl ?? undefined} alt={a.title} style={imgBox(i % 2 === 0 ? 170 : 120)} loading="lazy" />
           ))}
         </div>
       );
@@ -1135,7 +1135,7 @@ export default function ArtInContext({
                 }}
               >
                 {art.imageUrl ? (
-                  <img src={art.imageUrl} alt={art.title} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />
+                  <img src={art.imageUrl} alt={art.title} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} loading="lazy" />
                 ) : (
                   <div style={{ height: 100, background: art.color }} />
                 )}
@@ -1265,7 +1265,7 @@ export default function ArtInContext({
                 const inOwnExhibition = art.exhibitionId === exhibition.id;
                 return (
                   <li key={art.id} style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", fontSize: 13, border: "1px solid #e8e2d4", borderRadius: 2, padding: "10px 12px", background: "#fff" }}>
-                    {art.imageUrl && <img src={art.imageUrl} alt={art.title} style={{ width: 44, height: 44, objectFit: "cover" }} />}
+                    {art.imageUrl && <img src={art.imageUrl} alt={art.title} style={{ width: 44, height: 44, objectFit: "cover" }} loading="lazy" />}
                     <span><strong>{art.title}</strong> <span style={{ color: "#6b6558" }}>· {art.dimensions || art.medium}</span></span>
                     <span style={{ marginLeft: "auto" }}>
                       {placed ? (
@@ -1378,7 +1378,7 @@ export default function ArtInContext({
         <div style={{ display: "grid", gap: 10 }}>
           {selectedArtworks.map((art) => (
             <div key={art.id} style={{ display: "flex", gap: 10, alignItems: "start" }}>
-              {art.imageUrl && <img src={art.imageUrl} alt={art.title} style={{ width: 48, height: 48, objectFit: "cover" }} />}
+              {art.imageUrl && <img src={art.imageUrl} alt={art.title} style={{ width: 48, height: 48, objectFit: "cover" }} loading="lazy" />}
               <div style={{ flex: 1 }}>
                 <label style={labelStyle} htmlFor={`aic-label-${art.id}`}>{art.title}</label>
                 <textarea
@@ -1531,7 +1531,7 @@ export default function ArtInContext({
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {exhibition.artworks.map((a) => (
                 <span key={a.id} style={{ textAlign: "center", fontSize: 12, width: 110 }}>
-                  {a.imageUrl && <img src={a.imageUrl} alt={a.title} style={{ width: 110, height: 110, objectFit: "cover", border: "1px solid #e8e2d4" }} />}
+                  {a.imageUrl && <img src={a.imageUrl} alt={a.title} style={{ width: 110, height: 110, objectFit: "cover", border: "1px solid #e8e2d4" }} loading="lazy" />}
                   <span style={{ display: "block", marginTop: 4 }}>{a.title}</span>
                 </span>
               ))}

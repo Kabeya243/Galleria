@@ -550,7 +550,7 @@ export default function CollectionManager({
                       <button type="button" className="cm-title-btn" onClick={() => openDetail(a.id)} aria-expanded={isOpen}>
                         {a.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={a.imageUrl} alt="" className="cm-thumb" />
+                          <img src={a.imageUrl} alt="" className="cm-thumb" loading="lazy" />
                         ) : (
                           <span className="cm-thumb cm-thumb-blank" aria-hidden="true" />
                         )}

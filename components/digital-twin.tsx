@@ -1372,7 +1372,8 @@ function VrCameraTour({ target, active }: { target: [number, number, number] | n
                 ? "Everything matches the plan within 2 cm."
                 : `${mismatches.length} value${mismatches.length > 1 ? "s differ" : " differs"} from the plan by more than 2 cm — highlighted below.`}
             </p>
-            <table className={styles.inventoryTable}>
+            <div className={styles.tableScroll}>
+              <table className={styles.inventoryTable}>
               <thead>
                 <tr><th>Item</th><th>Planned</th><th>Measured</th><th>Difference</th></tr>
               </thead>
@@ -1388,7 +1389,8 @@ function VrCameraTour({ target, active }: { target: [number, number, number] | n
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
 
           {/* Installation order */}

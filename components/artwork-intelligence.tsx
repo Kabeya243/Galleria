@@ -537,7 +537,7 @@ export default function ArtworkIntelligence({
                 >
                   {artwork.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={artwork.imageUrl} alt={artwork.title} style={S.artworkThumb} />
+                    <img src={artwork.imageUrl} alt={artwork.title} style={S.artworkThumb} loading="lazy" />
                   ) : (
                     <span style={{ ...S.artworkThumb, background: artwork.color ?? "#b8a184", display: "block" }} />
                   )}

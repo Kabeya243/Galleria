@@ -1151,7 +1151,7 @@ export default function MockupStudio({
                           onClick={() => pickArtwork(slot, art.id)}
                         >
                           <span className="ms-thumb" style={{ backgroundColor: art.color }}>
-                            {art.imageUrl ? <img src={art.imageUrl} alt="" /> : <span style={{ backgroundColor: art.accent, width: "100%", height: "100%", display: "block" }} />}
+                            {art.imageUrl ? <img src={art.imageUrl} alt="" loading="lazy" /> : <span style={{ backgroundColor: art.accent, width: "100%", height: "100%", display: "block" }} />}
                           </span>
                           <span>
                             <strong>{art.title}</strong>

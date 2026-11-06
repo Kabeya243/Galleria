@@ -438,7 +438,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
                 >
                   {a.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={a.imageUrl} alt="" />
+                    <img src={a.imageUrl} alt="" loading="lazy" />
                   ) : (
                     <span style={{ aspectRatio: "4 / 3", display: "grid", placeItems: "center", background: "#efebe1", color: "#898a82" }}>
                       No image

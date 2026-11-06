@@ -378,7 +378,7 @@ export default function MarketplaceTool({
               <article key={listing.id} className="mp-card">
                 {listing.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={listing.imageUrl} alt={listing.title} className="mp-card-image" />
+                  <img src={listing.imageUrl} alt={listing.title} className="mp-card-image" loading="lazy" />
                 ) : (
                   <div className="mp-card-image mp-card-image-empty" aria-label="No image">
                     <span>No image</span>

@@ -295,3 +295,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Phase 8 — phones: 16px search text so iOS does not zoom on focus,
+   and a narrower search field so the header actions fit at 320px. */
+@media (max-width: 620px) {
+  .search input { font-size: 16px; width: 150px; }
+}

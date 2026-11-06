@@ -272,7 +272,7 @@ export default function SitePreview({
                     <figure key={art.id} style={{ margin: 0 }}>
                       {art.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={art.imageUrl} alt={art.title} style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: theme.surface }} />
+                        <img src={art.imageUrl} alt={art.title} style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: theme.surface }} loading="lazy" />
                       ) : (
                         <div style={{ width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${art.color}, ${art.accent})` }} />
                       )}

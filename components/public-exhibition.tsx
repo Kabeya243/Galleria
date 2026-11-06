@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, Maximize2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, Maximize2, Minimize2 } from "lucide-react";
 import { useProgress } from "@react-three/drei";
 import GalleryScene from "@/components/gallery-scene";
 import type { Artwork } from "@/lib/demo-data";
@@ -57,6 +57,31 @@ export default function PublicExhibition({
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
   const walkReset = useRef(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+
+  // Keep the button in sync with fullscreen state (e.g. the user exits
+  // with Esc), so the same button always offers the opposite action.
+  useEffect(() => {
+    function onFullscreenChange() {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    }
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    setFullscreenError(null);
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      setFullscreenError("Fullscreen is not available in this browser.");
+    }
+  }
   const activeRoom = exhibition.rooms.find((room) => room.id === activeRoomId) ?? exhibition.rooms[0];
   const roomArtworks = exhibition.artworks.filter((artwork) => artwork.roomId === activeRoom?.id);
 
@@ -118,7 +143,8 @@ export default function PublicExhibition({
           >{icon}</button>
         ))}
       </div>}
-      <button className="public-fullscreen" aria-label="Fullscreen" onClick={() => document.documentElement.requestFullscreen?.()}><Maximize2 size={17} /></button>
+      <button className="public-fullscreen" aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void toggleFullscreen()}>{isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
+      {fullscreenError && <p className="public-fullscreen-note" role="alert">{fullscreenError}</p>}
       {(selected || showInfo) && (
         <aside className="artwork-info-card">
           <button className="info-close" onClick={() => { setSelected(undefined); setShowInfo(false); }} aria-label="Close information">×</button>

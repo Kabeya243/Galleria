@@ -1,41 +1,43 @@
 # Galleria (SANAA)
 
-SANAA est une application indépendante de création et de visite d’expositions d’art virtuelles en 3D. 
-## Fonctionnalités disponibles
+SANAA is a web app for creating and visiting virtual 3D art exhibitions.
 
-- Création de compte et connexion avec adresse e-mail et mot de passe.
-- Mots de passe hachés et cookie de session HTTP-only.
-- Base SQLite locale avec comptes, expositions et œuvres.
-- Tableau de bord personnel protégé.
-- Éditeur de galerie Three.js : création de jusqu’à 12 salles, choix de leur forme, nom, couleurs et textures de murs (plâtre, béton, brique) et de sol (pierre, béton, bois); ajout de cloisons orientables et positionnables; éclairage par spots activable par salle; ajout d’un texte curatorial sur le mur; placement, rotation et mise à l’échelle des œuvres.
-- Enregistrement de l’exposition dans la base de données.
-- Publication et retrait d’une exposition avec une URL partageable.
-- Visite publique à la première personne : déplacement avec WASD/flèches, commandes tactiles ou clic sur le sol pour marcher jusqu’au point choisi; passages par des portes entre les salles, plafonds, fenêtres, textures, spots, cartels curatoriaux, détails des œuvres et compteur de visites.
-- Images téléversées et conservées dans `data/uploads/`; formats PNG, JPEG, WebP et AVIF, taille maximale de 8 Mo.
-- Contrôle de propriété pour la modification des expositions et l’accès aux images non publiées.
-- Script pour créer une exposition de démonstration AFROCENTRIK avec dix œuvres du portfolio réparties dans quatre salles.
+## Stack
 
-L’application est le premier MVP. La récupération du mot de passe, la vérification d’adresse e-mail, les visites guidées, les paiements, le stockage cloud et les statistiques avancées ne sont pas encore implémentés. La base SQLite et les fichiers téléversés sont locaux : avant un déploiement public, il faut migrer vers PostgreSQL et un stockage objet durable.
+- Next.js 15 + React 19 + TypeScript, Tailwind CSS 4
+- Three.js / React Three Fiber — the 3D gallery editor and public visits
+- Prisma + PostgreSQL — accounts, exhibitions, artworks, saved tool work
+- Cloudflare R2 (S3-compatible) — artwork image storage
+- Nodemailer over SMTP — password recovery emails
 
-## Démarrer en local
+## Features
 
-Node.js 20.9 ou ultérieur est requis. Dans un terminal PowerShell :
+- Email + password accounts, HTTP-only session cookie, password recovery
+- Personal dashboard, exhibitions list, and a 3D editor: up to 12 rooms, 17 room templates, wall/floor/ceiling colours and textures, partition walls, track lighting, curatorial wall text, frames, and placeable elements
+- Artwork uploads (PNG, JPEG, WebP, AVIF, HEIC/HEIF, compressed automatically) stored in R2
+- Publish / unpublish with a shareable public URL; first-person public visits (WASD, touch, click-to-walk) with visit counts
+- Galleries page with a live 3D preview of each room template
+- Tools: price-your-work calculator, inventory & collections, contacts, present & sell, documents (certificates of authenticity), mockup studio, colour intelligence, presentation designer, photography lab
+- Admin dashboard (owner-only) with tools-use tracking
 
-```powershell
-cd SANAA
+## Run locally
+
+Node.js 20.9 or later is required.
+
+```bash
 npm install
-Copy-Item .env.example .env
+cp .env.example .env
 ```
 
-Remplacez `SESSION_SECRET` dans `.env` par une valeur aléatoire d’au moins 32 caractères. Ensuite :
+Fill in `.env` (see `.env.example` for the full list of variables), then:
 
-```powershell
+```bash
 npm run db:setup
 npm run dev
 ```
 
-Ouvrez [http://localhost:3000](http://localhost:3000), créez un compte, puis créez une exposition depuis le tableau de bord. Le raccourci `/editor` renvoie vers le tableau de bord; chaque exposition a son propre éditeur. Une fois publiée, l’exposition est accessible à `/exhibition/<slug>`.
+Open [http://localhost:3000](http://localhost:3000), create an account, then create an exhibition from the dashboard. Once published, an exhibition is available at `/exhibition/<slug>`.
 
-Pour ajouter l’exposition de démonstration au compte local (après avoir créé le compte), lancez `npm run db:seed-demo`. Le script exige un seul compte SANAA local et ne crée pas de doublon.
+To add the AFROCENTRIK demo exhibition to a local account, run `npm run db:seed-demo` (it requires exactly one local account and never creates a duplicate).
 
-`npm run build` compile l’application et `npm run typecheck` vérifie TypeScript.
+`npm run build` compiles the app and `npm run typecheck` checks TypeScript.

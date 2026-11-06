@@ -32,9 +32,15 @@ export default function ExhibitionsPage({
   const [exhibitions, setExhibitions] = useState(initialExhibitions);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
+  // Two-step inline confirm for deleting an exhibition (same pattern as
+  // the editor's remove-room): first click arms, second confirms, and the
+  // armed state clears after a few seconds.
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   async function createExhibition() {
     setCreating(true);
+    setPageError(null);
     try {
       const response = await fetch("/api/exhibitions", { method: "POST" });
       const result = await response.json();
@@ -42,13 +48,18 @@ export default function ExhibitionsPage({
       window.location.assign(`/editor/${result.exhibition.id}`);
     } catch (error) {
       console.error("Could not create exhibition.", error);
-      window.alert(error instanceof Error ? error.message : "Could not create an exhibition.");
+      setPageError(error instanceof Error ? error.message : "Could not create an exhibition.");
       setCreating(false);
     }
   }
 
   async function deleteExhibition(exhibition: OwnExhibition) {
-    if (!window.confirm(`Delete "${exhibition.title}"? This cannot be undone.`)) return;
+    if (confirmingDeleteId !== exhibition.id) {
+      setConfirmingDeleteId(exhibition.id);
+      window.setTimeout(() => setConfirmingDeleteId((current) => (current === exhibition.id ? null : current)), 10000);
+      return;
+    }
+    setConfirmingDeleteId(null);
     setDeletingId(exhibition.id);
     try {
       const response = await fetch(`/api/exhibitions/${exhibition.id}`, { method: "DELETE" });
@@ -57,7 +68,7 @@ export default function ExhibitionsPage({
       setExhibitions((current) => current.filter((item) => item.id !== exhibition.id));
     } catch (error) {
       console.error("Could not delete exhibition.", error);
-      window.alert(error instanceof Error ? error.message : "Could not delete this exhibition.");
+      setPageError(error instanceof Error ? error.message : "Could not delete this exhibition.");
     } finally {
       setDeletingId(null);
     }
@@ -80,6 +91,14 @@ export default function ExhibitionsPage({
         </header>
 
         <div className="dashboard-content">
+          {pageError && (
+            <div className="editor-error-banner" role="alert">
+              <span>{pageError}</span>
+              <button type="button" aria-label="Dismiss" onClick={() => setPageError(null)}>
+                ×
+              </button>
+            </div>
+          )}
           <section className="welcome-row">
             <div>
               <p className="eyebrow"><span className="status-dot" /> YOUR EXHIBITIONS · {exhibitions.length}</p>
@@ -141,9 +160,9 @@ export default function ExhibitionsPage({
                       <button
                         onClick={() => void deleteExhibition(exhibition)}
                         disabled={deletingId === exhibition.id}
-                        aria-label={`Delete ${exhibition.title}`}
+                        aria-label={confirmingDeleteId === exhibition.id ? `Click again to delete ${exhibition.title}` : `Delete ${exhibition.title}`}
                       >
-                        <Trash2 size={14} /> {deletingId === exhibition.id ? "Deleting…" : "Delete"}
+                        <Trash2 size={14} /> {deletingId === exhibition.id ? "Deleting…" : confirmingDeleteId === exhibition.id ? "Click again to delete" : "Delete"}
                       </button>
                     </div>
                   </div>

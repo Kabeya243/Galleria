@@ -139,8 +139,15 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // The exhibition failed to load (bad id, deleted, or server error): the
+  // workspace below stays hidden and the banner above explains, with a
+  // way back to the dashboard, instead of a native alert + redirect.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  // Editor guide panel (see the "Editor guide" link at the bottom of the
+  // left panel): the shortcuts and workflow, in the page's own words.
+  const [showGuide, setShowGuide] = useState(false);
   // Two-step inline confirm for removing a room (see removeRoom).
   const [confirmingRemoveRoom, setConfirmingRemoveRoom] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
@@ -180,8 +187,9 @@ export default function Editor({ exhibitionId }: { exhibitionId: string }) {
         setSaved(true);
       } catch (error) {
         console.error("Could not load exhibition.", error);
-        window.alert(error instanceof Error ? error.message : "Could not load this exhibition.");
-        window.location.assign("/");
+        if (!active) return;
+        setSaveError(error instanceof Error ? error.message : "Could not load this exhibition.");
+        setLoadFailed(true);
       } finally {
         if (active) setLoading(false);
       }
@@ -763,7 +771,7 @@ async function compressImage(file: File): Promise<File> {
       setSlug(result.slug);
     } catch (error) {
       console.error("Could not publish exhibition.", error);
-      window.alert(error instanceof Error ? error.message : "Could not publish this exhibition.");
+      setSaveError(error instanceof Error ? error.message : "Could not publish this exhibition.");
     } finally {
       setBusy(false);
     }
@@ -950,9 +958,10 @@ async function compressImage(file: File): Promise<File> {
         </div>
       )}
 
+      {!loadFailed && (
       <div className="editor-workspace">
         <aside className="editor-assets-panel">
-          <div className="panel-heading"><div><span className="panel-kicker">YOUR EXHIBITION</span><h1>Build your space</h1></div><button className="tiny-icon-button" aria-label="Editor help"><CircleHelp size={16} /></button></div>
+          <div className="panel-heading"><div><span className="panel-kicker">YOUR EXHIBITION</span><h1>Build your space</h1></div><button className="tiny-icon-button" aria-label="Editor help" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={16} /></button></div>
           <div className="room-list">
             {rooms.map((room, index) => (
               <button
@@ -1017,7 +1026,7 @@ async function compressImage(file: File): Promise<File> {
               </div>
             </>
           )}
-          <div className="left-panel-bottom"><div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. Double-click a wall to paint it.</p></div><button className="panel-help-link"><CircleHelp size={15} /> Editor guide <ArrowRight size={13} /></button></div>
+          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — double-click an artwork, an element or a wall.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — double-click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — switch on the footprints button, then WASD to move and drag to look.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. Double-click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
         </aside>
 
         <section className="editor-stage">
@@ -1189,6 +1198,13 @@ async function compressImage(file: File): Promise<File> {
           <div className="inspector-footer"><span>Saved with exhibition</span><span className="local-save-dot" /></div>
         </aside>
       </div>
+      )}
+      {loadFailed && (
+        <div className="editor-load-failed">
+          <p>This exhibition could not be opened. It may have been deleted, or the server could not be reached.</p>
+          <Link href="/">Back to the dashboard</Link>
+        </div>
+      )}
     </main>
   );
 }

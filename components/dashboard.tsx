@@ -51,6 +51,7 @@ export default function Dashboard({
 }) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const firstName = user.name.split(" ")[0] || user.name;
   const initials = user.name
     .split(" ")
@@ -78,7 +79,7 @@ export default function Dashboard({
       window.location.assign(`/editor/${result.exhibition.id}`);
     } catch (error) {
       console.error("Could not create exhibition.", error);
-      window.alert(error instanceof Error ? error.message : "Could not create an exhibition.");
+      setCreateError(error instanceof Error ? error.message : "Could not create an exhibition.");
       setCreating(false);
     }
   }
@@ -151,6 +152,15 @@ export default function Dashboard({
               </button>
             </div>
           </div>
+
+          {createError && (
+            <div className="editor-error-banner" role="alert">
+              <span>{createError}</span>
+              <button type="button" aria-label="Dismiss" onClick={() => setCreateError(null)}>
+                ×
+              </button>
+            </div>
+          )}
 
           <section className={styles.stats} aria-label="Your statistics">
             {statCards.map((card) => (

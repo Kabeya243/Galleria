@@ -159,6 +159,7 @@ export default function GalleriesPage({
 }) {
   const [selected, setSelected] = useState<RoomLayout>("cube");
   const [opening, setOpening] = useState<RoomLayout | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -175,6 +176,7 @@ export default function GalleriesPage({
   // this layout, then open the editor. Signed-out visitors go to /login.
   async function openInEditor(layout: RoomLayout) {
     setOpening(layout);
+    setOpenError(null);
     try {
       const createResponse = await fetch("/api/exhibitions", { method: "POST" });
       if (createResponse.status === 401) {
@@ -199,20 +201,29 @@ export default function GalleriesPage({
       window.location.assign(`/editor/${created.exhibition.id}`);
     } catch (error) {
       console.error("Could not open this room in the editor.", error);
-      window.alert(error instanceof Error ? error.message : "Could not open this room in the editor.");
+      setOpenError(error instanceof Error ? error.message : "Could not open this room in the editor.");
       setOpening(null);
     }
   }
 
   // The models only — the same content in both shells: a live 3D preview
-  // plus the ten room cards. Nothing else lives on this page.
+  // plus the seventeen room cards. Nothing else lives on this page.
   const galleriesContent = (
     <>
       <section className="galleries-intro">
-        <p className="eyebrow">TEN ROOMS · ONE COLLECTION</p>
+        <p className="eyebrow">SEVENTEEN ROOMS · ONE COLLECTION</p>
         <h1>Galleries<span className="title-period">.</span></h1>
-        <p>Ten gallery rooms, each with its own light, walls and floor. Pick one to walk through, or open it in the editor and hang your work.</p>
+        <p>Seventeen gallery rooms, each with its own light, walls and floor. Pick one to walk through, or open it in the editor and hang your work.</p>
       </section>
+
+      {openError && (
+        <div className="editor-error-banner" role="alert">
+          <span>{openError}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setOpenError(null)}>
+            ×
+          </button>
+        </div>
+      )}
 
       <section className="galleries-viewer" ref={viewerRef}>
         <div className="galleries-viewer-head">

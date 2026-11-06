@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
@@ -25,7 +25,11 @@ export async function GET(_request: Request, { params }: RouteContext) {
   if (!contentType) return NextResponse.json({ error: "Image not found." }, { status: 404 });
 
   try {
+    // The images/works directory is a local portfolio asset folder: it
+    // does not exist on Vercel, so a missing file (or directory) is a
+    // plain 404, never a 500.
     const artworkPath = path.join(process.cwd(), "..", "images", "works", filename);
+    await access(artworkPath);
     const bytes = await readFile(artworkPath);
     return new NextResponse(bytes, {
       headers: {

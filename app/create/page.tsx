@@ -40,10 +40,10 @@ const CARDS: HubCard[] = [
     status: "ready",
   },
   {
-    href: "/exhibitions",
+    href: "/tools/frame-studio",
     icon: Frame,
     title: "Frame Studio",
-    description: "Frames for your artworks — digitised styles, custom controls and presets, inside the 3D editor.",
+    description: "Frames for your artworks — 28 digitised styles, custom controls and presets, and side-by-side comparison.",
     status: "ready",
   },
   {

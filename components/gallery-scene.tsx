@@ -1706,8 +1706,9 @@ function RoomFeatures({
     );
   }
   if (layout === "black-panels") {
-    // Tall black panels suspended by rods, each carrying a framed
-    // black-and-white photograph.
+    // Tall black panels suspended by rods. The panels are architecture,
+    // not artworks: they carry no picture face, so nothing in the room
+    // reads as a framed work with a missing image.
     return (
       <group>
         {[-5.5, 0, 5.5].map((x) => (
@@ -1715,14 +1716,6 @@ function RoomFeatures({
             <mesh position={[x, 2.7, -1.5]}>
               <boxGeometry args={[2.2, 3.4, 0.14]} />
               <meshStandardMaterial color="#101010" roughness={0.85} />
-            </mesh>
-            <mesh position={[x, 2.7, -1.42]}>
-              <planeGeometry args={[1.7, 2.6]} />
-              <meshStandardMaterial color="#d8d5cc" roughness={0.9} />
-            </mesh>
-            <mesh position={[x, 2.9, -1.41]}>
-              <circleGeometry args={[0.5, 32]} />
-              <meshStandardMaterial color="#1c1c1a" roughness={0.9} />
             </mesh>
             {[-0.8, 0.8].map((dx) => (
               <mesh key={dx} position={[x + dx, (height + 4.4) / 2, -1.5]}>
@@ -1736,7 +1729,10 @@ function RoomFeatures({
     );
   }
   if (layout === "raw-concrete") {
-    // Seven freestanding black-framed panels in a staggered (quincunx) row.
+    // Seven freestanding black panels in a staggered (quincunx) row.
+    // They are partition architecture, not artworks: no picture face, so
+    // a visitor never reads them as framed works showing a black circle
+    // instead of a photograph.
     const panels: [number, number][] = [[-6, -3], [0, -3], [6, -3], [-3, 0], [3, 0], [-6, 3], [6, 3]];
     return (
       <group>
@@ -1745,14 +1741,6 @@ function RoomFeatures({
             <mesh position={[0, 1.35, 0]}>
               <boxGeometry args={[1.7, 2.5, 0.1]} />
               <meshStandardMaterial color="#171716" roughness={0.8} />
-            </mesh>
-            <mesh position={[0, 1.35, 0.06]}>
-              <planeGeometry args={[1.5, 2.3]} />
-              <meshStandardMaterial color="#e8e6e0" roughness={0.9} />
-            </mesh>
-            <mesh position={[0, 1.5, 0.07]}>
-              <circleGeometry args={[0.45, 32]} />
-              <meshStandardMaterial color="#232320" roughness={0.9} />
             </mesh>
           </group>
         ))}

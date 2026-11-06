@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Archive,
+  BarChart3,
   Boxes,
   Calculator,
   ChevronDown,
@@ -104,6 +105,9 @@ const NAV_GROUPS: NavGroup[] = [
     hub: "/intelligence",
     label: "Intelligence",
     items: [
+      // The hub itself is the entry point for everyone; Admin analytics
+      // stays owner-only, and "Your exhibition insights" lives on the hub.
+      { id: "insights", href: "/intelligence", label: "Exhibition insights", icon: BarChart3 },
       { id: "analytics", href: "/admin", label: "Admin analytics", icon: ShieldCheck, adminOnly: true },
     ],
   },

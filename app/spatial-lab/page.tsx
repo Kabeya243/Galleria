@@ -15,7 +15,7 @@ const CARDS: HubCard[] = [
     href: "/galleries",
     icon: GalleryVerticalEnd,
     title: "Gallery templates",
-    description: "Seventeen rooms to start from — pick one, open it in the editor, make it yours.",
+    description: "Forty rooms to start from — pick one, open it in the editor, make it yours.",
     status: "ready",
   },
   {

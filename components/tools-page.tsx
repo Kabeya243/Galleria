@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Calculator,
   FileText,
+  Frame,
   Gem,
   Image,
   LayoutGrid,
@@ -52,6 +53,12 @@ const TOOLS = [
     icon: FileText,
     title: "Documents",
     description: "Certificates of authenticity, labels and artwork sheets, ready to print.",
+  },
+  {
+    href: "/tools/frame-studio",
+    icon: Frame,
+    title: "Frame Studio",
+    description: "Frame your artworks — 28 digitised styles, custom width, depth, material and glass, and side-by-side comparison.",
   },
   {
     href: "/tools/mockup-studio",

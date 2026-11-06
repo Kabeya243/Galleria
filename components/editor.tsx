@@ -136,7 +136,17 @@ function NumberField({
   );
 }
 
-export default function Editor({ exhibitionId }: { exhibitionId: string }) {
+export default function Editor({
+  exhibitionId,
+  hiddenLayouts = [],
+}: {
+  exhibitionId: string;
+  // Layout ids the owner hid in the admin: not offered as a gallery
+  // choice (the room's own layout always stays available, so a room
+  // built with a hidden template still shows its own layout).
+  hiddenLayouts?: string[];
+}) {
+  const hiddenLayoutSet = useMemo(() => new Set(hiddenLayouts), [hiddenLayouts]);
   const [artworks, setArtworks] = useState<LayerArtwork[]>([]);
   const [rooms, setRooms] = useState<GalleryRoom[]>([]);
   const [activeRoomId, setActiveRoomId] = useState("");
@@ -2018,7 +2028,7 @@ async function compressImage(file: File): Promise<File> {
                     )}
                     {activeRoom && <>
                       <div className="property-section"><label>ROOM NAME</label><input className="full-input" {...editSessionProps} value={activeRoom.name} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, name: event.target.value.slice(0, 60) }))} /></div>
-                      <div className="property-section"><label>GALLERY</label><select className="full-input" {...editSessionProps} value={activeRoom.layout} onChange={(event) => updateRoom(activeRoom.id, (room) => applyLayoutPreset(room, event.target.value as RoomLayout))}>{Object.entries(roomLayouts).map(([layout, details]) => <option key={layout} value={layout}>{details.label} · {details.width} × {details.depth} m</option>)}</select></div>
+                      <div className="property-section"><label>GALLERY</label><select className="full-input" {...editSessionProps} value={activeRoom.layout} onChange={(event) => updateRoom(activeRoom.id, (room) => applyLayoutPreset(room, event.target.value as RoomLayout))}>{Object.entries(roomLayouts).filter(([layout]) => !hiddenLayoutSet.has(layout) || layout === activeRoom.layout).map(([layout, details]) => <option key={layout} value={layout}>{details.label} · {details.width} × {details.depth} m</option>)}</select></div>
                       <div className="property-section"><label>BACK WALL</label><div className="room-color-control"><input type="color" aria-label="Back wall colour" {...editSessionProps} value={activeRoom.wallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallColor: event.target.value }))} /><span>{activeRoom.wallColor}</span></div></div>
                       <div className="property-section"><label>SIDE WALLS</label><div className="room-color-control"><input type="color" aria-label="Side walls colour" {...editSessionProps} value={activeRoom.sideWallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, sideWallColor: event.target.value }))} /><span>{activeRoom.sideWallColor}</span></div></div>
                       <div className="property-section"><label>CEILING</label><div className="room-color-control"><input type="color" aria-label="Ceiling colour" {...editSessionProps} value={activeRoom.ceilingColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingColor: event.target.value }))} /><span>{activeRoom.ceilingColor}</span></div></div>

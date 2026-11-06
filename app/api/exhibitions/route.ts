@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser, toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
 import { createGalleryRoom, ROOM_MODELS, roomModelLayout } from "@/lib/rooms";
 
 export async function GET() {
@@ -49,7 +50,11 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const layout = roomModelLayout(parsed.data.model ?? "minimalist");
+  const requestedLayout = roomModelLayout(parsed.data.model ?? "minimalist");
+  // A model the owner hid in the admin cannot seed a new exhibition:
+  // fall back to the White Cube instead of creating with a hidden room.
+  const hiddenLayouts = await getHiddenRoomLayouts();
+  const layout = hiddenLayouts.includes(requestedLayout) ? "cube" : requestedLayout;
 
   const exhibition = await db.exhibition.create({
     data: {

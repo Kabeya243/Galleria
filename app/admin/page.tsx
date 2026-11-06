@@ -1,7 +1,10 @@
 import Link from "next/link";
+import AdminGalleries from "@/components/admin-galleries";
 import AdminShell from "@/components/admin-shell";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
+import { ROOM_MODELS, roomLayouts, type RoomLayout } from "@/lib/rooms";
 import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
 
 export const metadata = {
@@ -121,6 +124,7 @@ export default async function AdminRoute({
     toolUseLast30Days,
     recentToolUses,
     visitLogDays,
+    hiddenRoomLayouts,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -233,6 +237,9 @@ export default async function AdminRoute({
       where: { day: { gte: thirtyDaysAgo } },
       select: { day: true },
     }),
+    // Room templates the owner hid in the admin (see the Galleries
+    // section below): the list lives in code, this only masks ids.
+    getHiddenRoomLayouts(),
   ]);
 
   const userCount = userDates.length;
@@ -342,6 +349,25 @@ export default async function AdminRoute({
     day: "numeric",
     month: "long",
     year: "numeric",
+  });
+
+  // Room templates for the Galleries section: the five layouts in code,
+  // with a note for the four creation models and the reference room.
+  const modelNote = new Map(ROOM_MODELS.map((model) => [model.layout, `Creation model · ${model.id}`]));
+  const galleryTemplates = (Object.keys(roomLayouts) as RoomLayout[]).map((key) => {
+    const preset = roomLayouts[key];
+    return {
+      key,
+      label: preset.label,
+      category: preset.category,
+      width: preset.width,
+      depth: preset.depth,
+      height: preset.height,
+      note:
+        key === "gallery-skylight"
+          ? "Reference room · public exhibition"
+          : modelNote.get(key),
+    };
   });
 
   return (
@@ -861,6 +887,19 @@ export default async function AdminRoute({
             </table>
           </div>
         )}
+      </section>
+
+      {/* Galleries — room templates */}
+      <section id="galleries" className="ad-section">
+        <div className="ad-section-head">
+          <h2>Galleries</h2>
+          <p>
+            {galleryTemplates.length} room templates — the models visitors can pick. Deleting one hides it
+            from the catalogue, the creation dialog and the editor; exhibitions already built with it keep
+            working.
+          </p>
+        </div>
+        <AdminGalleries templates={galleryTemplates} hidden={hiddenRoomLayouts} />
       </section>
 
       <p className="ad-foot">

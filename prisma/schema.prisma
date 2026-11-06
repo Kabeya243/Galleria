@@ -293,3 +293,15 @@ model SavedWork {
   @@index([userId, kind])
   @@index([userId, updatedAt])
 }
+
+// Room templates hidden by the owner from the admin panel. Templates
+// live in code (lib/rooms.ts); hiding one only records its layout id
+// here, so the removal survives reloads and redeploys. Hidden templates
+// are filtered out wherever templates are listed, but exhibitions
+// already built with one keep working — they fall back to the White
+// Cube only if the layout itself disappears from the code.
+model HiddenRoomTemplate {
+  id        String   @id @default(cuid())
+  layout    String   @unique
+  createdAt DateTime @default(now())
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ROOM_MODELS, roomLayouts, type RoomModelId } from "@/lib/rooms";
 import { useT } from "@/lib/i18n";
+import { useHiddenRoomLayouts } from "@/lib/use-hidden-room-layouts";
 
 // Create-exhibition dialog (feature 7): the title is mandatory and the
 // visitor picks one of the four named room models for the first room.
@@ -22,6 +23,14 @@ export default function ExhibitionCreateDialog({
   const [error, setError] = useState<string | null>(null);
   const trimmed = title.trim();
 
+  // Models the owner hid in the admin are not offered. The selection
+  // follows the first visible model if the chosen one is hidden.
+  const hidden = useHiddenRoomLayouts();
+  const visibleModels = ROOM_MODELS.filter((candidate) => !hidden.has(candidate.layout));
+  const effectiveModel = visibleModels.some((candidate) => candidate.id === model)
+    ? model
+    : (visibleModels[0]?.id ?? "minimalist");
+
   const modelText: Record<RoomModelId, { name: string; desc: string }> = {
     minimalist: { name: t("create", "modelMinimalist"), desc: t("create", "modelMinimalistDesc") },
     classic: { name: t("create", "modelClassic"), desc: t("create", "modelClassicDesc") },
@@ -38,7 +47,7 @@ export default function ExhibitionCreateDialog({
     setCreating(true);
     setError(null);
     try {
-      await onCreate(trimmed, model);
+      await onCreate(trimmed, effectiveModel);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("create", "titleRequired"));
       setCreating(false);
@@ -73,16 +82,16 @@ export default function ExhibitionCreateDialog({
           <fieldset className="create-dialog-models">
             <legend>{t("create", "chooseModel")}</legend>
             <div className="create-dialog-model-grid">
-              {ROOM_MODELS.map((candidate) => (
+              {visibleModels.map((candidate) => (
                 <label
                   key={candidate.id}
-                  className={`create-dialog-model ${model === candidate.id ? "create-dialog-model-selected" : ""}`}
+                  className={`create-dialog-model ${effectiveModel === candidate.id ? "create-dialog-model-selected" : ""}`}
                 >
                   <input
                     type="radio"
                     name="room-model"
                     value={candidate.id}
-                    checked={model === candidate.id}
+                    checked={effectiveModel === candidate.id}
                     onChange={() => setModel(candidate.id)}
                   />
                   <span className="create-dialog-model-name">{modelText[candidate.id].name}</span>

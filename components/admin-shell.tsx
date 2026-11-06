@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Images,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Menu,
   Search,
@@ -59,7 +60,7 @@ export default function AdminShell({
   // Track which section is on screen, so the matching menu item is
   // highlighted (like the reference's active Dashboard row).
   useEffect(() => {
-    const ids = ["overview", "users", "exhibitions", "artworks", "tools"];
+    const ids = ["overview", "users", "exhibitions", "artworks", "galleries", "tools"];
     const elements = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -108,6 +109,12 @@ export default function AdminShell({
       href: "#artworks",
       icon: <ImageIcon size={18} />,
       badge: counts?.artworks,
+    },
+    {
+      id: "galleries",
+      label: "Galleries",
+      href: "#galleries",
+      icon: <LayoutGrid size={18} />,
     },
     {
       id: "tools",

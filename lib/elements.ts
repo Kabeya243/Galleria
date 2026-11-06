@@ -60,7 +60,7 @@ export const roomElementSchema = z.object({
   id: z.string().min(1).max(64),
   type: z.enum(elementTypes),
   name: z.string().trim().min(1).max(60),
-  // Which room template seeded this element (e.g. "partition-hall").
+  // Which room template seeded this element (e.g. "gallery-skylight").
   // Absent for elements the user added by hand, so a layout switch can
   // swap the seeded furniture without touching the user's own pieces.
   seededFrom: z.string().max(32).optional(),

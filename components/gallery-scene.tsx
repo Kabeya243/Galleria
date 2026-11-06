@@ -2376,199 +2376,6 @@ function RoomFeatures({
       </group>
     );
   }
-  if (layout === "black-panels") {
-    // Tall black panels suspended by rods. The panels are architecture,
-    // not artworks: they carry no picture face, so nothing in the room
-    // reads as a framed work with a missing image.
-    return (
-      <group>
-        {[-5.5, 0, 5.5].map((x) => (
-          <group key={x}>
-            <mesh position={[x, 2.7, -1.5]}>
-              <boxGeometry args={[2.2, 3.4, 0.14]} />
-              <meshStandardMaterial color="#101010" roughness={0.85} />
-            </mesh>
-            {[-0.8, 0.8].map((dx) => (
-              <mesh key={dx} position={[x + dx, (height + 4.4) / 2, -1.5]}>
-                <cylinderGeometry args={[0.02, 0.02, height - 4.4, 6]} />
-                <meshStandardMaterial color="#444440" roughness={0.5} metalness={0.5} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "raw-concrete") {
-    // Six freestanding concrete panels in three staggered rows. They are
-    // partition architecture, not artworks: no picture face, so a visitor
-    // never reads them as framed works showing a black circle instead of
-    // a photograph. They reuse the wall's concrete map (at panel scale)
-    // and colour, cast and receive shadows, and stand on slim steel feet
-    // — lit concrete with visible texture and shading, not black voids.
-    // (The old near-black #171716 slabs had no texture and no shadows,
-    // and sat where the wall-aimed spotlights never reach, so they
-    // rendered as pure black on both faces.)
-    //
-    // Placement is sightline-checked from the entrance (camera at
-    // z ≈ +4.5, eye 1.65 m): no panel stands on the line from the
-    // entrance to any of the three back-wall artworks, so the far wall
-    // reads fully on entering. The old quincunx put a panel directly in
-    // front of each back-wall work — the middle row (z = 0, x = ±3)
-    // hid the two outer works and the back-row centre (z = -3, x = 0)
-    // hid the centre work, which is why only 5 of 7 artworks could be
-    // identified from the entrance. The back row now frames the centre
-    // work (gap -1.9…+1.9 m) instead of blocking it.
-    const panels: [number, number][] = [[-6, 3], [6, 3], [-8, 0], [8, 0], [-2.75, -3], [2.75, -3]];
-    return (
-      <group>
-        {panels.map(([x, z], index) => (
-          <group key={index} position={[x, 0, z]}>
-            <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
-              <boxGeometry args={[1.7, 2.5, 0.1]} />
-              <meshStandardMaterial color={panelColor ?? "#a9a193"} map={panelTexture ?? undefined} roughness={panelPBR?.roughness ?? 0.88} envMapIntensity={panelPBR?.envMapIntensity ?? 0.2} />
-            </mesh>
-            {/* Slim steel stabiliser feet, like the partition walls. */}
-            {[-0.65, 0.65].map((dx) => (
-              <mesh key={dx} position={[dx, 0.04, 0]} castShadow receiveShadow>
-                <boxGeometry args={[0.1, 0.08, 0.6]} />
-                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
-              </mesh>
-            ))}
-            {/* Soft contact shadow grounding the panel where the spots
-                do not reach (also covers Medium, where the directional
-                light casts no shadow). */}
-            {contactDecals && <ContactDecal width={2.8} depth={1.4} />}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "parquet-portraits") {
-    // Ceiling track rails with spot heads, as in the reference room.
-    return (
-      <group>
-        {[-3.5, 3.5].map((x) => (
-          <group key={x}>
-            <mesh position={[x, height - 0.35, 0]}>
-              <boxGeometry args={[0.07, 0.07, depth - 1]} />
-              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
-            </mesh>
-            {[-depth / 4, 0, depth / 4].map((z) => (
-              <mesh key={z} position={[x, height - 0.45, z]}>
-                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
-                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "curved-wall") {
-    // Seven hanging spots along the arc of the curved front wall.
-    const curveRadius = 40;
-    const halfAngle = Math.asin(Math.min(0.95, width / 2 / curveRadius));
-    const centerZ = depth / 2 - curveRadius * Math.cos(halfAngle);
-    const tones = ["#8a9b88", "#bb8365", "#8796a9", "#a89a7a", "#7d8a99", "#b0855b", "#94a08e"];
-    return (
-      <group>
-        {Array.from({ length: 7 }, (_, index) => {
-          const theta = -halfAngle * 0.75 + (index * (halfAngle * 1.5)) / 6;
-          const r = curveRadius - 0.15;
-          const x = r * Math.sin(theta);
-          const z = centerZ + r * Math.cos(theta);
-          return (
-            <group key={index} position={[x, 2.3, z]} rotation={[0, theta + Math.PI, 0]}>
-              <mesh>
-                <boxGeometry args={[1.5, 1.9, 0.1]} />
-                <meshStandardMaterial color="#c5b7a3" roughness={0.85} />
-              </mesh>
-              <mesh position={[0, 0, 0.06]}>
-                <planeGeometry args={[1.3, 1.7]} />
-                <meshStandardMaterial color={tones[index]} roughness={0.9} />
-              </mesh>
-            </group>
-          );
-        })}
-      </group>
-    );
-  }
-  if (layout === "marble-sculpture") {
-    // Bronze figures on black and white plinths.
-    return (
-      <group>
-        {[
-          { x: -4, z: -1, plinth: "#171716" },
-          { x: 0, z: 1.5, plinth: "#f2efe8" },
-          { x: 4, z: -2, plinth: "#171716" },
-        ].map(({ x, z, plinth }) => (
-          <group key={`${x}-${z}`} position={[x, 0, z]}>
-            <mesh position={[0, 0.6, 0]}>
-              <boxGeometry args={[0.9, 1.2, 0.9]} />
-              <meshStandardMaterial color={plinth} roughness={0.8} />
-            </mesh>
-            <mesh position={[0, 1.75, 0]}>
-              <cylinderGeometry args={[0.12, 0.22, 1.1, 16]} />
-              <meshStandardMaterial color="#6b5433" roughness={0.45} metalness={0.6} />
-            </mesh>
-            <mesh position={[0, 2.44, 0]}>
-              <sphereGeometry args={[0.15, 20, 16]} />
-              <meshStandardMaterial color="#6b5433" roughness={0.45} metalness={0.6} />
-            </mesh>
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "quiet-minimal") {
-    // A single wooden bench and ceiling track rails, nothing else.
-    return (
-      <group>
-        <mesh position={[0, 0.45, 0]}>
-          <boxGeometry args={[2.2, 0.12, 0.7]} />
-          <meshStandardMaterial color="#8a6a45" roughness={0.8} />
-        </mesh>
-        {[-0.9, 0.9].map((x) => (
-          <mesh key={x} position={[x, 0.21, 0]}>
-            <boxGeometry args={[0.08, 0.42, 0.6]} />
-            <meshStandardMaterial color="#6b4f33" roughness={0.8} />
-          </mesh>
-        ))}
-        {[-3, 3].map((x) => (
-          <group key={x}>
-            <mesh position={[x, height - 0.35, 0]}>
-              <boxGeometry args={[0.07, 0.07, depth - 1]} />
-              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
-            </mesh>
-            {[-depth / 4, 0, depth / 4].map((z) => (
-              <mesh key={z} position={[x, height - 0.45, z]}>
-                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
-                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "pop-brick") {
-    // Three loud colour accents on the back wall.
-    return (
-      <group>
-        {[
-          { x: -4, color: "#ff4d2e" },
-          { x: 0, color: "#f5c518" },
-          { x: 4, color: "#2e6fb0" },
-        ].map(({ x, color }) => (
-          <mesh key={x} position={[x, 2.4, -depth / 2 + 0.16]}>
-            <planeGeometry args={[2.2, 2.6]} />
-            <meshStandardMaterial color={color} roughness={0.85} />
-          </mesh>
-        ))}
-      </group>
-    );
-  }
   if (layout === "totem-studio") {
     // Works suspended from the ceiling by thin cables, plus two plinths.
     return (
@@ -2600,66 +2407,6 @@ function RoomFeatures({
     );
   }
   // --- Ceiling architectures from the reference photos (November 2026) ---
-  if (layout === "coffered-concrete") {
-    // A grid of concrete coffers: beams hanging below the ceiling slab so
-    // the ceiling reads as a recessed grid, as in the reference photo.
-    const beamY = height - 0.4;
-    const xs: number[] = [];
-    for (let x = -width / 2 + 2; x < width / 2; x += 2.4) xs.push(x);
-    const zs: number[] = [];
-    for (let z = -depth / 2 + 2; z < depth / 2; z += 2.4) zs.push(z);
-    return (
-      <group>
-        {zs.map((z) => (
-          <mesh key={`x-${z}`} position={[0, beamY, z]}>
-            <boxGeometry args={[width, 0.32, 0.2]} />
-            <meshStandardMaterial color="#9d9688" roughness={0.9} />
-          </mesh>
-        ))}
-        {xs.map((x) => (
-          <mesh key={`z-${x}`} position={[x, beamY, 0]}>
-            <boxGeometry args={[0.2, 0.32, depth]} />
-            <meshStandardMaterial color="#9d9688" roughness={0.9} />
-          </mesh>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "skylight-grid") {
-    // A structural grid with glowing skylight panels set into it: the
-    // ceiling reads as a lit grid, as in the reference photo.
-    const beamY = height - 0.35;
-    const xs: number[] = [];
-    for (let x = -width / 2 + 3; x < width / 2; x += 3.2) xs.push(x);
-    const zs: number[] = [];
-    for (let z = -depth / 2 + 3; z < depth / 2; z += 3.2) zs.push(z);
-    const panels: [number, number][] = [];
-    xs.forEach((x, xi) => zs.forEach((z, zi) => {
-      if ((xi + zi) % 2 === 0) panels.push([x, z]);
-    }));
-    return (
-      <group>
-        {zs.map((z) => (
-          <mesh key={`x-${z}`} position={[0, beamY, z]}>
-            <boxGeometry args={[width, 0.3, 0.22]} />
-            <meshStandardMaterial color="#d8d5cf" roughness={0.7} metalness={0.2} />
-          </mesh>
-        ))}
-        {xs.map((x) => (
-          <mesh key={`z-${x}`} position={[x, beamY, 0]}>
-            <boxGeometry args={[0.22, 0.3, depth]} />
-            <meshStandardMaterial color="#d8d5cf" roughness={0.7} metalness={0.2} />
-          </mesh>
-        ))}
-        {panels.map(([x, z]) => (
-          <mesh key={`sky-${x}-${z}`} position={[x, height - 0.26, z]} rotation={[Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[2.6, 2.6]} />
-            <meshStandardMaterial color="#eef4ff" emissive="#dfe9ff" emissiveIntensity={0.9} side={DoubleSide} />
-          </mesh>
-        ))}
-      </group>
-    );
-  }
   if (layout === "gallery-skylight") {
     // The reference room: a white coffered ceiling with one central
     // skylight (verrière). White beams on a 2.4 m grid form the
@@ -2835,100 +2582,6 @@ function RoomFeatures({
       </group>
     );
   }
-  if (layout === "timber-ceiling") {
-    // Warm timber beams across a wooden ceiling.
-    const xs: number[] = [];
-    for (let x = -width / 2 + 1.5; x < width / 2; x += 2.2) xs.push(x);
-    return (
-      <group>
-        {xs.map((x) => (
-          <mesh key={x} position={[x, height - 0.32, 0]}>
-            <boxGeometry args={[0.22, 0.32, depth - 0.4]} />
-            <meshStandardMaterial color="#7a5c38" roughness={0.8} />
-          </mesh>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "high-concrete") {
-    // High concrete ceiling with exposed track rails and spot heads.
-    return (
-      <group>
-        {[-4.5, 0, 4.5].map((x) => (
-          <group key={x}>
-            <mesh position={[x, height - 0.35, 0]}>
-              <boxGeometry args={[0.07, 0.07, depth - 1]} />
-              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
-            </mesh>
-            {[-depth / 4, 0, depth / 4].map((z) => (
-              <mesh key={z} position={[x, height - 0.45, z]}>
-                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
-                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "beam-white") {
-    // Bright white gallery with exposed ceiling beams (joists).
-    const xs: number[] = [];
-    for (let x = -width / 2 + 2; x < width / 2; x += 2.6) xs.push(x);
-    return (
-      <group>
-        {xs.map((x) => (
-          <mesh key={x} position={[x, height - 0.38, 0]}>
-            <boxGeometry args={[0.26, 0.42, depth - 0.4]} />
-            <meshStandardMaterial color="#f0ece1" roughness={0.85} />
-          </mesh>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "partition-hall") {
-    // A museum hall of freestanding walls: the ceiling is plain white
-    // with exposed track rails and spot heads, as in the photo.
-    return (
-      <group>
-        {[-6, 0, 6].map((x) => (
-          <group key={x}>
-            <mesh position={[x, height - 0.35, 0]}>
-              <boxGeometry args={[0.07, 0.07, depth - 1]} />
-              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
-            </mesh>
-            {[-depth / 4, 0, depth / 4].map((z) => (
-              <mesh key={z} position={[x, height - 0.45, z]}>
-                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
-                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "storefront") {
-    // A bright storefront gallery: plain white ceiling, two track rails.
-    return (
-      <group>
-        {[-3.5, 3.5].map((x) => (
-          <group key={x}>
-            <mesh position={[x, height - 0.35, 0]}>
-              <boxGeometry args={[0.07, 0.07, depth - 1]} />
-              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
-            </mesh>
-            {[-depth / 4, 0, depth / 4].map((z) => (
-              <mesh key={z} position={[x, height - 0.45, z]}>
-                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
-                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
   return null;
 }
 
@@ -3011,16 +2664,6 @@ function GalleryRoom({
     if (!editable || !onWallSelect || dragged?.current) return;
     onWallSelect(wallId);
   };
-  // The curved room's front wall is a real arc, not a flat box face: it
-  // bulges toward the viewer, so the curve reads from the outside orbit
-  // view as well as from inside. Floor and ceiling extend to cover it.
-  const isCurved = room.layout === "curved-wall";
-  const curveRadius = 40;
-  const curveHalfAngle = Math.asin(Math.min(0.95, width / 2 / curveRadius));
-  const curveSagitta = curveRadius - curveRadius * Math.cos(curveHalfAngle);
-  const curveCenterZ = depth / 2 - curveRadius * Math.cos(curveHalfAngle);
-  const roomDepth = isCurved ? depth + curveSagitta : depth;
-  const roomDepthCenter = isCurved ? curveSagitta / 2 : 0;
   const wallTexture = useMemo(() => createSurfaceTexture(room.wallTexture), [room.wallTexture]);
   const floorTexture = useMemo(() => createSurfaceTexture(room.floorTexture), [room.floorTexture]);
   const ceilingTexture = useMemo(() => createSurfaceTexture(room.ceilingTexture), [room.ceilingTexture]);
@@ -3070,12 +2713,12 @@ function GalleryRoom({
 
   return (
     <group position={[offsetX, 0, 0]}>
-      <mesh position={[0, height - 0.12, roomDepthCenter]} receiveShadow>
-        <boxGeometry args={[width, 0.24, roomDepth]} />
+      <mesh position={[0, height - 0.12, 0]} receiveShadow>
+        <boxGeometry args={[width, 0.24, depth]} />
         <meshStandardMaterial color={room.ceilingColor} map={ceilingTexture} roughness={ceilingPBR.roughness} envMapIntensity={ceilingPBR.envMapIntensity} />
       </mesh>
       <mesh
-        position={[0, -0.09, roomDepthCenter]}
+        position={[0, -0.09, 0]}
         receiveShadow
         onClick={(event) => {
           if (!walkable || dragged?.current) return;
@@ -3083,7 +2726,7 @@ function GalleryRoom({
           onFloorClick?.(event.point);
         }}
       >
-        <boxGeometry args={[width, 0.18, roomDepth]} />
+        <boxGeometry args={[width, 0.18, depth]} />
         <meshStandardMaterial attach="material-0" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
         <meshStandardMaterial attach="material-1" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
         <meshStandardMaterial attach="material-2" color={floorTopColor} map={floorTopMap} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
@@ -3129,20 +2772,7 @@ function GalleryRoom({
         dragged={dragged}
         pbr={wallPBR}
       />
-      {isCurved ? (
-        <mesh
-          position={[0, height / 2, curveCenterZ]}
-          receiveShadow
-          onDoubleClick={(event) => {
-            if (!editable || !onWallSelect || dragged?.current) return;
-            event.stopPropagation();
-            onWallSelect("front");
-          }}
-        >
-          <cylinderGeometry args={[curveRadius, curveRadius, height, 64, 1, true, -curveHalfAngle, curveHalfAngle * 2]} />
-          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} side={DoubleSide} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
-        </mesh>
-      ) : entrance ? (
+      {entrance ? (
         <group position={[0, 0, depth / 2]}>
           <mesh
             position={[-(width + 1.65) / 4, height / 2, 0]}

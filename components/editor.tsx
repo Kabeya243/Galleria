@@ -53,6 +53,7 @@ import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, f
 const ELEMENT_PALETTE: { type: ElementType; label: string }[] = [
   { type: "partition", label: "Partition wall" },
   { type: "chair", label: "Chair" },
+  { type: "sofa", label: "Teal sofa" },
   { type: "bench", label: "Long bench" },
   { type: "table", label: "Table" },
   { type: "door", label: "Door" },
@@ -1945,7 +1946,7 @@ async function compressImage(file: File): Promise<File> {
                       ))}</div></div>
                       <div className="property-section"><label>BODY COLOUR</label><div className="room-color-control"><input type="color" aria-label="Wall text body colour" {...editSessionProps} value={selectedElement.bodyColor} onChange={(event) => updateElement(selectedElement.id, { bodyColor: event.target.value })} /><span>{selectedElement.bodyColor}</span></div></div>
                     </>
-                  ) : (
+                  ) : selectedElement.type === "sofa" ? null : (
                     <div className="property-section"><label>{selectedElement.type === "track-light" ? "LIGHT COLOUR" : "COLOUR"}</label><div className="room-color-control"><input type="color" aria-label="Element colour" {...editSessionProps} value={selectedElement.color} onChange={(event) => updateElement(selectedElement.id, { color: event.target.value })} /><span>{selectedElement.color}</span></div></div>
                   )}
                   <div className="property-actions"><button aria-label={selectedElement.hidden ? "Show element in 3D" : "Hide element in 3D"} title={selectedElement.hidden ? "Show in 3D" : "Hide in 3D"} onClick={() => toggleHidden({ kind: "element", id: selectedElement.id })}>{selectedElement.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button><button aria-label={selectedElement.locked ? "Unlock element" : "Lock element"} title={selectedElement.locked ? "Unlock (allow dragging)" : "Lock (cannot be dragged)"} onClick={() => toggleLocked({ kind: "element", id: selectedElement.id })}>{selectedElement.locked ? <Lock size={14} /> : <Unlock size={14} />}</button><button aria-label="Duplicate element" onClick={duplicateElement}><Copy size={14} /></button><button className="delete-action" aria-label="Delete element" onClick={removeElement}><Trash2 size={14} /></button></div>

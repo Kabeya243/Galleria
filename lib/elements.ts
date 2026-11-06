@@ -5,7 +5,9 @@ import { z } from "zod";
 // (movable partition walls on feet, long block bench, plinths, vitrine,
 // ceiling track lights, display shelves, desk & chair, sheer curtains),
 // plus the architectural pieces (column, low stage, stairs, doorway
-// arch) added for the 3D builder.
+// arch) added for the 3D builder — and the teal sofa, the first GLB-based
+// element: Kabeya's Blender-modelled velvet loveseat
+// (public/models/sofa-teal.glb), rendered by components/gallery-scene.tsx.
 export const elementTypes = [
   "partition",
   "chair",
@@ -24,6 +26,7 @@ export const elementTypes = [
   "platform",
   "stairs",
   "arch",
+  "sofa",
 ] as const;
 
 export type ElementType = (typeof elementTypes)[number];
@@ -50,6 +53,7 @@ export const ELEMENT_PLANES: Record<ElementType, "floor" | "wall" | "ceiling"> =
   platform: "floor",
   stairs: "floor",
   arch: "floor",
+  sofa: "floor",
 };
 
 export const roomElementSchema = z.object({
@@ -170,6 +174,10 @@ export const ELEMENT_DEFAULTS: Record<ElementType, ElementDefaults> = {
   platform: { label: "Platform · low stage", color: "#e8e4da", length: 3, y: 0, wallOffset: 0 },
   stairs: { label: "Stairs", color: "#f5f2eb", length: 2, y: 0, wallOffset: 0 },
   arch: { label: "Arch · doorway", color: "#f5f2eb", length: 2, y: 0, wallOffset: 0 },
+  // The sofa's fabric and wood come from the baked GLB materials, so its
+  // colour field is only a label tint (inspector colour is hidden for it);
+  // the default matches the velvet.
+  sofa: { label: "Teal sofa", color: "#1d5566", length: 1, y: 0, wallOffset: 0 },
 };
 
 // A new element, placed sensibly for its type: floor pieces near the

@@ -6,6 +6,7 @@ import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { ACESFilmicToneMapping, BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, surfacePBR, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
 import { resolveFrameSpec, shadeHex } from "@/lib/demo-data";
@@ -1268,6 +1269,71 @@ function MeasurementGuides({
 // One placeable 3D element from the Elements palette, rendered in the room
 // like an artwork: clickable to select, draggable along its plane (floor,
 // wall or ceiling), resizable from the lime handle when selected.
+// --- Teal sofa (GLB) ------------------------------------------------------
+// The only GLB-based element: Kabeya's Blender-modelled teal velvet loveseat
+// (public/models/sofa-teal.glb, 1.5 x 0.85 m, origin at floor centre).
+// Loaded imperatively with GLTFLoader — deliberately NOT drei's useGLTF,
+// which suspends: ElementMesh sits outside every <Suspense> boundary, and a
+// suspending child would unmount the whole room (the troika failure of
+// Nov 6). While the file loads nothing renders; it is a same-origin 344 KB
+// file, so the wait is a frame or two. The promise is shared, so any number
+// of sofas in a room costs one download; each instance clones the scene
+// (geometries and baked materials stay shared) so R3F never has one object
+// under two parents. The GLB's front faces -Z; like the chair, the sofa
+// must face +Z into the room, so the clone is turned halfway round.
+const SOFA_MODEL_URL = "/models/sofa-teal.glb";
+let sofaModelPromise: Promise<{ scene: Object3D }> | null = null;
+function loadSofaModel(): Promise<{ scene: Object3D }> {
+  if (!sofaModelPromise) {
+    sofaModelPromise = new Promise((resolve, reject) => {
+      new GLTFLoader().load(
+        SOFA_MODEL_URL,
+        (gltf) => resolve(gltf),
+        undefined,
+        (error) => reject(error instanceof Error ? error : new Error("Could not load the sofa model.")),
+      );
+    });
+    // A failed load must not poison every later sofa: allow a retry.
+    sofaModelPromise.catch(() => {
+      sofaModelPromise = null;
+    });
+  }
+  return sofaModelPromise;
+}
+
+function SofaModel() {
+  const [scene, setScene] = useState<Object3D | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadSofaModel()
+      .then((gltf) => {
+        if (!alive) return;
+        const clone = gltf.scene.clone(true);
+        clone.traverse((child) => {
+          const mesh = child as Object3D & { isMesh?: boolean; castShadow?: boolean; receiveShadow?: boolean };
+          if (mesh.isMesh) {
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+          }
+        });
+        setScene(clone);
+      })
+      .catch(() => {
+        // Load failed (e.g. the file is missing from the deploy): the
+        // element stays invisible rather than breaking the room.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!scene) return null;
+  return (
+    <group rotation={[0, Math.PI, 0]}>
+      <primitive object={scene} />
+    </group>
+  );
+}
+
 function ElementMesh({
   element,
   room,
@@ -1342,7 +1408,9 @@ function ElementMesh({
                     ? { size: [element.length + 0.3, 1.3, 1.5], y: 0.5, handle: [element.length / 2 + 0.18, 0.6, 0.2] }
                     : element.type === "arch"
                       ? { size: [element.length + 0.3, 2.9, 0.5], y: 1.3, handle: [element.length / 2 + 0.18, 1.3, 0.2] }
-                      : { size: [1.7, 1.7, 1.3], y: 0.7, handle: [0.85, 0.65, 0.2] };
+                      : element.type === "sofa"
+                        ? { size: [1.8, 1.25, 1.15], y: 0.47, handle: [0.9, 0.5, 0.2] }
+                        : { size: [1.7, 1.7, 1.3], y: 0.7, handle: [0.85, 0.65, 0.2] };
   // Track-light spot targets (three heads, aimed down and into the room).
   const trackTargets = useMemo(() => [new Object3D(), new Object3D(), new Object3D()], []);
   useEffect(() => {
@@ -1715,6 +1783,7 @@ function ElementMesh({
           </mesh>
         </group>
       )}
+      {element.type === "sofa" && <SofaModel />}
       {selected && (
         <mesh position={[0, outline.y, 0]}>
           <boxGeometry args={outline.size} />

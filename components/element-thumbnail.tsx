@@ -27,6 +27,19 @@ export default function ElementThumbnail({ type, size = 26 }: { type: ElementTyp
           <line x1="34" y1="29" x2="34" y2="44" stroke={stroke} strokeWidth="2" />
         </>
       )}
+      {type === "sofa" && (
+        <>
+          <rect x="8" y="8" width="32" height="16" rx="3" fill="#2a6b7a" stroke={stroke} strokeWidth="1.2" />
+          <circle cx="18" cy="16" r="1.6" fill="#123f4a" />
+          <circle cx="24" cy="16" r="1.6" fill="#123f4a" />
+          <circle cx="30" cy="16" r="1.6" fill="#123f4a" />
+          <rect x="4" y="20" width="7" height="16" rx="2" fill="#2a6b7a" stroke={stroke} strokeWidth="1.2" />
+          <rect x="37" y="20" width="7" height="16" rx="2" fill="#2a6b7a" stroke={stroke} strokeWidth="1.2" />
+          <rect x="8" y="26" width="32" height="8" rx="2" fill="#2a6b7a" stroke={stroke} strokeWidth="1.2" />
+          <line x1="10" y1="36" x2="9" y2="44" stroke={wood} strokeWidth="2.5" />
+          <line x1="38" y1="36" x2="39" y2="44" stroke={wood} strokeWidth="2.5" />
+        </>
+      )}
       {type === "bench" && (
         <>
           <rect x="5" y="24" width="38" height="9" rx="1" fill={fill} stroke={stroke} strokeWidth="1.5" />

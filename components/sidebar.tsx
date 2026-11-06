@@ -7,7 +7,6 @@ import {
   BarChart3,
   Boxes,
   Calculator,
-  ChevronDown,
   Compass,
   FileText,
   GalleryVerticalEnd,
@@ -218,15 +217,10 @@ export default function Sidebar({
           <span className="brand-name">SANAA</span>
         </Link>
 
-        <div className="workspace-switcher">
-          <div className="workspace-avatar">S</div>
-          <div className="workspace-copy">
-            <span>Workspace</span>
-            <strong>{user.name}</strong>
-          </div>
-          <ChevronDown size={15} />
-        </div>
-
+        {/* The workspace box used to sit here ("Workspace" + the owner's
+            name with a chevron), but it did nothing: a single workspace,
+            no menu, no switch. The name still shows in the profile chip
+            at the bottom of the sidebar. Removed 2026-11-07. */}
         <div className="side-nav-groups">
           <nav aria-label="Main navigation">
             {NAV_GROUPS.map((group) => {

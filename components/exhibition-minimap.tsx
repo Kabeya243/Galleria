@@ -98,8 +98,8 @@ export default function ExhibitionMinimap({
                     y={y}
                     width={w}
                     height={h}
-                    fill={isActive ? "#fff" : "rgba(255,255,255,0.07)"}
-                    stroke={isActive ? "#fff" : "rgba(255,255,255,0.55)"}
+                    fill={isActive ? "var(--ink)" : "var(--accent-soft)"}
+                    stroke={isActive ? "var(--ink)" : "var(--muted)"}
                     strokeWidth={isActive ? 2 : 1}
                   />
                   <text
@@ -108,7 +108,7 @@ export default function ExhibitionMinimap({
                     textAnchor="middle"
                     fontSize={9}
                     fontWeight={700}
-                    fill={isActive ? "#000" : "#fff"}
+                    fill={isActive ? "var(--paper)" : "var(--ink)"}
                     style={{ textTransform: "uppercase", letterSpacing: ".08em" }}
                   >
                     {room.name}
@@ -123,8 +123,8 @@ export default function ExhibitionMinimap({
                           cx={cx}
                           cy={cy}
                           r={isSelected ? 7 : 5}
-                          fill={isSelected ? "#000" : "#fff"}
-                          stroke="#000"
+                          fill={isSelected ? "var(--paper)" : "var(--ink)"}
+                          stroke="var(--paper)"
                           strokeWidth={1.5}
                         />
                         {/* A transparent hit target so the dot is easy to

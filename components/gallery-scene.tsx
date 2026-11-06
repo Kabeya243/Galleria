@@ -14,7 +14,7 @@ import type { FrameSpec } from "@/lib/demo-data";
 import { frameTileTexture, matTexture } from "@/lib/frame-textures";
 import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, rosetteGeometry, scrollGeometry, setInstancedMatrices, type FrameLevel } from "@/lib/frame-geometry";
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
-import { roomLayouts, type GalleryRoom, type PartitionWall, type WallId } from "@/lib/rooms";
+import { isStoneLayout, roomLayouts, roomPlanOffsets, type GalleryRoom, type PartitionWall, type RoomLayout, type WallId } from "@/lib/rooms";
 
 // Light moods per room: the spot colour and intensity, and the room's
 // ambient and directional light, all follow the room's light type.
@@ -926,6 +926,7 @@ function ArtworkFrame({
   walkable,
   onWalkTo,
   offsetX,
+  offsetZ,
   dragged,
   editable,
   onDragStart,
@@ -942,6 +943,10 @@ function ArtworkFrame({
   walkable?: boolean;
   onWalkTo?: (point: Vector3, yaw: number) => void;
   offsetX?: number;
+  // World offset along Z of the room the artwork hangs in (0 except
+  // for the Stone Gallery halves) — the walk-to destination is in
+  // world coordinates, like the X above.
+  offsetZ?: number;
   dragged?: React.RefObject<boolean>;
   // Editor only: drag the artwork along its wall with the hand cursor,
   // and resize it from the lime handle at its bottom-right corner.
@@ -975,7 +980,7 @@ function ArtworkFrame({
           const nx = Math.sin(artwork.rotation);
           const nz = Math.cos(artwork.rotation);
           onWalkTo(
-            new Vector3((offsetX ?? 0) + x + nx * 2.2, 0, z + nz * 2.2),
+            new Vector3((offsetX ?? 0) + x + nx * 2.2, 0, (offsetZ ?? 0) + z + nz * 2.2),
             Math.atan2(nx, nz),
           );
           onSelect?.(artwork.id);
@@ -2299,7 +2304,7 @@ function RoomFeatures({
   contactDecals,
   shadows,
 }: {
-  layout: string;
+  layout: RoomLayout;
   width: number;
   depth: number;
   height: number;
@@ -2528,7 +2533,7 @@ function RoomFeatures({
     );
   }
   // --- Ceiling architectures from the reference photos (November 2026) ---
-  if (layout === "stone-gallery") {
+  if (isStoneLayout(layout)) {
     // The Stone Gallery (Three.js reference room "Galerie en pierre"):
     // dark timber beams across the ceiling, an arched niche on the back
     // wall, rubble at the foot of the left wall, a concrete plinth with
@@ -2536,21 +2541,55 @@ function RoomFeatures({
     // architecture — the room's colours, dimensions and light stay
     // editable in the inspector. The round-arched dividing wall itself
     // is a partition (shape "arch"), rendered by ArchPartitionWall.
+    //
+    // The single pre-split room ("stone-gallery") renders the whole
+    // set, as before. When the gallery is split in two, each half
+    // renders only the pieces that stood in it in the reference room:
+    // the niche is on the back wall (back half), the rubble and the
+    // plinth are in the front part (front half), the track lights are
+    // split by their z, and the beams run the depth of whichever half
+    // they are in. Positions are LOCAL to the half (front half centre
+    // global z = +5.5, back half −6.5).
+    const isFront = layout === "stone-gallery-front";
+    const isBack = layout === "stone-gallery-back";
     const beamXs: number[] = [];
     for (let x = -width / 2 + 1; x <= width / 2 - 1 + 0.01; x += 3) {
       beamXs.push(Math.round(x * 100) / 100);
     }
     const nicheX = Math.min(5, width / 2 - 2);
     const plinthX = Math.min(6.2, width / 2 - 1.5);
-    const plinthZ = Math.min(4, depth / 2 - 1);
-    const trackLights: [number, number][] = [
-      [-4, 6], [0, 6], [4, 6],
-      [-5, -5], [0, -5], [5, -5],
-      [-4, 2], [4, 2],
-    ].map(([x, z]) => [
+    // The plinth stood at global z = 4: local z = −1.5 in the front
+    // half (centre +5.5); in the single room it is local z = 4.
+    const plinthZ = isFront ? -1.5 : Math.min(4, depth / 2 - 1);
+    // Track lights by their global z: the fixtures at global z = 6 and
+    // 2 belong to the front half (local +0.5 and −3.5), the ones at
+    // global z = −5 to the back half (local +1.5); the single room
+    // keeps all eight at their original local z.
+    const trackLights: [number, number][] = (isFront
+      ? [[-4, 0.5], [0, 0.5], [4, 0.5], [-4, -3.5], [4, -3.5]]
+      : isBack
+        ? [[-5, 1.5], [0, 1.5], [5, 1.5]]
+        : [[-4, 6], [0, 6], [4, 6], [-5, -5], [0, -5], [5, -5], [-4, 2], [4, 2]]
+    ).map(([x, z]) => [
       Math.max(-width / 2 + 1, Math.min(width / 2 - 1, x)),
       Math.max(-depth / 2 + 1, Math.min(depth / 2 - 1, z)),
     ]);
+    // Rubble at the foot of the left wall. In the single room it sits
+    // at global z −2…+2; in the front half the same global span is
+    // local z −7.5…−3.5, clamped to the half (−6.5…−3.5, by the arch).
+    // The back half has none.
+    const rubble = isBack
+      ? []
+      : isFront
+        ? stoneRubble.map((block) => ({
+            ...block,
+            position: [
+              block.position[0],
+              block.position[1],
+              Math.max(-depth / 2, Math.min(-depth / 2 + 3, block.position[2] - 5.5)),
+            ] as [number, number, number],
+          }))
+        : stoneRubble;
     return (
       <group>
         {/* Dark timber beams across the ceiling, every 3 m. */}
@@ -2564,19 +2603,26 @@ function RoomFeatures({
             artwork that hangs over it. It sits 0.05 m off the wall's
             front face (the wall is a 0.25 m box, so its face is at
             -depth/2 + 0.125) — at -depth/2 + 0.05 it was buried inside
-            the wall and invisible. It receives the artwork's shadow. */}
+            the wall and invisible. It receives the artwork's shadow.
+            The niche is on the back wall, so only the single room and
+            the back half have one. */}
+        {!isFront && (
         <mesh position={[nicheX, 0, -depth / 2 + 0.175]} receiveShadow>
           <shapeGeometry args={[stoneNicheShape]} />
           <meshStandardMaterial color="#7d7164" roughness={1} />
         </mesh>
+        )}
         {/* Rubble at the foot of the left wall. */}
-        {stoneRubble.map((block, i) => (
+        {rubble.map((block, i) => (
           <mesh key={`rubble-${i}`} position={block.position} rotation={block.rotation} castShadow>
             <boxGeometry args={block.size} />
             <meshStandardMaterial color="#9a8f7c" roughness={1} />
           </mesh>
         ))}
-        {/* Concrete plinth with four small white frames. */}
+        {/* Concrete plinth with four small white frames. The plinth
+            stood in the front part, so only the single room and the
+            front half have one. */}
+        {!isBack && (
         <group position={[plinthX, 0, plinthZ]}>
           <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
             <boxGeometry args={[2.6, 0.5, 1.5]} />
@@ -2589,6 +2635,7 @@ function RoomFeatures({
             </mesh>
           ))}
         </group>
+        )}
         {/* Track-light fixtures: a thin drop wire and a glowing bar. */}
         {trackLights.map(([x, z], i) => (
           <group key={`track-${i}`}>
@@ -2890,6 +2937,9 @@ function ArchPartitionWall({
 function GalleryRoom({
   room,
   offsetX,
+  offsetZ,
+  hideBackWall,
+  hideFrontWall,
   artworks,
   selectedId,
   onSelect,
@@ -2916,6 +2966,15 @@ function GalleryRoom({
 }: {
   room: GalleryRoom;
   offsetX: number;
+  // World offset along Z (0 for every room except the Stone Gallery
+  // halves, which stack along Z — see roomPlanOffsets). Defaults to 0.
+  offsetZ?: number;
+  // The Stone Gallery halves share the arched dividing wall as their
+  // common boundary: the front room hides its back wall (the arch is
+  // the back boundary) and the back room hides its front wall (the
+  // same arch, rendered once by the front room, is the front boundary).
+  hideBackWall?: boolean;
+  hideFrontWall?: boolean;
   artworks: Artwork[];
   selectedId?: string;
   onSelect?: (id: string, additive?: boolean) => void;
@@ -3004,17 +3063,18 @@ function GalleryRoom({
           walkable={walkable}
           onWalkTo={onWalkTo}
           offsetX={offsetX}
+          offsetZ={offsetZ}
           dragged={dragged}
           editable={editable}
           onDragStart={onDragStart}
           onHoverChange={onHoverChange}
         />
       )),
-    [artworks, dragged, editable, multiSelectedIds, offsetX, onDragStart, onHoverChange, onSelect, onWalkTo, selectedId, walkable],
+    [artworks, dragged, editable, multiSelectedIds, offsetX, offsetZ, onDragStart, onHoverChange, onSelect, onWalkTo, selectedId, walkable],
   );
 
   return (
-    <group position={[offsetX, 0, 0]}>
+    <group position={[offsetX, 0, offsetZ ?? 0]}>
       <mesh position={[0, height - 0.12, 0]} receiveShadow>
         <boxGeometry args={[width, 0.24, depth]} />
         <meshStandardMaterial color={room.ceilingColor} map={ceilingTexture} roughness={ceilingPBR.roughness} envMapIntensity={ceilingPBR.envMapIntensity} />
@@ -3036,6 +3096,10 @@ function GalleryRoom({
         <meshStandardMaterial attach="material-4" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
         <meshStandardMaterial attach="material-5" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
       </mesh>
+      {/* The back wall — hidden for the Stone Gallery front half, whose
+          back boundary is the arched dividing wall (a partition), not a
+          solid wall. */}
+      {!hideBackWall && (
       <mesh
         position={[0, height / 2, wallZ]}
         receiveShadow
@@ -3048,6 +3112,7 @@ function GalleryRoom({
         <boxGeometry args={[width, height, 0.25]} />
         <meshStandardMaterial color={backColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("back") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("back") ? 0.16 : 0} />
       </mesh>
+      )}
       <WallWithOpening
         x={-width / 2}
         depth={depth}
@@ -3074,7 +3139,10 @@ function GalleryRoom({
         dragged={dragged}
         pbr={wallPBR}
       />
-      {entrance ? (
+      {/* The front wall — hidden for the Stone Gallery back half, whose
+          front boundary is the arched dividing wall (rendered once by
+          the front room), not a solid wall. */}
+      {!hideFrontWall && (entrance ? (
         <group position={[0, 0, depth / 2]}>
           <mesh
             position={[-(width + 1.65) / 4, height / 2, 0]}
@@ -3118,7 +3186,7 @@ function GalleryRoom({
           <boxGeometry args={[width, height, 0.22]} />
           <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
-      )}
+      ))}
       {room.partitionWalls.map((wall) =>
         wall.shape === "arch" ? (
           <ArchPartitionWall
@@ -3221,6 +3289,7 @@ function WalkControls({
   rooms,
   activeRoomId,
   offsets,
+  zOffsets,
   input,
   destination,
   lookYaw,
@@ -3232,6 +3301,10 @@ function WalkControls({
   rooms: GalleryRoom[];
   activeRoomId: string;
   offsets: number[];
+  // World offset along Z per room (0 for every room except the Stone
+  // Gallery halves, which stack along Z — see roomPlanOffsets).
+  // Defaults to all 0, so rooms centred on z = 0 behave as before.
+  zOffsets?: number[];
   input: React.RefObject<Set<string>>;
   destination: React.RefObject<Vector3 | null>;
   // Yaw to face once the destination is reached (e.g. an artwork just
@@ -3257,11 +3330,14 @@ function WalkControls({
   const lastKey = useRef<string | null>(null);
   const lastReset = useRef(resetSignal?.current ?? 0);
 
+  // World Z offset of a room (0 unless it is a Stone Gallery half).
+  const zOffsetOf = (index: number) => zOffsets?.[index] ?? 0;
+
   useEffect(() => {
     if (!initialized.current) {
       const startIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoomId));
       const startRoom = rooms[startIndex];
-      camera.position.set(offsets[startIndex], 1.65, roomLayouts[startRoom.layout].depth / 2 - 1.5);
+      camera.position.set(offsets[startIndex], 1.65, zOffsetOf(startIndex) + roomLayouts[startRoom.layout].depth / 2 - 1.5);
       camera.rotation.set(0, 0, 0);
       currentRoomIndex.current = startIndex;
       handledRoomId.current = activeRoomId;
@@ -3275,12 +3351,12 @@ function WalkControls({
     camera.position.set(
       offsets[requestedIndex],
       1.65,
-      depth / 2 - 1.5,
+      zOffsetOf(requestedIndex) + depth / 2 - 1.5,
     );
     camera.rotation.set(0, 0, 0);
     currentRoomIndex.current = requestedIndex;
     handledRoomId.current = activeRoomId;
-  }, [activeRoomId, camera, offsets, rooms]);
+  }, [activeRoomId, camera, offsets, rooms, zOffsets]);
 
   useEffect(() => {
     if (!enabled) {
@@ -3352,7 +3428,7 @@ function WalkControls({
       lastReset.current = resetSignal.current;
       const targetRoom = rooms[0];
       const { depth } = roomLayouts[targetRoom.layout];
-      camera.position.set(offsets[0], 1.65, depth / 2 - 1.5);
+      camera.position.set(offsets[0], 1.65, zOffsetOf(0) + depth / 2 - 1.5);
       camera.rotation.set(0, 0, 0);
       destination.current = null;
       lookYaw.current = null;
@@ -3408,12 +3484,19 @@ function WalkControls({
     const { width, depth } = roomLayouts[room.layout];
     let nextX = camera.position.x + velocity.current.x;
     let nextZ = camera.position.z + velocity.current.z;
+    // Walls, partitions and room bounds are LOCAL to the room; the
+    // camera moves in WORLD coordinates. Convert z (and x) to the
+    // room's local frame before comparing — a Stone Gallery half sits
+    // at a Z offset, so world z is not local z.
+    const roomZ = zOffsetOf(roomIndex);
     const localX = camera.position.x - offsets[roomIndex];
     const targetX = nextX - offsets[roomIndex];
+    const localZ = camera.position.z - roomZ;
+    let targetZ = nextZ - roomZ;
     for (const wall of room.partitionWalls) {
       if (wall.orientation === "horizontal") {
-        const crossesWall = Math.min(camera.position.z, nextZ) <= wall.z + 0.2
-          && Math.max(camera.position.z, nextZ) >= wall.z - 0.2;
+        const crossesWall = Math.min(localZ, targetZ) <= wall.z + 0.2
+          && Math.max(localZ, targetZ) >= wall.z - 0.2;
         let overlapsWall = Math.min(localX, targetX) <= wall.x + wall.length / 2 + 0.35
           && Math.max(localX, targetX) >= wall.x - wall.length / 2 - 0.35;
         if (wall.shape === "arch") {
@@ -3428,17 +3511,18 @@ function WalkControls({
         }
         if (crossesWall && overlapsWall) {
           nextZ = camera.position.z;
+          targetZ = localZ;
         }
       } else {
         const crossesWall = Math.min(localX, targetX) <= wall.x + 0.2
           && Math.max(localX, targetX) >= wall.x - 0.2;
-        let overlapsWall = Math.min(camera.position.z, nextZ) <= wall.z + wall.length / 2 + 0.35
-          && Math.max(camera.position.z, nextZ) >= wall.z - wall.length / 2 - 0.35;
+        let overlapsWall = Math.min(localZ, targetZ) <= wall.z + wall.length / 2 + 0.35
+          && Math.max(localZ, targetZ) >= wall.z - wall.length / 2 - 0.35;
         if (wall.shape === "arch") {
           // Same arch passage, turned 90°: the opening runs along z.
           const openingHalf = 2 * archScale(roomLayouts[room.layout].height);
-          const segMin = Math.min(camera.position.z, nextZ);
-          const segMax = Math.max(camera.position.z, nextZ);
+          const segMin = Math.min(localZ, targetZ);
+          const segMax = Math.max(localZ, targetZ);
           const overlapsLeftSolid = segMin <= wall.z - openingHalf + 0.35 && segMax >= wall.z - wall.length / 2 - 0.35;
           const overlapsRightSolid = segMin <= wall.z + wall.length / 2 + 0.35 && segMax >= wall.z + openingHalf - 0.35;
           overlapsWall = overlapsLeftSolid || overlapsRightSolid;
@@ -3456,36 +3540,72 @@ function WalkControls({
       const effectiveLength = element.length * element.scale;
       const horizontal = Math.abs(Math.sin(element.rotation)) < 0.5;
       if (horizontal) {
-        const crossesWall = Math.min(camera.position.z, nextZ) <= element.z + 0.2
-          && Math.max(camera.position.z, nextZ) >= element.z - 0.2;
+        const crossesWall = Math.min(localZ, targetZ) <= element.z + 0.2
+          && Math.max(localZ, targetZ) >= element.z - 0.2;
         const overlapsWall = Math.min(localX, targetX) <= element.x + effectiveLength / 2 + 0.35
           && Math.max(localX, targetX) >= element.x - effectiveLength / 2 - 0.35;
         if (crossesWall && overlapsWall) {
           nextZ = camera.position.z;
+          targetZ = localZ;
         }
       } else {
         const crossesWall = Math.min(localX, targetX) <= element.x + 0.2
           && Math.max(localX, targetX) >= element.x - 0.2;
-        const overlapsWall = Math.min(camera.position.z, nextZ) <= element.z + effectiveLength / 2 + 0.35
-          && Math.max(camera.position.z, nextZ) >= element.z - effectiveLength / 2 - 0.35;
+        const overlapsWall = Math.min(localZ, targetZ) <= element.z + effectiveLength / 2 + 0.35
+          && Math.max(localZ, targetZ) >= element.z - effectiveLength / 2 - 0.35;
         if (crossesWall && overlapsWall) {
           nextX = camera.position.x;
         }
       }
     }
+    // The Stone Gallery halves: the arch is the passage between them,
+    // along Z. While the visitor is inside the arch opening, the bound
+    // on the arch side relaxes to the wall itself (the arched tunnel),
+    // so they can walk up to and through it; outside the opening the
+    // normal margin applies and the solid wall blocks them.
+    const isStoneFront = room.layout === "stone-gallery-front";
+    const isStoneBack = room.layout === "stone-gallery-back";
+    const archOpeningHalf = (isStoneFront || isStoneBack) ? 2 * archScale(roomLayouts[room.layout].height) : 0;
+    const inArchOpening = (isStoneFront || isStoneBack) && Math.abs(localX) < archOpeningHalf && Math.abs(targetX) < archOpeningHalf;
     const leftEdge = offsets[roomIndex] - width / 2 + 0.45;
     const rightEdge = offsets[roomIndex] + width / 2 - 0.45;
-    const frontEdge = depth / 2 - 0.45;
-    const backEdge = -depth / 2 + 0.55;
+    const frontEdge = isStoneBack && inArchOpening ? depth / 2 : depth / 2 - 0.45;
+    const backEdge = isStoneFront && inArchOpening ? -depth / 2 : -depth / 2 + 0.55;
 
-    if (nextZ <= frontEdge && nextZ >= backEdge) camera.position.z = nextZ;
+    // Crossing the arch (along Z) into the other half: the camera keeps
+    // moving in world coordinates — only the active room changes, so
+    // the new room's bounds take over on the next frame.
+    if (inArchOpening) {
+      if (isStoneFront && targetZ < -depth / 2 && rooms[roomIndex + 1]?.layout === "stone-gallery-back") {
+        camera.position.z = nextZ;
+        camera.position.x = nextX;
+        currentRoomIndex.current = roomIndex + 1;
+        handledRoomId.current = rooms[roomIndex + 1].id;
+        onRoomChange?.(rooms[roomIndex + 1].id);
+        return;
+      }
+      if (isStoneBack && targetZ > depth / 2 && rooms[roomIndex - 1]?.layout === "stone-gallery-front") {
+        camera.position.z = nextZ;
+        camera.position.x = nextX;
+        currentRoomIndex.current = roomIndex - 1;
+        handledRoomId.current = rooms[roomIndex - 1].id;
+        onRoomChange?.(rooms[roomIndex - 1].id);
+        return;
+      }
+    }
+
+    if (targetZ <= frontEdge && targetZ >= backEdge) camera.position.z = nextZ;
     if (nextX >= leftEdge && nextX <= rightEdge) {
       camera.position.x = nextX;
       return;
     }
 
     const nextIndex = nextX < leftEdge ? roomIndex - 1 : roomIndex + 1;
-    if (Math.abs(camera.position.z) < 0.9 && nextIndex >= 0 && nextIndex < rooms.length) {
+    // A side doorway only joins rooms that sit side by side along X
+    // (same Z offset). The Stone Gallery halves stack along Z, so there
+    // is no side doorway between them — the arch is the passage, along Z.
+    const xAdjacent = nextIndex >= 0 && nextIndex < rooms.length && zOffsetOf(nextIndex) === roomZ;
+    if (Math.abs(localZ) < 0.9 && xAdjacent) {
       const { width: nextWidth } = roomLayouts[rooms[nextIndex].layout];
       camera.position.x = offsets[nextIndex] + (nextX < leftEdge ? 1 : -1) * (nextWidth / 2 - 3);
       camera.rotation.set(0, 0, 0);
@@ -3808,20 +3928,18 @@ export default function GalleryScene({
   multiSelectedIds?: string[];
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
-  const offsets = useMemo(() => {
-    let current = 0;
-    return sceneRooms.map((sceneRoom, index) => {
-      if (index > 0) {
-        const previousWidth = roomLayouts[sceneRooms[index - 1].layout].width;
-        const currentWidth = roomLayouts[sceneRoom.layout].width;
-        current += (previousWidth + currentWidth) / 2;
-      }
-      return current;
-    });
-  }, [sceneRooms]);
+  // Where each room sits in the shared 3D space (see roomPlanOffsets):
+  // rooms line up along X, except a Stone Gallery front/back pair,
+  // which shares one X and stacks along Z. `offsets` is the X offset
+  // (kept, so every existing use keeps working); `zOffsets` is the Z
+  // offset (0 for every room except the Stone halves).
+  const planOffsets = useMemo(() => roomPlanOffsets(sceneRooms), [sceneRooms]);
+  const offsets = planOffsets.x;
+  const zOffsets = planOffsets.z;
 
   const artworkRooms = walkMode ? sceneRooms : [room];
   const artworkOffsets = walkMode ? offsets : [0];
+  const artworkZOffsets = walkMode ? zOffsets : [0];
   const destination = useRef<Vector3 | null>(null);
   const lookYaw = useRef<number | null>(null);
   const dragged = useRef(false);
@@ -3836,8 +3954,9 @@ export default function GalleryScene({
     const targetRoomIndex = sceneRooms.findIndex((sceneRoom) => sceneRoom.id === teleportTarget.roomId);
     if (targetRoomIndex < 0) return;
     const worldX = offsets[targetRoomIndex] + teleportTarget.x;
+    const worldZ = zOffsets[targetRoomIndex] + teleportTarget.z;
     if (teleportTarget.roomId === activeRoomIdRef.current) {
-      destination.current = new Vector3(worldX, 0, teleportTarget.z);
+      destination.current = new Vector3(worldX, 0, worldZ);
       lookYaw.current = teleportTarget.yaw;
       pendingTeleport.current = null;
     } else {
@@ -3853,10 +3972,10 @@ export default function GalleryScene({
     if (!pending || pending.roomId !== (activeRoomId ?? room.id)) return;
     const targetRoomIndex = sceneRooms.findIndex((sceneRoom) => sceneRoom.id === pending.roomId);
     if (targetRoomIndex < 0) return;
-    destination.current = new Vector3(offsets[targetRoomIndex] + pending.x, 0, pending.z);
+    destination.current = new Vector3(offsets[targetRoomIndex] + pending.x, 0, zOffsets[targetRoomIndex] + pending.z);
     lookYaw.current = pending.yaw;
     pendingTeleport.current = null;
-  }, [activeRoomId, offsets, room.id, sceneRooms]);
+  }, [activeRoomId, offsets, room.id, sceneRooms, zOffsets]);
   // Editor drag state: set on pointerdown on an artwork (or its resize
   // handle), read by DragHandler on every pointer move, cleared on
   // pointerup. While a drag is active the orbit controls stay off, so the
@@ -3996,11 +4115,29 @@ export default function GalleryScene({
     setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
   };
 
-  const artworkNodes = artworkRooms.map((sceneRoom, index) => (
+  const artworkNodes = artworkRooms.map((sceneRoom, index) => {
+    // The Stone Gallery halves share the arched dividing wall: the
+    // front half hides its back wall and the back half hides its front
+    // wall, so the arch (a partition in the front room) is the one
+    // shared boundary, seen from both sides. A half only hides its
+    // wall when its partner is in the exhibition (a lone half keeps
+    // all its walls).
+    const sceneIndex = sceneRooms.findIndex((candidate) => candidate.id === sceneRoom.id);
+    const isStoneFront = sceneRoom.layout === "stone-gallery-front" && sceneRooms[sceneIndex + 1]?.layout === "stone-gallery-back";
+    const isStoneBack = sceneRoom.layout === "stone-gallery-back" && sceneRooms[sceneIndex - 1]?.layout === "stone-gallery-front";
+    // Side doorways only join rooms that sit side by side along X
+    // (same Z offset). The Stone Gallery halves stack along Z, so
+    // there is no side doorway between them — the arch is the passage.
+    const leftAdjacent = walkMode && index > 0 && artworkZOffsets[index] === artworkZOffsets[index - 1];
+    const rightAdjacent = walkMode && index < artworkRooms.length - 1 && artworkZOffsets[index] === artworkZOffsets[index + 1];
+    return (
     <GalleryRoom
       key={sceneRoom.id}
       room={sceneRoom}
       offsetX={artworkOffsets[index]}
+      offsetZ={artworkZOffsets[index]}
+      hideBackWall={isStoneFront}
+      hideFrontWall={isStoneBack}
       artworks={artworks.filter((artwork) => artwork.roomId === sceneRoom.id)}
       selectedId={selectedId}
       onSelect={onSelect}
@@ -4032,14 +4169,16 @@ export default function GalleryScene({
       // door wall (no doubled wall, so no z-fighting), the outer ends are
       // solid and the front stays closed, so no void or box exterior is
       // ever visible through a window or an entrance hole.
-      leftOpening={walkMode ? (index > 0 ? "none" : "solid") : "window"}
-      rightOpening={walkMode ? (index < sceneRooms.length - 1 ? "door" : "solid") : "window"}
+      leftOpening={walkMode ? (leftAdjacent ? "none" : "solid") : "window"}
+      rightOpening={walkMode ? (rightAdjacent ? "door" : "solid") : "window"}
       entrance={false}
     />
-  ));
+    );
+  });
   const startRoom = sceneRooms[Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)))];
   const startIndex = Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)));
   const startOffset = offsets[startIndex];
+  const startZOffset = zOffsets[startIndex];
   const startDepth = roomLayouts[startRoom.layout].depth;
   const interiorView = interior === true && !walkMode;
   const interiorLimits = useMemo(() => {
@@ -4092,12 +4231,12 @@ export default function GalleryScene({
       }}
       onPointerUp={() => { dragStartPoint.current = null; }}
     >
-      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={qualityCfg.dpr} shadows>
+      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startZOffset + startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={qualityCfg.dpr} shadows>
         {/* Stone Gallery: the reference room's dark warm backdrop and
             fog (0x3a342d, 14–34 m) — the moody depth the generic bright
             gallery loses. Other rooms keep the wall colour. */}
-        <color attach="background" args={[room.layout === "stone-gallery" ? "#3a342d" : room.wallColor]} />
-        {room.layout === "stone-gallery" && <fog attach="fog" args={["#3a342d", 14, 34]} />}
+        <color attach="background" args={[isStoneLayout(room.layout) ? "#3a342d" : room.wallColor]} />
+        {isStoneLayout(room.layout) && <fog attach="fog" args={["#3a342d", 14, 34]} />}
         {/* The environment map carries part of the ambient light while
             it is on, so the flat ambient is turned down to match — the
             room's light mood (warm/cool/ambient) still drives the result. */}
@@ -4128,22 +4267,30 @@ export default function GalleryScene({
         {/* The environment map is neutral white-room light: halve it
             for the Stone Gallery so it does not wash out the warm
             stone glow. */}
-        <LocalEnvironment enabled={qualityCfg.env} intensity={room.layout === "stone-gallery" ? qualityCfg.envIntensity * 0.5 : qualityCfg.envIntensity} />
+        <LocalEnvironment enabled={qualityCfg.env} intensity={isStoneLayout(room.layout) ? qualityCfg.envIntensity * 0.5 : qualityCfg.envIntensity} />
         {sceneRooms.map((sceneRoom, index) =>
-          sceneRoom.layout === "stone-gallery" ? (
+          isStoneLayout(sceneRoom.layout) ? (
             // Stone Gallery: the reference room's five warm ceiling
             // point lights (positions from the source, z shifted +3 to
-            // centre the room). They are the room's ceiling lights;
-            // they do not cast shadows (five cube maps would be far
-            // too expensive) — the directional and the artwork spots
-            // carry the shadows.
+            // centre the room), split across the two halves by their
+            // global z — the front half gets the two at global z = 5
+            // (local −0.5), the back half the three at global z = −6
+            // and −1.5 (local +0.5 and +5.0). They are the room's
+            // ceiling lights; they do not cast shadows (five cube maps
+            // would be far too expensive) — the directional and the
+            // artwork spots carry the shadows.
             <group key={`stone-lights-${sceneRoom.id}`}>
-              {[[-4, 5], [4, 5], [-3, -6], [4, -6], [0, -1.5]].map(([x, z], i) => (
-                <pointLight key={i} position={[offsets[index] + x, 5, z]} intensity={10} distance={12} color="#ffe2b8" />
+              {(sceneRoom.layout === "stone-gallery-front"
+                ? [[-4, -0.5], [4, -0.5]]
+                : sceneRoom.layout === "stone-gallery-back"
+                  ? [[-3, 0.5], [4, 0.5], [0, 5.0]]
+                  : [[-4, 5], [4, 5], [-3, -6], [4, -6], [0, -1.5]]
+              ).map(([x, z], i) => (
+                <pointLight key={i} position={[offsets[index] + x, 5, zOffsets[index] + z]} intensity={10} distance={12} color="#ffe2b8" />
               ))}
             </group>
           ) : (
-            <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={sceneLights.pointIntensity} color={sceneLights.pointColor} />
+            <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, zOffsets[index] - 2]} intensity={sceneLights.pointIntensity} color={sceneLights.pointColor} />
           ),
         )}
         {/* Artwork textures load through Suspense so a slow image suspends
@@ -4172,7 +4319,7 @@ export default function GalleryScene({
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}
         {walkMode && input ? (
-          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
         ) : (
           <OrbitControls
             makeDefault

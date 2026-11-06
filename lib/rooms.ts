@@ -130,6 +130,55 @@ export const roomLayouts = {
     lightType: "stone-warm",
     partitions: [{ x: 0, z: -1, length: 20, orientation: "horizontal", shape: "arch" }],
   },
+  // The two halves of a Stone Gallery exhibition, created TOGETHER from
+  // the "stone" model (see app/api/exhibitions/route.ts). They are NOT
+  // standalone templates — they never appear in the /galleries catalogue
+  // nor in the editor's layout picker (see HIDDEN_LAYOUT_KEYS below).
+  // The plan itself is unchanged from the reference room: the front half
+  // is the entrance part (20 × 13 m, centre at global z = +5.5) and the
+  // back half is the part behind the arch (20 × 11 m, centre at global
+  // z = −6.5), with the arched dividing wall as their shared boundary
+  // at global z = −1. The arch is a partition at the back edge of the
+  // front room (local z = −6.5), so it is rendered once, by the front
+  // room, and seen from both sides. The single "stone-gallery" layout
+  // above stays for exhibitions saved before the split (backward
+  // compatibility).
+  "stone-gallery-front": {
+    label: "Stone Gallery — Front",
+    category: "Architectural",
+    description: "The front (entrance) half of the Stone Gallery, from the entrance to the arched dividing wall.",
+    width: 20,
+    depth: 13,
+    height: 6.5,
+    wallColor: "#b8ab94",
+    sideWallColor: "#ab9d84",
+    floorColor: "#b5b0a5",
+    wallTexture: "stone-plaster",
+    floorTexture: "stone-concrete",
+    ceilingColor: "#d8d2c4",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "stone-warm",
+    partitions: [{ x: 0, z: -6.5, length: 20, orientation: "horizontal", shape: "arch" }],
+  },
+  "stone-gallery-back": {
+    label: "Stone Gallery — Back",
+    category: "Architectural",
+    description: "The back half of the Stone Gallery, behind the arched dividing wall.",
+    width: 20,
+    depth: 11,
+    height: 6.5,
+    wallColor: "#b8ab94",
+    sideWallColor: "#ab9d84",
+    floorColor: "#b5b0a5",
+    wallTexture: "stone-plaster",
+    floorTexture: "stone-concrete",
+    ceilingColor: "#d8d2c4",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "stone-warm",
+    partitions: [],
+  },
   // Glass Pavilion — the outdoor room model, kept from the November
   // 2026 catalogue expansion; the other expansion templates were retired.
   "glass-pavilion": {
@@ -175,6 +224,56 @@ export type RoomModelId = (typeof ROOM_MODELS)[number]["id"];
 export function roomModelLayout(modelId: string): RoomLayout {
   const model = ROOM_MODELS.find((candidate) => candidate.id === modelId);
   return (model?.layout ?? "cube") as RoomLayout;
+}
+
+// Layouts that are halves of a multi-room template, not standalone
+// templates: the Stone Gallery front/back halves never appear in the
+// /galleries catalogue nor in the editor's layout picker. A Stone
+// Gallery is always created as the pair (see the exhibitions route).
+export const HIDDEN_LAYOUT_KEYS: ReadonlySet<RoomLayout> = new Set([
+  "stone-gallery-front",
+  "stone-gallery-back",
+]);
+
+// Any Stone Gallery layout — the single pre-split room and the two
+// halves — shares the restored stone look (stone-plaster walls,
+// stone-concrete floor, warm dark backdrop #3a342d + fog, stone-warm
+// light, soft shadows).
+export function isStoneLayout(layout: RoomLayout): boolean {
+  return layout === "stone-gallery" || layout === "stone-gallery-front" || layout === "stone-gallery-back";
+}
+
+// Where each room sits in the shared 3D space, as world offsets from the
+// origin. Rooms normally line up side by side along X (each touching the
+// next). A Stone Gallery front/back pair is different: the two halves
+// share the same X and stack along Z — the front half centred at
+// z = +5.5, the back half at z = −6.5 — so the arched dividing wall at
+// global z = −1 stays the passage between them, exactly as in the
+// reference room. The plan itself is never redrawn: the pair keeps the
+// reference room's dimensions and positions, only made functional.
+// The X of a pair follows the rooms before it, like any other room.
+export function roomPlanOffsets(rooms: { layout: RoomLayout }[]): { x: number[]; z: number[] } {
+  const xs: number[] = [];
+  const zs: number[] = [];
+  let currentX = 0;
+  for (let i = 0; i < rooms.length; i += 1) {
+    const layout = rooms[i].layout;
+    const width = roomLayouts[layout].width;
+    if (i > 0) {
+      const previousLayout = rooms[i - 1].layout;
+      const previousWidth = roomLayouts[previousLayout].width;
+      // The back half of a Stone Gallery sits behind the front half,
+      // not beside it: same X as the front half.
+      if (!(previousLayout === "stone-gallery-front" && layout === "stone-gallery-back")) {
+        currentX += (previousWidth + width) / 2;
+      }
+    }
+    xs.push(currentX);
+    // The Stone Gallery halves stack along Z; every other room is
+    // centred on z = 0.
+    zs.push(layout === "stone-gallery-front" ? 5.5 : layout === "stone-gallery-back" ? -6.5 : 0);
+  }
+  return { x: xs, z: zs };
 }
 
 const layoutKeys = Object.keys(roomLayouts) as [RoomLayout, ...RoomLayout[]];
@@ -275,7 +374,10 @@ export const partitionWallSchema = z.object({
   id: z.string().min(1).max(64),
   x: z.number().min(-20).max(20),
   z: z.number().min(-20).max(20),
-  length: z.number().min(1).max(16),
+  // Up to 24 m so a partition can span the full width (20 m) or depth
+  // (24 m) of the largest room — the Stone Gallery's arched dividing
+  // wall is 20 m long. (Was 16, which rejected that wall on load.)
+  length: z.number().min(1).max(24),
   orientation: z.enum(["horizontal", "vertical"]),
   // Painted colour for this one wall; falls back to the room's side walls.
   color: z.string().regex(/^#[\da-f]{6}$/i).optional(),
@@ -438,7 +540,22 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "cube"): Galle
     },
     layout,
   );
-  return { ...room, elements: seedElements(layout) };
+  // applyLayoutPreset returns a room unchanged when it already has the
+  // target layout, so a NEW room created straight into a layout never
+  // received that layout's preset partitions — the Stone Gallery's
+  // arched dividing wall (and the White Cube's partition) were silently
+  // dropped, and the room opened as a single open hall ("Partition
+  // walls 0/8"). A new room has no user customisations to preserve, so
+  // seed the preset's partitions here, like the seeded elements below.
+  // (The floor also comes from the preset here: floorTexture
+  // "stone-concrete" infers floorType "stone-concrete", so a new Stone
+  // Gallery gets the Stone concrete floor, not the old Polished
+  // concrete / Concrete.)
+  return {
+    ...room,
+    partitionWalls: roomLayouts[layout].partitions.map((wall) => ({ ...wall, id: crypto.randomUUID() })),
+    elements: seedElements(layout),
+  };
 }
 
 // The seven placeholder artworks of the Stone Gallery demo, pre-placed
@@ -457,7 +574,28 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "cube"): Galle
 // bundled paths to be saved (see isAllowedImageUrl).
 // The placeholder description says plainly that the work is a
 // placeholder to replace.
-export function seedStoneGalleryArtworks(roomId: string) {
+// The seven placeholder artworks of the Stone Gallery demo, pre-placed
+// when an exhibition is created from the stone model — as NORMAL
+// artworks (real Artwork rows), so the editor can select each one,
+// change its title, replace its image, move/resize it or delete it.
+// Positions and sizes are the demo's (Three.js source, z shifted +3 m
+// to centre the room on the origin), split across the two rooms: the
+// front room (Room 1, centre global z = +5.5) takes the works that hung
+// in front of the arch, the back room (Room 2, centre global z = −6.5)
+// takes the works behind it. Each position is LOCAL to its room (local
+// z = global z − 5.5 for Room 1, global z + 6.5 for Room 2); x and y
+// are unchanged. The works sit 0.1 m off the wall face they hang on:
+// the dividing-wall works sit 0.1 m off the arch wall's face, and the
+// back/side works sit 0.1 m off the inner face of SANAA's 0.25 m wall
+// boxes (0.225 m off the room boundary), so the wood frame (0.12 m
+// deep) clears the stone and the work stands off the wall like the
+// reference instead of sitting flush in it. The images are procedural
+// placeholders generated from the source's own art
+// (public/artworks/stone-gallery/*.jpg); the editor allows those
+// bundled paths to be saved (see isAllowedImageUrl).
+// The placeholder description says plainly that the work is a
+// placeholder to replace.
+export function seedStoneGalleryArtworks(frontRoomId: string, backRoomId: string) {
   const placeholder = "Placeholder artwork from the Stone Gallery template — replace it with your own work.";
   const base = {
     artist: "",
@@ -466,90 +604,91 @@ export function seedStoneGalleryArtworks(roomId: string) {
     description: placeholder,
     scale: 1,
     frame: "wood",
-    roomId,
   };
+  const front = { ...base, roomId: frontRoomId };
+  const back = { ...base, roomId: backRoomId };
   return [
     {
-      ...base,
+      ...front,
       title: "Stone Collage",
       dimensions: "220 × 260 cm",
       color: "#cdb78f",
       accent: "#4a2f22",
       positionX: -9.775,
       positionY: 2.3,
-      positionZ: 0.5,
+      positionZ: -5.0,
       rotation: Math.PI / 2,
       imageUrl: "/artworks/stone-gallery/collage.jpg",
     },
     {
-      ...base,
+      ...front,
       title: "Vivid Field I",
       dimensions: "140 × 260 cm",
       color: "#d9a23a",
       accent: "#b4361f",
       positionX: -6,
       positionY: 2.4,
-      positionZ: -0.55,
+      positionZ: -6.05,
       rotation: 0,
       imageUrl: "/artworks/stone-gallery/vivid.jpg",
     },
     {
-      ...base,
+      ...front,
       title: "Red Field I",
       dimensions: "220 × 170 cm",
       color: "#8b1c14",
       accent: "#d8581e",
       positionX: 6,
       positionY: 2.3,
-      positionZ: -0.55,
+      positionZ: -6.05,
       rotation: 0,
       imageUrl: "/artworks/stone-gallery/red.jpg",
     },
     {
-      ...base,
+      ...back,
       title: "Vivid Field II",
       dimensions: "140 × 260 cm",
       color: "#d9a23a",
       accent: "#b4361f",
       positionX: -3.4,
       positionY: 2.4,
-      positionZ: -11.775,
+      positionZ: -5.275,
       rotation: 0,
       imageUrl: "/artworks/stone-gallery/vivid.jpg",
     },
     {
-      ...base,
+      ...back,
       title: "Red Field II",
       dimensions: "90 × 150 cm",
       color: "#8b1c14",
       accent: "#d8581e",
       positionX: 0,
       positionY: 2.6,
-      positionZ: -11.775,
+      positionZ: -5.275,
       rotation: 0,
       imageUrl: "/artworks/stone-gallery/red.jpg",
     },
     {
-      ...base,
+      ...back,
       title: "Red Field III",
       dimensions: "200 × 150 cm",
       color: "#8b1c14",
       accent: "#d8581e",
       positionX: 5,
       positionY: 1.9,
-      positionZ: -11.775,
+      positionZ: -5.275,
       rotation: 0,
       imageUrl: "/artworks/stone-gallery/red.jpg",
     },
     {
-      ...base,
+      ...back,
       title: "Vivid Field III",
       dimensions: "160 × 240 cm",
       color: "#d9a23a",
       accent: "#b4361f",
       positionX: 9.775,
       positionY: 2.3,
-      positionZ: -5,
+      positionZ: 1.5,
       rotation: -Math.PI / 2,
       imageUrl: "/artworks/stone-gallery/vivid.jpg",
     },

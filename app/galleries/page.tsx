@@ -2,7 +2,7 @@ import GalleriesPage, { type GalleryPresetCard } from "@/components/galleries-pa
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
-import { roomLayouts, type RoomLayout } from "@/lib/rooms";
+import { roomLayouts, HIDDEN_LAYOUT_KEYS, type RoomLayout } from "@/lib/rooms";
 
 export const metadata = {
   title: "Galleries — SANAA",
@@ -15,7 +15,9 @@ export default async function GalleriesRoute() {
   // Templates the owner hid in the admin never reach the catalogue.
   const hidden = new Set(await getHiddenRoomLayouts());
   const rooms = (Object.keys(roomLayouts) as RoomLayout[])
-    .filter((key) => !hidden.has(key))
+    // The Stone Gallery front/back halves are not standalone templates:
+    // the catalogue keeps its six models, Stone Gallery among them.
+    .filter((key) => !hidden.has(key) && !HIDDEN_LAYOUT_KEYS.has(key))
     .map((key): GalleryPresetCard => {
     const preset = roomLayouts[key];
     return {

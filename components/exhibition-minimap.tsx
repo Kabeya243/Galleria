@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Map as MapIcon, X } from "lucide-react";
 import type { Artwork } from "@/lib/demo-data";
-import { roomLayouts, type GalleryRoom } from "@/lib/rooms";
+import { roomLayouts, roomPlanOffsets, type GalleryRoom } from "@/lib/rooms";
 import { useT } from "@/lib/i18n";
 
 // Floor plan + teleport (public exhibition): a top-down plan of the
@@ -30,32 +30,31 @@ export default function ExhibitionMinimap({
   const t = useT();
   const [open, setOpen] = useState(false);
 
-  // Same room offsets as the 3D scene (rooms side by side along X), so
-  // the plan matches the space the visitor walks through.
-  const { offsets, minX, maxX, maxDepth } = useMemo(() => {
-    let current = 0;
-    const offsets = rooms.map((room, index) => {
-      if (index > 0) {
-        const previousWidth = roomLayouts[rooms[index - 1].layout].width;
-        const currentWidth = roomLayouts[room.layout].width;
-        current += (previousWidth + currentWidth) / 2;
-      }
-      return current;
-    });
-    const minX = Math.min(...rooms.map((room, i) => offsets[i] - roomLayouts[room.layout].width / 2));
-    const maxX = Math.max(...rooms.map((room, i) => offsets[i] + roomLayouts[room.layout].width / 2));
-    const maxDepth = Math.max(...rooms.map((room) => roomLayouts[room.layout].depth));
-    return { offsets, minX, maxX, maxDepth };
+  // Same room offsets as the 3D scene (see roomPlanOffsets), so the
+  // plan matches the space the visitor walks through. Rooms normally
+  // line up along X; a Stone Gallery front/back pair shares one X and
+  // stacks along Z (front half below, back half above), so the plan
+  // shows both rooms and the visitor can switch between them.
+  const { offsets, zOffsets, minX, maxX, minZ, maxZ } = useMemo(() => {
+    const plan = roomPlanOffsets(rooms);
+    const minX = Math.min(...rooms.map((room, i) => plan.x[i] - roomLayouts[room.layout].width / 2));
+    const maxX = Math.max(...rooms.map((room, i) => plan.x[i] + roomLayouts[room.layout].width / 2));
+    const minZ = Math.min(...rooms.map((room, i) => plan.z[i] - roomLayouts[room.layout].depth / 2));
+    const maxZ = Math.max(...rooms.map((room, i) => plan.z[i] + roomLayouts[room.layout].depth / 2));
+    return { offsets: plan.x, zOffsets: plan.z, minX, maxX, minZ, maxZ };
   }, [rooms]);
 
   const width = Math.max(1, maxX - minX);
-  const height = Math.max(1, maxDepth);
+  const height = Math.max(1, maxZ - minZ);
   // 1 m = 10 units in the SVG; the plan scales to its container.
   const SCALE = 10;
   const viewWidth = width * SCALE;
   const viewHeight = height * SCALE;
   const toX = (worldX: number) => (worldX - minX) * SCALE;
-  const toY = (worldZ: number) => (worldZ + maxDepth / 2) * SCALE;
+  // The back wall (most negative z) is at the top of the plan, the
+  // front wall at the bottom — like a floor plan with the entrance
+  // at the bottom.
+  const toY = (worldZ: number) => (worldZ - minZ) * SCALE;
 
   if (rooms.length === 0) return null;
 
@@ -73,7 +72,7 @@ export default function ExhibitionMinimap({
             {rooms.map((room, index) => {
               const layout = roomLayouts[room.layout];
               const x = toX(offsets[index] - layout.width / 2);
-              const y = toY(-layout.depth / 2);
+              const y = toY(zOffsets[index] - layout.depth / 2);
               const w = layout.width * SCALE;
               const h = layout.depth * SCALE;
               const isActive = room.id === activeRoomId;
@@ -103,7 +102,7 @@ export default function ExhibitionMinimap({
                   </text>
                   {roomArtworks.map((artwork) => {
                     const cx = toX(offsets[index] + artwork.position[0]);
-                    const cy = toY(artwork.position[2]);
+                    const cy = toY(zOffsets[index] + artwork.position[2]);
                     const isSelected = artwork.id === selectedArtworkId;
                     return (
                       <g key={artwork.id} role="listitem">

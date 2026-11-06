@@ -4,7 +4,7 @@ import AdminShell from "@/components/admin-shell";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
-import { ROOM_MODELS, roomLayouts, type RoomLayout } from "@/lib/rooms";
+import { HIDDEN_LAYOUT_KEYS, ROOM_MODELS, roomLayouts, type RoomLayout } from "@/lib/rooms";
 import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
 
 export const metadata = {
@@ -353,8 +353,10 @@ export default async function AdminRoute({
 
   // Room templates for the Galleries section: the five layouts in code,
   // with a note for the four creation models and the reference room.
-  const modelNote = new Map(ROOM_MODELS.map((model) => [model.layout, `Creation model · ${model.id}`]));
-  const galleryTemplates = (Object.keys(roomLayouts) as RoomLayout[]).map((key) => {
+  // The Stone Gallery front/back halves are not standalone templates,
+  // so they never appear here (same as in the /galleries catalogue).
+  const modelNote = new Map<RoomLayout, string>(ROOM_MODELS.map((model) => [model.layout, `Creation model · ${model.id}`]));
+  const galleryTemplates = (Object.keys(roomLayouts) as RoomLayout[]).filter((key) => !HIDDEN_LAYOUT_KEYS.has(key)).map((key) => {
     const preset = roomLayouts[key];
     return {
       key,

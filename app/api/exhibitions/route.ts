@@ -56,18 +56,31 @@ export async function POST(request: Request) {
   const hiddenLayouts = await getHiddenRoomLayouts();
   const layout = hiddenLayouts.includes(requestedLayout) ? "cube" : requestedLayout;
 
-  const room = createGalleryRoom(0, layout);
+  const frontRoom = createGalleryRoom(0, layout);
+  // The Stone Gallery is TWO rooms: the front (entrance) half and the
+  // back half behind the arched dividing wall, created together from
+  // the one "stone" model. The plan is the reference room's own — the
+  // front half 20 × 13 m centred at global z = +5.5, the back half
+  // 20 × 11 m centred at global z = −6.5 — only made functional, so
+  // the mini-plan shows Room 1 and Room 2 and the visitor can move
+  // between them. Both halves get the Stone concrete floor (the preset
+  // infers floorType "stone-concrete" from floorTexture
+  // "stone-concrete") and the arched dividing wall as a real partition
+  // in the front room.
+  const rooms = layout === "stone-gallery"
+    ? [frontRoom, createGalleryRoom(1, "stone-gallery-back")]
+    : [frontRoom];
   const exhibition = await db.exhibition.create({
     data: {
       title: parsed.data.title,
       slug: randomUUID(),
       ownerId: user.id,
-      rooms: JSON.stringify([room]),
+      rooms: JSON.stringify(rooms),
       // The Stone Gallery ships with its seven demo artworks pre-placed
-      // as normal artworks, so the room looks like the reference on
+      // as normal artworks, so the rooms look like the reference on
       // opening — and each one can be edited, re-imaged or deleted in
       // the editor like any artwork the owner adds by hand.
-      artworks: layout === "stone-gallery" ? { create: seedStoneGalleryArtworks(room.id) } : undefined,
+      artworks: layout === "stone-gallery" ? { create: seedStoneGalleryArtworks(rooms[0].id, rooms[1].id) } : undefined,
     },
   });
   return NextResponse.json({ exhibition }, { status: 201 });

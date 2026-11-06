@@ -86,6 +86,10 @@ export type FrameSpec = {
   floatGap: number;
   texture: FrameTextureKind;
   bead: boolean;
+  // Real photo strip of the frame's moulding ("/frames/<id>.png"): the
+  // front-face skin for the nine digitised frames. Only the built-ins
+  // carry one; Frame Studio customs do not.
+  photo?: string;
   // Edge profile of the bar (flat by default) and wood-grain strength
   // (0–1, wood textures only). Glass over the artwork, if any.
   profile?: FrameProfile;
@@ -123,32 +127,32 @@ export const FRAME_VARIANTS = {
   white: flat({ label: "White", color: "#f5f2eb", metalness: 0, roughness: 0.8 }),
   // Wood shadow box (photo-65): warm medium-brown natural wood, visible
   // grain, deep tray, artwork floated and recessed inside.
-  "wood-box": flat({ label: "Wood shadow box", color: "#8a6242", metalness: 0, roughness: 0.7, width: 0.07, depth: 0.18, recess: 0.1, floatGap: 0.08, texture: "wood", trayColor: "#6b4a30", profile: "stepped" }),
+  "wood-box": flat({ label: "Wood shadow box", color: "#8a6242", metalness: 0, roughness: 0.7, width: 0.07, depth: 0.18, recess: 0.1, floatGap: 0.08, texture: "wood", trayColor: "#6b4a30", profile: "stepped", photo: "/frames/wood-box.png" }),
   // Gold ornate + red velvet (photo_1-16): bright gold frame, fine beaded
   // inner edge, wide deep-red velvet mat, thin gold frame around the work.
-  "gold-velvet": flat({ label: "Gold ornate · red velvet", color: "#c9a227", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true, mat: { color: "#6e0f1a", width: 0.14, texture: "velvet" }, trim: { color: "#d4af37", width: 0.015, at: "artwork" }, profile: "stepped", ornament: "rosettes", ornamentSpacing: 0.22 }),
+  "gold-velvet": flat({ label: "Gold ornate · red velvet", color: "#c9a227", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true, mat: { color: "#6e0f1a", width: 0.14, texture: "velvet" }, trim: { color: "#d4af37", width: 0.015, at: "artwork" }, profile: "stepped", ornament: "rosettes", ornamentSpacing: 0.22, photo: "/frames/gold-velvet.png" }),
   // Gold classic (photo_2-8): warm gold, smooth stepped profile, beaded
   // inner line, medium width, elegant.
-  "gold-classic": flat({ label: "Gold classic", color: "#b08d3e", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true, profile: "stepped" }),
+  "gold-classic": flat({ label: "Gold classic", color: "#b08d3e", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true, profile: "stepped", photo: "/frames/gold-classic.png" }),
   // Gold baroque carved (photo_3-5): heavily carved floral/scroll relief,
   // wide, antique gold with dark recesses.
-  "gold-baroque": flat({ label: "Gold baroque", color: "#a67c37", metalness: 0.8, roughness: 0.45, width: 0.16, depth: 0.13, texture: "gold-carved", profile: "stepped", ornament: "carved", ornamentSpacing: 0.15 }),
+  "gold-baroque": flat({ label: "Gold baroque", color: "#a67c37", metalness: 0.8, roughness: 0.45, width: 0.16, depth: 0.13, texture: "gold-carved", profile: "stepped", ornament: "carved", ornamentSpacing: 0.15, photo: "/frames/gold-baroque.png" }),
   // Yellow lacquer (photo_4-4): vivid yellow, wide flat smooth profile,
   // high gloss; the work floats small on a wide yellow field.
-  "yellow-lacquer": flat({ label: "Yellow lacquer", color: "#f5c400", metalness: 0.05, roughness: 0.15, width: 0.06, depth: 0.14, recess: 0.04, texture: "yellow-gloss", mat: { color: "#f5c400", width: 0.25, texture: "yellow" }, profile: "bevelled" }),
+  "yellow-lacquer": flat({ label: "Yellow lacquer", color: "#f5c400", metalness: 0.05, roughness: 0.15, width: 0.06, depth: 0.14, recess: 0.04, texture: "yellow-gloss", mat: { color: "#f5c400", width: 0.25, texture: "yellow" }, profile: "bevelled", photo: "/frames/yellow-lacquer.png" }),
   // Black + gold + cream mat (photo_5-4, lower frame): wide glossy black
   // frame, thin gold trim, wide cream passe-partout, thin gold frame
   // around the artwork.
-  "black-gold-cream": flat({ label: "Black + gold · cream mat", color: "#141414", metalness: 0.2, roughness: 0.35, width: 0.11, depth: 0.12, texture: "black-gloss", mat: { color: "#f2ead8", width: 0.16, texture: "paper" }, trim: { color: "#c9a227", width: 0.02, at: "both" }, profile: "stepped" }),
+  "black-gold-cream": flat({ label: "Black + gold · cream mat", color: "#141414", metalness: 0.2, roughness: 0.35, width: 0.11, depth: 0.12, texture: "black-gloss", mat: { color: "#f2ead8", width: 0.16, texture: "paper" }, trim: { color: "#c9a227", width: 0.02, at: "both" }, profile: "stepped", photo: "/frames/black-gold-cream.png" }),
   // Black + cream mat (photo_5-4, upper frame): thin black frame, wide
   // cream mat, no gold.
-  "black-cream": flat({ label: "Black · cream mat", color: "#1a1a1a", metalness: 0.1, roughness: 0.6, width: 0.035, depth: 0.1, texture: "black-matte", mat: { color: "#f2ead8", width: 0.16, texture: "paper" }, profile: "bevelled" }),
+  "black-cream": flat({ label: "Black · cream mat", color: "#1a1a1a", metalness: 0.1, roughness: 0.6, width: 0.035, depth: 0.1, texture: "black-matte", mat: { color: "#f2ead8", width: 0.16, texture: "paper" }, profile: "bevelled", photo: "/frames/black-cream.png" }),
   // Gold museum wide (photo_6-3): very wide ornate gold museum frame,
   // beaded inner edge, warm gold, grand.
-  "gold-museum": flat({ label: "Gold museum", color: "#c19a3d", metalness: 0.85, roughness: 0.3, width: 0.2, depth: 0.13, texture: "gold-brushed", bead: true, profile: "stepped", ornament: "rosettes", ornamentSpacing: 0.2 }),
+  "gold-museum": flat({ label: "Gold museum", color: "#c19a3d", metalness: 0.85, roughness: 0.3, width: 0.2, depth: 0.13, texture: "gold-brushed", bead: true, profile: "stepped", ornament: "rosettes", ornamentSpacing: 0.2, photo: "/frames/gold-museum.png" }),
   // Black shadow box (photo_7-2): deep matte black tray, wide, artwork
   // floated inside with a visible gap.
-  "black-box": flat({ label: "Black shadow box", color: "#1c1c1c", metalness: 0.05, roughness: 0.9, width: 0.08, depth: 0.2, recess: 0.12, floatGap: 0.1, texture: "black-matte", trayColor: "#111111", profile: "bevelled" }),
+  "black-box": flat({ label: "Black shadow box", color: "#1c1c1c", metalness: 0.05, roughness: 0.9, width: 0.08, depth: 0.2, recess: 0.12, floatGap: 0.1, texture: "black-matte", trayColor: "#111111", profile: "bevelled", photo: "/frames/black-box.png" }),
   // --- Frame Studio built-ins (Nov 2026) ---
   // Natural wood: pale, barely stained, fine grain, slim.
   "natural-wood": flat({ label: "Natural wood", color: "#c2a878", metalness: 0, roughness: 0.8, width: 0.06, depth: 0.1, texture: "oak", grain: 0.35 }),

@@ -12,7 +12,7 @@ import type { Artwork } from "@/lib/demo-data";
 import { resolveFrameSpec } from "@/lib/demo-data";
 import type { FrameSpec } from "@/lib/demo-data";
 import { frameTileTexture, matTexture } from "@/lib/frame-textures";
-import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, rosetteGeometry, scrollGeometry, setInstancedMatrices } from "@/lib/frame-geometry";
+import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, rosetteGeometry, scrollGeometry, setInstancedMatrices, type FrameLevel } from "@/lib/frame-geometry";
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
 import { roomLayouts, type GalleryRoom, type WallId } from "@/lib/rooms";
 
@@ -408,12 +408,16 @@ function useFrameMaterial(spec: FrameSpec) {
       map.repeat.set(2.5, 2.5);
       map.needsUpdate = true;
     }
+    // Photo frames wear the real photo on the front face; the ring's
+    // metal is only its thin edge and bevel, so cap it — bare-metal
+    // glare on the edge would fight the photo's own gold.
+    const ringMetalness = spec.photo ? Math.min(spec.metalness, 0.6) : isMetal ? Math.max(spec.metalness, 0.9) : spec.metalness;
     return {
       map,
       bumpMap: map,
       bumpScale: isWood ? 0.02 : 0,
       color: isWood ? "#ffffff" : spec.color,
-      metalness: isMetal ? Math.max(spec.metalness, 0.9) : spec.metalness,
+      metalness: ringMetalness,
       roughness: spec.roughness,
       envMapIntensity: spec.metalness > 0.5 ? 1.4 : 0.6,
       opacity: spec.opacity,
@@ -494,6 +498,119 @@ function OrnamentSet({
           <meshStandardMaterial color={color} metalness={Math.max(metalness, 0.9)} roughness={roughness} envMapIntensity={1.4} />
         </instancedMesh>
       )}
+    </group>
+  );
+}
+
+// The real photo of a digitised frame, worn as a skin on the front face
+// of the 3D moulding rings. The photo is the skin, the extruded rings
+// are the body: the skin is a set of thin planes laid on each level's
+// front face, one per bar, so the frame keeps its real depth, profile
+// steps and shadows. The strip PNG has the moulding's outer edge at the
+// top of the image and its inner edge at the bottom; each plane maps
+// the strip across its bar (U along the bar, repeated so the carving
+// never stretches) and across its level's radial band (V). The instanced
+// beads and rosettes are NOT rendered for photo frames — the photo
+// already carries the real beads and carving, and doubling them would
+// put a second, misaligned pattern on top.
+function FramePhotoSkin({
+  photo,
+  levels,
+  openingW,
+  openingH,
+  w,
+  backZ,
+  depth,
+  metalness,
+  roughness,
+}: {
+  photo: string;
+  levels: FrameLevel[];
+  openingW: number;
+  openingH: number;
+  w: number;
+  backZ: number;
+  depth: number;
+  metalness: number;
+  roughness: number;
+}) {
+  const texture = useTexture(photo);
+  texture.colorSpace = SRGBColorSpace;
+  // The strip's height/width ratio: one tile covers (band width) across
+  // the bar and (band width * L/H) along it, so the carving is never
+  // stretched no matter how long the bar is.
+  const img = texture.image as unknown as { width?: number; height?: number } | undefined;
+  const stripAspect = img && img.width && img.height ? img.height / img.width : 0.15;
+  // The photo carries the real gold colour and carving: keep the metal
+  // response moderate, or the room environment washes the photo out
+  // into flat yellow (the bare-metal failure the photo replaces).
+  const skinMetalness = Math.min(metalness, 0.45);
+  // One texture clone per level per orientation: the horizontal bars
+  // share a repeat (their length), the vertical bars another — the bars
+  // are different lengths, so one repeat would stretch the carving.
+  const levelSkins = useMemo(() => {
+    return levels
+      .map((level, li) => {
+        const bandW = (level.outerFrac - level.innerFrac) * w;
+        if (!(bandW > 0.001)) return null;
+        const skinZ = backZ + level.depthFrac * depth + 0.0015;
+        const outerW = openingW + 2 * level.outerFrac * w;
+        const innerH = openingH + 2 * level.innerFrac * w;
+        const yTop = openingH / 2 + ((level.innerFrac + level.outerFrac) / 2) * w;
+        const xSide = openingW / 2 + ((level.innerFrac + level.outerFrac) / 2) * w;
+        const uH = (outerW / bandW) * stripAspect;
+        const uV = (innerH / bandW) * stripAspect;
+        const vRepeat = level.outerFrac - level.innerFrac;
+        const vOffset = level.innerFrac;
+        const hTex = texture.clone();
+        hTex.wrapS = RepeatWrapping;
+        hTex.repeat.set(uH, vRepeat);
+        hTex.offset.set(0, vOffset);
+        hTex.needsUpdate = true;
+        const vTex = texture.clone();
+        vTex.wrapS = RepeatWrapping;
+        vTex.repeat.set(uV, vRepeat);
+        vTex.offset.set(0, vOffset);
+        vTex.needsUpdate = true;
+        return { key: li, skinZ, outerW, innerH, bandW, yTop, xSide, hTex, vTex };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [texture, levels, openingW, openingH, w, backZ, depth, stripAspect]);
+  useEffect(
+    () => () => {
+      levelSkins.forEach(({ hTex, vTex }) => {
+        hTex.dispose();
+        vTex.dispose();
+      });
+    },
+    [levelSkins],
+  );
+  return (
+    <group>
+      {levelSkins.map(({ key, skinZ, outerW, innerH, bandW, yTop, xSide, hTex, vTex }) => (
+        <group key={key}>
+          {/* Top bar — outer edge up. */}
+          <mesh position={[0, yTop, skinZ]}>
+            <planeGeometry args={[outerW, bandW]} />
+            <meshStandardMaterial map={hTex} color="#ffffff" metalness={skinMetalness} roughness={roughness} envMapIntensity={0.6} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+          </mesh>
+          {/* Bottom bar — turned 180 deg so the outer edge is down. */}
+          <mesh position={[0, -yTop, skinZ]} rotation={[0, 0, Math.PI]}>
+            <planeGeometry args={[outerW, bandW]} />
+            <meshStandardMaterial map={hTex} color="#ffffff" metalness={skinMetalness} roughness={roughness} envMapIntensity={0.6} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+          </mesh>
+          {/* Left bar — turned +90 deg so the outer edge is left. */}
+          <mesh position={[-xSide, 0, skinZ]} rotation={[0, 0, Math.PI / 2]}>
+            <planeGeometry args={[innerH, bandW]} />
+            <meshStandardMaterial map={vTex} color="#ffffff" metalness={skinMetalness} roughness={roughness} envMapIntensity={0.6} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+          </mesh>
+          {/* Right bar — turned -90 deg so the outer edge is right. */}
+          <mesh position={[xSide, 0, skinZ]} rotation={[0, 0, -Math.PI / 2]}>
+            <planeGeometry args={[innerH, bandW]} />
+            <meshStandardMaterial map={vTex} color="#ffffff" metalness={skinMetalness} roughness={roughness} envMapIntensity={0.6} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
@@ -583,7 +700,21 @@ function FrameAssembly({ width, height, spec, selected }: { width: number; heigh
           />
         </mesh>
       ))}
-      {/* Rounded profile: a half-round bead along the inner front edge. */}
+      {/* Photo skin: the real frame photo on the front face (the rings
+          underneath keep the real depth, profile steps and shadows). */}
+      {spec.photo && (
+        <FramePhotoSkin
+          photo={spec.photo}
+          levels={levels}
+          openingW={openingW}
+          openingH={openingH}
+          w={w}
+          backZ={backZ}
+          depth={d}
+          metalness={spec.metalness}
+          roughness={spec.roughness}
+        />
+      )}
       {spec.profile === "rounded" && (
         <group>
           <mesh position={[0, openingH / 2 + w * 0.05, frontZ - w * 0.05]} rotation={[0, 0, Math.PI / 2]}>
@@ -636,10 +767,12 @@ function FrameAssembly({ width, height, spec, selected }: { width: number; heigh
           <FrameBar size={[trim.width, openingH, 0.02]} position={[openingW / 2 + trim.width / 2, 0, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
         </group>
       )}
-      {/* Beaded inner edge: real gold spheres on the inner front face. */}
-      {spec.bead && <BeadSpheres positions={beadPositions} z={innerFrontZ + 0.003} />}
-      {/* Carved border: real rosettes (and scrolls) on the outer band. */}
-      {ornament !== "none" && (
+      {/* Beaded inner edge: real gold spheres on the inner front face.
+          Not for photo frames — the photo already carries the beads. */}
+      {spec.bead && !spec.photo && <BeadSpheres positions={beadPositions} z={innerFrontZ + 0.003} />}
+      {/* Carved border: real rosettes (and scrolls) on the outer band.
+          Not for photo frames — the photo already carries the carving. */}
+      {ornament !== "none" && !spec.photo && (
         <OrnamentSet positions={ornamentLoop} z={frontZ - 0.003} scale={ornamentScale} carved={ornament === "carved"} color={spec.color} metalness={spec.metalness} roughness={spec.roughness} />
       )}
     </group>

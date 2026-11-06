@@ -10,6 +10,7 @@ import {
   ASSET_SOURCES,
   EXTERNAL_PROVIDER_SLOTS,
   IMAGE3D_MODES,
+  MARKETPLACE_REFERENCES,
   MAX_ASSET_FILE_BYTES,
   PUBLIC_DOMAIN_REFERENCES,
   formatBytes,
@@ -430,6 +431,7 @@ export default function ImageTo3D() {
 
   const selectedMode = IMAGE3D_MODES.find((item) => item.id === mode);
   const provider = getImage3DProvider(providerId) ?? localApproximationProvider;
+  const selectedSlot = EXTERNAL_PROVIDER_SLOTS.find((slot) => slot.id === providerId);
 
   return (
     <div>
@@ -576,12 +578,31 @@ export default function ImageTo3D() {
           </div>
 
           <div className="property-section">
-            <label>PUBLIC-DOMAIN REFERENCE LINKS — LINK OUT, DO NOT RE-HOST</label>
+            <label>REFERENCE LINKS — LINK OUT, DO NOT RE-HOST</label>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-              Starter sources for free 3D assets. These are links to other sites — SANAA does not copy or host their files. Always check the licence on the file page itself before using an asset.
+              Starter sources for free 3D assets, plus marketplaces below. These are links to other sites — SANAA does not copy or host their files. Always check the licence on the file page itself before using an asset.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {PUBLIC_DOMAIN_REFERENCES.map((ref) => (
+                <li key={ref.name} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 12 }}>
+                  <a href={ref.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", fontWeight: 600, fontSize: 13 }}>
+                    {ref.name} ↗
+                  </a>
+                  <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
+                    {ref.what}
+                    <br />
+                    Licence: {ref.license}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <h3 style={{ fontSize: 13, margin: "18px 0 6px" }}>Marketplaces — per-asset licence, link out only</h3>
+            <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
+              Marketplace assets are not free by default: each one has its own licence and price. Record the asset URL
+              and licence in your library like any other source — SANAA never re-hosts marketplace files.
+            </p>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
+              {MARKETPLACE_REFERENCES.map((ref) => (
                 <li key={ref.name} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 12 }}>
                   <a href={ref.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", fontWeight: 600, fontSize: 13 }}>
                     {ref.name} ↗
@@ -721,7 +742,19 @@ export default function ImageTo3D() {
                 </option>
               ))}
             </select>
-            <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>{provider.setupInstructions()}</p>
+            <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
+              {selectedSlot ? (
+                <>
+                  <strong style={{ color: "var(--ink)" }}>Not connected — setup required.</strong> {selectedSlot.setup ?? selectedSlot.note}
+                  <br />
+                  <a href={selectedSlot.docs} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                    {selectedSlot.docs} ↗
+                  </a>
+                </>
+              ) : (
+                provider.setupInstructions()
+              )}
+            </p>
           </div>
 
           <div className="property-section">
@@ -836,17 +869,24 @@ export default function ImageTo3D() {
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
               No external provider is connected yet, so the three reconstruction modes stay unavailable rather than pretending to work. To enable
               one, implement the <code>Image3DProvider</code> interface in <code>lib/asset-library.ts</code> and register it in{" "}
-              <code>image3DProviders</code>. Each service needs its own account and API key, billed per generation.
+              <code>image3DProviders</code>. Cloud services need their own account and API key, billed per generation; RealityCapture /
+              RealityScan is different — it is desktop software licensed through an Epic Games account, with no API key at all.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {EXTERNAL_PROVIDER_SLOTS.map((slot) => (
                 <li key={slot.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 12 }}>
-                  <strong style={{ fontSize: 13 }}>{slot.label}</strong>
+                  <strong style={{ fontSize: 13 }}>
+                    {slot.label} — not connected
+                  </strong>
                   <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-                    {slot.note}
+                    {slot.setup ?? slot.note}
                     <br />
-                    Environment: <code>{slot.envVars.join(" · ")}</code>
-                    <br />
+                    {slot.envVars.length > 0 && (
+                      <>
+                        Environment: <code>{slot.envVars.join(" · ")}</code>
+                        <br />
+                      </>
+                    )}
                     <a href={slot.docs} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
                       {slot.docs} ↗
                     </a>

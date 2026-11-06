@@ -989,6 +989,81 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
     }, "image/png");
   }
 
+  // --- Unreal Engine / Twinmotion export -----------------------------------
+  // A JSON manifest of the measured twin: the bridge for rebuilding this
+  // exact room in Twinmotion or Unreal Engine. This is NOT a Datasmith
+  // (.udatasmith) or FBX file and NOT a live link to Unreal — SANAA
+  // produces no Unreal file format. The manifest carries the numbers so the
+  // room can be rebuilt 1:1 in Twinmotion/Unreal, by hand or by a Datasmith
+  // workflow. All dimensions are metres; origin is the centre of the floor,
+  // +X along the room length, +Z along the room width, +Y up.
+  function exportUnrealManifest() {
+    const slug = (twin.title || "twin").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    const manifest = {
+      format: "sanaa-digital-twin",
+      version: 1,
+      units: "metres",
+      exportedAt: new Date().toISOString(),
+      twin: { title: twin.title, roomName: twin.roomName },
+      room: {
+        lengthMetres: twin.length,
+        widthMetres: twin.width,
+        heightMetres: twin.height,
+        plannedLengthMetres: twin.plannedLength,
+        plannedWidthMetres: twin.plannedWidth,
+        plannedHeightMetres: twin.plannedHeight,
+      },
+      materials: {
+        wall: { material: twin.wallMaterial, color: twin.wallColor },
+        floor: { material: twin.floorMaterial, color: twin.floorColor },
+        ceiling: { color: twin.ceilingColor },
+      },
+      openings: twin.openings.map((opening) => ({
+        kind: opening.kind,
+        wall: opening.wall,
+        offsetAlongWallMetres: opening.offset,
+        widthMetres: opening.width,
+        heightMetres: opening.height,
+        sillHeightMetres: opening.sill,
+        position3d: wallPoint(twin, opening.wall, opening.offset, opening.sill + opening.height / 2),
+      })),
+      artworks: twin.placements.map((placement) => {
+        const art = artworks.find((item) => item.id === placement.artworkId);
+        const size = art ? parseDimensions(art.dimensions) : null;
+        return {
+          title: art?.title ?? "Unknown artwork",
+          artist: art?.artist ?? "",
+          year: art?.year ?? "",
+          medium: art?.medium ?? "",
+          dimensions: art?.dimensions ?? "",
+          widthMetres: size?.w ?? null,
+          heightMetres: size?.h ?? null,
+          frame: art?.frame ?? "",
+          wall: placement.wall,
+          offsetAlongWallMetres: placement.offset,
+          hangingHeightToCentreMetres: placement.height,
+          plannedOffsetAlongWallMetres: placement.plannedOffset,
+          plannedHangingHeightToCentreMetres: placement.plannedHeight,
+          position3d: wallPoint(twin, placement.wall, placement.offset, placement.height),
+          imageUrl: art?.imageUrl ?? null,
+        };
+      }),
+      notes: [
+        "This is a JSON manifest, NOT a Datasmith (.udatasmith) or FBX file. Rebuild the room in Twinmotion or Unreal Engine from these dimensions and place each artwork as an image plane at the listed wall, offset and hanging height.",
+        "Artwork image files are referenced by URL where available; they are not embedded in this file — supply the image files to Twinmotion / Unreal Engine separately.",
+        "Requires Twinmotion or Unreal Engine installed and an Epic Games account. This export is a one-way bridge, not a live link to Unreal.",
+      ],
+    };
+    const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${slug}-unreal-twinmotion-manifest.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setMessage("Exported the Unreal / Twinmotion manifest as JSON. It is a data bridge for rebuilding this room — not a Datasmith file and not a live link to Unreal.");
+  }
+
 // --- VR movement rig ----------------------------------------------------------
 // Runs inside the VR Canvas: while a session is presenting, the thumbstick
 // (gamepad axes) walks the camera on the floor plane, and pressing the
@@ -1357,6 +1432,85 @@ function VrCameraTour({ target, active }: { target: [number, number, number] | n
                 </li>
               ))}
             </ul>
+          </section>
+
+          {/* Unreal Engine / Twinmotion export — JSON manifest bridge */}
+          <section style={cardStyle} aria-label="Export for Unreal Engine and Twinmotion">
+            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>7 · Export for Unreal Engine / Twinmotion</h2>
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
+              Download this twin as a JSON manifest — room dimensions, wall / floor / ceiling materials and colours,
+              door and window positions, and every artwork placement with its real dimensions, frame and hanging
+              height — so the room can be rebuilt 1:1 in Twinmotion or Unreal Engine.
+            </p>
+            <p style={{ fontSize: 12, lineHeight: 1.6, background: "#fdf3e3", border: "1px solid #e8d5ae", borderRadius: 6, padding: 10 }}>
+              <strong>An export bridge, not a live link.</strong> This downloads a JSON manifest — it does <em>not</em>{" "}
+              produce a Datasmith (.udatasmith) or FBX file, and there is no one-click Datasmith import. In Twinmotion
+              or Unreal Engine, rebuild the room to these exact dimensions and place each artwork as an image plane at
+              the listed wall, offset and hanging height. That needs Twinmotion or Unreal Engine installed, with an Epic
+              Games account. Artwork images are referenced by URL in the manifest, not embedded — supply the image files
+              separately.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className="primary-button" onClick={exportUnrealManifest}>
+                Download Unreal / Twinmotion manifest (JSON)
+              </button>
+            </div>
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 8, lineHeight: 1.6 }}>
+              Included: room length × width × height (measured and planned), wall material and colour, floor material
+              and colour, ceiling colour, every door and window (wall, offset, size, sill height, 3D position), and
+              every placed artwork (title, artist, year, medium, dimensions in metres, frame, wall, offset along the
+              wall, hanging height to centre, 3D position). All dimensions are in metres.
+            </p>
+          </section>
+
+          {/* Unreal Engine — Pixel Streaming: integration point, not connected */}
+          <section style={cardStyle} aria-label="Unreal Engine Pixel Streaming">
+            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>8 · Unreal Engine — Pixel Streaming</h2>
+            <p style={{ fontSize: 12, lineHeight: 1.6, background: "#f6f1ea", border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
+              <strong>Integration point — not connected, not a working demo.</strong> Nothing on this page streams
+              Unreal, and no stream URL is wired in yet. This section documents what that step would honestly require,
+              so it is planned, not promised.
+            </p>
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
+              Unreal Engine does <strong>not</strong> run natively in a browser the way Three.js does. A web page
+              cannot just load an Unreal scene. Delivering Unreal quality to a browser means <strong>Pixel
+              Streaming</strong>: the packaged Unreal application runs on a remote GPU server and streams its rendered
+              frames (and audio) to the visitor&apos;s browser as video over WebRTC, with mouse / keyboard / touch input
+              travelling back. The visitor needs only a modern browser — no install, no graphics card of their own. The
+              other web route is a downloadable packaged app, not a web page at all.
+            </p>
+            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>What Pixel Streaming really requires</h3>
+            <ul style={{ fontSize: 12, lineHeight: 1.8, margin: "0 0 12px", paddingLeft: 18 }}>
+              <li>An Epic Games developer account, and the gallery built as an Unreal Engine project with the Pixel Streaming plugin enabled and packaged.</li>
+              <li>A GPU cloud server to run it on — for example an AWS, Azure or GCP GPU instance (Epic publishes an official Pixel Streaming solution in the Azure Marketplace). The server runs while visitors are watching, so this is an <strong>ongoing cost</strong>, priced by the cloud provider — no price is stated here because it depends on the instance, region and hours used.</li>
+              <li>A signalling server (the plugin ships a Node.js one) plus STUN / TURN servers so the stream can reach visitors behind home routers — see Epic&apos;s Pixel Streaming documentation at dev.epicgames.com.</li>
+              <li>At scale, a matchmaker / load balancer so several visitors each get their own running instance — one stream is one running Unreal app.</li>
+            </ul>
+            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>Setup steps, when the time comes</h3>
+            <ol style={{ fontSize: 12, lineHeight: 1.8, margin: "0 0 12px", paddingLeft: 18 }}>
+              <li>Build the gallery in Unreal Engine from the manifest above (section 7), RealityCapture / RealityScan models of the real space, and Fab assets for dressing.</li>
+              <li>Enable the Pixel Streaming plugin, package the project, and test the stream locally first.</li>
+              <li>Deploy the packaged app to a GPU server with the signalling server, and confirm the stream URL.</li>
+              <li>Only then wire that stream URL into SANAA as an embedded player — a future step, not part of this tool yet.</li>
+            </ol>
+            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>The practical path today — no streaming needed</h3>
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
+              True-to-life (&laquo; vraie réalité &raquo;) does not have to wait for a server. Use Twinmotion / Unreal
+              Engine <strong>offline</strong> to produce photorealistic renders and assets — RealityCapture / RealityScan
+              scans of real spaces and objects, Fab assets for furniture and dressing, the JSON manifest above for the
+              exact room dimensions — and feed those renders and models back into this web platform, which already shows
+              them in Three.js. That is the free-tools-first decision: RealityCapture is free under $1M annual revenue
+              and Fab has free assets, while Pixel Streaming is a paid server cost — so streaming stays a later option,
+              not the starting point. Streaming is the later step, only if the gallery must be interactive in the browser at
+              Unreal quality, and only once the GPU server cost is budgeted.
+            </p>
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
+              Reference: Epic&apos;s official Pixel Streaming deployment in Azure —{" "}
+              <a href="https://learn.microsoft.com/de-de/gaming/azure/reference-architectures/unreal-pixel-streaming-in-azure" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                Unreal Pixel Streaming in Azure ↗
+              </a>{" "}
+              (Epic&apos;s own Pixel Streaming documentation lives at dev.epicgames.com).
+            </p>
           </section>
         </div>
       )}

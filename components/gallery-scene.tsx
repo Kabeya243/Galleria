@@ -610,17 +610,17 @@ function FramePhotoSkin({
         hTex.needsUpdate = true;
         const vTex = texture.clone();
         vTex.wrapS = RepeatWrapping;
-        // Vertical bars: turn the texture 90 deg so the grain follows
-        // the moulding's length, as it does on the horizontal bars.
-        // The mesh is already turned 90 deg, so the strip's long axis
-        // (U, the grain) would otherwise run across the bar. Rotating
-        // the texture swaps U/V, so the repeat and the band offset swap
-        // with it: the band slice (vRepeat / vOffset) moves to U, the
-        // along-bar repeat (uV) moves to V.
-        vTex.center.set(0.5, 0.5);
-        vTex.rotation = Math.PI / 2;
-        vTex.repeat.set(vRepeat, uV);
-        vTex.offset.set(vOffset, 0);
+        // Vertical bars: NO texture rotation. The mesh itself is turned
+        // +/-90 deg, and the UVs travel with it, so the strip's long axis
+        // (U, the grain) already runs along the moulding's length — exactly
+        // as on the horizontal bars. Rotating the texture as well would
+        // put the grain across the bar (verified against Three.js
+        // Matrix3.setUvTransform: rotation +PI/2 makes the grain
+        // horizontal on a vertical stile). Keep the same repeat/offset
+        // layout as the horizontal bars: U repeats along the bar, V
+        // selects the band slice.
+        vTex.repeat.set(uV, vRepeat);
+        vTex.offset.set(0, vOffset);
         vTex.needsUpdate = true;
         return { key: li, skinZ, outerW, innerH, bandW, yTop, xSide, hTex, vTex };
       })

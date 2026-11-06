@@ -25,6 +25,16 @@ function prettyDate(iso: string): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+// Same format as the dashboard's Visitor statistics, so the average
+// time reads identically on both pages.
+function formatDuration(seconds: number | null): string {
+  if (seconds == null) return "—";
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+}
+
 export default function VisitorAnalytics({
   exhibitions,
   selectedId,
@@ -35,6 +45,7 @@ export default function VisitorAnalytics({
   uniqueVisitors30,
   totalVisitsAllTime,
   uniqueVisitorsAllTime,
+  avgDurationSeconds,
   topArtworks,
   devices,
   referrers,
@@ -49,6 +60,7 @@ export default function VisitorAnalytics({
   uniqueVisitors30: number;
   totalVisitsAllTime: number;
   uniqueVisitorsAllTime: number;
+  avgDurationSeconds: number | null;
   topArtworks: TopArtwork[];
   devices: CountRow[];
   referrers: CountRow[];
@@ -59,14 +71,17 @@ export default function VisitorAnalytics({
   const maxDaily = Math.max(...daily.map((d) => d.visits), 1);
   const hasVisits = totalVisitsAllTime > 0;
 
+  // A visit is one exhibition open. Artwork-detail opens are counted
+  // separately under Most viewed artworks and never inflate these totals.
   const totals = useMemo(
     () => [
       { value: totalVisits30, label: "Visits · last 30 days" },
       { value: uniqueVisitors30, label: "Unique visitors · last 30 days" },
       { value: totalVisitsAllTime, label: "Visits · all time" },
       { value: uniqueVisitorsAllTime, label: "Unique visitors · all time" },
+      { value: formatDuration(avgDurationSeconds), label: "Average time · all time" },
     ],
-    [totalVisits30, uniqueVisitors30, totalVisitsAllTime, uniqueVisitorsAllTime],
+    [totalVisits30, uniqueVisitors30, totalVisitsAllTime, uniqueVisitorsAllTime, avgDurationSeconds],
   );
 
   function downloadCsv() {
@@ -82,6 +97,7 @@ export default function VisitorAnalytics({
         ["Unique visitors last 30 days", uniqueVisitors30],
         ["Visits all time", totalVisitsAllTime],
         ["Unique visitors all time", uniqueVisitorsAllTime],
+        ["Average time all time", formatDuration(avgDurationSeconds)],
         [],
         ["Visits per day (last 30 days)"],
         ["Date", "Visits", "Unique visitors"],
@@ -193,6 +209,10 @@ export default function VisitorAnalytics({
           </div>
         ))}
       </div>
+      <p style={{ margin: "0 0 24px", color: "var(--muted)", fontSize: 12 }}>
+        Visits count each time this exhibition is opened. Opening an artwork&apos;s details counts towards that
+        artwork&apos;s views, not towards visits.
+      </p>
 
       <section style={{ marginBottom: 32 }}>
         <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Visits — last 30 days</h2>

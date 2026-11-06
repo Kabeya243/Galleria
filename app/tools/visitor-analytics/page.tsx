@@ -68,17 +68,25 @@ export default async function VisitorAnalyticsRoute({
   const now = new Date();
   const windowStart = utcDay(new Date(now.getTime() - (DAYS - 1) * 24 * 60 * 60 * 1000));
 
-  const [recentRows, allTimeCount, allTimeKeys, topArtworkGroups, deviceGroups, countryGroups, referrerRows] =
+  // A "visit" here is an exhibition open (artworkId null) — the same
+  // definition as the dashboard's Visitor statistics, so the two pages
+  // agree. Artwork-detail opens are counted separately, under Most
+  // viewed artworks, and must not inflate the visit totals.
+  const [recentRows, allTimeCount, allTimeKeys, avgDuration, topArtworkGroups, deviceGroups, countryGroups, referrerRows] =
     await Promise.all([
       db.visitLog.findMany({
-        where: { exhibitionId: selected.id, day: { gte: windowStart } },
+        where: { exhibitionId: selected.id, artworkId: null, day: { gte: windowStart } },
         select: { day: true, visitorKey: true },
       }),
-      db.visitLog.count({ where: { exhibitionId: selected.id } }),
+      db.visitLog.count({ where: { exhibitionId: selected.id, artworkId: null } }),
       db.visitLog.findMany({
-        where: { exhibitionId: selected.id },
+        where: { exhibitionId: selected.id, artworkId: null },
         select: { visitorKey: true },
         distinct: ["visitorKey"],
+      }),
+      db.visitLog.aggregate({
+        where: { exhibitionId: selected.id, artworkId: null },
+        _avg: { durationSeconds: true },
       }),
       db.visitLog.groupBy({
         by: ["artworkId"],
@@ -89,17 +97,17 @@ export default async function VisitorAnalyticsRoute({
       }),
       db.visitLog.groupBy({
         by: ["device"],
-        where: { exhibitionId: selected.id },
+        where: { exhibitionId: selected.id, artworkId: null },
         _count: { _all: true },
       }),
       db.visitLog.groupBy({
         by: ["country"],
-        where: { exhibitionId: selected.id },
+        where: { exhibitionId: selected.id, artworkId: null },
         _count: { _all: true },
         orderBy: { _count: { country: "desc" } },
       }),
       db.visitLog.findMany({
-        where: { exhibitionId: selected.id },
+        where: { exhibitionId: selected.id, artworkId: null },
         select: { referrer: true },
         take: 10000,
       }),
@@ -182,6 +190,7 @@ export default async function VisitorAnalyticsRoute({
         uniqueVisitors30={unique30}
         totalVisitsAllTime={allTimeCount}
         uniqueVisitorsAllTime={allTimeKeys.length}
+        avgDurationSeconds={avgDuration._avg.durationSeconds != null ? Math.round(avgDuration._avg.durationSeconds) : null}
         topArtworks={topArtworks}
         devices={devices}
         referrers={referrers}

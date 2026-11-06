@@ -990,7 +990,11 @@ button { font-weight: 600; }
 .auth-noir-divider:before, .auth-noir-divider:after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .auth-noir-checklist { list-style: none; margin: -14px 0 22px; padding: 0; color: #8f8d82; font-size: 11px; line-height: 1.9; }
 .auth-noir-checklist li span { display: inline-block; width: 16px; }
-.auth-noir-check-ok { color: var(--ink); }
+/* Satisfied rules stay visible: the label brightens and the tick turns
+   green. Never var(--ink) here — it is near-black (#252722) on the
+   noir panel (#121212), which made satisfied rules invisible. */
+.auth-noir-check-ok { color: #d8d6cc; }
+.auth-noir-check-ok span { color: #6fbf73; }
 .auth-noir-error { margin: 0 0 22px; padding: 11px 13px; border: 1px solid #5a2b22; border-radius: 6px; background: #2a1410; color: #f0a58f; font-size: 12px; }
 .auth-noir-submit { position: absolute; right: 30px; bottom: 30px; width: 96px; height: 96px; border: 0; border-radius: 50% !important; background: #fff; color: #000; font: 700 11px "DM Sans", sans-serif; letter-spacing: .08em; cursor: pointer; transition: transform .18s, background .18s; }
 .auth-noir-submit:hover { transform: scale(1.05); background: #e8e6df; }

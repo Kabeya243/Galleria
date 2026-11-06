@@ -224,7 +224,7 @@ export default async function HomePage() {
       stats={{
         exhibitions: { value: exhibitions.length, ...deltaText(exhibitionsRecent) },
         artworks: { value: artworkCount, ...deltaText(artworksRecent) },
-        views: { value: viewCount, note: "All time" },
+        views: { value: viewCount, note: "All time · page loads" },
         publicExhibitions: { value: publicExhibitions.length, ...deltaText(publishedRecent) },
       }}
       chart={chart}

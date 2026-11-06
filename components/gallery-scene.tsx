@@ -3332,12 +3332,10 @@ function WalkControls({
   // The frame loop runs outside React renders, so it must never call a
   // possibly stale onRoomChange closure: the arch switch can fire
   // inside the scene while the header, panel and artworks stay on the
-  // old room. These refs are refreshed on every render, and the frame
-  // loop only ever calls / reads through them.
+  // old room. This ref is refreshed on every render, and the frame
+  // loop only ever calls through it.
   const onRoomChangeRef = useRef(onRoomChange);
   onRoomChangeRef.current = onRoomChange;
-  const activeRoomIdRef = useRef(activeRoomId);
-  activeRoomIdRef.current = activeRoomId;
   const initialized = useRef(false);
   const velocity = useRef(new Vector3());
   const direction = useRef(new Vector3());
@@ -3361,7 +3359,20 @@ function WalkControls({
       return;
     }
     const requestedIndex = rooms.findIndex((room) => room.id === activeRoomId);
-    if (requestedIndex < 0 || handledRoomId.current === activeRoomId) return;
+    if (requestedIndex < 0) return;
+    // A room change the frame loop already made — walking through the
+    // arch or a doorway — must never move the camera: the visitor is
+    // already standing in the new room. The loop sets both the internal
+    // index and the handled id before calling onRoomChange, so when the
+    // parent's active room catches up the index already matches. Only
+    // sync the handled id and leave the camera exactly where it is.
+    // The camera is repositioned to the room entrance solely for a
+    // parent-initiated switch (floor-plan / room-list click, reset),
+    // where the frame loop has not moved the internal index.
+    if (handledRoomId.current === activeRoomId || currentRoomIndex.current === requestedIndex) {
+      handledRoomId.current = activeRoomId;
+      return;
+    }
     const room = rooms[requestedIndex];
     const { depth } = roomLayouts[room.layout];
     camera.position.set(
@@ -3456,34 +3467,15 @@ function WalkControls({
       }
       return;
     }
-    // Reconcile the active room with where the camera actually is.
-    // The arch threshold below fires once, in a single frame; if that
-    // call never reaches the parent, the camera walks on into the other
-    // half while the header, panel and artworks stay on the old room
-    // (the live symptom: camera 2–3 m from the back wall, still
-    // "ROOM 1"). So every frame, derive the Stone half from the
-    // camera's world Z and re-assert it when it disagrees with the
-    // active room. The boundary is the arch wall itself (0.7 m thick,
-    // centred on the shared edge), so standing inside the arched
-    // tunnel changes nothing and the room never flickers at the
-    // boundary. Only the Stone front/back pair uses this — other rooms
-    // keep their doorway switching.
-    for (let i = 0; i + 1 < rooms.length; i += 1) {
-      if (rooms[i].layout !== "stone-gallery-front" || rooms[i + 1].layout !== "stone-gallery-back") continue;
-      const boundaryZ = zOffsetOf(i) - roomLayouts[rooms[i].layout].depth / 2;
-      const worldZ = camera.position.z;
-      const activeId = activeRoomIdRef.current;
-      if (worldZ < boundaryZ - 0.35 && activeId !== rooms[i + 1].id) {
-        currentRoomIndex.current = i + 1;
-        handledRoomId.current = rooms[i + 1].id;
-        onRoomChangeRef.current?.(rooms[i + 1].id);
-      } else if (worldZ > boundaryZ + 0.35 && activeId !== rooms[i].id) {
-        currentRoomIndex.current = i;
-        handledRoomId.current = rooms[i].id;
-        onRoomChangeRef.current?.(rooms[i].id);
-      }
-      break;
-    }
+    // No continuous reconciliation here: the active room changes only
+    // on the actual arch / doorway crossing (the threshold switch
+    // below), which keeps the camera exactly where the visitor is
+    // standing. Re-asserting the room from the camera's world Z every
+    // frame re-fired onRoomChange and, through the parent, could reset
+    // the camera to the room entrance instead of only switching the
+    // active room — the snap-back at the arch. The threshold switch
+    // already calls onRoomChange through the ref, so a missed switch
+    // cannot strand the header on the old room.
     const keys = input.current;
     const forwardInput = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
     const sideInput = Number(keys.has("KeyD") || keys.has("ArrowRight")) - Number(keys.has("KeyA") || keys.has("ArrowLeft"));

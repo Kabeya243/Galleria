@@ -140,6 +140,12 @@ export function surfacePBR(style: string | undefined, site: "floor" | "wall" | "
       return site === "floor"
         ? { roughness: 0.5, metalness: 0, envMapIntensity: 0.45 }
         : { roughness: 0.68, metalness: 0, envMapIntensity: 0.25 };
+    case "parquet":
+      // Real light parquet photo (Poly Haven "Wood Floor", CC0): a satin
+      // finish, a touch more sheen than the procedural wood tile.
+      return site === "floor"
+        ? { roughness: 0.42, metalness: 0, envMapIntensity: 0.55 }
+        : { roughness: 0.68, metalness: 0, envMapIntensity: 0.25 };
     case "brick":
       return { roughness: 0.92, metalness: 0, envMapIntensity: 0.08 };
     case "stone":

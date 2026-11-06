@@ -161,7 +161,7 @@ export const ELEMENT_DEFAULTS: Record<ElementType, ElementDefaults> = {
   chair: { label: "Chair", color: "#8a6a45", length: 1, y: 0, wallOffset: 0 },
   bench: { label: "Long bench", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
   table: { label: "Table", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
-  door: { label: "Door", color: "#8a6a45", length: 1, y: 0, wallOffset: 0.15 },
+  door: { label: "Door", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0.15 },
   window: { label: "Window", color: "#f5f2eb", length: 1, y: 1.8, wallOffset: 0.16 },
   "wall-text": { label: "Wall text", color: "#f5f2eb", length: 4, y: 2.2, wallOffset: 0.16 },
   plinth: { label: "Plinth", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },

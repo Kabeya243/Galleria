@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
+import { ACESFilmicToneMapping, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, surfacePBR, type RenderQuality } from "@/lib/render-quality";
@@ -60,7 +60,10 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
       for (let x = offset; x <= 256; x += 64) context.fillRect(x - 1, row * 32, 3, 32);
     }
     texture.repeat.set(6, 3);
-  } else if (style === "wood") {
+  } else if (style === "wood" || style === "parquet") {
+    // "parquet" shares the procedural wood tile as its fallback: the
+    // real photo (useParquetTexture) replaces it once loaded, so the
+    // floor never sits flat while the photo is in flight.
     context.fillStyle = "#f8f2e2";
     context.fillRect(0, 0, 256, 256);
     for (let plank = 0; plank < 8; plank += 1) {
@@ -150,6 +153,44 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
     texture.repeat.set(2, 2);
   }
 
+  return texture;
+}
+
+// Real light parquet (Poly Haven "Wood Floor", CC0) for the "parquet"
+// floor finish: loaded imperatively (TextureLoader + state), never via
+// useTexture — GalleryRoom sits outside every <Suspense> boundary, so a
+// suspending load would blank the scene (the wall-text troika failure).
+// Until the photo loads, the caller falls back to the procedural wood
+// tile, so the floor never sits flat. One photo tile covers ~2 m of
+// floor (eight wide planks per tile), so the planks read at a real
+// scale in any room size.
+function useParquetTexture(width: number, depth: number): Texture | null {
+  const [texture, setTexture] = useState<Texture | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const loader = new TextureLoader();
+    const tex = loader.load(
+      "/textures/wood-floor.jpg",
+      (loaded) => {
+        if (!alive) return;
+        loaded.colorSpace = SRGBColorSpace;
+        loaded.wrapS = RepeatWrapping;
+        loaded.wrapT = RepeatWrapping;
+        loaded.anisotropy = 8;
+        loaded.repeat.set(Math.max(1, width / 2), Math.max(1, depth / 2));
+        loaded.needsUpdate = true;
+        setTexture(loaded);
+      },
+      undefined,
+      () => {
+        // Load failed: keep the procedural wood tile.
+      },
+    );
+    return () => {
+      alive = false;
+      tex.dispose();
+    };
+  }, [width, depth]);
   return texture;
 }
 
@@ -1011,13 +1052,48 @@ function WallWithOpening({
           </mesh>
         </group>
       ) : (
-        <mesh
-          position={[x - Math.sign(x) * 0.02, (windowBottom + windowTop) / 2, 0]}
-          rotation={[0, Math.PI / 2, 0]}
-        >
-          <planeGeometry args={[windowWidth, windowTop - windowBottom]} />
-          <meshPhysicalMaterial color="#9bd1db" transparent opacity={0.28} roughness={0.12} side={DoubleSide} />
-        </mesh>
+        // A real gallery window: white frame and muntins around the
+        // opening, a bright sky-bright glass, and a sill into the room.
+        // The glass itself is emissive (the sky) — no separate sky plane,
+        // so a shared wall between two rooms never shows one room's sky
+        // floating inside the other.
+        <group>
+          {/* Glass: bright and sky-lit, the daylight cue. */}
+          <mesh
+            position={[x - Math.sign(x) * 0.02, (windowBottom + windowTop) / 2, 0]}
+            rotation={[0, Math.PI / 2, 0]}
+          >
+            <planeGeometry args={[windowWidth, windowTop - windowBottom]} />
+            <meshPhysicalMaterial color="#dceeff" transparent opacity={0.4} roughness={0.08} emissive="#bcd8ff" emissiveIntensity={0.7} side={DoubleSide} />
+          </mesh>
+          {/* White frame around the opening, proud of the wall face. */}
+          {[-1, 1].map((side) => (
+            <mesh key={`jamb-${side}`} position={[x - Math.sign(x) * 0.13, (windowBottom + windowTop) / 2, side * (windowWidth / 2 + 0.05)]}>
+              <boxGeometry args={[0.08, windowTop - windowBottom + 0.1, 0.1]} />
+              <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
+            </mesh>
+          ))}
+          {[-1, 1].map((side) => (
+            <mesh key={`rail-${side}`} position={[x - Math.sign(x) * 0.13, (side > 0 ? windowTop : windowBottom) + side * 0.05, 0]}>
+              <boxGeometry args={[0.08, 0.1, windowWidth + 0.2]} />
+              <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
+            </mesh>
+          ))}
+          {/* Muntins: one vertical, one horizontal divider across the glass. */}
+          <mesh position={[x - Math.sign(x) * 0.02, (windowBottom + windowTop) / 2, 0]}>
+            <boxGeometry args={[0.04, windowTop - windowBottom, 0.05]} />
+            <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
+          </mesh>
+          <mesh position={[x - Math.sign(x) * 0.02, (windowBottom + windowTop) / 2, 0]}>
+            <boxGeometry args={[0.04, 0.05, windowWidth]} />
+            <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
+          </mesh>
+          {/* Sill: a white ledge below the window, into the room. */}
+          <mesh position={[x - Math.sign(x) * 0.22, windowBottom - 0.03, 0]}>
+            <boxGeometry args={[0.3, 0.06, windowWidth + 0.3]} />
+            <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
+          </mesh>
+        </group>
       )}
     </group>
   );
@@ -1706,6 +1782,9 @@ function ElementMesh({
         </group>
       )}
       {element.type === "door" && (
+        // Flush white door: slim frame, a panel set flush with a thin
+        // shadow gap around it, and a slim lever handle — the reference
+        // room's door, not a wood door with a ball knob.
         <group>
           {[-0.85, 0.85].map((x) => (
             <mesh key={x} position={[x, 1.25, 0]} castShadow>
@@ -1717,17 +1796,33 @@ function ElementMesh({
             <boxGeometry args={[1.8, 0.12, 0.14]} />
             <meshStandardMaterial color={element.color} roughness={0.8} />
           </mesh>
+          {/* Shadow gap: a dark reveal behind the panel, so the flush
+              panel reads as a separate leaf with a crisp edge. */}
+          <mesh position={[0, 1.2, -0.01]}>
+            <boxGeometry args={[1.66, 2.46, 0.02]} />
+            <meshStandardMaterial color="#2b2b28" roughness={0.9} />
+          </mesh>
           <mesh position={[0, 1.2, 0.01]} castShadow>
             <boxGeometry args={[1.6, 2.4, 0.06]} />
             <meshStandardMaterial color={element.color} roughness={0.75} />
           </mesh>
-          <mesh position={[0.6, 1.05, 0.08]}>
-            <sphereGeometry args={[0.045, 12, 10]} />
-            <meshStandardMaterial color="#3a3a36" metalness={0.6} roughness={0.4} />
+          {/* Slim lever handle: a small rose and a horizontal lever in
+              dark bronze, at hand height on the right of the panel. */}
+          <mesh position={[0.62, 1.05, 0.055]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.028, 0.028, 0.02, 16]} />
+            <meshStandardMaterial color="#3a3a36" metalness={0.75} roughness={0.35} />
+          </mesh>
+          <mesh position={[0.55, 1.05, 0.075]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.013, 0.013, 0.14, 12]} />
+            <meshStandardMaterial color="#3a3a36" metalness={0.75} roughness={0.35} />
           </mesh>
         </group>
       )}
       {element.type === "window" && (
+        // White-framed window with muntins and a bright sky behind the
+        // glass, so daylight reads through it. The sky plane sits just
+        // behind the glass (in front of the wall), so it never leaks
+        // into another room.
         <group>
           <mesh position={[0, 0.67, 0]}>
             <boxGeometry args={[1.8, 0.07, 0.1]} />
@@ -1743,9 +1838,23 @@ function ElementMesh({
               <meshStandardMaterial color={element.color} roughness={0.8} />
             </mesh>
           ))}
+          {/* Sky behind the glass: a bright emissive plane, the daylight. */}
+          <mesh position={[0, 0, -0.04]}>
+            <planeGeometry args={[1.6, 1.2]} />
+            <meshStandardMaterial color="#e8f2ff" emissive="#dceaff" emissiveIntensity={1.1} side={DoubleSide} />
+          </mesh>
           <mesh position={[0, 0, 0]}>
             <planeGeometry args={[1.6, 1.2]} />
-            <meshPhysicalMaterial color="#9bd1db" transparent opacity={0.28} roughness={0.12} side={DoubleSide} />
+            <meshPhysicalMaterial color="#cfe8ef" transparent opacity={0.18} roughness={0.08} side={DoubleSide} />
+          </mesh>
+          {/* Muntins: one vertical, one horizontal divider across the glass. */}
+          <mesh position={[0, 0, 0.01]}>
+            <boxGeometry args={[0.05, 1.2, 0.04]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0, 0.01]}>
+            <boxGeometry args={[1.6, 0.05, 0.04]} />
+            <meshStandardMaterial color={element.color} roughness={0.8} />
           </mesh>
           <mesh position={[0, -0.73, 0.04]}>
             <boxGeometry args={[1.9, 0.06, 0.18]} />
@@ -1812,6 +1921,12 @@ function ElementMesh({
                 <mesh>
                   <cylinderGeometry args={[0.07, 0.09, 0.16, 12]} />
                   <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+                </mesh>
+                {/* Lit lens: a warm glowing disc at the head's mouth, so
+                    the fixture reads as switched on, not just a dark can. */}
+                <mesh position={[0, -0.085, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[0.055, 16]} />
+                  <meshStandardMaterial color="#fff0d6" emissive="#fff0d6" emissiveIntensity={1.5} side={DoubleSide} />
                 </mesh>
               </group>
             );
@@ -2081,6 +2196,7 @@ function RoomFeatures({
   panelColor,
   panelPBR,
   contactDecals,
+  shadows,
 }: {
   layout: string;
   width: number;
@@ -2092,7 +2208,20 @@ function RoomFeatures({
   panelColor?: string;
   panelPBR?: { roughness: number; envMapIntensity: number };
   contactDecals?: boolean;
+  // Render quality: whether the skylight's daylight casts real shadows.
+  shadows?: boolean;
 }) {
+  // Target of the skylight's daylight spot: the floor centre, so the
+  // light falls straight down through the verrière. Created here (top
+  // of the component, before the layout branches) so the hooks run on
+  // every render whatever the layout.
+  const skyTarget = useMemo(() => new Object3D(), []);
+  useEffect(() => {
+    skyTarget.position.set(0, 0, 0);
+    return () => {
+      skyTarget.removeFromParent();
+    };
+  }, [skyTarget]);
   if (layout === "cube") {
     // Ceiling track rails running the depth of the room, with spot heads.
     return (
@@ -2432,6 +2561,112 @@ function RoomFeatures({
       </group>
     );
   }
+  if (layout === "gallery-skylight") {
+    // The reference room: a white coffered ceiling with one central
+    // skylight (verrière). White beams on a 2.4 m grid form the
+    // coffers; the beams stop at the skylight opening, which is framed
+    // by a white curb and filled with a bright sky panel. A real
+    // spotlight shines down through it, so daylight pools on the
+    // parquet. The beams are real 3D relief, not a flat photo.
+    const beamY = height - 0.38;
+    const beamW = 0.18;
+    const beamD = 0.28;
+    const spacing = 2.4;
+    const skyX0 = -1.8;
+    const skyX1 = 1.8;
+    const skyZ0 = -1.2;
+    const skyZ1 = 1.2;
+    const xs: number[] = [];
+    for (let x = -width / 2 + spacing; x < width / 2; x += spacing) xs.push(x);
+    const zs: number[] = [];
+    for (let z = -depth / 2 + spacing; z < depth / 2; z += spacing) zs.push(z);
+    // Split a beam run into the segments that stop at the skylight
+    // opening, so no beam crosses the verrière.
+    const splitRun = (from: number, to: number, lo: number, hi: number): [number, number][] => {
+      if (hi <= from || lo >= to) return [[from, to]];
+      const segs: [number, number][] = [];
+      if (lo > from) segs.push([from, lo]);
+      if (hi < to) segs.push([hi, to]);
+      return segs.filter(([a, b]) => b - a > 0.05);
+    };
+    // X-beams (along X) at each grid z, split where they cross the skylight.
+    const xBeams: { z: number; from: number; to: number }[] = [];
+    zs.forEach((z) => {
+      if (z > skyZ0 && z < skyZ1) {
+        splitRun(-width / 2, width / 2, skyX0, skyX1).forEach(([from, to]) => xBeams.push({ z, from, to }));
+      } else {
+        xBeams.push({ z, from: -width / 2, to: width / 2 });
+      }
+    });
+    // Z-beams (along Z) at each grid x, split where they cross the skylight.
+    const zBeams: { x: number; from: number; to: number }[] = [];
+    xs.forEach((x) => {
+      if (x > skyX0 && x < skyX1) {
+        splitRun(-depth / 2, depth / 2, skyZ0, skyZ1).forEach(([from, to]) => zBeams.push({ x, from, to }));
+      } else {
+        zBeams.push({ x, from: -depth / 2, to: depth / 2 });
+      }
+    });
+    return (
+      <group>
+        {xBeams.map(({ z, from, to }, i) => (
+          <mesh key={`xb-${i}`} position={[(from + to) / 2, beamY, z]}>
+            <boxGeometry args={[to - from, beamD, beamW]} />
+            <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
+          </mesh>
+        ))}
+        {zBeams.map(({ x, from, to }, i) => (
+          <mesh key={`zb-${i}`} position={[x, beamY, (from + to) / 2]}>
+            <boxGeometry args={[beamW, beamD, to - from]} />
+            <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
+          </mesh>
+        ))}
+        {/* Curb: a white frame around the skylight opening, finishing
+            the cut edge of the coffers (same white as the beams, so it
+            reads as one frame; slightly deeper, so it lips below them). */}
+        <mesh position={[0, beamY, skyZ0]}>
+          <boxGeometry args={[skyX1 - skyX0 + 0.28, beamD + 0.04, 0.14]} />
+          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
+        </mesh>
+        <mesh position={[0, beamY, skyZ1]}>
+          <boxGeometry args={[skyX1 - skyX0 + 0.28, beamD + 0.04, 0.14]} />
+          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
+        </mesh>
+        <mesh position={[skyX0, beamY, 0]}>
+          <boxGeometry args={[0.14, beamD + 0.04, skyZ1 - skyZ0]} />
+          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
+        </mesh>
+        <mesh position={[skyX1, beamY, 0]}>
+          <boxGeometry args={[0.14, beamD + 0.04, skyZ1 - skyZ0]} />
+          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
+        </mesh>
+        {/* Sky: a bright emissive panel at the top of the light well. */}
+        <mesh position={[0, height - 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[skyX1 - skyX0, skyZ1 - skyZ0]} />
+          <meshStandardMaterial color="#eef4ff" emissive="#dfe9ff" emissiveIntensity={1.2} side={DoubleSide} />
+        </mesh>
+        {/* Daylight: a real spotlight falling straight down through the
+            verrière, so a pool of daylight lands on the parquet. */}
+        <primitive object={skyTarget} />
+        <spotLight
+          position={[0, height - 0.4, 0]}
+          target={skyTarget}
+          angle={0.55}
+          penumbra={0.75}
+          intensity={50}
+          distance={16}
+          color="#e8f0ff"
+          castShadow={shadows ?? true}
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+          shadow-bias={-0.0002}
+          shadow-normalBias={0.02}
+          shadow-camera-near={0.5}
+          shadow-camera-far={16}
+        />
+      </group>
+    );
+  }
   if (layout === "timber-ceiling") {
     // Warm timber beams across a wooden ceiling.
     const xs: number[] = [];
@@ -2621,6 +2856,14 @@ function GalleryRoom({
   const wallTexture = useMemo(() => createSurfaceTexture(room.wallTexture), [room.wallTexture]);
   const floorTexture = useMemo(() => createSurfaceTexture(room.floorTexture), [room.floorTexture]);
   const ceilingTexture = useMemo(() => createSurfaceTexture(room.ceilingTexture), [room.ceilingTexture]);
+  // Real parquet photo for the "parquet" floor finish (the procedural
+  // wood tile above is the fallback until the photo loads).
+  const parquetTexture = useParquetTexture(width, depth);
+  // The photo carries its own light-wood colours, so it renders
+  // un-tinted (white); the procedural tile is multiplied by the floor
+  // colour as before.
+  const floorTopMap = room.floorTexture === "parquet" ? (parquetTexture ?? floorTexture) : floorTexture;
+  const floorTopColor = room.floorTexture === "parquet" && parquetTexture ? "#ffffff" : room.floorColor;
   // Freestanding panels reuse the wall's surface map at panel scale: the
   // wall texture repeats 4x2 across a 22 m wall, so a shared instance
   // would pack the formwork joints far too densely on a 1.7 m panel.
@@ -2675,7 +2918,7 @@ function GalleryRoom({
         <boxGeometry args={[width, 0.18, roomDepth]} />
         <meshStandardMaterial attach="material-0" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
         <meshStandardMaterial attach="material-1" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
-        <meshStandardMaterial attach="material-2" color={room.floorColor} map={floorTexture} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
+        <meshStandardMaterial attach="material-2" color={floorTopColor} map={floorTopMap} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
         <meshStandardMaterial attach="material-3" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
         <meshStandardMaterial attach="material-4" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
         <meshStandardMaterial attach="material-5" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
@@ -2836,7 +3079,7 @@ function GalleryRoom({
           <CuratorialTextPlane text={room.curatorialText} maxWidthM={Math.min(width - 2, 9)} wallColor={room.wallColor} />
         </group>
       )}
-      <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} panelTexture={panelTexture} panelColor={backColor} panelPBR={wallPBR} contactDecals={qualityCfg.contactDecals} />
+      <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} panelTexture={panelTexture} panelColor={backColor} panelPBR={wallPBR} contactDecals={qualityCfg.contactDecals} shadows={qualityCfg.shadows} />
       {showGrid && <FloorGrid width={width} depth={depth} />}
       {showMeasure && <MeasurementGuides artworks={artworks} selectedId={selectedId} width={width} depth={depth} />}
       {artworkNodes}

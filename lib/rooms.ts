@@ -15,7 +15,8 @@ export const roomCategories = [
 export type RoomCategory = (typeof roomCategories)[number];
 
 // The gallery collection, rebuilt from Kabeya's ten reference rooms and
-// expanded to forty templates in November 2026. Each preset carries its
+// expanded to forty-one templates (forty in November 2026, plus the
+// Skylight Gallery reference room). Each preset carries its
 // own dimensions, finishes, light mood and seeded furniture, so picking
 // a gallery in the editor already looks like the reference space.
 // The original seventeen presets keep their layout ids, dimensions and
@@ -234,6 +235,30 @@ export const roomLayouts = {
     wallTexture: "plaster",
     floorTexture: "wood",
     ceilingColor: "#e8e4da",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "spot-warm",
+    partitions: [],
+  },
+  // The reference room (November 2026): a bright white gallery under a
+  // white coffered ceiling with one central skylight, light parquet
+  // underfoot — the room from the preview renders Kabeya validated.
+  // The ceiling (white coffers + verrière + daylight) is built by
+  // RoomFeatures in components/gallery-scene.tsx; the floor is the real
+  // Poly Haven "Wood Floor" photo (CC0) via the "parquet" finish.
+  "gallery-skylight": {
+    label: "Skylight Gallery",
+    category: "Architectural",
+    description: "A bright white gallery under a white coffered ceiling and a central skylight, light parquet underfoot — the reference room.",
+    width: 18,
+    depth: 12,
+    height: 5.2,
+    wallColor: "#faf8f2",
+    sideWallColor: "#f0ece1",
+    floorColor: "#c9a877",
+    wallTexture: "plaster",
+    floorTexture: "parquet",
+    ceilingColor: "#faf8f2",
     ceilingTexture: "plaster",
     spotlights: true,
     lightType: "spot-warm",
@@ -772,6 +797,10 @@ export const floorTextures = {
   concrete: "Concrete",
   wood: "Wood",
   marble: "Marble",
+  // Real light parquet: the Poly Haven "Wood Floor" photo (CC0) in
+  // public/textures/wood-floor.jpg, loaded by the 3D scene. The
+  // procedural "wood" tile stays the fallback until the photo loads.
+  parquet: "Parquet · real wood",
 } as const;
 
 // Ceiling finishes reuse the wall finishes, plus wood for the timber
@@ -785,6 +814,9 @@ export const ceilingTextures = {
 // so picking "Light wood" visibly re-floors the room.
 export const floorTypes = {
   "light-wood": { label: "Light wood · parquet", texture: "wood", color: "#c9a877" },
+  // Light parquet, real wood: the Poly Haven photo texture, so any room
+  // can take the reference-room floor from the floor picker.
+  "light-parquet": { label: "Light parquet · real wood", texture: "parquet", color: "#c9a877" },
   "dark-wood": { label: "Dark wood", texture: "wood", color: "#5a4632" },
   "polished-concrete": { label: "Polished concrete", texture: "concrete", color: "#cfc9bd" },
   white: { label: "White", texture: "stone", color: "#f2efe8" },
@@ -821,6 +853,7 @@ function hexLuminance(hex: string): number {
 // created before floor types keep showing the same floor in the picker.
 export function inferFloorType(floorTexture: string, floorColor: string): FloorType {
   const luminance = hexLuminance(floorColor);
+  if (floorTexture === "parquet") return "light-parquet";
   if (floorTexture === "wood") return luminance > 0.45 ? "light-wood" : "dark-wood";
   if (floorTexture === "marble") return "marble";
   if (floorTexture === "concrete") return "polished-concrete";
@@ -862,7 +895,7 @@ export const galleryRoomSchema = z.object({
   floorColor: z.string().regex(/^#[\da-f]{6}$/i),
   ceilingColor: z.string().regex(/^#[\da-f]{6}$/i).default("#f5f2eb"),
   wallTexture: z.enum(["plaster", "concrete", "brick", "marble"]).default("plaster"),
-  floorTexture: z.enum(["stone", "concrete", "wood", "marble"]).default("stone"),
+  floorTexture: z.enum(["stone", "concrete", "wood", "marble", "parquet"]).default("stone"),
   ceilingTexture: z.enum(["plaster", "concrete", "brick", "marble", "wood"]).default("plaster"),
   spotlights: z.boolean().default(true),
   partitionWalls: z.array(partitionWallSchema).max(8).default([]),
@@ -984,6 +1017,13 @@ export function seedElements(layout: RoomLayout): RoomElement[] {
       return [
         make("partition", -5, 0, 0, Math.PI / 2, { length: 6 }),
         make("partition", 5, 0, 0, Math.PI / 2, { length: 6 }),
+      ];
+    case "gallery-skylight": // Reference room: one flush white door on
+      // the back wall (right side, clear of the hang). The side walls
+      // already carry real window openings, so no window element is
+      // seeded; the light comes from the skylight and the artwork spots.
+      return [
+        make("door", 7.5, 0, -depth / 2 + 0.15, 0),
       ];
     case "storefront": // Photo 7: display shelves, plinths, desk & chair.
       return [

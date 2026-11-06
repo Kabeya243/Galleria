@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Bell, Eye, Footprints, PenLine, Search } from "lucide-react";
+import { ArrowUpRight, Bell, Eye, Footprints, PenLine, Search, Star } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
-import { ceilingTextures, createGalleryRoom, floorTextures, roomLayouts, wallTextures, type RoomLayout } from "@/lib/rooms";
+import { ceilingTextures, createGalleryRoom, floorTextures, roomCategories, roomLayouts, wallTextures, type RoomCategory, type RoomLayout } from "@/lib/rooms";
 
 export type GalleryPresetCard = {
   key: RoomLayout;
   label: string;
+  category: RoomCategory;
+  description: string;
   width: number;
   depth: number;
   height: number;
@@ -161,6 +163,48 @@ export default function GalleriesPage({
   const [opening, setOpening] = useState<RoomLayout | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [walking, setWalking] = useState(false);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<"All" | "Favourites" | RoomCategory>("All");
+  const [favourites, setFavourites] = useState<RoomLayout[]>([]);
+
+  // Favourites live in this browser only (localStorage) — the same
+  // pattern as the Contacts tool. They do not sync to the account.
+  const FAVOURITES_KEY = "sanaa:favourite-galleries";
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(FAVOURITES_KEY);
+      if (!raw) return;
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setFavourites(parsed.filter((key): key is RoomLayout => typeof key === "string" && key in roomLayouts));
+      }
+    } catch {
+      // A corrupt stored list just means no favourites yet.
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FAVOURITES_KEY, JSON.stringify(favourites));
+    } catch {
+      // Private browsing or a full store: favourites just won't persist.
+    }
+  }, [favourites]);
+
+  function toggleFavourite(layout: RoomLayout) {
+    setFavourites((current) =>
+      current.includes(layout) ? current.filter((key) => key !== layout) : [...current, layout],
+    );
+  }
+
+  const filteredRooms = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return rooms.filter((room) => {
+      if (category === "Favourites" && !favourites.includes(room.key)) return false;
+      if (category !== "All" && category !== "Favourites" && room.category !== category) return false;
+      if (needle && ![room.label, room.description, room.category].join(" ").toLowerCase().includes(needle)) return false;
+      return true;
+    });
+  }, [rooms, query, category, favourites]);
   const movementKeys = useRef(new Set<string>());
   const viewerRef = useRef<HTMLDivElement>(null);
   const selectedRoom = rooms.find((room) => room.key === selected) ?? rooms[0];
@@ -207,13 +251,14 @@ export default function GalleriesPage({
   }
 
   // The models only — the same content in both shells: a live 3D preview
-  // plus the seventeen room cards. Nothing else lives on this page.
+  // plus the room cards, with category filters, search and favourites.
+  // Nothing else lives on this page.
   const galleriesContent = (
     <>
       <section className="galleries-intro">
-        <p className="eyebrow">SEVENTEEN ROOMS · ONE COLLECTION</p>
+        <p className="eyebrow">{rooms.length} ROOMS · ONE COLLECTION</p>
         <h1>Galleries<span className="title-period">.</span></h1>
-        <p>Seventeen gallery rooms, each with its own light, walls and floor. Pick one to walk through, or open it in the editor and hang your work.</p>
+        <p>{rooms.length} gallery rooms, each with its own light, walls and floor. Pick one to walk through, or open it in the editor and hang your work.</p>
       </section>
 
       {openError && (
@@ -235,6 +280,15 @@ export default function GalleriesPage({
           <button className="galleries-open-button" onClick={() => void openInEditor(selected)} disabled={opening !== null}>
             <PenLine size={15} /> {opening === selected ? "Opening…" : "Open in editor"}
           </button>
+          <button
+            className="galleries-open-button"
+            onClick={() => toggleFavourite(selected)}
+            aria-label={favourites.includes(selected) ? `Remove ${selectedRoom.label} from favourites` : `Save ${selectedRoom.label} as a favourite`}
+            aria-pressed={favourites.includes(selected)}
+            style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}
+          >
+            <Star size={15} fill={favourites.includes(selected) ? "currentColor" : "none"} /> {favourites.includes(selected) ? "Saved" : "Save"}
+          </button>
           <button className="galleries-open-button" onClick={() => setWalking((value) => !value)} aria-label="Walk through this room">
             <Footprints size={15} /> {walking ? "Exit walk" : "Walk through"}
           </button>
@@ -245,15 +299,80 @@ export default function GalleriesPage({
         <p className="galleries-viewer-hint">{walking ? "Walk mode · Click the floor to walk · WASD to move · Drag to look" : "Inside the room · Drag to look around · Scroll to zoom"}</p>
       </section>
 
+      <section aria-label="Find a gallery" style={{ maxWidth: 1350, margin: "28px auto 0", padding: "0 44px" }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--line)", borderRadius: 8, padding: "0 12px", minHeight: 40, flex: "1 1 240px", maxWidth: 340, background: "var(--surface-3)" }}>
+            <Search size={15} style={{ color: "var(--muted)", flexShrink: 0 }} />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search galleries…"
+              aria-label="Search galleries by name or description"
+              style={{ border: 0, outline: "none", background: "transparent", font: "inherit", fontSize: 13, width: "100%", color: "inherit" }}
+            />
+          </label>
+          <div role="group" aria-label="Filter by category" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(["All", "Favourites", ...roomCategories] as const).map((chip) => {
+              const active = category === chip;
+              const count = chip === "All" ? rooms.length : chip === "Favourites" ? favourites.length : rooms.filter((room) => room.category === chip).length;
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setCategory(chip)}
+                  aria-pressed={active}
+                  style={{
+                    minHeight: 34,
+                    padding: "0 13px",
+                    borderRadius: 999,
+                    border: "1px solid var(--line)",
+                    background: active ? "var(--ink)" : "transparent",
+                    color: active ? "var(--paper)" : "inherit",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {chip === "Favourites" ? `★ Favourites (${count})` : `${chip} (${count})`}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <p style={{ margin: "10px 0 0", color: "var(--muted)", fontSize: 11 }}>
+          {filteredRooms.length === rooms.length
+            ? `Showing all ${rooms.length} rooms.`
+            : `Showing ${filteredRooms.length} of ${rooms.length} rooms.`}{" "}
+          Favourites are saved in this browser only — they do not sync to your account yet.
+        </p>
+      </section>
+
       <section className="galleries-grid">
-        {rooms.map((room) => (
+        {filteredRooms.map((room) => (
           <article key={room.key} className={`gallery-card${room.key === selected ? " selected" : ""}`}>
             <button className="gallery-card-preview-button" onClick={() => viewIn3D(room.key)} aria-label={`Preview ${room.label} in 3D`}>
               <RoomPreviewCanvas room={room} />
             </button>
             <div className="gallery-card-body">
-              <h3>{room.label}</h3>
-              <p>{room.width} × {room.depth} m · {room.height} m high</p>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                <div>
+                  <p style={{ margin: "0 0 2px", color: "var(--accent)", fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>{room.category}</p>
+                  <h3>{room.label}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleFavourite(room.key)}
+                  aria-label={favourites.includes(room.key) ? `Remove ${room.label} from favourites` : `Save ${room.label} as a favourite`}
+                  aria-pressed={favourites.includes(room.key)}
+                  title={favourites.includes(room.key) ? "Remove from favourites" : "Save as favourite"}
+                  style={{ background: "transparent", border: 0, padding: 2, cursor: "pointer", color: favourites.includes(room.key) ? "var(--accent)" : "var(--muted)", flexShrink: 0 }}
+                >
+                  <Star size={17} fill={favourites.includes(room.key) ? "currentColor" : "none"} />
+                </button>
+              </div>
+              <p style={{ marginTop: 4, lineHeight: 1.5 }}>{room.description}</p>
+              <p style={{ marginTop: 6 }}>{room.width} × {room.depth} m · {room.height} m high</p>
               <p className="gallery-card-finishes">{wallTextures[room.wallTexture]} walls · {floorTextures[room.floorTexture]} floor</p>
               <div className="gallery-card-actions">
                 <button onClick={() => viewIn3D(room.key)}><Eye size={14} /> View in 3D</button>
@@ -264,6 +383,21 @@ export default function GalleriesPage({
             </div>
           </article>
         ))}
+        {filteredRooms.length === 0 && (
+          <div style={{ gridColumn: "1 / -1", border: "1px solid var(--line)", borderRadius: 12, padding: "32px 20px", textAlign: "center" }}>
+            <p style={{ margin: 0, fontWeight: 600 }}>No galleries match that search.</p>
+            <p style={{ margin: "6px 0 14px", color: "var(--muted)", fontSize: 12 }}>
+              {category === "Favourites" ? "You have not saved any favourites yet — tap the star on a room to save it here." : "Try a different word, or clear the filters."}
+            </p>
+            <button
+              type="button"
+              onClick={() => { setQuery(""); setCategory("All"); }}
+              style={{ minHeight: 36, padding: "0 16px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--ink)", color: "var(--paper)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
       </section>
     </>
   );

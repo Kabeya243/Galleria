@@ -183,7 +183,7 @@ function CardPlane({ title, body }: { title: string; body: string }) {
     if (ctx) {
       ctx.fillStyle = "#fdfdfc";
       ctx.fillRect(0, 0, 1024, 1024);
-      ctx.fillStyle = "#a67c37";
+      ctx.fillStyle = "#000000";
       ctx.fillRect(112, 400, 120, 3);
       ctx.fillStyle = "#141414";
       ctx.font = "600 64px Georgia, 'Times New Roman', serif";
@@ -799,7 +799,7 @@ export default function VideoGenerator({
             {recording && (
               <div style={{ marginTop: 10 }}>
                 <div style={{ height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${progress}%`, background: "#a67c37" }} />
+                  <div style={{ height: "100%", width: `${progress}%`, background: "#ffffff" }} />
                 </div>
                 <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: 11 }}>Recording… {Math.round(progress)}% — keep this tab in the foreground until it finishes.</p>
               </div>

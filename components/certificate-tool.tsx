@@ -63,7 +63,7 @@ type SavedCertificate = {
   updatedAt: string;
 };
 
-const GOLD = "#a67c37";
+const GOLD = "#000000";
 const INK = "#1a1a1a";
 const SERIF = '"Fraunces", Georgia, serif';
 
@@ -326,7 +326,7 @@ export default function CertificateTool({
         ? "1px solid #1a1a1a"
         : cfg.border === "double"
           ? "4px double #1a1a1a"
-          : "1px solid #a67c37";
+          : "1px solid #000000";
   const accent = cfg.goldAccent ? GOLD : INK;
   const template = TEMPLATES.find((item) => item.id === cfg.template) ?? TEMPLATES[0];
 

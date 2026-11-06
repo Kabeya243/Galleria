@@ -1072,22 +1072,22 @@ export default function MockupStudio({
         .ms-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .ms-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #4a4440; }
         .ms-field input[type="number"], .ms-field input[type="text"], .ms-field select { border: 1px solid #d9d4c9; border-radius: 8px; padding: 8px 10px; font-size: 14px; background: #fdfdfc; color: #1a1a1a; width: 100%; }
-        .ms-field input[type="range"] { width: 100%; accent-color: #a67c37; }
+        .ms-field input[type="range"] { width: 100%; accent-color: #ffffff; }
         .ms-field input[type="color"] { width: 100%; height: 36px; border: 1px solid #d9d4c9; border-radius: 8px; background: #fdfdfc; padding: 2px; }
         .ms-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4a4440; }
-        .ms-check input { accent-color: #a67c37; width: 16px; height: 16px; }
+        .ms-check input { accent-color: #ffffff; width: 16px; height: 16px; }
         .ms-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .ms-chip { border: 1px solid #d9d4c9; background: #fdfdfc; color: #1a1a1a; border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
         .ms-chip[aria-pressed="true"] { background: #1a1a1a; color: #fdfdfc; border-color: #1a1a1a; }
         .ms-scene { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
         @media (max-width: 480px) { .ms-scene { grid-template-columns: repeat(2, 1fr); } }
         .ms-scene button { border: 1px solid #d9d4c9; border-radius: 8px; padding: 0; overflow: hidden; cursor: pointer; background: #fdfdfc; text-align: left; }
-        .ms-scene button[aria-pressed="true"] { border-color: #a67c37; box-shadow: 0 0 0 2px #a67c37; }
+        .ms-scene button[aria-pressed="true"] { border-color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
         .ms-scene .swatch { height: 34px; }
         .ms-scene span { display: block; font-size: 11px; padding: 5px 6px; color: #1a1a1a; }
         .ms-artlist { display: flex; flex-direction: column; gap: 6px; }
         .ms-art { display: flex; gap: 10px; align-items: center; border: 1px solid #e8e2d6; border-radius: 8px; padding: 6px; cursor: pointer; background: #fdfdfc; text-align: left; width: 100%; }
-        .ms-art[aria-pressed="true"] { border-color: #a67c37; box-shadow: 0 0 0 1px #a67c37; }
+        .ms-art[aria-pressed="true"] { border-color: #ffffff; box-shadow: 0 0 0 1px #ffffff; }
         .ms-thumb { width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
         .ms-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .ms-art strong { display: block; font-size: 13px; color: #1a1a1a; }
@@ -1102,7 +1102,7 @@ export default function MockupStudio({
         .ms-saved-item { display: flex; align-items: center; gap: 8px; border: 1px solid #e8e2d6; border-radius: 8px; padding: 8px 10px; background: #fdfdfc; }
         .ms-saved-item strong { flex: 1; font-size: 13px; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ms-saved-item button { border: 1px solid #d9d4c9; background: #fff; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; color: #1a1a1a; }
-        .ms-saved-item input { flex: 1; border: 1px solid #a67c37; border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+        .ms-saved-item input { flex: 1; border: 1px solid #ffffff; border-radius: 6px; padding: 4px 8px; font-size: 13px; }
         .ms-export { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
       `}</style>
 

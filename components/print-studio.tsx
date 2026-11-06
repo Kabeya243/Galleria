@@ -561,7 +561,7 @@ export default function PrintStudio({
         .pr-kind span { font-size: 12px; color: var(--muted); line-height: 1.45; }
         .pr-kind.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
         .pr-check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
-        .pr-check input { accent-color: #a67c37; width: 16px; height: 16px; }
+        .pr-check input { accent-color: #ffffff; width: 16px; height: 16px; }
         .pr-verdict { margin: 0; font-size: 13px; line-height: 1.55; padding: 10px 12px; border-radius: 6px; }
         .pr-verdict.good { background: #eef4ea; color: #2f5d2a; }
         .pr-verdict.warn { background: #fdf3e0; color: #7a5410; }
@@ -605,7 +605,7 @@ export default function PrintStudio({
         .pr-catalogue .pr-art { height: 55%; overflow: hidden; margin-bottom: 12px; }
         .pr-body { font-size: 12px; line-height: 1.6; margin-top: 8px !important; }
         .pr-cert { padding: calc(var(--safe-px) + 14px); box-sizing: border-box; height: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .pr-cert-eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #a67c37; margin: 0 0 12px; }
+        .pr-cert-eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #000000; margin: 0 0 12px; }
         .pr-cert p { font-size: 12px; margin: 3px 0; }
         .pr-cert-sign { display: flex; justify-content: space-between; width: 80%; margin-top: 28px; border-top: 1px solid #141414; padding-top: 6px; font-size: 11px; color: #6f6a61; }
         .pr-cert-foot { color: #6f6a61; font-size: 10px !important; margin-top: 18px !important; }

@@ -640,7 +640,7 @@ export default function ColorIntelligence({
     if (!ctx) return;
     ctx.fillStyle = "#fdfdfc";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#a67c37";
+    ctx.fillStyle = "#000000";
     ctx.font = "700 22px 'DM Sans', sans-serif";
     ctx.fillText("SANAA · COLOR INTELLIGENCE", pad, pad + 10);
     ctx.fillStyle = "#141414";

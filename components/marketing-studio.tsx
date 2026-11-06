@@ -257,7 +257,7 @@ function defaultConfig(artistName: string, exhibitions: MarketingExhibition[], a
     artistName,
     logoText: artistName,
     bgColor: "#fdfdfc",
-    accentColor: "#a67c37",
+    accentColor: "#000000",
     textColor: "#141414",
     includeImage: true,
     pressText: exhibitions[0]?.description ?? "",
@@ -271,7 +271,7 @@ function configFromSaved(data: Record<string, unknown>, artistName: string, exhi
 }
 
 const PALETTE_PRESETS = [
-  { label: "Gallery white / gold", bg: "#fdfdfc", accent: "#a67c37", text: "#141414" },
+  { label: "Gallery white / black", bg: "#fdfdfc", accent: "#000000", text: "#141414" },
   { label: "Ink black / gold", bg: "#141414", accent: "#c9a35c", text: "#f5f1e8" },
   { label: "Warm paper / rust", bg: "#f5efe4", accent: "#9a4a2b", text: "#1d1a16" },
   { label: "Sage / ink", bg: "#eef0ea", accent: "#4c5b4a", text: "#1d1a16" },
@@ -786,7 +786,7 @@ export default function MarketingStudio({
         .mk-kind span { font-size: 12px; color: var(--muted); line-height: 1.45; }
         .mk-kind.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
         .mk-check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
-        .mk-check input { accent-color: #a67c37; width: 16px; height: 16px; }
+        .mk-check input { accent-color: #ffffff; width: 16px; height: 16px; }
         .mk-palette-label { font-size: 12px; font-weight: 600; color: var(--muted); }
         .mk-palettes { display: flex; flex-direction: column; gap: 6px; }
         .mk-palette { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
@@ -814,7 +814,7 @@ export default function MarketingStudio({
         .mk-canvas-wrap { background: #ece9e3; border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; place-items: center; overflow: auto; }
         .mk-canvas-wrap canvas { max-width: 100%; height: auto; display: block; box-shadow: 0 2px 18px rgba(0,0,0,0.18); }
         .mk-press { background: #fdfdfc; border: 1px solid var(--line); border-radius: 10px; padding: 36px 40px; color: #141414; max-width: 720px; margin: 0 auto; }
-        .mk-press-eyebrow { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #a67c37; margin: 0 0 10px; }
+        .mk-press-eyebrow { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffffff; margin: 0 0 10px; }
         .mk-press h2 { font-family: Fraunces, Georgia, serif; font-size: 32px; margin: 0 0 8px; }
         .mk-press h3 { font-family: Fraunces, Georgia, serif; font-size: 18px; margin: 28px 0 10px; }
         .mk-press-meta { color: #6f6a61; font-size: 14px; margin: 0 0 20px; }

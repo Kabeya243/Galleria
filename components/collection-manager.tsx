@@ -776,7 +776,7 @@ export default function CollectionManager({
         .cm-tag button { background: none; border: none; cursor: pointer; color: inherit; font-size: 14px; line-height: 1; padding: 0; }
         .cm-detail { background: #fff; border: 1px solid #e0d7c2; border-radius: 14px; padding: 22px; }
         .cm-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
-        .cm-eyebrow { font-size: 11px; letter-spacing: .12em; color: #a67c37; font-weight: 700; margin: 0 0 4px; }
+        .cm-eyebrow { font-size: 11px; letter-spacing: .12em; color: #ffffff; font-weight: 700; margin: 0 0 4px; }
         .cm-detail h2 { font-family: Fraunces, Georgia, serif; font-size: 24px; margin: 0; }
         .cm-detail-sub { color: #6b6455; margin: 4px 0 0; font-size: 14px; }
         .cm-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }

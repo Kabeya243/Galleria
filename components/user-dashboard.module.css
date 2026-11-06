@@ -45,7 +45,7 @@
   height: 36px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fffdf8;
+  color: #000000;
   font-size: 13px;
   font-weight: 700;
   flex-shrink: 0;
@@ -166,11 +166,11 @@
 }
 
 .barOlder {
-  background: #ddd9d0;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .barMax {
-  background: #8a6a3f;
+  background: #ffffff;
 }
 
 .barLabel {

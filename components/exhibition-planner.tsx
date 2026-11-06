@@ -793,10 +793,10 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
         .ep-inline-add input { flex: 1; }
         .ep-sequence { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
         .ep-seq-item { display: flex; gap: 14px; border: 1px solid #e8e2d6; border-radius: 12px; padding: 14px; align-items: flex-start; }
-        .ep-seq-num { font-family: Fraunces, Georgia, serif; font-size: 20px; color: #a67c37; flex: none; width: 24px; text-align: center; }
+        .ep-seq-num { font-family: Fraunces, Georgia, serif; font-size: 20px; color: #ffffff; flex: none; width: 24px; text-align: center; }
         .ep-seq-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
         .ep-seq-body .ep-field { margin-bottom: 6px; }
-        .ep-link-btn { background: none; border: none; padding: 0; font: inherit; font-size: 13px; color: #a67c37; cursor: pointer; text-align: left; text-decoration: underline; }
+        .ep-link-btn { background: none; border: none; padding: 0; font: inherit; font-size: 13px; color: #ffffff; cursor: pointer; text-align: left; text-decoration: underline; }
         .ep-seq-order { display: flex; flex-direction: column; gap: 6px; flex: none; }
         .ep-seq-order button { background: #fff; border: 1px solid #ddd6c8; border-radius: 6px; width: 32px; height: 30px; cursor: pointer; font-size: 14px; color: #141414; }
         .ep-seq-order button:disabled { opacity: .4; cursor: not-allowed; }
@@ -821,7 +821,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
           .ep-print, .ep-print * { visibility: visible; }
           .ep-print { display: block; position: absolute; inset: 0; padding: 0; font-family: "DM Sans", Arial, sans-serif; color: #141414; font-size: 12pt; line-height: 1.5; }
           .ep-print h1 { font-family: Fraunces, Georgia, serif; font-size: 24pt; margin: 0 0 4pt; }
-          .ep-print h2 { font-family: Fraunces, Georgia, serif; font-size: 14pt; margin: 18pt 0 6pt; border-bottom: 1px solid #a67c37; padding-bottom: 3pt; }
+          .ep-print h2 { font-family: Fraunces, Georgia, serif; font-size: 14pt; margin: 18pt 0 6pt; border-bottom: 1px solid #000000; padding-bottom: 3pt; }
           .ep-print p { margin: 0 0 8pt; white-space: pre-wrap; }
           .ep-print-meta { color: #6b6455; }
           .ep-print ol, .ep-print ul { margin: 0 0 8pt; padding-left: 18pt; }

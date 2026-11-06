@@ -149,7 +149,7 @@ export default function VisitorAnalytics({
               width: `${total > 0 ? Math.max((row.count / total) * 100, 2) : 0}%`,
               height: "100%",
               borderRadius: 3,
-              background: "var(--gold, #a67c37)",
+              background: "var(--gold, #ffffff)",
             }}
           />
         </div>
@@ -233,7 +233,7 @@ export default function VisitorAnalytics({
                   width: "100%",
                   maxWidth: 22,
                   height: `${d.visits > 0 ? Math.max((d.visits / maxDaily) * 100, 6) : 1.5}%`,
-                  background: d.visits === maxDaily && d.visits > 0 ? "#a67c37" : "var(--ink)",
+                  background: d.visits === maxDaily && d.visits > 0 ? "#ffffff" : "var(--ink)",
                   opacity: d.visits > 0 ? 0.85 : 0.25,
                   borderRadius: "2px 2px 0 0",
                 }}

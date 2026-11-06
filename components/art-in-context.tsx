@@ -86,7 +86,7 @@ const STEPS = [
 
 type StepStatus = "done" | "in-progress" | "not-started";
 
-const GOLD = "#a67c37";
+const GOLD = "#000000";
 const INK = "#141414";
 
 function emptyProjectData(): ProjectData {

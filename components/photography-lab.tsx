@@ -708,8 +708,8 @@ export default function PhotographyLab({
         .plab-stage-inner { position: relative; line-height: 0; }
         .plab-empty { padding: 48px 24px; text-align: center; color: var(--muted); line-height: 1.6; max-width: 460px; }
         .plab-empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 8px; }
-        .plab-cropbox { position: absolute; border: 2px solid #a67c37; background: rgba(166,124,55,.06); box-shadow: 0 0 0 9999px rgba(20,20,18,.35); cursor: move; touch-action: none; }
-        .plab-handle { position: absolute; width: 18px; height: 18px; background: #fdfdfc; border: 2px solid #a67c37; border-radius: 50%; touch-action: none; }
+        .plab-cropbox { position: absolute; border: 2px solid #ffffff; background: rgba(255,255,255,0.06); box-shadow: 0 0 0 9999px rgba(20,20,18,.35); cursor: move; touch-action: none; }
+        .plab-handle { position: absolute; width: 18px; height: 18px; background: #000000; border: 2px solid #ffffff; border-radius: 50%; touch-action: none; }
         .plab-handle-nw { left: -9px; top: -9px; cursor: nwse-resize; }
         .plab-handle-ne { right: -9px; top: -9px; cursor: nesw-resize; }
         .plab-handle-sw { left: -9px; bottom: -9px; cursor: nesw-resize; }
@@ -722,7 +722,7 @@ export default function PhotographyLab({
         .plab-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); padding: 9px 13px; font-size: 12px; font-weight: 600; cursor: pointer; }
         .plab-btn:hover:not(:disabled) { border-color: var(--ink); }
         .plab-btn:disabled { opacity: .5; cursor: default; }
-        .plab-btn-gold { border-color: #a67c37; color: #a67c37; }
+        .plab-btn-gold { border-color: #ffffff; color: #ffffff; }
         .plab-btn-dark { background: #343d35; border-color: #343d35; color: #fffdfa; }
         .plab-btn-dark:hover:not(:disabled) { background: #49564a; border-color: #49564a; }
         .plab-controls { display: grid; gap: 22px; }
@@ -732,7 +732,7 @@ export default function PhotographyLab({
         .plab-slider { display: grid; grid-template-columns: 118px 1fr 44px; gap: 10px; align-items: center; padding: 6px 0; font-size: 12px; }
         .plab-slider label { color: var(--muted); font-weight: 600; }
         .plab-slider output { text-align: right; font-variant-numeric: tabular-nums; }
-        .plab-slider input[type="range"] { width: 100%; accent-color: #a67c37; }
+        .plab-slider input[type="range"] { width: 100%; accent-color: #ffffff; }
         .plab-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         .plab-select, .plab-input { height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); font-size: 13px; outline: none; min-width: 0; }
         .plab-select:focus, .plab-input:focus { border-color: var(--ink); }

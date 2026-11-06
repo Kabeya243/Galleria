@@ -1,6 +1,6 @@
 /* Shared styles for the Phase 4 studio tools: Accessibility & Audio Guide
-   Studio and Art Education Studio. White-gallery luxury: paper #fdfdfc,
-   ink #141414, gold #a67c37, Fraunces headings, DM Sans body. */
+   Studio and Art Education Studio. Black & white editorial: paper #000000,
+   ink #ffffff, Fraunces headings, DM Sans body. */
 
 .wrap {
   display: grid;
@@ -9,8 +9,8 @@
 }
 
 .card {
-  background: #fdfdfc;
-  border: 1px solid var(--line, #eceae4);
+  background: var(--surface);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 10px;
   padding: 20px 22px;
 }
@@ -19,13 +19,13 @@
   margin: 0 0 4px;
   font: 600 19px/1.3 "Fraunces", Georgia, serif;
   letter-spacing: -0.02em;
-  color: #141414;
+  color: #ffffff;
 }
 
 .card h3 {
   margin: 22px 0 8px;
   font: 600 14px/1.4 "Fraunces", Georgia, serif;
-  color: #141414;
+  color: #ffffff;
 }
 
 .card h3:first-child {
@@ -34,7 +34,7 @@
 
 .kicker {
   margin: 0 0 10px;
-  color: #a67c37;
+  color: #ffffff;
   font: 600 9px "DM Sans", sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -42,7 +42,7 @@
 
 .muted {
   margin: 0;
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
   font-size: 12px;
   line-height: 1.6;
 }
@@ -71,11 +71,11 @@
 .field label {
   font-size: 11px;
   font-weight: 600;
-  color: #141414;
+  color: #ffffff;
 }
 
 .field label span {
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
   font-weight: 400;
 }
 
@@ -85,10 +85,10 @@
 .field textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 6px;
-  background: #fff;
-  color: #141414;
+  background: var(--surface-2);
+  color: #ffffff;
   font: inherit;
   font-size: 13px;
   line-height: 1.55;
@@ -102,9 +102,9 @@
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  outline: 2px solid rgba(166, 124, 55, 0.45);
+  outline: 2px solid rgba(255, 255, 255, 0.45);
   outline-offset: 0;
-  border-color: #a67c37;
+  border-color: #ffffff;
 }
 
 .twoCol {
@@ -127,28 +127,28 @@
 
 .tab {
   padding: 8px 13px;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 999px;
   background: transparent;
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .tab:hover {
-  color: #141414;
-  border-color: #a67c37;
+  color: #ffffff;
+  border-color: #ffffff;
 }
 
 .tabActive {
-  background: #141414;
-  border-color: #141414;
-  color: #fdfdfc;
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--surface);
 }
 
 .tabActive:hover {
-  color: #fdfdfc;
+  color: var(--surface);
 }
 
 .btn {
@@ -157,16 +157,16 @@
   gap: 7px;
   padding: 10px 15px;
   border-radius: 5px;
-  border: 1px solid var(--line, #eceae4);
-  background: #fff;
-  color: #141414;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  background: var(--surface-2);
+  color: #ffffff;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .btn:hover:not(:disabled) {
-  border-color: #a67c37;
+  border-color: #ffffff;
 }
 
 .btn:disabled {
@@ -175,23 +175,23 @@
 }
 
 .btnPrimary {
-  background: #343d35;
-  border-color: #343d35;
-  color: #fffdfa;
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: #49564a;
-  border-color: #49564a;
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(255, 255, 255, 0.88);
 }
 
 .btnDanger {
-  color: #9a3b2e;
-  border-color: #e5c9c2;
+  color: #ff7a6b;
+  border-color: rgba(255, 122, 107, 0.4);
 }
 
 .btnDanger:hover:not(:disabled) {
-  border-color: #9a3b2e;
+  border-color: #ff7a6b;
 }
 
 .btnSmall {
@@ -201,15 +201,15 @@
 
 .status {
   font-size: 12px;
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
 }
 
 .statusOk {
-  color: #3f6b3a;
+  color: #ffffff;
 }
 
 .statusErr {
-  color: #9a3b2e;
+  color: #ff7a6b;
 }
 
 .list {
@@ -225,19 +225,19 @@
   align-items: center;
   justify-content: space-between;
   padding: 11px 13px;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-2);
 }
 
 .listItem strong {
   font-size: 12px;
-  color: #141414;
+  color: #ffffff;
 }
 
 .listItem span {
   display: block;
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
   font-size: 11px;
   margin-top: 2px;
 }
@@ -253,19 +253,19 @@
   padding: 0;
   overflow: hidden;
   text-align: left;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-2);
   cursor: pointer;
 }
 
 .artworkPick:hover {
-  border-color: #a67c37;
+  border-color: #ffffff;
 }
 
 .artworkPickActive {
-  border-color: #a67c37;
-  box-shadow: 0 0 0 1px #a67c37;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .artworkPick img {
@@ -273,7 +273,7 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  background: #efebe1;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .artworkPick span {
@@ -281,14 +281,14 @@
   padding: 8px 10px;
   font-size: 11px;
   font-weight: 600;
-  color: #141414;
+  color: #ffffff;
   line-height: 1.35;
 }
 
 .artworkPick small {
   display: block;
   padding: 0 10px 9px;
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
   font-size: 10px;
 }
 
@@ -305,9 +305,9 @@
   gap: 10px;
   align-items: flex-start;
   padding: 10px 12px;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-2);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -324,33 +324,33 @@
 }
 
 .checkPass {
-  background: #e4efe0;
-  color: #3f6b3a;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 .checkFail {
-  background: #f6e7e2;
-  color: #9a3b2e;
+  background: rgba(255, 122, 107, 0.12);
+  color: #ff7a6b;
 }
 
 .checkList small {
   display: block;
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
   font-size: 11px;
 }
 
 .previewBox {
   margin-top: 14px;
   padding: 16px 18px;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-2);
 }
 
 .previewBox h4 {
   margin: 0 0 6px;
   font: 600 15px/1.3 "Fraunces", Georgia, serif;
-  color: #141414;
+  color: #ffffff;
 }
 
 .swatchRow {
@@ -364,16 +364,16 @@
   width: 38px;
   height: 30px;
   padding: 0;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 5px;
-  background: #fff;
+  background: var(--surface-2);
   cursor: pointer;
 }
 
 .ratio {
   font-size: 13px;
   font-weight: 700;
-  color: #141414;
+  color: #ffffff;
 }
 
 .quizOption {
@@ -382,16 +382,16 @@
   text-align: left;
   padding: 11px 13px;
   margin-top: 8px;
-  border: 1px solid var(--line, #eceae4);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-2);
   font-size: 13px;
   cursor: pointer;
   line-height: 1.5;
 }
 
 .quizOption:hover:not(:disabled) {
-  border-color: #a67c37;
+  border-color: #ffffff;
 }
 
 .quizOption:disabled {
@@ -399,23 +399,23 @@
 }
 
 .quizCorrect {
-  border-color: #3f6b3a;
-  background: #eef5ea;
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .quizWrong {
-  border-color: #9a3b2e;
-  background: #f9ece8;
+  border-color: #ff7a6b;
+  background: rgba(255, 122, 107, 0.12);
 }
 
 .score {
   font: 600 26px/1.2 "Fraunces", Georgia, serif;
-  color: #141414;
+  color: #ffffff;
 }
 
 .emptyBox {
   padding: 26px;
-  border: 1px dashed var(--line, #eceae4);
+  border: 1px dashed var(--line, rgba(255, 255, 255, 0.14));
   border-radius: 10px;
   text-align: center;
 }
@@ -424,13 +424,13 @@
   display: block;
   margin-bottom: 6px;
   font: 600 16px "Fraunces", Georgia, serif;
-  color: #141414;
+  color: #ffffff;
 }
 
 .emptyBox p {
   margin: 0 auto 14px;
   max-width: 480px;
-  color: var(--muted, #898a82);
+  color: var(--muted, rgba(255, 255, 255, 0.6));
   font-size: 12px;
   line-height: 1.6;
 }
@@ -438,7 +438,7 @@
 .divider {
   height: 1px;
   margin: 20px 0;
-  background: var(--line, #eceae4);
+  background: var(--line, rgba(255, 255, 255, 0.14));
 }
 
 /* Print: only the printable resource sheet shows. */

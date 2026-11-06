@@ -1018,7 +1018,7 @@ const PRINT_AND_COMPONENT_CSS = `
 .pd-slide h2 { margin: 0; font-family: "Fraunces", serif; font-size: 5.2cqw; font-weight: 600; line-height: 1.1; }
 .pd-slide h3 { margin: 0 0 2cqw; font-family: "Fraunces", serif; font-size: 3.4cqw; font-weight: 600; line-height: 1.2; }
 .pd-slide p { margin: 0; font-size: 1.9cqw; line-height: 1.65; }
-.pd-slide-kicker { margin: 0 0 1.5cqw; color: #a67c37; font-size: 1.5cqw; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.pd-slide-kicker { margin: 0 0 1.5cqw; color: #000000; font-size: 1.5cqw; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .pd-slide-artist { margin-top: 1.5cqw; color: #666; font-size: 2.4cqw; }
 .pd-slide-title { align-items: center; justify-content: center; text-align: center; }
 .pd-slide-cover { margin-top: 3cqw; width: 46%; max-height: 42%; min-height: 0; overflow: hidden; }

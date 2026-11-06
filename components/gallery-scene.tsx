@@ -955,7 +955,7 @@ function ArtworkFrame({
           }}
         >
           <boxGeometry args={[0.26, 0.26, 0.26]} />
-          <meshStandardMaterial color="#d7ff32" emissive="#d7ff32" emissiveIntensity={0.4} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.4} />
         </mesh>
       )}
     </group>
@@ -996,7 +996,7 @@ function WallWithOpening({
     map: texture,
     roughness: pbr?.roughness ?? 0.88,
     envMapIntensity: pbr?.envMapIntensity ?? 0.12,
-    emissive: highlight ? "#a67c37" : "#000000",
+    emissive: highlight ? "#ffffff" : "#000000",
     emissiveIntensity: highlight ? 0.16 : 0,
   } as const;
   // A drag (orbit) must not count as a click on the wall, and a single
@@ -1364,7 +1364,7 @@ function FloorGrid({ width, depth }: { width: number; depth: number }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <lineBasicMaterial color="#a67c37" transparent opacity={0.45} />
+      <lineBasicMaterial color="#ffffff" transparent opacity={0.45} />
     </lineSegments>
   );
 }
@@ -1398,7 +1398,7 @@ function MeasureLabel({
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#fdfdfc";
     ctx.fillRect(0, 0, widthPx, 64);
-    ctx.strokeStyle = "#a67c37";
+    ctx.strokeStyle = "#000000";
     ctx.lineWidth = 3;
     ctx.strokeRect(1.5, 1.5, widthPx - 3, 61);
     ctx.fillStyle = "#252722";
@@ -1525,7 +1525,7 @@ function MeasurementGuides({
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[guides.lines, 3]} />
           </bufferGeometry>
-          <lineBasicMaterial color="#a67c37" transparent opacity={0.9} />
+          <lineBasicMaterial color="#ffffff" transparent opacity={0.9} />
         </lineSegments>
       )}
       {guides.labels.map((label, index) => (
@@ -2116,7 +2116,7 @@ function ElementMesh({
           }}
         >
           <boxGeometry args={[0.26, 0.26, 0.26]} />
-          <meshStandardMaterial color="#d7ff32" emissive="#d7ff32" emissiveIntensity={0.4} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.4} />
         </mesh>
       )}
     </group>
@@ -3097,7 +3097,7 @@ function GalleryRoom({
         }}
       >
         <boxGeometry args={[width, height, 0.25]} />
-        <meshStandardMaterial color={backColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("back") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("back") ? 0.16 : 0} />
+        <meshStandardMaterial color={backColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("back") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("back") ? 0.16 : 0} />
       </mesh>
       <WallWithOpening
         x={-width / 2}
@@ -3136,7 +3136,7 @@ function GalleryRoom({
           }}
         >
           <cylinderGeometry args={[curveRadius, curveRadius, height, 64, 1, true, -curveHalfAngle, curveHalfAngle * 2]} />
-          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} side={DoubleSide} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} side={DoubleSide} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
       ) : entrance ? (
         <group position={[0, 0, depth / 2]}>
@@ -3150,7 +3150,7 @@ function GalleryRoom({
             }}
           >
             <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
           </mesh>
           <mesh
             position={[(width + 1.65) / 4, height / 2, 0]}
@@ -3162,7 +3162,7 @@ function GalleryRoom({
             }}
           >
             <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
           </mesh>
           <mesh position={[0, (height + 2.5) / 2, 0]} receiveShadow>
             <boxGeometry args={[1.65, height - 2.5, 0.22]} />
@@ -3180,7 +3180,7 @@ function GalleryRoom({
           }}
         >
           <boxGeometry args={[width, height, 0.22]} />
-          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
+          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
       )}
       {room.partitionWalls.map((wall) => (
@@ -3200,7 +3200,7 @@ function GalleryRoom({
               ? [wall.length, height - 0.25, 0.18]
               : [0.18, height - 0.25, wall.length]}
           />
-          <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight(wall.id) ? "#a67c37" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
+          <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight(wall.id) ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
         </mesh>
       ))}
       {room.spotlights && (artworks.length > 0 ? (

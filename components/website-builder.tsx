@@ -463,7 +463,7 @@ export default function WebsiteBuilder({
         .wb-color-row input:last-child { flex: 1; }
         .wb-checks { display: flex; flex-direction: column; gap: 8px; }
         .wb-check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
-        .wb-check input { accent-color: #a67c37; width: 16px; height: 16px; }
+        .wb-check input { accent-color: #ffffff; width: 16px; height: 16px; }
         .wb-cv-row, .wb-press-row { display: grid; gap: 8px; }
         .wb-cv-row { grid-template-columns: 64px 1fr 1fr 28px; }
         .wb-press-row { grid-template-columns: 1fr 1fr 64px 1fr 28px; }
@@ -478,11 +478,11 @@ export default function WebsiteBuilder({
         .wb-msg { margin: 0; font-size: 13px; color: var(--muted); }
         .wb-error { margin: 0; font-size: 13px; color: #9a2b2b; }
         .wb-public { margin: 0; font-size: 13px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .wb-public a { color: #a67c37; }
+        .wb-public a { color: #ffffff; }
         .wb-saved { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
         .wb-saved li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; }
         .wb-saved-title { background: none; border: none; padding: 0; cursor: pointer; font: inherit; font-weight: 600; color: var(--ink); text-align: left; }
-        .wb-saved a { color: #a67c37; }
+        .wb-saved a { color: #ffffff; }
         .wb-danger { background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: #9a2b2b; }
         .wb-preview-col { position: sticky; top: 16px; }
         @media (max-width: 1080px) { .wb-preview-col { position: static; } }

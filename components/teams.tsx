@@ -713,7 +713,7 @@ export default function TeamsTool({
         .tm-versions p { margin: 0; color: var(--muted); }
         .tm-comments { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
         .tm-comment { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
-        .tm-comment-review { border-left: 3px solid #a67c37; }
+        .tm-comment-review { border-left: 3px solid #ffffff; }
         .tm-comment-approve { border-left: 3px solid #3f5a2e; }
         .tm-comment-changes { border-left: 3px solid #7a2e22; }
         .tm-comment-resolved { opacity: .65; }

@@ -111,7 +111,7 @@ const FRAME_COLORS: Record<FrameStyle, string> = {
   "natural wood": "#8a6a42",
   black: "#1c1c1c",
   white: "#f2efe8",
-  gold: "#a67c37",
+  gold: "#ffffff",
 };
 
 function uid() {
@@ -327,7 +327,7 @@ function TwinScene({ twin, artworks, selectedId, onSelect }: {
                 }}
               >
                 <planeGeometry args={[size.w + 0.2, size.h + 0.2]} />
-                <meshBasicMaterial color="#a67c37" transparent opacity={0.25} side={THREE.DoubleSide} />
+                <meshBasicMaterial color="#ffffff" transparent opacity={0.25} side={THREE.DoubleSide} />
               </mesh>
             )}
           </group>
@@ -375,8 +375,8 @@ function PlanView({ twin, artworks }: { twin: TwinData; artworks: TwinArtwork[] 
       <text x={pad - 8} y={pad + (twin.width * scale) / 2} textAnchor="end" fontSize={11} fill="#141414" transform={`rotate(-90 ${pad - 8} ${pad + (twin.width * scale) / 2})`}>
         {twin.width.toFixed(2)} m
       </text>
-      <text x={pad + 6} y={pad + 14} fontSize={10} fill="#a67c37">BACK</text>
-      <text x={pad + 6} y={pad + twin.width * scale - 6} fontSize={10} fill="#a67c37">FRONT</text>
+      <text x={pad + 6} y={pad + 14} fontSize={10} fill="#ffffff">BACK</text>
+      <text x={pad + 6} y={pad + twin.width * scale - 6} fontSize={10} fill="#ffffff">FRONT</text>
       {/* Openings as coloured wall segments */}
       {twin.openings.map((opening) => {
         const [ox, oy] = wallPlanPoint(opening.wall, opening.offset);
@@ -408,7 +408,7 @@ function PlanView({ twin, artworks }: { twin: TwinData; artworks: TwinArtwork[] 
               y={cy - (horizontal ? 4 : (size.w * scale) / 2)}
               width={horizontal ? size.w * scale : 8}
               height={horizontal ? 8 : size.w * scale}
-              fill="#a67c37"
+              fill="#ffffff"
               stroke="#141414"
               strokeWidth={0.5}
             />
@@ -1607,8 +1607,8 @@ function VrCameraTour({ target, active }: { target: [number, number, number] | n
               )}
             </div>
             {tourActive && vrTourWork && (
-              <div style={{ border: "1px solid #a67c37", borderRadius: 6, padding: 14, background: "#fdfaf3" }}>
-                <p style={{ fontSize: 11, color: "#a67c37", margin: "0 0 4px" }}>
+              <div style={{ border: "1px solid #ffffff", borderRadius: 6, padding: 14, background: "#0d0d0d" }}>
+                <p style={{ fontSize: 11, color: "#ffffff", margin: "0 0 4px" }}>
                   STOP {tourIndex + 1} OF {vrWorks.length}
                 </p>
                 <h3 style={{ fontFamily: "Fraunces, serif", fontSize: 17, margin: "0 0 6px" }}>
@@ -1788,7 +1788,7 @@ function VrCameraTour({ target, active }: { target: [number, number, number] | n
                     <span
                       style={{
                         position: "absolute", right: -10, bottom: -10, width: 20, height: 20,
-                        background: "#a67c37", border: "2px solid #fff", borderRadius: "50%", cursor: "nwse-resize",
+                        background: "#ffffff", border: "2px solid #fff", borderRadius: "50%", cursor: "nwse-resize",
                       }}
                       onPointerDown={(e) => {
                         e.stopPropagation();

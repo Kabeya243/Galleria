@@ -6,7 +6,10 @@
    artworks keep their real colours; the UI chrome is black and white. */
 
 .page {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #000000;
   color: #ffffff;
   font-family: "DM Sans", sans-serif;

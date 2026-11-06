@@ -136,7 +136,7 @@ export function defaultSiteConfig(artistName: string, email: string, exhibitions
     tagline: "Contemporary artist",
     bio: "",
     theme: "gallery-white",
-    accentColor: "#a67c37",
+    accentColor: "#000000",
     heroArtworkId: exhibitions.flatMap((e) => e.artworks)[0]?.id ?? "",
     heroHeading: artistName,
     heroSubheading: "Contemporary artist",
@@ -188,7 +188,7 @@ export default function SitePreview({
   maxWidth?: number;
 }) {
   const theme = themeById(config.theme);
-  const accent = config.accentColor || "#a67c37";
+  const accent = config.accentColor || "#000000";
   const allArtworks = exhibitions.flatMap((e) => e.artworks);
   const heroArt = allArtworks.find((a) => a.id === config.heroArtworkId) ?? allArtworks[0];
   const shownExhibitions = exhibitions.filter((e) => config.selectedExhibitionIds.includes(e.id));

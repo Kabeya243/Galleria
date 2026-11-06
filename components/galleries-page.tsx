@@ -144,7 +144,7 @@ function RoomPreviewCanvas({ room }: { room: GalleryPresetCard }) {
     paintPattern(ctx, room.ceilingTexture, room.ceilingColor, 0, 0, w, h * 0.12);
     paintPattern(ctx, room.wallTexture, room.wallColor, 0, h * 0.12, w, h * 0.58);
     paintPattern(ctx, room.floorTexture, room.floorColor, 0, h * 0.7, w, h * 0.3);
-    ctx.fillStyle = "#d7ff32";
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, h * 0.7 - 1, w, 2);
   }, [room]);
   return <canvas ref={ref} width={640} height={400} className="gallery-card-preview" aria-label={`${room.label} finishes preview`} />;

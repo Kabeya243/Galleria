@@ -386,7 +386,7 @@ export default function AiArchitect({
     if (!ctx) return;
     ctx.fillStyle = selectedTemplate?.wallColor ?? "#f5f2eb";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#a67c37";
+    ctx.fillStyle = "#000000";
     ctx.font = "700 20px 'DM Sans', sans-serif";
     ctx.fillText("SANAA · AI EXHIBITION ARCHITECT", pad, pad + 8);
     ctx.fillStyle = "#141414";

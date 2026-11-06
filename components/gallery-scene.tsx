@@ -3494,17 +3494,56 @@ function WalkControls({
         .addScaledVector(right.current, sideInput)
         .normalize();
     } else if (destinationPoint) {
-      direction.current.set(destinationPoint.x - camera.position.x, 0, destinationPoint.z - camera.position.z);
+      // A destination in the other Stone Gallery half is reached through
+      // the arched opening, not in a straight line: walking straight at
+      // an off-centre destination drives the visitor into the solid wall
+      // beside the arch and they stop at the threshold. Route via the
+      // centre of the arch (world x = the pair's X, world z = −1) first;
+      // once the camera is close to the arch centre (or already through
+      // it, in the destination's room) the real destination takes over.
+      let targetPoint = destinationPoint;
+      let routingViaArch = false;
+      const destRoomIndex = (() => {
+        for (let i = 0; i < rooms.length; i++) {
+          const { width: w, depth: d } = roomLayouts[rooms[i].layout];
+          if (Math.abs(destinationPoint.x - offsets[i]) <= w / 2 && Math.abs(destinationPoint.z - zOffsetOf(i)) <= d / 2) return i;
+        }
+        return -1;
+      })();
+      const hereIndex = currentRoomIndex.current;
+      const isStonePairCrossing =
+        destRoomIndex >= 0 && destRoomIndex !== hereIndex &&
+        ((rooms[hereIndex].layout === "stone-gallery-front" && rooms[destRoomIndex].layout === "stone-gallery-back") ||
+          (rooms[hereIndex].layout === "stone-gallery-back" && rooms[destRoomIndex].layout === "stone-gallery-front"));
+      if (isStonePairCrossing) {
+        const frontIndex = rooms[hereIndex].layout === "stone-gallery-front" ? hereIndex : destRoomIndex;
+        const archX = offsets[frontIndex];
+        const archZ = -1;
+        const distToArch = Math.hypot(camera.position.x - archX, camera.position.z - archZ);
+        if (distToArch > 0.6) {
+          targetPoint = new Vector3(archX, 0, archZ);
+          routingViaArch = true;
+        }
+      }
+      direction.current.set(targetPoint.x - camera.position.x, 0, targetPoint.z - camera.position.z);
       if (direction.current.length() < 0.2) {
-        destination.current = null;
-        lookYaw.current = null;
+        // Arrived at the real destination — clear it. Arriving at the
+        // arch waypoint never clears it: the waypoint is only a via
+        // point, and the camera is already within 0.6 m of it when the
+        // real destination takes over, so this branch is only reached
+        // for the real destination.
+        if (!routingViaArch) {
+          destination.current = null;
+          lookYaw.current = null;
+        }
         return;
       }
       direction.current.normalize();
       velocity.current.copy(direction.current);
       // Turn to face the destination (e.g. the artwork just clicked) while
-      // walking toward it.
-      if (lookYaw.current !== null) {
+      // walking toward it — only once heading for the real destination,
+      // not while routing through the arch.
+      if (!routingViaArch && lookYaw.current !== null) {
         const step = Math.min(delta, 0.05) * 2.5;
         let diff = lookYaw.current - camera.rotation.y;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -3537,12 +3576,17 @@ function WalkControls({
           && Math.max(localX, targetX) >= wall.x - wall.length / 2 - 0.35;
         if (wall.shape === "arch") {
           // The arch opening is a real passage: only the solid parts of
-          // the wall (outside the opening) block the visitor.
+          // the wall (outside the opening) block the visitor. The solid
+          // parts end exactly at the opening edges — the 0.35 body
+          // margin must not shrink the opening itself, or the visitor
+          // sees a 4 m opening they cannot walk through at its edges
+          // (the camera stopped at the threshold). The margin stays on
+          // the outer ends only, so the camera never clips the side walls.
           const openingHalf = 2 * archScale(roomLayouts[room.layout].height);
           const segMin = Math.min(localX, targetX);
           const segMax = Math.max(localX, targetX);
-          const overlapsLeftSolid = segMin <= wall.x - openingHalf + 0.35 && segMax >= wall.x - wall.length / 2 - 0.35;
-          const overlapsRightSolid = segMin <= wall.x + wall.length / 2 + 0.35 && segMax >= wall.x + openingHalf - 0.35;
+          const overlapsLeftSolid = segMin <= wall.x - openingHalf && segMax >= wall.x - wall.length / 2 - 0.35;
+          const overlapsRightSolid = segMin <= wall.x + wall.length / 2 + 0.35 && segMax >= wall.x + openingHalf;
           overlapsWall = overlapsLeftSolid || overlapsRightSolid;
         }
         if (crossesWall && overlapsWall) {
@@ -3556,11 +3600,12 @@ function WalkControls({
           && Math.max(localZ, targetZ) >= wall.z - wall.length / 2 - 0.35;
         if (wall.shape === "arch") {
           // Same arch passage, turned 90°: the opening runs along z.
+          // The solid parts end exactly at the opening edges (see above).
           const openingHalf = 2 * archScale(roomLayouts[room.layout].height);
           const segMin = Math.min(localZ, targetZ);
           const segMax = Math.max(localZ, targetZ);
-          const overlapsLeftSolid = segMin <= wall.z - openingHalf + 0.35 && segMax >= wall.z - wall.length / 2 - 0.35;
-          const overlapsRightSolid = segMin <= wall.z + wall.length / 2 + 0.35 && segMax >= wall.z + openingHalf - 0.35;
+          const overlapsLeftSolid = segMin <= wall.z - openingHalf && segMax >= wall.z - wall.length / 2 - 0.35;
+          const overlapsRightSolid = segMin <= wall.z + wall.length / 2 + 0.35 && segMax >= wall.z + openingHalf;
           overlapsWall = overlapsLeftSolid || overlapsRightSolid;
         }
         if (crossesWall && overlapsWall) {
@@ -4189,7 +4234,12 @@ export default function GalleryScene({
       artworks={artworks.filter((artwork) => artwork.roomId === sceneRoom.id)}
       selectedId={selectedId}
       onSelect={onSelect}
-      walkable={walkMode && walking === true && sceneRoom.id === (activeRoomId ?? room.id)}
+      // In walk mode every room's floor and artworks are walk targets, not
+      // just the active room's: a click on the far room's floor (through
+      // the arch) must set a destination there instead of doing nothing,
+      // and the camera walks to it through the arch (see the arch
+      // waypoint in WalkControls).
+      walkable={walkMode && walking === true}
       editable={editable}
       onDragStart={handleDragStart}
       onHoverChange={setHoveredArtwork}

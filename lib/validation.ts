@@ -105,12 +105,14 @@ const artworkSchema = z.object({
     ])
     .default("wood"),
   // An artwork image is either a legacy database upload, a portfolio
-  // image, or a new R2 upload (public URL under the configured R2 base).
+  // image, or a new R2 upload — served same-origin from /api/r2/... (the
+  // raw R2 public URL cannot load as a WebGL texture: the bucket has no
+  // CORS policy), or the raw R2 public URL itself.
   imageUrl: z
     .string()
     .refine(
       (url) =>
-        /^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i.test(url) ||
+        /^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif))$/i.test(url) ||
         isR2ImageUrl(url),
       { message: "Invalid image URL." },
     )

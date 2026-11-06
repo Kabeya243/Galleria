@@ -479,9 +479,83 @@ function RenderQualityToggle({ quality, onChange, canvasClassName }: { quality: 
   );
 }
 
-function LoadedArtwork({ imageUrl, width, height, z = 0.083 }: { imageUrl: string; width: number; height: number; z?: number }) {
-  const texture = useTexture(imageUrl);
-  texture.colorSpace = SRGBColorSpace;
+// Artwork image texture, loaded imperatively (TextureLoader + state),
+// never via useTexture: useTexture suspends on the load, and on failure
+// it throws — and there is no error boundary around the artworks, so one
+// bad image URL crashes the whole editor (the "Replace image" crash: the
+// new R2 public URL has no CORS policy, so the texture load failed and
+// useTexture threw). A failed load keeps the previous texture, or the
+// placeholder print when there is none — it never throws.
+function useArtworkTexture(imageUrl: string): Texture | null {
+  const [texture, setTexture] = useState<Texture | null>(null);
+  const currentRef = useRef<Texture | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const loader = new TextureLoader();
+    const next = loader.load(
+      imageUrl,
+      (loaded) => {
+        if (!alive) return;
+        loaded.colorSpace = SRGBColorSpace;
+        const previous = currentRef.current;
+        currentRef.current = loaded;
+        setTexture(loaded);
+        previous?.dispose();
+      },
+      undefined,
+      () => {
+        // Load failed (e.g. a cross-origin image without CORS): keep the
+        // previous texture (or the placeholder). Never throw.
+        if (!alive) return;
+        next.dispose();
+      },
+    );
+    return () => {
+      alive = false;
+      // The new texture never finished loading: drop it. The displayed
+      // texture (if any) is untouched.
+      if (currentRef.current !== next) next.dispose();
+    };
+  }, [imageUrl]);
+  useEffect(
+    () => () => {
+      currentRef.current?.dispose();
+    },
+    [],
+  );
+  return texture;
+}
+
+// The placeholder print shown when an artwork has no image yet, or its
+// image is still loading / failed to load: a coloured plane with the
+// artwork's accent disc and a beige strip, at the same depths as the
+// textured print.
+function PlaceholderPrint({ width, height, z, frameless, color, accent }: { width: number; height: number; z: number; frameless: boolean; color: string; accent: string }) {
+  return (
+    <>
+      <mesh position={[0, 0, frameless ? z - 0.008 : z]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), frameless ? z + 0.002 : z + 0.01]} rotation={[0, 0, -0.22]}>
+        <circleGeometry args={[0.48 * Math.min(width / 1.82, height / 2.12), 48]} />
+        <meshStandardMaterial color={accent} />
+      </mesh>
+      <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), frameless ? z + 0.004 : z + 0.012]} rotation={[0, 0, 0.12]}>
+        <planeGeometry args={[0.8 * (width / 1.82), 0.32 * (height / 2.12)]} />
+        <meshStandardMaterial color="#d7c6a9" />
+      </mesh>
+    </>
+  );
+}
+
+function LoadedArtwork({ imageUrl, width, height, z = 0.083, color, accent, frameless }: { imageUrl: string; width: number; height: number; z?: number; color: string; accent: string; frameless: boolean }) {
+  const texture = useArtworkTexture(imageUrl);
+  if (!texture) {
+    // Still loading, or the image failed to load: show the placeholder
+    // print, never a blank frame — and never throw.
+    return <PlaceholderPrint width={width} height={height} z={z} frameless={frameless} color={color} accent={accent} />;
+  }
   return (
     <mesh position={[0, 0, z]}>
       <planeGeometry args={[width, height]} />
@@ -969,6 +1043,8 @@ function ArtworkFrame({
   // the frame value. "None" hangs the print frameless on the wall.
   const frameValue = artwork.frame ?? "wood";
   const frame = resolveFrameSpec(frameValue);
+  // Depth of the print on the wall (textured or placeholder).
+  const printZ = frameValue === "none" ? 0.02 : -0.06 + frame.depth - frame.recess + 0.005;
   // Full framed size on the wall, for the selection outline and the
   // resize handle (wide frames and mats stick out past the artwork).
   const frameOuter = frameOuterSize(artwork);
@@ -1018,22 +1094,9 @@ function ArtworkFrame({
       {/* Frameless prints sit almost flat on the wall; framed works sit at
           the frame's front face, recessed inside a shadow box. */}
       {artwork.imageUrl ? (
-        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={frameValue === "none" ? 0.02 : -0.06 + frame.depth - frame.recess + 0.005} />
+        <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={printZ} color={artwork.color} accent={artwork.accent} frameless={frameValue === "none"} />
       ) : (
-        <>
-          <mesh position={[0, 0, frameValue === "none" ? 0.012 : -0.06 + frame.depth - frame.recess + 0.005]}>
-            <planeGeometry args={[width, height]} />
-            <meshStandardMaterial color={artwork.color} />
-          </mesh>
-          <mesh position={[-0.24 * (width / 1.82), 0.34 * (height / 2.12), frameValue === "none" ? 0.022 : -0.06 + frame.depth - frame.recess + 0.015]} rotation={[0, 0, -0.22]}>
-            <circleGeometry args={[0.48 * Math.min(width / 1.82, height / 2.12), 48]} />
-            <meshStandardMaterial color={artwork.accent} />
-          </mesh>
-          <mesh position={[0.28 * (width / 1.82), -0.34 * (height / 2.12), frameValue === "none" ? 0.024 : -0.06 + frame.depth - frame.recess + 0.017]} rotation={[0, 0, 0.12]}>
-            <planeGeometry args={[0.8 * (width / 1.82), 0.32 * (height / 2.12)]} />
-            <meshStandardMaterial color="#d7c6a9" />
-          </mesh>
-        </>
+        <PlaceholderPrint width={width} height={height} z={printZ} frameless={frameValue === "none"} color={artwork.color} accent={artwork.accent} />
       )}
       {selected && (
         <mesh position={[0, 0, -0.1]}>

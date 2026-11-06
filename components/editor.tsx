@@ -1370,8 +1370,10 @@ async function compressImage(file: File): Promise<File> {
   // body at 4.5 MB (the editor compresses first), and an oversized file
   // gets a clear message. Once a CORS policy is set on the bucket, the
   // presigned direct upload can be re-enabled to lift the cap.
-  // Returns the public URL, or null when R2 is not configured so the
-  // caller can fall back to the legacy database upload.
+  // Returns the public URL — the same-origin serving URL (/api/r2/...)
+  // so the image loads as a 3D texture without CORS — or null when R2
+  // is not configured so the caller can fall back to the legacy
+  // database upload.
   async function uploadToR2(file: File): Promise<string | null> {
     const body = new FormData();
     body.set("file", file);

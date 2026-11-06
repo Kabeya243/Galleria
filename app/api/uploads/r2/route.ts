@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getR2Bucket, getR2Client, isR2Configured, r2PublicUrl } from "@/lib/r2";
+import { getR2Bucket, getR2Client, isR2Configured } from "@/lib/r2";
 
 export const runtime = "nodejs";
 
@@ -74,5 +74,10 @@ export async function POST(request: Request) {
     console.error("Could not upload image to R2.", error);
     return NextResponse.json({ error: "Could not upload this image." }, { status: 502 });
   }
-  return NextResponse.json({ url: r2PublicUrl(key), key }, { status: 200 });
+  // Same-origin serving URL, not the raw R2 public URL: three.js loads
+  // textures with crossOrigin "anonymous" and the bucket has no CORS
+  // policy, so the raw R2 URL fails to load as a texture and useTexture
+  // throws, crashing the editor (the "Replace image" crash). Served
+  // from /api/r2/<key> the image is same-origin and loads fine.
+  return NextResponse.json({ url: `/api/r2/${key}`, key }, { status: 200 });
 }

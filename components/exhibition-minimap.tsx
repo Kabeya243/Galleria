@@ -48,13 +48,27 @@ export default function ExhibitionMinimap({
   const height = Math.max(1, maxZ - minZ);
   // 1 m = 10 units in the SVG; the plan scales to its container.
   const SCALE = 10;
-  const viewWidth = width * SCALE;
-  const viewHeight = height * SCALE;
-  const toX = (worldX: number) => (worldX - minX) * SCALE;
+  // The panel is dark (#050505, pure black & white theme), so the plan
+  // must read on a dark background: the active room is a solid white
+  // block with a black label, an inactive room a dark block with a
+  // light border and a white label. (The old scheme — active 6% black,
+  // inactive white — was drawn for a light panel, so whichever room
+  // was active vanished into the dark panel with its label, and the
+  // plan looked cut off at the top where that room sits.)
+  // A padding ring keeps rooms and dots off the SVG edge: artworks
+  // hung on the back wall sit at the very edge of their room, and
+  // without it their dots are half clipped by the viewport.
+  const PAD = 12;
+  const viewWidth = width * SCALE + PAD * 2;
+  const viewHeight = height * SCALE + PAD * 2;
+  const toX = (worldX: number) => (worldX - minX) * SCALE + PAD;
   // The back wall (most negative z) is at the top of the plan, the
   // front wall at the bottom — like a floor plan with the entrance
   // at the bottom.
-  const toY = (worldZ: number) => (worldZ - minZ) * SCALE;
+  const toY = (worldZ: number) => (worldZ - minZ) * SCALE + PAD;
+  // Keep every dot fully inside the plan (visible and clickable): a
+  // dot on a wall would otherwise sit half outside the viewport.
+  const clampDot = (value: number, max: number) => Math.min(Math.max(value, 8), Math.max(8, max - 8));
 
   if (rooms.length === 0) return null;
 
@@ -67,7 +81,7 @@ export default function ExhibitionMinimap({
             width="100%"
             role="list"
             aria-label={t("minimap", "floorPlan")}
-            style={{ display: "block", maxHeight: 180 }}
+            style={{ display: "block", maxHeight: 200 }}
           >
             {rooms.map((room, index) => {
               const layout = roomLayouts[room.layout];
@@ -84,9 +98,8 @@ export default function ExhibitionMinimap({
                     y={y}
                     width={w}
                     height={h}
-                    fill={isActive ? "#000" : "#fff"}
-                    fillOpacity={isActive ? 0.06 : 1}
-                    stroke={isActive ? "#000" : "#999"}
+                    fill={isActive ? "#fff" : "rgba(255,255,255,0.07)"}
+                    stroke={isActive ? "#fff" : "rgba(255,255,255,0.55)"}
                     strokeWidth={isActive ? 2 : 1}
                   />
                   <text
@@ -95,14 +108,14 @@ export default function ExhibitionMinimap({
                     textAnchor="middle"
                     fontSize={9}
                     fontWeight={700}
-                    fill="#000"
+                    fill={isActive ? "#000" : "#fff"}
                     style={{ textTransform: "uppercase", letterSpacing: ".08em" }}
                   >
                     {room.name}
                   </text>
                   {roomArtworks.map((artwork) => {
-                    const cx = toX(offsets[index] + artwork.position[0]);
-                    const cy = toY(zOffsets[index] + artwork.position[2]);
+                    const cx = clampDot(toX(offsets[index] + artwork.position[0]), viewWidth);
+                    const cy = clampDot(toY(zOffsets[index] + artwork.position[2]), viewHeight);
                     const isSelected = artwork.id === selectedArtworkId;
                     return (
                       <g key={artwork.id} role="listitem">

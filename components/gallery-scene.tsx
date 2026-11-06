@@ -3329,6 +3329,15 @@ function WalkControls({
   const { camera, gl } = useThree();
   const currentRoomIndex = useRef(Math.max(0, rooms.findIndex((room) => room.id === activeRoomId)));
   const handledRoomId = useRef(activeRoomId);
+  // The frame loop runs outside React renders, so it must never call a
+  // possibly stale onRoomChange closure: the arch switch can fire
+  // inside the scene while the header, panel and artworks stay on the
+  // old room. These refs are refreshed on every render, and the frame
+  // loop only ever calls / reads through them.
+  const onRoomChangeRef = useRef(onRoomChange);
+  onRoomChangeRef.current = onRoomChange;
+  const activeRoomIdRef = useRef(activeRoomId);
+  activeRoomIdRef.current = activeRoomId;
   const initialized = useRef(false);
   const velocity = useRef(new Vector3());
   const direction = useRef(new Vector3());
@@ -3443,9 +3452,37 @@ function WalkControls({
       if (currentRoomIndex.current !== 0) {
         currentRoomIndex.current = 0;
         handledRoomId.current = targetRoom.id;
-        onRoomChange?.(targetRoom.id);
+        onRoomChangeRef.current?.(targetRoom.id);
       }
       return;
+    }
+    // Reconcile the active room with where the camera actually is.
+    // The arch threshold below fires once, in a single frame; if that
+    // call never reaches the parent, the camera walks on into the other
+    // half while the header, panel and artworks stay on the old room
+    // (the live symptom: camera 2–3 m from the back wall, still
+    // "ROOM 1"). So every frame, derive the Stone half from the
+    // camera's world Z and re-assert it when it disagrees with the
+    // active room. The boundary is the arch wall itself (0.7 m thick,
+    // centred on the shared edge), so standing inside the arched
+    // tunnel changes nothing and the room never flickers at the
+    // boundary. Only the Stone front/back pair uses this — other rooms
+    // keep their doorway switching.
+    for (let i = 0; i + 1 < rooms.length; i += 1) {
+      if (rooms[i].layout !== "stone-gallery-front" || rooms[i + 1].layout !== "stone-gallery-back") continue;
+      const boundaryZ = zOffsetOf(i) - roomLayouts[rooms[i].layout].depth / 2;
+      const worldZ = camera.position.z;
+      const activeId = activeRoomIdRef.current;
+      if (worldZ < boundaryZ - 0.35 && activeId !== rooms[i + 1].id) {
+        currentRoomIndex.current = i + 1;
+        handledRoomId.current = rooms[i + 1].id;
+        onRoomChangeRef.current?.(rooms[i + 1].id);
+      } else if (worldZ > boundaryZ + 0.35 && activeId !== rooms[i].id) {
+        currentRoomIndex.current = i;
+        handledRoomId.current = rooms[i].id;
+        onRoomChangeRef.current?.(rooms[i].id);
+      }
+      break;
     }
     const keys = input.current;
     const forwardInput = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
@@ -3588,7 +3625,7 @@ function WalkControls({
         camera.position.x = nextX;
         currentRoomIndex.current = roomIndex + 1;
         handledRoomId.current = rooms[roomIndex + 1].id;
-        onRoomChange?.(rooms[roomIndex + 1].id);
+        onRoomChangeRef.current?.(rooms[roomIndex + 1].id);
         return;
       }
       if (isStoneBack && targetZ > depth / 2 && rooms[roomIndex - 1]?.layout === "stone-gallery-front") {
@@ -3596,7 +3633,7 @@ function WalkControls({
         camera.position.x = nextX;
         currentRoomIndex.current = roomIndex - 1;
         handledRoomId.current = rooms[roomIndex - 1].id;
-        onRoomChange?.(rooms[roomIndex - 1].id);
+        onRoomChangeRef.current?.(rooms[roomIndex - 1].id);
         return;
       }
     }
@@ -3620,7 +3657,7 @@ function WalkControls({
       lookYaw.current = null;
       currentRoomIndex.current = nextIndex;
       handledRoomId.current = rooms[nextIndex].id;
-      onRoomChange?.(rooms[nextIndex].id);
+      onRoomChangeRef.current?.(rooms[nextIndex].id);
       return;
     }
     camera.position.x = MathUtils.clamp(nextX, leftEdge, rightEdge);
@@ -3954,10 +3991,19 @@ export default function GalleryScene({
   // (the camera re-enters at that room's entrance), then the pending
   // target is walked to once the room is active.
   const pendingTeleport = useRef<TeleportTarget | null>(null);
+  // The nonce of the last teleport this effect actually handled. The
+  // editor requests a teleport and enters walk mode in the same click
+  // (setTeleportTarget + setWalking(true)); if this effect first runs
+  // while walkMode is still false it must NOT swallow the request —
+  // it re-runs once walk mode turns on and handles it then. Without
+  // the guard, re-running on walkMode would replay the same teleport.
+  const lastTeleportNonce = useRef<number | null>(null);
   const activeRoomIdRef = useRef(activeRoomId ?? room.id);
   activeRoomIdRef.current = activeRoomId ?? room.id;
   useEffect(() => {
     if (!teleportTarget || !walkMode) return;
+    if (teleportTarget.nonce === lastTeleportNonce.current) return;
+    lastTeleportNonce.current = teleportTarget.nonce;
     const targetRoomIndex = sceneRooms.findIndex((sceneRoom) => sceneRoom.id === teleportTarget.roomId);
     if (targetRoomIndex < 0) return;
     const worldX = offsets[targetRoomIndex] + teleportTarget.x;
@@ -3970,10 +4016,13 @@ export default function GalleryScene({
       pendingTeleport.current = teleportTarget;
       onRoomChange?.(teleportTarget.roomId);
     }
-    // Intentionally only on the teleport request (nonce), not on room
-    // changes — the room-change effect below picks up the pending target.
+    // Re-runs when walk mode turns on too, not only on the teleport
+    // request (nonce): a teleport asked from the editor's floor plan
+    // arrives together with entering walk mode, and the request must
+    // be handled once walk mode is actually on. The nonce guard above
+    // keeps a re-run from replaying the same teleport.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teleportTarget?.nonce]);
+  }, [teleportTarget?.nonce, walkMode]);
   useEffect(() => {
     const pending = pendingTeleport.current;
     if (!pending || pending.roomId !== (activeRoomId ?? room.id)) return;

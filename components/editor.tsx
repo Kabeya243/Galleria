@@ -547,6 +547,21 @@ export default function Editor({
     if (!walking) setWalking(true);
   }
 
+  // Floor-plan room click (minimap): a room name in the plan is a
+  // teleport too, not just an edit-view switch — it enters walk mode
+  // at that room's entrance (the same teleportTarget path as an
+  // artwork dot, so the scene switches rooms and walks in). The left
+  // panel's room list stays the edit-view way to switch rooms without
+  // entering walk mode.
+  function handleRoomTeleport(roomId: string) {
+    const room = rooms.find((candidate) => candidate.id === roomId);
+    if (!room) return;
+    const depth = roomLayouts[room.layout].depth;
+    teleportNonce.current += 1;
+    setTeleportTarget({ roomId, x: 0, z: depth / 2 - 1.5, yaw: 0, nonce: teleportNonce.current });
+    if (!walking) setWalking(true);
+  }
+
   // The Layers panel selects by ref and switches to the item's room.
   function selectLayerItem(ref: LayerItemRef, additive: boolean) {
     if (ref.kind === "artwork") selectArtwork(ref.id, additive);
@@ -1832,7 +1847,7 @@ async function compressImage(file: File): Promise<File> {
               activeRoomId={activeRoom?.id ?? ""}
               selectedArtworkId={selectedId}
               onTeleport={handleTeleport}
-              onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }}
+              onRoomChange={handleRoomTeleport}
             />
             <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>

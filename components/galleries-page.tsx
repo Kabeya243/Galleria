@@ -25,6 +25,20 @@ export type GalleryPresetCard = {
   ceilingTexture: keyof typeof ceilingTextures;
 };
 
+// The Stone Gallery is two rooms (front 20×13 m, back 20×11 m, arch
+// between them), not one 20×24 m hall — its card and preview say so
+// instead of the single room's dimensions. The other models keep the
+// single-room line.
+function finishesLine(room: GalleryPresetCard): string {
+  const finishes = `${wallTextures[room.wallTexture]} walls · ${floorTextures[room.floorTexture]} floor`;
+  if (room.key === "stone-gallery") {
+    const front = roomLayouts["stone-gallery-front"];
+    const back = roomLayouts["stone-gallery-back"];
+    return `Two rooms · ${front.width}×${front.depth} m + ${back.width}×${back.depth} m · ${room.height} m high · ${finishes}`;
+  }
+  return `${room.width} × ${room.depth} m · ${room.height} m high · ${finishes}`;
+}
+
 function shadeHex(hex: string, factor: number): string {
   const value = Number.parseInt(hex.slice(1), 16);
   const r = Math.min(255, Math.max(0, Math.round(((value >> 16) & 255) * factor)));
@@ -290,7 +304,7 @@ export default function GalleriesPage({
           <div>
             <span className="panel-kicker">LIVE 3D PREVIEW</span>
             <h2>{selectedRoom.label}</h2>
-            <p>{selectedRoom.width} × {selectedRoom.depth} m · {selectedRoom.height} m high · {wallTextures[selectedRoom.wallTexture]} walls · {floorTextures[selectedRoom.floorTexture]} floor</p>
+            <p>{finishesLine(selectedRoom)}</p>
           </div>
           <button className="galleries-open-button" onClick={() => void openInEditor(selected)} disabled={opening !== null}>
             <PenLine size={15} /> {opening === selected ? "Opening…" : "Open in editor"}
@@ -387,7 +401,7 @@ export default function GalleriesPage({
                 </button>
               </div>
               <p style={{ marginTop: 4, lineHeight: 1.5 }}>{room.description}</p>
-              <p className="gallery-card-finishes" style={{ marginTop: 6 }}>{room.width} × {room.depth} m · {room.height} m high · {wallTextures[room.wallTexture]} walls · {floorTextures[room.floorTexture]} floor</p>
+              <p className="gallery-card-finishes" style={{ marginTop: 6 }}>{finishesLine(room)}</p>
               <div className="gallery-card-actions">
                 <button onClick={() => viewIn3D(room.key)}><Eye size={14} /> View in 3D</button>
                 <button className="gallery-card-open" onClick={() => void openInEditor(room.key)} disabled={opening !== null}>

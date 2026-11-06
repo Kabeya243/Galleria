@@ -1086,7 +1086,10 @@ export default function Editor({
   // Check here first, so the editor names the artwork and the missing
   // detail instead of failing with a cryptic error.
   function isAllowedImageUrl(url: string): boolean {
-    if (/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i.test(url)) return true;
+    // Keep in sync with the server-side imageUrl check in
+    // lib/validation.ts: a URL the server rejects must not pass here,
+    // and a URL the server accepts must not be blocked here.
+    if (/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif))$/i.test(url)) return true;
     // Bundled placeholder artworks (Stone Gallery template): static
     // images shipped with the app, so they are always there to load.
     if (/^\/artworks\/stone-gallery\/[a-z0-9-]+\.(?:jpg|jpeg|webp)$/i.test(url)) return true;

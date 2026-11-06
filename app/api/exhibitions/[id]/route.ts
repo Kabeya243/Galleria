@@ -4,6 +4,7 @@ import { getCurrentUser, toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
 import { exhibitionUpdateSchema } from "@/lib/validation";
+import { canEditExhibition } from "@/lib/teams";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -47,11 +48,16 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in to edit this exhibition." }, { status: 401 });
   const { id } = await params;
+  // The owner, or a team editor with an edit share on this exhibition
+  // (Teams & Collaboration, Phase 6). Anyone else gets a plain 404.
   const exhibition = await db.exhibition.findFirst({
-    where: { id, ownerId: user.id },
+    where: { id },
     include: { artworks: { orderBy: { createdAt: "asc" } } },
   });
   if (!exhibition) return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+  if (exhibition.ownerId !== user.id && !(await canEditExhibition(user.id, id))) {
+    return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+  }
 
   return NextResponse.json({
     exhibition: {
@@ -69,8 +75,14 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
   try {
     const input = exhibitionUpdateSchema.parse(await request.json());
-    const existing = await db.exhibition.findFirst({ where: { id, ownerId: user.id } });
+    const existing = await db.exhibition.findFirst({ where: { id } });
     if (!existing) return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+    // Save path: the owner, or a team editor with an edit share
+    // (Teams & Collaboration, Phase 6). Viewers and strangers are
+    // refused here, server-side, whatever the UI shows.
+    if (existing.ownerId !== user.id && !(await canEditExhibition(user.id, id))) {
+      return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
+    }
 
     await db.$transaction(async (transaction) => {
       await transaction.exhibition.update({

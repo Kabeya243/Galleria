@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Compass, Presentation } from "lucide-react";
+import { Compass, Globe, Megaphone, Presentation, Printer, Store } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 export const metadata = {
   title: "Publish — SANAA",
   description:
-    "Put your work in front of people: present your published rooms as viewing rooms, and see them live.",
+    "Put your work in front of people: viewing rooms, portfolio sites, marketing, print and the marketplace.",
 };
 
 const CARDS: HubCard[] = [
@@ -25,6 +25,34 @@ const CARDS: HubCard[] = [
     description: "See published exhibitions live, the way visitors see them — including your own.",
     status: "ready",
   },
+  {
+    href: "/tools/website-builder",
+    icon: Globe,
+    title: "Artist Website Builder",
+    description: "A portfolio site from your own works — themes, bio, CV, exhibitions, live preview and a public page.",
+    status: "ready",
+  },
+  {
+    href: "/tools/marketing-studio",
+    icon: Megaphone,
+    title: "Marketing Studio",
+    description: "Posters, social graphics, invitations and press kits from your exhibitions, ready to export.",
+    status: "ready",
+  },
+  {
+    href: "/tools/print-studio",
+    icon: Printer,
+    title: "Print Production Studio",
+    description: "Production-ready print: dimensions, bleed, margins and honest resolution checks, with PDFs.",
+    status: "ready",
+  },
+  {
+    href: "/marketplace",
+    icon: Store,
+    title: "Marketplace",
+    description: "List originals, editions and prints for sale — browse listings and answer buyer inquiries.",
+    status: "ready",
+  },
 ];
 
 export default async function PublishHub() {
@@ -39,7 +67,7 @@ export default async function PublishHub() {
       hubName="Publish"
       title="Publish"
       eyebrow="PUBLISH"
-      description="Put your work in front of people: present your published rooms as viewing rooms, and see them live."
+      description="Put your work in front of people: viewing rooms, portfolio sites, marketing, print and the marketplace."
       cards={CARDS}
     />
   );

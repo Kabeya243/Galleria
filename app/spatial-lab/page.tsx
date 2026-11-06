@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Boxes, GalleryVerticalEnd } from "lucide-react";
+import { Boxes, GalleryVerticalEnd, Scan } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 export const metadata = {
   title: "Spatial Lab — SANAA",
   description:
-    "The 3D side of the studio: gallery room templates and the editor where exhibitions take shape.",
+    "The 3D side of the studio: gallery room templates, the editor where exhibitions take shape, and digital twins with VR and AR.",
 };
 
 const CARDS: HubCard[] = [
@@ -25,6 +25,13 @@ const CARDS: HubCard[] = [
     description: "Place artworks on the walls, shape the rooms, set the light — from your exhibitions list.",
     status: "ready",
   },
+  {
+    href: "/tools/digital-twin",
+    icon: Scan,
+    title: "Digital Twin, VR & AR",
+    description: "A measured twin of a real room, VR walkthroughs and AR previews of your work on a real wall.",
+    status: "ready",
+  },
 ];
 
 export default async function SpatialLabHub() {
@@ -39,7 +46,7 @@ export default async function SpatialLabHub() {
       hubName="Spatial Lab"
       title="Spatial Lab"
       eyebrow="SPATIAL LAB"
-      description="The 3D side of the studio: gallery room templates and the editor where exhibitions take shape."
+      description="The 3D side of the studio: gallery room templates, the editor where exhibitions take shape, and digital twins with VR and AR."
       cards={CARDS}
     />
   );

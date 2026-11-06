@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { Accessibility, Archive, ClipboardList, FileText, GraduationCap, Library, ShieldCheck, Users } from "lucide-react";
-import HubPage, { type HubCard } from "@/components/hub-page";
+import { Accessibility, Archive, ClipboardList, FileText, GraduationCap, Library, ShieldCheck, Users } from "lucide-react";import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -48,6 +47,13 @@ export default async function ManageHub() {
       icon: GraduationCap,
       title: "Art Education Studio",
       description: "Learning guides, questions and quizzes for your exhibitions — built for schools, families and curious visitors.",
+      status: "ready",
+    },
+    {
+      href: "/tools/teams",
+      icon: Users,
+      title: "Teams & Collaboration",
+      description: "Work on exhibitions together — shared projects, comments, reviews and an activity log.",
       status: "ready",
     },
     {

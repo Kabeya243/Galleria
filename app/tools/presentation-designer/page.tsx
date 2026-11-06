@@ -1,0 +1,55 @@
+import { redirect } from "next/navigation";
+import ToolsShell from "@/components/tools-shell";
+import PresentationDesigner from "@/components/presentation-designer";
+import { getCurrentUser } from "@/lib/auth";
+import { logToolUse, type ToolSlug } from "@/lib/tool-use";
+import { db } from "@/lib/db";
+
+export const metadata = {
+  title: "Presentation Designer — SANAA Tools",
+  description:
+    "Build a professional art presentation — portfolio, gallery proposal or art-fair application — from your own artworks, then export it as a PDF.",
+};
+
+export default async function PresentationDesignerRoute() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  // "presentation-designer" is not in TOOL_SLUGS yet (lib/tool-use.ts is
+  // owned by another agent), so cast to keep the usage log without
+  // touching that file.
+  await logToolUse("presentation-designer" as ToolSlug, user.id);
+  const [exhibitionCount, artworks] = await Promise.all([
+    db.exhibition.count({ where: { ownerId: user.id } }),
+    db.artwork.findMany({
+      where: { exhibition: { ownerId: user.id } },
+      select: {
+        id: true,
+        title: true,
+        artist: true,
+        year: true,
+        medium: true,
+        dimensions: true,
+        description: true,
+        color: true,
+        accent: true,
+        imageUrl: true,
+        exhibition: { select: { title: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+  return (
+    <ToolsShell
+      user={user}
+      exhibitionCount={exhibitionCount}
+      title="Presentation Designer"
+      eyebrow="TOOLS · PRESENTATION DESIGNER"
+      description="Turn your artworks into a presentation a gallery, a jury or a fair can open and understand in minutes — a title page, your works with captions, your biography and your project, exported as a PDF."
+    >
+      <PresentationDesigner
+        artworks={artworks.map((a) => ({ ...a, exhibitionTitle: a.exhibition.title }))}
+        userName={user.name}
+      />
+    </ToolsShell>
+  );
+}

@@ -1824,11 +1824,21 @@ function RoomFeatures({
   width,
   depth,
   height,
+  panelTexture,
+  panelColor,
+  panelPBR,
+  contactDecals,
 }: {
   layout: string;
   width: number;
   depth: number;
   height: number;
+  // Freestanding panels reuse the wall's surface map (at panel scale),
+  // colour and PBR finish, so they read as the room's own architecture.
+  panelTexture?: Texture | null;
+  panelColor?: string;
+  panelPBR?: { roughness: number; envMapIntensity: number };
+  contactDecals?: boolean;
 }) {
   if (layout === "cube") {
     // Ceiling track rails running the depth of the room, with spot heads.
@@ -1909,19 +1919,45 @@ function RoomFeatures({
     );
   }
   if (layout === "raw-concrete") {
-    // Seven freestanding black panels in a staggered (quincunx) row.
-    // They are partition architecture, not artworks: no picture face, so
-    // a visitor never reads them as framed works showing a black circle
-    // instead of a photograph.
-    const panels: [number, number][] = [[-6, -3], [0, -3], [6, -3], [-3, 0], [3, 0], [-6, 3], [6, 3]];
+    // Six freestanding concrete panels in three staggered rows. They are
+    // partition architecture, not artworks: no picture face, so a visitor
+    // never reads them as framed works showing a black circle instead of
+    // a photograph. They reuse the wall's concrete map (at panel scale)
+    // and colour, cast and receive shadows, and stand on slim steel feet
+    // — lit concrete with visible texture and shading, not black voids.
+    // (The old near-black #171716 slabs had no texture and no shadows,
+    // and sat where the wall-aimed spotlights never reach, so they
+    // rendered as pure black on both faces.)
+    //
+    // Placement is sightline-checked from the entrance (camera at
+    // z ≈ +4.5, eye 1.65 m): no panel stands on the line from the
+    // entrance to any of the three back-wall artworks, so the far wall
+    // reads fully on entering. The old quincunx put a panel directly in
+    // front of each back-wall work — the middle row (z = 0, x = ±3)
+    // hid the two outer works and the back-row centre (z = -3, x = 0)
+    // hid the centre work, which is why only 5 of 7 artworks could be
+    // identified from the entrance. The back row now frames the centre
+    // work (gap -1.9…+1.9 m) instead of blocking it.
+    const panels: [number, number][] = [[-6, 3], [6, 3], [-8, 0], [8, 0], [-2.75, -3], [2.75, -3]];
     return (
       <group>
         {panels.map(([x, z], index) => (
           <group key={index} position={[x, 0, z]}>
-            <mesh position={[0, 1.35, 0]}>
+            <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
               <boxGeometry args={[1.7, 2.5, 0.1]} />
-              <meshStandardMaterial color="#171716" roughness={0.8} />
+              <meshStandardMaterial color={panelColor ?? "#a9a193"} map={panelTexture ?? undefined} roughness={panelPBR?.roughness ?? 0.88} envMapIntensity={panelPBR?.envMapIntensity ?? 0.2} />
             </mesh>
+            {/* Slim steel stabiliser feet, like the partition walls. */}
+            {[-0.65, 0.65].map((dx) => (
+              <mesh key={dx} position={[dx, 0.04, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.1, 0.08, 0.6]} />
+                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
+              </mesh>
+            ))}
+            {/* Soft contact shadow grounding the panel where the spots
+                do not reach (also covers Medium, where the directional
+                light casts no shadow). */}
+            {contactDecals && <ContactDecal width={2.8} depth={1.4} />}
           </group>
         ))}
       </group>
@@ -2332,11 +2368,22 @@ function GalleryRoom({
   const wallTexture = useMemo(() => createSurfaceTexture(room.wallTexture), [room.wallTexture]);
   const floorTexture = useMemo(() => createSurfaceTexture(room.floorTexture), [room.floorTexture]);
   const ceilingTexture = useMemo(() => createSurfaceTexture(room.ceilingTexture), [room.ceilingTexture]);
+  // Freestanding panels reuse the wall's surface map at panel scale: the
+  // wall texture repeats 4x2 across a 22 m wall, so a shared instance
+  // would pack the formwork joints far too densely on a 1.7 m panel.
+  const panelTexture = useMemo(() => {
+    if (!wallTexture) return undefined;
+    const tex = wallTexture.clone();
+    tex.repeat.set(1, 1);
+    tex.needsUpdate = true;
+    return tex;
+  }, [wallTexture]);
   useEffect(() => () => {
     wallTexture?.dispose();
     floorTexture?.dispose();
     ceilingTexture?.dispose();
-  }, [ceilingTexture, floorTexture, wallTexture]);
+    panelTexture?.dispose();
+  }, [ceilingTexture, floorTexture, panelTexture, wallTexture]);
   const artworkNodes = useMemo(
     () =>
       artworks.map((artwork) => (
@@ -2536,7 +2583,7 @@ function GalleryRoom({
           <CuratorialTextPlane text={room.curatorialText} maxWidthM={Math.min(width - 2, 9)} wallColor={room.wallColor} />
         </group>
       )}
-      <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} />
+      <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} panelTexture={panelTexture} panelColor={backColor} panelPBR={wallPBR} contactDecals={qualityCfg.contactDecals} />
       {showGrid && <FloorGrid width={width} depth={depth} />}
       {showMeasure && <MeasurementGuides artworks={artworks} selectedId={selectedId} width={width} depth={depth} />}
       {artworkNodes}

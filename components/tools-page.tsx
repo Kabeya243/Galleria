@@ -24,6 +24,7 @@ import {
   Palette,
   Presentation,
   Printer,
+  Route,
   Scan,
   ScanEye,
   Sparkles,
@@ -38,6 +39,12 @@ import styles from "./tools.module.css";
 // Written in SANAA's own words — the tool ideas follow the same needs as
 // the big art platforms, the copy and the design are ours.
 const TOOLS = [
+  {
+    href: "/tools/art-in-context",
+    icon: Route,
+    title: "Art in Context",
+    description: "One guided path from upload to promotion — photography, colour, frames, mockups, the 3D gallery, publication and export, all on the same artworks.",
+  },
   {
     href: "/tools/price-your-work",
     icon: Calculator,

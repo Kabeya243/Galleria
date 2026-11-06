@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Aperture, Boxes, Calculator, Frame, GalleryVerticalEnd, Image, Palette, Presentation, Wrench } from "lucide-react";
+import { Aperture, Boxes, Calculator, Frame, GalleryVerticalEnd, Image, Palette, Presentation, Route, Wrench } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -11,6 +11,13 @@ export const metadata = {
 };
 
 const CARDS: HubCard[] = [
+  {
+    href: "/tools/art-in-context",
+    icon: Route,
+    title: "Art in Context",
+    description: "One guided path from upload to promotion — photography, colour, frames, mockups, the 3D gallery, publication and export, all on the same artworks.",
+    status: "ready",
+  },
   {
     href: "/exhibitions",
     icon: GalleryVerticalEnd,

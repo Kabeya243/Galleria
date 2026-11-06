@@ -2,15 +2,20 @@
 
 import Link from "next/link";
 import {
+  Accessibility,
   Aperture,
   Archive,
   ArrowRight,
+  BarChart3,
   Calculator,
+  ClipboardList,
   FileText,
   Frame,
   Gem,
+  GraduationCap,
   Image,
   LayoutGrid,
+  Library,
   Palette,
   Presentation,
   Store,
@@ -83,6 +88,36 @@ const TOOLS = [
     icon: Presentation,
     title: "Presentation Designer",
     description: "Build a presentation for a buyer, a gallery or a jury — slides from your own artworks, ready to share.",
+  },
+  {
+    href: "/tools/collection-manager",
+    icon: Library,
+    title: "Collection Manager",
+    description: "Your whole collection in one place — provenance, inventory numbers, condition and availability, with search and bulk actions.",
+  },
+  {
+    href: "/tools/exhibition-planner",
+    icon: ClipboardList,
+    title: "Exhibition Planner",
+    description: "Plan an exhibition end to end — concept, works, rooms, wall labels, checklist, team and a printable plan.",
+  },
+  {
+    href: "/tools/visitor-analytics",
+    icon: BarChart3,
+    title: "Visitor Analytics",
+    description: "See who visits your exhibitions, day by day — most viewed works, devices, sources, all anonymous.",
+  },
+  {
+    href: "/tools/accessibility-studio",
+    icon: Accessibility,
+    title: "Accessibility & Audio Guide Studio",
+    description: "Audio descriptions, narration and transcripts in English and French, so everyone can experience your work.",
+  },
+  {
+    href: "/tools/education-studio",
+    icon: GraduationCap,
+    title: "Art Education Studio",
+    description: "Learning guides, questions and quizzes for your exhibitions — built for schools, families and curious visitors.",
   },
 ] as const;
 

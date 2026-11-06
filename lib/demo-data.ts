@@ -37,6 +37,11 @@ export type FrameMatKind = "velvet" | "paper" | "yellow";
 // step down toward the artwork; rounded softens the inner front edge;
 // bevelled cuts a 45° chamfer; scooped carves a dark channel.
 export type FrameProfile = "flat" | "stepped" | "rounded" | "bevelled" | "scooped";
+// Repeated 3D ornaments along the frame's bars: "rosettes" is a row of
+// small carved rosettes; "carved" alternates rosettes and scrolls, the
+// dense baroque carving. The ornaments are real instanced geometry, not
+// a drawing — the drawn carving is gone.
+export type FrameOrnament = "none" | "rosettes" | "carved";
 export type FrameFinish = "matte" | "satin" | "gloss";
 export type FrameGlass = "none" | "clear" | "non-reflective" | "museum";
 export type FrameMaterial = "wood" | "metal" | "gold" | "silver" | "acrylic" | "plain";
@@ -86,6 +91,10 @@ export type FrameSpec = {
   profile?: FrameProfile;
   grain?: number;
   glass?: FrameGlass;
+  // Repeated 3D ornaments along the bars (see FrameOrnament), and the
+  // spacing between them in metres (default 0.16).
+  ornament?: FrameOrnament;
+  ornamentSpacing?: number;
   // Acrylic frames are see-through: the bars render semi-transparent.
   opacity?: number;
   // Mat between frame and artwork (a real border the artwork sits on).
@@ -114,32 +123,32 @@ export const FRAME_VARIANTS = {
   white: flat({ label: "White", color: "#f5f2eb", metalness: 0, roughness: 0.8 }),
   // Wood shadow box (photo-65): warm medium-brown natural wood, visible
   // grain, deep tray, artwork floated and recessed inside.
-  "wood-box": flat({ label: "Wood shadow box", color: "#8a6242", metalness: 0, roughness: 0.7, width: 0.07, depth: 0.18, recess: 0.1, floatGap: 0.08, texture: "wood", trayColor: "#6b4a30" }),
+  "wood-box": flat({ label: "Wood shadow box", color: "#8a6242", metalness: 0, roughness: 0.7, width: 0.07, depth: 0.18, recess: 0.1, floatGap: 0.08, texture: "wood", trayColor: "#6b4a30", profile: "stepped" }),
   // Gold ornate + red velvet (photo_1-16): bright gold frame, fine beaded
   // inner edge, wide deep-red velvet mat, thin gold frame around the work.
-  "gold-velvet": flat({ label: "Gold ornate · red velvet", color: "#c9a227", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true, mat: { color: "#6e0f1a", width: 0.14, texture: "velvet" }, trim: { color: "#d4af37", width: 0.015, at: "artwork" } }),
+  "gold-velvet": flat({ label: "Gold ornate · red velvet", color: "#c9a227", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true, mat: { color: "#6e0f1a", width: 0.14, texture: "velvet" }, trim: { color: "#d4af37", width: 0.015, at: "artwork" }, profile: "stepped", ornament: "rosettes", ornamentSpacing: 0.22 }),
   // Gold classic (photo_2-8): warm gold, smooth stepped profile, beaded
   // inner line, medium width, elegant.
-  "gold-classic": flat({ label: "Gold classic", color: "#b08d3e", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true }),
+  "gold-classic": flat({ label: "Gold classic", color: "#b08d3e", metalness: 0.85, roughness: 0.35, width: 0.09, depth: 0.12, texture: "gold-brushed", bead: true, profile: "stepped" }),
   // Gold baroque carved (photo_3-5): heavily carved floral/scroll relief,
   // wide, antique gold with dark recesses.
-  "gold-baroque": flat({ label: "Gold baroque", color: "#a67c37", metalness: 0.8, roughness: 0.45, width: 0.16, depth: 0.13, texture: "gold-carved" }),
+  "gold-baroque": flat({ label: "Gold baroque", color: "#a67c37", metalness: 0.8, roughness: 0.45, width: 0.16, depth: 0.13, texture: "gold-carved", profile: "stepped", ornament: "carved", ornamentSpacing: 0.15 }),
   // Yellow lacquer (photo_4-4): vivid yellow, wide flat smooth profile,
   // high gloss; the work floats small on a wide yellow field.
-  "yellow-lacquer": flat({ label: "Yellow lacquer", color: "#f5c400", metalness: 0.05, roughness: 0.15, width: 0.06, depth: 0.14, recess: 0.04, texture: "yellow-gloss", mat: { color: "#f5c400", width: 0.25, texture: "yellow" } }),
+  "yellow-lacquer": flat({ label: "Yellow lacquer", color: "#f5c400", metalness: 0.05, roughness: 0.15, width: 0.06, depth: 0.14, recess: 0.04, texture: "yellow-gloss", mat: { color: "#f5c400", width: 0.25, texture: "yellow" }, profile: "bevelled" }),
   // Black + gold + cream mat (photo_5-4, lower frame): wide glossy black
   // frame, thin gold trim, wide cream passe-partout, thin gold frame
   // around the artwork.
-  "black-gold-cream": flat({ label: "Black + gold · cream mat", color: "#141414", metalness: 0.2, roughness: 0.35, width: 0.11, depth: 0.12, texture: "black-gloss", mat: { color: "#f2ead8", width: 0.16, texture: "paper" }, trim: { color: "#c9a227", width: 0.02, at: "both" } }),
+  "black-gold-cream": flat({ label: "Black + gold · cream mat", color: "#141414", metalness: 0.2, roughness: 0.35, width: 0.11, depth: 0.12, texture: "black-gloss", mat: { color: "#f2ead8", width: 0.16, texture: "paper" }, trim: { color: "#c9a227", width: 0.02, at: "both" }, profile: "stepped" }),
   // Black + cream mat (photo_5-4, upper frame): thin black frame, wide
   // cream mat, no gold.
-  "black-cream": flat({ label: "Black · cream mat", color: "#1a1a1a", metalness: 0.1, roughness: 0.6, width: 0.035, depth: 0.1, texture: "black-matte", mat: { color: "#f2ead8", width: 0.16, texture: "paper" } }),
+  "black-cream": flat({ label: "Black · cream mat", color: "#1a1a1a", metalness: 0.1, roughness: 0.6, width: 0.035, depth: 0.1, texture: "black-matte", mat: { color: "#f2ead8", width: 0.16, texture: "paper" }, profile: "bevelled" }),
   // Gold museum wide (photo_6-3): very wide ornate gold museum frame,
   // beaded inner edge, warm gold, grand.
-  "gold-museum": flat({ label: "Gold museum", color: "#c19a3d", metalness: 0.85, roughness: 0.3, width: 0.2, depth: 0.13, texture: "gold-brushed", bead: true }),
+  "gold-museum": flat({ label: "Gold museum", color: "#c19a3d", metalness: 0.85, roughness: 0.3, width: 0.2, depth: 0.13, texture: "gold-brushed", bead: true, profile: "stepped", ornament: "rosettes", ornamentSpacing: 0.2 }),
   // Black shadow box (photo_7-2): deep matte black tray, wide, artwork
   // floated inside with a visible gap.
-  "black-box": flat({ label: "Black shadow box", color: "#1c1c1c", metalness: 0.05, roughness: 0.9, width: 0.08, depth: 0.2, recess: 0.12, floatGap: 0.1, texture: "black-matte", trayColor: "#111111" }),
+  "black-box": flat({ label: "Black shadow box", color: "#1c1c1c", metalness: 0.05, roughness: 0.9, width: 0.08, depth: 0.2, recess: 0.12, floatGap: 0.1, texture: "black-matte", trayColor: "#111111", profile: "bevelled" }),
   // --- Frame Studio built-ins (Nov 2026) ---
   // Natural wood: pale, barely stained, fine grain, slim.
   "natural-wood": flat({ label: "Natural wood", color: "#c2a878", metalness: 0, roughness: 0.8, width: 0.06, depth: 0.1, texture: "oak", grain: 0.35 }),
@@ -164,7 +173,7 @@ export const FRAME_VARIANTS = {
   "deep-box": flat({ label: "Deep-box frame", color: "#7a5236", metalness: 0, roughness: 0.7, width: 0.08, depth: 0.28, recess: 0.18, floatGap: 0.12, texture: "wood", grain: 0.6, trayColor: "#5d3d26" }),
   // Ornamental classical: wide carved gold with a cream mat and a thin
   // gold ring around the artwork — the grand salon look.
-  ornamental: flat({ label: "Ornamental classical", color: "#b08d3e", metalness: 0.85, roughness: 0.4, width: 0.18, depth: 0.14, texture: "gold-carved", bead: true, mat: { color: "#f2ead8", width: 0.12, texture: "paper" }, trim: { color: "#d4af37", width: 0.015, at: "artwork" } }),
+  ornamental: flat({ label: "Ornamental classical", color: "#b08d3e", metalness: 0.85, roughness: 0.4, width: 0.18, depth: 0.14, texture: "gold-carved", bead: true, mat: { color: "#f2ead8", width: 0.12, texture: "paper" }, trim: { color: "#d4af37", width: 0.015, at: "artwork" }, profile: "stepped", ornament: "carved", ornamentSpacing: 0.16 }),
   // Archival frame: thin black frame, very wide cream museum board —
   // the conservation framing for works on paper.
   archival: flat({ label: "Archival frame", color: "#1a1a1a", metalness: 0.1, roughness: 0.6, width: 0.03, depth: 0.09, texture: "black-matte", mat: { color: "#f2ead8", width: 0.2, texture: "paper" } }),
@@ -380,6 +389,8 @@ export function specFromFrameConfig(config: FrameConfig): FrameSpec {
     grain: config.grain,
     glass: config.glass,
     opacity,
+    ornament: base.ornament,
+    ornamentSpacing: base.ornamentSpacing,
     mat: config.matWidth > 0 ? { color: config.matColor, width: config.matWidth, texture: "paper" } : undefined,
     trim:
       config.innerBorder > 0

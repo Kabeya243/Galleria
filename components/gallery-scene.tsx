@@ -3,15 +3,16 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
-import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, BufferAttribute, CanvasTexture, DoubleSide, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
+import { ACESFilmicToneMapping, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, surfacePBR, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
-import { resolveFrameSpec, shadeHex } from "@/lib/demo-data";
-import type { FrameSpec, FrameTextureKind } from "@/lib/demo-data";
-import { beadStripTexture, frameTileTexture, matTexture } from "@/lib/frame-textures";
+import { resolveFrameSpec } from "@/lib/demo-data";
+import type { FrameSpec } from "@/lib/demo-data";
+import { frameTileTexture, matTexture } from "@/lib/frame-textures";
+import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, rosetteGeometry, scrollGeometry, setInstancedMatrices } from "@/lib/frame-geometry";
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
 import { roomLayouts, type GalleryRoom, type WallId } from "@/lib/rooms";
 
@@ -386,19 +387,38 @@ export function frameOuterSize(artwork: Artwork): { width: number; height: numbe
   return { width: width + extra, height: height + extra };
 }
 
-// One material tile, cloned per bar so each bar can repeat it along its
-// own length. The clone shares the cached canvas; disposing it on
-// unmount only drops the GPU copy.
-function useTiledFrameMaterial(spec: FrameSpec, repeatX: number, repeatY: number) {
+// The material of a frame's bars: real PBR. Gold and silver are bare
+// metal — no colour map, so the room environment reflects in them
+// instead of a flat drawn gold dulling the surface. Wood keeps its
+// grain tile as colour + bump (the ring UVs are in metres, so the tile
+// repeats every 0.4 m). The clone shares the cached canvas; disposing
+// it on unmount only drops the GPU copy.
+function useFrameMaterial(spec: FrameSpec) {
   const material = useMemo(() => {
-    const tile = frameTileTexture(spec.texture, { grain: spec.grain });
+    const isWood = spec.texture === "wood" || spec.texture === "oak" || spec.texture === "walnut" || spec.texture === "mahogany";
+    const isMetal =
+      spec.texture === "gold-brushed" ||
+      spec.texture === "gold-carved" ||
+      spec.texture === "silver-brushed" ||
+      spec.texture === "aluminium-brushed" ||
+      spec.metalness >= 0.8;
+    const tile = isWood ? frameTileTexture(spec.texture, { grain: spec.grain }) : undefined;
     const map = tile?.clone();
     if (map) {
-      map.repeat.set(Math.max(1, repeatX), Math.max(1, repeatY));
+      map.repeat.set(2.5, 2.5);
       map.needsUpdate = true;
     }
-    return { map, color: tile ? "#ffffff" : spec.color, metalness: spec.metalness, roughness: spec.roughness, opacity: spec.opacity };
-  }, [spec, repeatX, repeatY]);
+    return {
+      map,
+      bumpMap: map,
+      bumpScale: isWood ? 0.02 : 0,
+      color: isWood ? "#ffffff" : spec.color,
+      metalness: isMetal ? Math.max(spec.metalness, 0.9) : spec.metalness,
+      roughness: spec.roughness,
+      envMapIntensity: spec.metalness > 0.5 ? 1.4 : 0.6,
+      opacity: spec.opacity,
+    };
+  }, [spec]);
   useEffect(() => () => {
     material.map?.dispose();
   }, [material]);
@@ -414,102 +434,76 @@ function FrameBar({ size, position, material }: { size: [number, number, number]
   );
 }
 
-// The edge profile of a frame bar, drawn as a strip along the bar's
-// inner front edge: a step down toward the artwork, a 45° chamfer, a
-// rounded bead, or a dark scooped channel. `horizontal` runs the strip
-// along X (top/bottom bars); vertical bars run it along Y. `sign` picks
-// which side of the opening the bar sits on.
-function ProfileStrip({ horizontal, sign, openingW, openingH, spec, material }: {
-  horizontal: boolean;
-  sign: 1 | -1;
-  openingW: number;
-  openingH: number;
-  spec: FrameSpec;
-  material: { map?: CanvasTexture; color: string; metalness: number; roughness: number; opacity?: number };
+// The beaded inner edge of the gold frames: real gold spheres,
+// instanced along the opening, half-embedded in the frame's inner
+// front face — not drawn dots on a flat strip.
+function BeadSpheres({ positions, z }: { positions: { x: number; y: number }[]; z: number }) {
+  const ref = useRef<InstancedMesh>(null!);
+  useLayoutEffect(() => {
+    if (ref.current) setInstancedMatrices(ref.current, positions, z, 1);
+  }, [positions, z]);
+  if (positions.length === 0) return null;
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, positions.length]} frustumCulled={false} castShadow>
+      <sphereGeometry args={[0.008, 12, 10]} />
+      <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.3} envMapIntensity={1.2} />
+    </instancedMesh>
+  );
+}
+
+// The carved border of the ornate gold frames: rosettes — and, for the
+// dense baroque carving, alternating rosettes and scrolls — instanced
+// along the outer moulding band, standing proud of the front face.
+function OrnamentSet({
+  positions,
+  z,
+  scale,
+  carved,
+  color,
+  metalness,
+  roughness,
+}: {
+  positions: { x: number; y: number }[];
+  z: number;
+  scale: number;
+  carved: boolean;
+  color: string;
+  metalness: number;
+  roughness: number;
 }) {
-  const profile = spec.profile ?? "flat";
-  if (profile === "flat") return null;
-  const w = spec.width;
-  const d = spec.depth;
-  const barZ = -0.06 + d / 2;
-  const frontZ = -0.06 + d;
-  const length = horizontal ? openingW : openingH;
-  if (profile === "stepped") {
-    // A step down: a shallower bar on the inner half of the frame.
-    const size: [number, number, number] = horizontal ? [length, w * 0.45, d * 0.55] : [w * 0.45, length, d * 0.55];
-    const position: [number, number, number] = horizontal
-      ? [0, sign * (openingH / 2 + w * 0.22), barZ - d * 0.12]
-      : [sign * (openingW / 2 + w * 0.22), 0, barZ - d * 0.12];
-    return <FrameBar size={size} position={position} material={material} />;
-  }
-  if (profile === "bevelled") {
-    // A 45° chamfer plane between the front face and the inner edge.
-    const size: [number, number, number] = horizontal ? [length, w * 0.55, 0.025] : [w * 0.55, length, 0.025];
-    const position: [number, number, number] = horizontal
-      ? [0, sign * (openingH / 2 + w * 0.1), frontZ - w * 0.1]
-      : [sign * (openingW / 2 + w * 0.1), 0, frontZ - w * 0.1];
-    const rotation: [number, number, number] = horizontal ? [Math.PI / 4, 0, 0] : [0, Math.PI / 4, 0];
-    return (
-      <mesh position={position} rotation={rotation}>
-        <boxGeometry args={size} />
-        <meshStandardMaterial color={spec.color} metalness={spec.metalness} roughness={spec.roughness} />
-      </mesh>
-    );
-  }
-  if (profile === "rounded") {
-    // A half-round bead along the inner front edge.
-    const position: [number, number, number] = horizontal
-      ? [0, sign * (openingH / 2 + w * 0.05), frontZ - w * 0.05]
-      : [sign * (openingW / 2 + w * 0.05), 0, frontZ - w * 0.05];
-    const rotation: [number, number, number] = horizontal ? [0, 0, Math.PI / 2] : [0, 0, 0];
-    return (
-      <mesh position={position} rotation={rotation}>
-        <cylinderGeometry args={[w * 0.22, w * 0.22, length, 16]} />
-        <meshStandardMaterial color={spec.color} metalness={spec.metalness} roughness={spec.roughness} />
-      </mesh>
-    );
-  }
-  // Scooped: a dark recessed channel along the inner edge.
-  const size: [number, number, number] = horizontal ? [length, w * 0.5, 0.02] : [w * 0.5, length, 0.02];
-  const position: [number, number, number] = horizontal
-    ? [0, sign * (openingH / 2 + w * 0.25), frontZ - 0.015]
-    : [sign * (openingW / 2 + w * 0.25), 0, frontZ - 0.015];
+  const rosetteRef = useRef<InstancedMesh>(null!);
+  const scrollRef = useRef<InstancedMesh>(null!);
+  const rosetteGeo = useMemo(() => rosetteGeometry(), []);
+  const scrollGeo = useMemo(() => scrollGeometry(), []);
+  const rosettePositions = useMemo(() => (carved ? positions.filter((_, i) => i % 2 === 0) : positions), [carved, positions]);
+  const scrollPositions = useMemo(() => (carved ? positions.filter((_, i) => i % 2 === 1) : []), [carved, positions]);
+  useLayoutEffect(() => {
+    if (rosetteRef.current) setInstancedMatrices(rosetteRef.current, rosettePositions, z, scale);
+  }, [rosettePositions, z, scale]);
+  useLayoutEffect(() => {
+    if (scrollRef.current) setInstancedMatrices(scrollRef.current, scrollPositions, z, scale);
+  }, [scrollPositions, z, scale]);
+  if (positions.length === 0) return null;
   return (
-    <mesh position={position}>
-      <boxGeometry args={size} />
-      <meshStandardMaterial color={shadeHex(spec.color, 0.55)} metalness={0} roughness={0.9} />
-    </mesh>
+    <group>
+      <instancedMesh ref={rosetteRef} args={[rosetteGeo, undefined, Math.max(1, rosettePositions.length)]} frustumCulled={false} castShadow>
+        <meshStandardMaterial color={color} metalness={Math.max(metalness, 0.9)} roughness={roughness} envMapIntensity={1.4} />
+      </instancedMesh>
+      {carved && scrollPositions.length > 0 && (
+        <instancedMesh ref={scrollRef} args={[scrollGeo, undefined, scrollPositions.length]} frustumCulled={false} castShadow>
+          <meshStandardMaterial color={color} metalness={Math.max(metalness, 0.9)} roughness={roughness} envMapIntensity={1.4} />
+        </instancedMesh>
+      )}
+    </group>
   );
 }
 
-// The beaded inner edge of the gold frames: a row of gold dots on a
-// transparent strip, repeated along the frame's inner edge.
-function BeadStrip({ length, position, rotation }: { length: number; position: [number, number, number]; rotation?: [number, number, number] }) {
-  const map = useMemo(() => {
-    const base = beadStripTexture();
-    const clone = base?.clone();
-    if (clone) {
-      clone.repeat.set(Math.max(1, Math.round(length / 0.25)), 1);
-      clone.needsUpdate = true;
-    }
-    return clone;
-  }, [length]);
-  useEffect(() => () => {
-    map?.dispose();
-  }, [map]);
-  if (!map) return null;
-  return (
-    <mesh position={position} rotation={rotation ?? [0, 0, 0]}>
-      <planeGeometry args={[length, 0.03]} />
-      <meshBasicMaterial map={map} transparent toneMapped={false} />
-    </mesh>
-  );
-}
-
-// The frame around an artwork, built from its digitized spec: four
-// profiled bars with the drawn material texture, a back panel (the tray
-// a floated work hangs against), an optional mat the work sits on, thin
-// gold trim rings and a beaded inner edge where the photo has one.
+// The frame around an artwork, built from its digitized spec: extruded
+// moulding rings with a real stepped profile (no corner joints, the
+// steps catch light), a back panel (the tray a floated work hangs
+// against), an optional mat the work sits on, thin gold trim rings,
+// real bead spheres on the inner edge where the photo has them, and
+// real carved rosettes / scrolls on the ornate gold frames.
 // Local z: the frame back sits at -0.06, the front face at -0.06 + depth.
 function FrameAssembly({ width, height, spec, selected }: { width: number; height: number; spec: FrameSpec; selected: boolean }) {
   const w = spec.width;
@@ -521,14 +515,51 @@ function FrameAssembly({ width, height, spec, selected }: { width: number; heigh
   const outerH = openingH + 2 * w;
   const backZ = -0.06;
   const frontZ = backZ + d;
-  const barZ = backZ + d / 2;
   const artZ = frontZ - spec.recess;
-  const tile = 0.4; // metres per texture tile along a bar
-  const topMaterial = useTiledFrameMaterial(spec, outerW / tile, w / tile);
-  const sideMaterial = useTiledFrameMaterial(spec, w / tile, openingH / tile);
+  const material = useFrameMaterial(spec);
   const matMap = useMemo(() => (spec.mat ? matTexture(spec.mat.texture, spec.mat.color) : undefined), [spec.mat]);
   const trim = spec.trim;
   const trimZ = artZ - 0.005;
+  // Moulding levels: each level is one extruded ring; together they tile
+  // the bar and step down toward the artwork.
+  const levels = useMemo(() => profileLevels(spec.profile), [spec.profile]);
+  const bevel = useMemo(() => profileBevel(spec.profile, w, d), [spec.profile, w, d]);
+  const rings = useMemo(
+    () =>
+      levels.map((level) =>
+        frameRingGeometry(
+          openingW + 2 * level.outerFrac * w,
+          openingH + 2 * level.outerFrac * w,
+          openingW + 2 * level.innerFrac * w,
+          openingH + 2 * level.innerFrac * w,
+          level.depthFrac * d,
+          bevel.size,
+          bevel.thickness,
+          bevel.segments,
+        ),
+      ),
+    [levels, openingW, openingH, w, d, bevel],
+  );
+  useEffect(() => () => {
+    rings.forEach((g) => g.dispose());
+  }, [rings]);
+  // Front face of the innermost level — where the beads sit.
+  const innerFrontZ = backZ + levels[levels.length - 1].depthFrac * d;
+  const beadPositions = useMemo(
+    () => (spec.bead ? perimeterPositions(openingW + 0.018, openingH + 0.018, 0.02) : []),
+    [spec.bead, openingW, openingH],
+  );
+  // Carved border: rosettes (and scrolls, for the dense baroque carving)
+  // along the outer moulding band's centreline.
+  const ornament = spec.ornament ?? "none";
+  const outerLevel = levels[0];
+  const bandCenter = ((outerLevel.innerFrac + outerLevel.outerFrac) / 2) * w;
+  const bandWidth = (outerLevel.outerFrac - outerLevel.innerFrac) * w;
+  const ornamentLoop = useMemo(
+    () => (ornament === "none" ? [] : perimeterPositions(openingW + 2 * bandCenter, openingH + 2 * bandCenter, spec.ornamentSpacing ?? 0.16)),
+    [ornament, openingW, openingH, bandCenter, spec.ornamentSpacing],
+  );
+  const ornamentScale = Math.min(1.2, Math.max(0.45, (bandWidth * 0.7) / 0.075));
   return (
     <group>
       {/* Back panel: the tray interior a floated work hangs against. */}
@@ -536,18 +567,41 @@ function FrameAssembly({ width, height, spec, selected }: { width: number; heigh
         <boxGeometry args={[outerW, outerH, 0.04]} />
         <meshStandardMaterial color={selected ? "#aa7958" : spec.trayColor ?? spec.color} metalness={0} roughness={0.9} />
       </mesh>
-      {/* Four profiled bars. */}
-      <FrameBar size={[outerW, w, d]} position={[0, openingH / 2 + w / 2, barZ]} material={topMaterial} />
-      <FrameBar size={[outerW, w, d]} position={[0, -openingH / 2 - w / 2, barZ]} material={topMaterial} />
-      <FrameBar size={[w, openingH, d]} position={[-openingW / 2 - w / 2, 0, barZ]} material={sideMaterial} />
-      <FrameBar size={[w, openingH, d]} position={[openingW / 2 + w / 2, 0, barZ]} material={sideMaterial} />
-      {/* Edge profile along each bar's inner front edge. */}
-      {(spec.profile ?? "flat") !== "flat" && (
+      {/* Profiled moulding rings. */}
+      {rings.map((geo, i) => (
+        <mesh key={i} geometry={geo} position={[0, 0, backZ]} castShadow>
+          <meshStandardMaterial
+            map={material.map}
+            bumpMap={material.bumpMap}
+            bumpScale={material.bumpScale}
+            color={material.color}
+            metalness={material.metalness}
+            roughness={material.roughness}
+            envMapIntensity={material.envMapIntensity}
+            transparent={material.opacity !== undefined && material.opacity < 1}
+            opacity={material.opacity ?? 1}
+          />
+        </mesh>
+      ))}
+      {/* Rounded profile: a half-round bead along the inner front edge. */}
+      {spec.profile === "rounded" && (
         <group>
-          <ProfileStrip horizontal sign={1} openingW={openingW} openingH={openingH} spec={spec} material={topMaterial} />
-          <ProfileStrip horizontal sign={-1} openingW={openingW} openingH={openingH} spec={spec} material={topMaterial} />
-          <ProfileStrip horizontal={false} sign={-1} openingW={openingW} openingH={openingH} spec={spec} material={sideMaterial} />
-          <ProfileStrip horizontal={false} sign={1} openingW={openingW} openingH={openingH} spec={spec} material={sideMaterial} />
+          <mesh position={[0, openingH / 2 + w * 0.05, frontZ - w * 0.05]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[w * 0.22, w * 0.22, openingW, 16]} />
+            <meshStandardMaterial color={spec.color} metalness={material.metalness} roughness={material.roughness} envMapIntensity={material.envMapIntensity} />
+          </mesh>
+          <mesh position={[0, -openingH / 2 - w * 0.05, frontZ - w * 0.05]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[w * 0.22, w * 0.22, openingW, 16]} />
+            <meshStandardMaterial color={spec.color} metalness={material.metalness} roughness={material.roughness} envMapIntensity={material.envMapIntensity} />
+          </mesh>
+          <mesh position={[-openingW / 2 - w * 0.05, 0, frontZ - w * 0.05]}>
+            <cylinderGeometry args={[w * 0.22, w * 0.22, openingH, 16]} />
+            <meshStandardMaterial color={spec.color} metalness={material.metalness} roughness={material.roughness} envMapIntensity={material.envMapIntensity} />
+          </mesh>
+          <mesh position={[openingW / 2 + w * 0.05, 0, frontZ - w * 0.05]}>
+            <cylinderGeometry args={[w * 0.22, w * 0.22, openingH, 16]} />
+            <meshStandardMaterial color={spec.color} metalness={material.metalness} roughness={material.roughness} envMapIntensity={material.envMapIntensity} />
+          </mesh>
         </group>
       )}
       {/* Glass over the artwork: a faint sheen, strongest for clear
@@ -582,14 +636,11 @@ function FrameAssembly({ width, height, spec, selected }: { width: number; heigh
           <FrameBar size={[trim.width, openingH, 0.02]} position={[openingW / 2 + trim.width / 2, 0, trimZ]} material={{ map: undefined, color: trim.color, metalness: 0.9, roughness: 0.3 }} />
         </group>
       )}
-      {/* Beaded inner edge, just inside the frame on its front face. */}
-      {spec.bead && (
-        <group>
-          <BeadStrip length={openingW} position={[0, openingH / 2 + 0.02, frontZ + 0.002]} />
-          <BeadStrip length={openingW} position={[0, -openingH / 2 - 0.02, frontZ + 0.002]} />
-          <BeadStrip length={openingH} position={[-openingW / 2 - 0.02, 0, frontZ + 0.002]} rotation={[0, 0, Math.PI / 2]} />
-          <BeadStrip length={openingH} position={[openingW / 2 + 0.02, 0, frontZ + 0.002]} rotation={[0, 0, Math.PI / 2]} />
-        </group>
+      {/* Beaded inner edge: real gold spheres on the inner front face. */}
+      {spec.bead && <BeadSpheres positions={beadPositions} z={innerFrontZ + 0.003} />}
+      {/* Carved border: real rosettes (and scrolls) on the outer band. */}
+      {ornament !== "none" && (
+        <OrnamentSet positions={ornamentLoop} z={frontZ - 0.003} scale={ornamentScale} carved={ornament === "carved"} color={spec.color} metalness={spec.metalness} roughness={spec.roughness} />
       )}
     </group>
   );

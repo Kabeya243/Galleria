@@ -110,42 +110,10 @@ export function frameTileTexture(kind: FrameTextureKind, options?: { grain?: num
       ctx.fillRect(0, 0, size, size);
     });
   } else if (kind === "gold-carved") {
-    texture = makeTile((ctx, size) => {
-      ctx.fillStyle = "#a67c37";
-      ctx.fillRect(0, 0, size, size);
-      // Repeating baroque scroll: curls and leaves, dark in the recesses.
-      const step = 64;
-      for (let x = 0; x < size; x += step) {
-        for (let y = 0; y < size; y += step) {
-          ctx.strokeStyle = "#6b4a1f";
-          ctx.globalAlpha = 0.55;
-          ctx.lineWidth = 5;
-          ctx.beginPath();
-          ctx.arc(x + step / 2, y + step / 2, step * 0.32, 0.3, Math.PI * 1.7);
-          ctx.stroke();
-          ctx.strokeStyle = "#d4af37";
-          ctx.globalAlpha = 0.8;
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          ctx.arc(x + step / 2, y + step / 2, step * 0.32, 0.3, Math.PI * 1.7);
-          ctx.stroke();
-          ctx.fillStyle = "#e8c96a";
-          ctx.globalAlpha = 0.75;
-          ctx.beginPath();
-          ctx.ellipse(x + step * 0.78, y + step * 0.22, 9, 4.5, 0.7, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.beginPath();
-          ctx.ellipse(x + step * 0.22, y + step * 0.78, 9, 4.5, 0.7, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "#8a6d1f";
-          ctx.globalAlpha = 0.6;
-          ctx.beginPath();
-          ctx.arc(x + step / 2, y + step / 2, 3.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.globalAlpha = 1;
-    });
+    // Carved gold is real ornament geometry now (lib/frame-geometry.ts) —
+    // no drawn carving. The bars render as bare gold metal; the texture
+    // returns undefined so the material falls back to the spec colour.
+    texture = undefined;
   } else if (kind === "yellow-gloss") {
     texture = makeTile((ctx, size) => {
       ctx.fillStyle = "#f5c400";
@@ -221,35 +189,4 @@ export function matTexture(kind: FrameMatKind, color: string): CanvasTexture | u
   }
   matCache.set(key, texture);
   return texture;
-}
-
-let beadTexture: CanvasTexture | undefined;
-
-// A row of gold beads on a transparent strip, repeated along the frame's
-// inner edge — the beaded line of the gold frames in the photos.
-export function beadStripTexture(): CanvasTexture | undefined {
-  if (beadTexture !== undefined) return beadTexture;
-  if (typeof document === "undefined") return undefined;
-  const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 16;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return undefined;
-  ctx.clearRect(0, 0, 64, 16);
-  for (let x = 4; x < 64; x += 8) {
-    const gradient = ctx.createRadialGradient(x - 1, 7, 0.5, x, 8, 4);
-    gradient.addColorStop(0, "#f4dc7d");
-    gradient.addColorStop(0.6, "#c9a227");
-    gradient.addColorStop(1, "#8a6d1f");
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(x, 8, 3.6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  beadTexture = new CanvasTexture(canvas);
-  beadTexture.colorSpace = SRGBColorSpace;
-  beadTexture.wrapS = RepeatWrapping;
-  beadTexture.wrapT = RepeatWrapping;
-  beadTexture.anisotropy = 4;
-  return beadTexture;
 }

@@ -179,6 +179,12 @@ export function surfacePBR(style: string | undefined, site: "floor" | "wall" | "
       return site === "floor"
         ? { roughness: 0.62, metalness: 0, envMapIntensity: 0.3 }
         : { roughness: 0.85, metalness: 0, envMapIntensity: 0.15 };
+    case "stone-plaster":
+    case "stone-concrete":
+      // The Stone Gallery surfaces: the reference room's dead-matte
+      // stone plaster (walls, roughness 1) and mottled concrete
+      // (floor, roughness 0.95) — no polish, no sheen.
+      return { roughness: 0.95, metalness: 0, envMapIntensity: 0.1 };
     default:
       // Plaster (and any unknown finish): dead matte, almost no reflection.
       return { roughness: 0.95, metalness: 0, envMapIntensity: 0.12 };

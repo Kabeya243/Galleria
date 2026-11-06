@@ -22,6 +22,12 @@ const LIGHT_PRESETS = {
   "spot-warm": { ambient: 1.4, directional: 1.8, directionalColor: "#fff2df", spotColor: "#fff0d6", spotIntensity: 22, pointColor: "#f4d8b8", pointIntensity: 0.55 },
   "spot-cool": { ambient: 1.5, directional: 1.9, directionalColor: "#e8f0ff", spotColor: "#dfe8ff", spotIntensity: 22, pointColor: "#d8e2f4", pointIntensity: 0.55 },
   ambient: { ambient: 2.6, directional: 1.0, directionalColor: "#ffffff", spotColor: "#ffffff", spotIntensity: 0, pointColor: "#ffffff", pointIntensity: 0.3 },
+  // Stone Gallery: the reference room's warm glow — a soft hemisphere
+  // plus warm point lights carry the ambient, a gentle warm
+  // directional grounds the shadows, and the per-artwork spots stay
+  // low (no bright pools). The hemisphere and the five point lights
+  // are added in GalleryScene when this preset is active.
+  "stone-warm": { ambient: 0.6, directional: 0.8, directionalColor: "#ffe2b8", spotColor: "#ffe2b8", spotIntensity: 10, pointColor: "#ffe2b8", pointIntensity: 0.55 },
 } as const;
 
 function createSurfaceTexture(style: string): CanvasTexture | undefined {
@@ -104,6 +110,33 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
       context.fillRect(x, y, 2, 2);
     }
     texture.repeat.set(4, 2);
+  } else if (style === "stone-concrete") {
+    // Stone concrete (Stone Gallery floor): the reference room's
+    // mottled concrete — large soft dark and light blotches over a
+    // warm grey base, no formwork joints, no panel lines. Drawn in
+    // near-white so the floor colour tints it. Seeded. Values are the
+    // reference's, halved for this 256 px tile (the reference uses a
+    // 512 px tile): 700 blotches of radius 6–70.
+    context.fillStyle = "#f4f1ea";
+    context.fillRect(0, 0, 256, 256);
+    let seed = 31;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    for (let i = 0; i < 700; i += 1) {
+      const dark = rand() < 0.5;
+      const alpha = 0.03 + rand() * 0.07;
+      context.fillStyle = dark
+        ? `rgba(99, 94, 89, ${alpha.toFixed(3)})`
+        : `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+      const r = 3 + rand() * 32;
+      context.beginPath();
+      context.arc(rand() * 256, rand() * 256, r, 0, Math.PI * 2);
+      context.fill();
+    }
+    // One tile covers ~4 m, like the reference (5 across, 5 deep).
+    texture.repeat.set(5, 5);
   } else if (style === "marble") {
     context.fillStyle = "#fbfaf6";
     context.fillRect(0, 0, 256, 256);
@@ -138,11 +171,14 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
     context.fillRect(127, 0, 3, 256);
     texture.repeat.set(4, 3);
   } else if (style === "stone-plaster") {
-    // Stone plaster (Stone Gallery): warm plaster with speckles, age
-    // stains and hairline cracks — the Three.js reference room's wall.
-    // Drawn in near-white so the wall colour tints it; the dark
-    // speckle, stains and cracks stay dark. Seeded, so the wall looks
-    // the same on every render.
+    // Stone plaster (Stone Gallery): the Three.js reference room's
+    // wall, drawn the way the reference draws it — large soft
+    // blotches (not fine dots), age stains and hairline cracks over a
+    // warm plaster base. Drawn in near-white so the wall colour tints
+    // it; the dark speckle, stains and cracks stay dark. Seeded, so
+    // the wall looks the same on every render. Values are the
+    // reference's, halved for this 256 px tile (the reference uses a
+    // 512 px tile): 900 speckles of radius 4–55, 14 stains, 10 cracks.
     context.fillStyle = "#f2eee3";
     context.fillRect(0, 0, 256, 256);
     let seed = 7;
@@ -150,42 +186,43 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
       seed = (seed * 16807) % 2147483647;
       return seed / 2147483647;
     };
-    // Speckles: small dark and light dots, like the reference.
-    for (let i = 0; i < 800; i += 1) {
+    // Speckles: large soft dark and light blotches, like the reference.
+    for (let i = 0; i < 900; i += 1) {
       const dark = rand() < 0.5;
-      const alpha = 0.04 + rand() * 0.12;
+      const alpha = dark ? 0.03 + rand() * 0.09 : 0.04 + rand() * 0.11;
       context.fillStyle = dark
         ? `rgba(110, 100, 85, ${alpha.toFixed(3)})`
         : `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
-      const r = 1 + rand() * 9;
+      const r = 2 + rand() * 26;
       context.beginPath();
       context.arc(rand() * 256, rand() * 256, r, 0, Math.PI * 2);
       context.fill();
     }
     // Age stains: soft rectangular patches.
-    for (let i = 0; i < 12; i += 1) {
-      const alpha = 0.1 + rand() * 0.15;
+    for (let i = 0; i < 14; i += 1) {
+      const alpha = 0.25 + rand() * 0.2;
       context.fillStyle = `rgba(120, 108, 92, ${alpha.toFixed(3)})`;
       const w = 20 + rand() * 35;
       const h = 12 + rand() * 18;
       context.fillRect(rand() * (256 - w), rand() * (256 - h), w, h);
     }
     // Hairline cracks: jagged polylines wandering downwards.
-    context.strokeStyle = "rgba(70, 60, 50, 0.35)";
-    context.lineWidth = 1;
-    for (let i = 0; i < 8; i += 1) {
+    context.strokeStyle = "rgba(60, 50, 40, 0.45)";
+    context.lineWidth = 1.2;
+    for (let i = 0; i < 10; i += 1) {
       let x = rand() * 256;
       let y = rand() * 256;
       context.beginPath();
       context.moveTo(x, y);
       for (let k = 0; k < 10; k += 1) {
-        x += (rand() - 0.5) * 20;
-        y += 6 + rand() * 16;
+        x += (rand() - 0.5) * 14;
+        y += 3 + rand() * 11;
         context.lineTo(x, y);
       }
       context.stroke();
     }
-    texture.repeat.set(4, 2);
+    // One tile covers ~4 m, like the reference (5 across a 20 m wall).
+    texture.repeat.set(5, 1.6);
   } else {
     context.fillStyle = "#f6f3ec";
     context.fillRect(0, 0, 256, 256);
@@ -2524,8 +2561,11 @@ function RoomFeatures({
           </mesh>
         ))}
         {/* Arched niche on the back wall (darker stone), behind the
-            artwork that hangs over it. */}
-        <mesh position={[nicheX, 0, -depth / 2 + 0.05]}>
+            artwork that hangs over it. It sits 0.05 m off the wall's
+            front face (the wall is a 0.25 m box, so its face is at
+            -depth/2 + 0.125) — at -depth/2 + 0.05 it was buried inside
+            the wall and invisible. It receives the artwork's shadow. */}
+        <mesh position={[nicheX, 0, -depth / 2 + 0.175]} receiveShadow>
           <shapeGeometry args={[stoneNicheShape]} />
           <meshStandardMaterial color="#7d7164" roughness={1} />
         </mesh>
@@ -2543,7 +2583,7 @@ function RoomFeatures({
             <meshStandardMaterial color="#8d8a82" roughness={1} />
           </mesh>
           {[5.4, 5.9, 6.4, 6.9].map((fx) => (
-            <mesh key={fx} position={[fx - 6.2, 0.78, -0.1]} rotation={[-0.25, 0, 0]}>
+            <mesh key={fx} position={[fx - 6.2, 0.78, -0.1]} rotation={[-0.25, 0, 0]} castShadow>
               <boxGeometry args={[0.4, 0.5, 0.03]} />
               <meshStandardMaterial color="#e8e8e8" metalness={0.4} roughness={0.4} />
             </mesh>
@@ -2801,6 +2841,20 @@ function ArchPartitionWall({
     outline.holes.push(hole);
     return outline;
   }, [wall.length, height]);
+  // The extrude UVs are in metres (shape coordinates), not 0–1, so the
+  // shared wall texture — repeated 5×1.6 for the box walls — would tile
+  // far too densely here. Clone it with a 0.25 repeat, like the
+  // reference (wallMat(0.25, 0.25)): one tile covers ~4 m.
+  const archTexture = useMemo(() => {
+    if (!wallTexture) return undefined;
+    const tex = wallTexture.clone();
+    tex.repeat.set(0.25, 0.25);
+    tex.needsUpdate = true;
+    return tex;
+  }, [wallTexture]);
+  useEffect(() => () => {
+    archTexture?.dispose();
+  }, [archTexture]);
   // The extrusion runs 0 → 0.7 m along local +z; offset the mesh so the
   // wall is centred on (x, z). For a vertical wall the mesh is rotated
   // 90°, which maps local +z onto world +x.
@@ -2823,7 +2877,7 @@ function ArchPartitionWall({
       <extrudeGeometry args={[shape, { depth: 0.7, bevelEnabled: false }]} />
       <meshStandardMaterial
         color={wallColor}
-        map={wallTexture}
+        map={archTexture}
         roughness={wallPBR.roughness}
         envMapIntensity={wallPBR.envMapIntensity}
         emissive={highlight ? "#ffffff" : "#000000"}
@@ -4039,11 +4093,19 @@ export default function GalleryScene({
       onPointerUp={() => { dragStartPoint.current = null; }}
     >
       <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={qualityCfg.dpr} shadows>
-        <color attach="background" args={[room.wallColor]} />
+        {/* Stone Gallery: the reference room's dark warm backdrop and
+            fog (0x3a342d, 14–34 m) — the moody depth the generic bright
+            gallery loses. Other rooms keep the wall colour. */}
+        <color attach="background" args={[room.layout === "stone-gallery" ? "#3a342d" : room.wallColor]} />
+        {room.layout === "stone-gallery" && <fog attach="fog" args={["#3a342d", 14, 34]} />}
         {/* The environment map carries part of the ambient light while
             it is on, so the flat ambient is turned down to match — the
             room's light mood (warm/cool/ambient) still drives the result. */}
         <ambientLight intensity={qualityCfg.env ? sceneLights.ambient * 0.6 : sceneLights.ambient} />
+        {/* Stone Gallery: the reference room's warm hemisphere
+            (sky #fff0dc, ground #6a5d4c) — the main ambient, like the
+            original's HemisphereLight. */}
+        {room.lightType === "stone-warm" && <hemisphereLight args={["#fff0dc", "#6a5d4c", 0.75]} />}
         <directionalLight
           position={[roomSpan.centerX - 3, 8, 4]}
           target={dirTarget}
@@ -4063,8 +4125,27 @@ export default function GalleryScene({
         />
         <primitive object={dirTarget} />
         <ToneMappingRig exposure={qualityCfg.exposure} />
-        <LocalEnvironment enabled={qualityCfg.env} intensity={qualityCfg.envIntensity} />
-        {sceneRooms.map((sceneRoom, index) => <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={sceneLights.pointIntensity} color={sceneLights.pointColor} />)}
+        {/* The environment map is neutral white-room light: halve it
+            for the Stone Gallery so it does not wash out the warm
+            stone glow. */}
+        <LocalEnvironment enabled={qualityCfg.env} intensity={room.layout === "stone-gallery" ? qualityCfg.envIntensity * 0.5 : qualityCfg.envIntensity} />
+        {sceneRooms.map((sceneRoom, index) =>
+          sceneRoom.layout === "stone-gallery" ? (
+            // Stone Gallery: the reference room's five warm ceiling
+            // point lights (positions from the source, z shifted +3 to
+            // centre the room). They are the room's ceiling lights;
+            // they do not cast shadows (five cube maps would be far
+            // too expensive) — the directional and the artwork spots
+            // carry the shadows.
+            <group key={`stone-lights-${sceneRoom.id}`}>
+              {[[-4, 5], [4, 5], [-3, -6], [4, -6], [0, -1.5]].map(([x, z], i) => (
+                <pointLight key={i} position={[offsets[index] + x, 5, z]} intensity={10} distance={12} color="#ffe2b8" />
+              ))}
+            </group>
+          ) : (
+            <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, -2]} intensity={sceneLights.pointIntensity} color={sceneLights.pointColor} />
+          ),
+        )}
         {/* Artwork textures load through Suspense so a slow image suspends
             only the artworks — never the whole room or page. */}
         <Suspense fallback={null}>{artworkNodes}</Suspense>

@@ -476,6 +476,12 @@ export function lightingSuggestions(
       detail:
         "Cool spots sharpen blues and whites but can make warm skin tones and wood frames look grey. If the work is warm, switch the room to warm spots.",
     });
+  } else if (lightType === "stone-warm") {
+    out.push({
+      title: "Stone warm glow — keep it",
+      detail:
+        "The room already uses the Stone Gallery's warm hemisphere and point lights. The glow is soft and even; keep the per-artwork spots low so the stone, not the beams, carries the warmth.",
+    });
   } else {
     out.push({
       title: "Soft ambient light — add spots for the anchors",

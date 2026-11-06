@@ -1,5 +1,5 @@
 import Dashboard from "@/components/dashboard";
-import PublicHome, { type PublicHomeExhibition } from "@/components/public-home";
+import PublicHome, { type FeaturedPreview, type PublicHomeExhibition } from "@/components/public-home";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
@@ -36,6 +36,42 @@ async function findPublicExhibitions(): Promise<PublicHomeExhibition[]> {
   }));
 }
 
+// The hero preview: the newest public exhibition with its first three
+// artworks that have an image — the real works, shown live in 3D.
+async function findFeaturedPreview(): Promise<FeaturedPreview | null> {
+  const exhibition = await db.exhibition.findFirst({
+    where: { status: "public" },
+    include: {
+      owner: { select: { name: true } },
+      _count: { select: { artworks: true } },
+      artworks: {
+        where: { imageUrl: { not: null } },
+        select: { id: true, title: true, imageUrl: true },
+        orderBy: { createdAt: "asc" },
+        take: 3,
+      },
+    },
+    orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
+  });
+  if (!exhibition) return null;
+  const artworks = exhibition.artworks
+    .filter((artwork) => artwork.imageUrl)
+    .map((artwork) => ({
+      id: artwork.id,
+      title: artwork.title,
+      imageUrl: artwork.imageUrl as string,
+    }));
+  if (artworks.length === 0) return null;
+  return {
+    id: exhibition.id,
+    title: exhibition.title,
+    slug: exhibition.slug,
+    artistName: exhibition.owner.name,
+    artworkCount: exhibition._count.artworks,
+    artworks,
+  };
+}
+
 const DAY_MS = 86_400_000;
 
 function utcDayStart(time: number): number {
@@ -53,8 +89,11 @@ function deltaText(recentCount: number): { delta: string; tone: "up" | "flat" } 
 export default async function HomePage() {
   const user = await getCurrentUser();
   if (!user) {
-    const exhibitions = await findPublicExhibitions();
-    return <PublicHome exhibitions={exhibitions} />;
+    const [exhibitions, featured] = await Promise.all([
+      findPublicExhibitions(),
+      findFeaturedPreview(),
+    ]);
+    return <PublicHome exhibitions={exhibitions} featured={featured} />;
   }
 
   const exhibitions = await db.exhibition.findMany({

@@ -103,6 +103,33 @@ export const roomLayouts = {
     lightType: "spot-warm",
     partitions: [],
   },
+  // Stone Gallery — adapted from a Three.js reference room ("Galerie en
+  // pierre"): a 20 × 24 m stone hall, 6.5 m high, with a round-arched
+  // dividing wall, dark timber beams, a wall niche, rubble and a
+  // concrete plinth. The arch wall is a real partition (shape "arch")
+  // so the editor can move, resize or remove it like any other wall;
+  // the beams, niche, rubble and plinth are built by RoomFeatures in
+  // components/gallery-scene.tsx. The seven placeholder artworks on
+  // the walls are seeded by seedStoneGalleryArtworks below when an
+  // exhibition is created from this model.
+  "stone-gallery": {
+    label: "Stone Gallery",
+    category: "Architectural",
+    description: "A stone hall with a round-arched dividing wall, dark timber beams and warm track light — from a Three.js reference room.",
+    width: 20,
+    depth: 24,
+    height: 6.5,
+    wallColor: "#b8ab94",
+    sideWallColor: "#ab9d84",
+    floorColor: "#b5b0a5",
+    wallTexture: "stone-plaster",
+    floorTexture: "concrete",
+    ceilingColor: "#d8d2c4",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "spot-warm",
+    partitions: [{ x: 0, z: -1, length: 20, orientation: "horizontal", shape: "arch" }],
+  },
   // Glass Pavilion — the outdoor room model, kept from the November
   // 2026 catalogue expansion; the other expansion templates were retired.
   "glass-pavilion": {
@@ -140,6 +167,7 @@ export const ROOM_MODELS = [
   { id: "classic", layout: "grand-hall" },
   { id: "studio", layout: "totem-studio" },
   { id: "outdoor", layout: "glass-pavilion" },
+  { id: "stone", layout: "stone-gallery" },
 ] as const;
 
 export type RoomModelId = (typeof ROOM_MODELS)[number]["id"];
@@ -156,6 +184,10 @@ export const wallTextures = {
   concrete: "Concrete",
   brick: "Brick",
   marble: "Marble",
+  // Stone plaster: the beige stone wall of the Stone Gallery — speckles,
+  // stains and hairline cracks over a warm plaster base (see
+  // createSurfaceTexture in components/gallery-scene.tsx).
+  "stone-plaster": "Stone plaster",
 } as const;
 
 export const floorTextures = {
@@ -236,6 +268,11 @@ export const partitionWallSchema = z.object({
   orientation: z.enum(["horizontal", "vertical"]),
   // Painted colour for this one wall; falls back to the room's side walls.
   color: z.string().regex(/^#[\da-f]{6}$/i).optional(),
+  // Wall shape: a plain rectangle ("rect") or a full wall pierced by a
+  // round arch ("arch", the Stone Gallery dividing wall). Absent means
+  // "rect". The arch opening is 4 m wide with its springing at 3.4 m
+  // (see the arch partition renderer in components/gallery-scene.tsx).
+  shape: z.enum(["rect", "arch"]).optional(),
 });
 
 export type PartitionWall = z.infer<typeof partitionWallSchema>;
@@ -260,7 +297,7 @@ export const galleryRoomSchema = z.object({
   sideWallColor: z.string().regex(/^#[\da-f]{6}$/i),
   floorColor: z.string().regex(/^#[\da-f]{6}$/i),
   ceilingColor: z.string().regex(/^#[\da-f]{6}$/i).default("#f5f2eb"),
-  wallTexture: z.enum(["plaster", "concrete", "brick", "marble"]).default("plaster"),
+  wallTexture: z.enum(["plaster", "concrete", "brick", "marble", "stone-plaster"]).default("plaster"),
   floorTexture: z.enum(["stone", "concrete", "wood", "marble", "parquet"]).default("stone"),
   ceilingTexture: z.enum(["plaster", "concrete", "brick", "marble", "wood"]).default("plaster"),
   spotlights: z.boolean().default(true),
@@ -391,6 +428,117 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "cube"): Galle
     layout,
   );
   return { ...room, elements: seedElements(layout) };
+}
+
+// The seven placeholder artworks of the Stone Gallery demo, pre-placed
+// when an exhibition is created from the stone model — as NORMAL
+// artworks (real Artwork rows), so the editor can select each one,
+// change its title, replace its image, move/resize it or delete it.
+// Positions and sizes are the demo's (Three.js source, z shifted +3 m
+// to centre the room on the origin); the two works on the dividing
+// wall sit 0.1 m off its face so the wood frame (0.12 m deep) clears
+// the stone. The images are procedural placeholders generated from the
+// source's own art (public/artworks/stone-gallery/*.jpg); the editor
+// allows those bundled paths to be saved (see isAllowedImageUrl).
+// The placeholder description says plainly that the work is a
+// placeholder to replace.
+export function seedStoneGalleryArtworks(roomId: string) {
+  const placeholder = "Placeholder artwork from the Stone Gallery template — replace it with your own work.";
+  const base = {
+    artist: "",
+    year: "",
+    medium: "Mixed media",
+    description: placeholder,
+    scale: 1,
+    frame: "wood",
+    roomId,
+  };
+  return [
+    {
+      ...base,
+      title: "Stone Collage",
+      dimensions: "220 × 260 cm",
+      color: "#cdb78f",
+      accent: "#4a2f22",
+      positionX: -9.9,
+      positionY: 2.3,
+      positionZ: 0.5,
+      rotation: Math.PI / 2,
+      imageUrl: "/artworks/stone-gallery/collage.jpg",
+    },
+    {
+      ...base,
+      title: "Vivid Field I",
+      dimensions: "140 × 260 cm",
+      color: "#d9a23a",
+      accent: "#b4361f",
+      positionX: -6,
+      positionY: 2.4,
+      positionZ: -0.55,
+      rotation: 0,
+      imageUrl: "/artworks/stone-gallery/vivid.jpg",
+    },
+    {
+      ...base,
+      title: "Red Field I",
+      dimensions: "220 × 170 cm",
+      color: "#8b1c14",
+      accent: "#d8581e",
+      positionX: 6,
+      positionY: 2.3,
+      positionZ: -0.55,
+      rotation: 0,
+      imageUrl: "/artworks/stone-gallery/red.jpg",
+    },
+    {
+      ...base,
+      title: "Vivid Field II",
+      dimensions: "140 × 260 cm",
+      color: "#d9a23a",
+      accent: "#b4361f",
+      positionX: -3.4,
+      positionY: 2.4,
+      positionZ: -11.9,
+      rotation: 0,
+      imageUrl: "/artworks/stone-gallery/vivid.jpg",
+    },
+    {
+      ...base,
+      title: "Red Field II",
+      dimensions: "90 × 150 cm",
+      color: "#8b1c14",
+      accent: "#d8581e",
+      positionX: 0,
+      positionY: 2.6,
+      positionZ: -11.9,
+      rotation: 0,
+      imageUrl: "/artworks/stone-gallery/red.jpg",
+    },
+    {
+      ...base,
+      title: "Red Field III",
+      dimensions: "200 × 150 cm",
+      color: "#8b1c14",
+      accent: "#d8581e",
+      positionX: 5,
+      positionY: 1.9,
+      positionZ: -11.85,
+      rotation: 0,
+      imageUrl: "/artworks/stone-gallery/red.jpg",
+    },
+    {
+      ...base,
+      title: "Vivid Field III",
+      dimensions: "160 × 240 cm",
+      color: "#d9a23a",
+      accent: "#b4361f",
+      positionX: 9.9,
+      positionY: 2.3,
+      positionZ: -5,
+      rotation: -Math.PI / 2,
+      imageUrl: "/artworks/stone-gallery/vivid.jpg",
+    },
+  ];
 }
 
 // Galleries retired in November 2026, kept as a migration so exhibitions

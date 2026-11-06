@@ -197,6 +197,11 @@ export const DICTIONARY = {
       fr: "Verre et lumière du jour, comme en plein air.",
       en: "Glass and daylight, like the open air.",
     },
+    modelStone: { fr: "Pierre", en: "Stone" },
+    modelStoneDesc: {
+      fr: "Salle en pierre, arche ronde, poutres sombres.",
+      en: "Stone hall, round arch, dark timber beams.",
+    },
     create: { fr: "Créer", en: "Create" },
     creating: { fr: "Création…", en: "Creating…" },
   },

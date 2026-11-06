@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, AdditiveBlending, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3 } from "three";
+import { ACESFilmicToneMapping, AdditiveBlending, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, Path, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Shape, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, surfacePBR, type RenderQuality } from "@/lib/render-quality";
@@ -14,7 +14,7 @@ import type { FrameSpec } from "@/lib/demo-data";
 import { frameTileTexture, matTexture } from "@/lib/frame-textures";
 import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, rosetteGeometry, scrollGeometry, setInstancedMatrices, type FrameLevel } from "@/lib/frame-geometry";
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
-import { roomLayouts, type GalleryRoom, type WallId } from "@/lib/rooms";
+import { roomLayouts, type GalleryRoom, type PartitionWall, type WallId } from "@/lib/rooms";
 
 // Light moods per room: the spot colour and intensity, and the room's
 // ambient and directional light, all follow the room's light type.
@@ -137,6 +137,55 @@ function createSurfaceTexture(style: string): CanvasTexture | undefined {
     context.fillRect(0, 127, 256, 3);
     context.fillRect(127, 0, 3, 256);
     texture.repeat.set(4, 3);
+  } else if (style === "stone-plaster") {
+    // Stone plaster (Stone Gallery): warm plaster with speckles, age
+    // stains and hairline cracks — the Three.js reference room's wall.
+    // Drawn in near-white so the wall colour tints it; the dark
+    // speckle, stains and cracks stay dark. Seeded, so the wall looks
+    // the same on every render.
+    context.fillStyle = "#f2eee3";
+    context.fillRect(0, 0, 256, 256);
+    let seed = 7;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    // Speckles: small dark and light dots, like the reference.
+    for (let i = 0; i < 800; i += 1) {
+      const dark = rand() < 0.5;
+      const alpha = 0.04 + rand() * 0.12;
+      context.fillStyle = dark
+        ? `rgba(110, 100, 85, ${alpha.toFixed(3)})`
+        : `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+      const r = 1 + rand() * 9;
+      context.beginPath();
+      context.arc(rand() * 256, rand() * 256, r, 0, Math.PI * 2);
+      context.fill();
+    }
+    // Age stains: soft rectangular patches.
+    for (let i = 0; i < 12; i += 1) {
+      const alpha = 0.1 + rand() * 0.15;
+      context.fillStyle = `rgba(120, 108, 92, ${alpha.toFixed(3)})`;
+      const w = 20 + rand() * 35;
+      const h = 12 + rand() * 18;
+      context.fillRect(rand() * (256 - w), rand() * (256 - h), w, h);
+    }
+    // Hairline cracks: jagged polylines wandering downwards.
+    context.strokeStyle = "rgba(70, 60, 50, 0.35)";
+    context.lineWidth = 1;
+    for (let i = 0; i < 8; i += 1) {
+      let x = rand() * 256;
+      let y = rand() * 256;
+      context.beginPath();
+      context.moveTo(x, y);
+      for (let k = 0; k < 10; k += 1) {
+        x += (rand() - 0.5) * 20;
+        y += 6 + rand() * 16;
+        context.lineTo(x, y);
+      }
+      context.stroke();
+    }
+    texture.repeat.set(4, 2);
   } else {
     context.fillStyle = "#f6f3ec";
     context.fillRect(0, 0, 256, 256);
@@ -2321,6 +2370,41 @@ function RoomFeatures({
       recessedTargets.forEach((target) => target.removeFromParent());
     };
   }, [recessedTargets]);
+  // Arched niche (Stone Gallery only): a flat arched panel, darker
+  // stone, on the back wall. Fixed shape — the same 3.2 m wide, 4.6 m
+  // tall arch as the Three.js reference room.
+  const stoneNicheShape = useMemo(() => {
+    const niche = new Shape();
+    niche.moveTo(-1.6, 0);
+    niche.lineTo(-1.6, 3);
+    niche.absarc(0, 3, 1.6, Math.PI, 0, true);
+    niche.lineTo(1.6, 0);
+    niche.lineTo(-1.6, 0);
+    return niche;
+  }, []);
+  // Rubble (Stone Gallery only): fourteen small blocks at the foot of
+  // the left wall. Seeded, so the pile looks the same on every render.
+  const stoneRubble = useMemo(() => {
+    let seed = 23;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    return Array.from({ length: 14 }, () => {
+      const sx = 0.4 + rand() * 0.5;
+      const sy = 0.3 + rand() * 0.3;
+      const sz = 0.4 + rand() * 0.5;
+      return {
+        size: [sx, sy, sz] as [number, number, number],
+        position: [
+          -width / 2 + 0.4 + rand() * 0.7,
+          sy / 2,
+          -2 + rand() * 4,
+        ] as [number, number, number],
+        rotation: [rand() * 0.4, rand() * 3, rand() * 0.4] as [number, number, number],
+      };
+    });
+  }, [width]);
   if (layout === "cube") {
     // Ceiling track rails running the depth of the room, with spot heads.
     return (
@@ -2407,6 +2491,80 @@ function RoomFeatures({
     );
   }
   // --- Ceiling architectures from the reference photos (November 2026) ---
+  if (layout === "stone-gallery") {
+    // The Stone Gallery (Three.js reference room "Galerie en pierre"):
+    // dark timber beams across the ceiling, an arched niche on the back
+    // wall, rubble at the foot of the left wall, a concrete plinth with
+    // four small white frames, and eight track-light fixtures. Fixed
+    // architecture — the room's colours, dimensions and light stay
+    // editable in the inspector. The round-arched dividing wall itself
+    // is a partition (shape "arch"), rendered by ArchPartitionWall.
+    const beamXs: number[] = [];
+    for (let x = -width / 2 + 1; x <= width / 2 - 1 + 0.01; x += 3) {
+      beamXs.push(Math.round(x * 100) / 100);
+    }
+    const nicheX = Math.min(5, width / 2 - 2);
+    const plinthX = Math.min(6.2, width / 2 - 1.5);
+    const plinthZ = Math.min(4, depth / 2 - 1);
+    const trackLights: [number, number][] = [
+      [-4, 6], [0, 6], [4, 6],
+      [-5, -5], [0, -5], [5, -5],
+      [-4, 2], [4, 2],
+    ].map(([x, z]) => [
+      Math.max(-width / 2 + 1, Math.min(width / 2 - 1, x)),
+      Math.max(-depth / 2 + 1, Math.min(depth / 2 - 1, z)),
+    ]);
+    return (
+      <group>
+        {/* Dark timber beams across the ceiling, every 3 m. */}
+        {beamXs.map((x) => (
+          <mesh key={`beam-${x}`} position={[x, height - 0.2, 0]} castShadow>
+            <boxGeometry args={[0.35, 0.4, depth]} />
+            <meshStandardMaterial color="#4a3528" roughness={0.8} />
+          </mesh>
+        ))}
+        {/* Arched niche on the back wall (darker stone), behind the
+            artwork that hangs over it. */}
+        <mesh position={[nicheX, 0, -depth / 2 + 0.05]}>
+          <shapeGeometry args={[stoneNicheShape]} />
+          <meshStandardMaterial color="#7d7164" roughness={1} />
+        </mesh>
+        {/* Rubble at the foot of the left wall. */}
+        {stoneRubble.map((block, i) => (
+          <mesh key={`rubble-${i}`} position={block.position} rotation={block.rotation} castShadow>
+            <boxGeometry args={block.size} />
+            <meshStandardMaterial color="#9a8f7c" roughness={1} />
+          </mesh>
+        ))}
+        {/* Concrete plinth with four small white frames. */}
+        <group position={[plinthX, 0, plinthZ]}>
+          <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
+            <boxGeometry args={[2.6, 0.5, 1.5]} />
+            <meshStandardMaterial color="#8d8a82" roughness={1} />
+          </mesh>
+          {[5.4, 5.9, 6.4, 6.9].map((fx) => (
+            <mesh key={fx} position={[fx - 6.2, 0.78, -0.1]} rotation={[-0.25, 0, 0]}>
+              <boxGeometry args={[0.4, 0.5, 0.03]} />
+              <meshStandardMaterial color="#e8e8e8" metalness={0.4} roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
+        {/* Track-light fixtures: a thin drop wire and a glowing bar. */}
+        {trackLights.map(([x, z], i) => (
+          <group key={`track-${i}`}>
+            <mesh position={[x, height - 0.6, z]}>
+              <cylinderGeometry args={[0.01, 0.01, 1.2, 4]} />
+              <meshBasicMaterial color="#222222" />
+            </mesh>
+            <mesh position={[x, height - 1.2, z]}>
+              <boxGeometry args={[1.3, 0.07, 0.14]} />
+              <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={1} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
   if (layout === "gallery-skylight") {
     // The reference room: a white coffered ceiling with one central
     // skylight (verrière). White beams on a 2.4 m grid form the
@@ -2583,6 +2741,96 @@ function RoomFeatures({
     );
   }
   return null;
+}
+
+// The Stone Gallery arch opening: 4 m wide (radius 2 m) with its
+// springing at 3.4 m. Scaled down if the room is too low to hold it —
+// the same scale the arch wall renderer and the walk collision use, so
+// the opening the visitor walks through matches the one they see.
+function archScale(height: number): number {
+  const fullApex = 3.4 + 2;
+  return height - 0.3 < fullApex ? Math.max(0.3, (height - 0.3) / fullApex) : 1;
+}
+
+// A partition wall pierced by a round arch (the Stone Gallery dividing
+// wall): a full-height stone wall with a real arched opening, not a
+// solid panel. The opening is 4 m wide with its springing at 3.4 m
+// (radius 2 m, apex 5.4 m), from the Three.js reference room; it scales
+// down if the room is too low to hold it. The wall is 0.7 m thick, like
+// the reference, and centred on the partition's (x, z) like the
+// rectangular partitions, so the editor's position / length /
+// orientation controls keep working on it.
+function ArchPartitionWall({
+  wall,
+  height,
+  wallTexture,
+  wallColor,
+  wallPBR,
+  highlight,
+  editable,
+  onWallSelect,
+  dragged,
+}: {
+  wall: PartitionWall;
+  height: number;
+  wallTexture?: Texture | null;
+  wallColor: string;
+  wallPBR: { roughness: number; envMapIntensity: number };
+  highlight: boolean;
+  editable?: boolean;
+  onWallSelect?: (id: string) => void;
+  dragged?: React.RefObject<boolean>;
+}) {
+  const shape = useMemo(() => {
+    const half = wall.length / 2;
+    const scale = archScale(height);
+    const springing = 3.4 * scale;
+    const radius = 2 * scale;
+    const outline = new Shape();
+    outline.moveTo(-half, 0);
+    outline.lineTo(half, 0);
+    outline.lineTo(half, height);
+    outline.lineTo(-half, height);
+    outline.lineTo(-half, 0);
+    const hole = new Path();
+    hole.moveTo(-radius, 0);
+    hole.lineTo(-radius, springing);
+    hole.absarc(0, springing, radius, Math.PI, 0, true);
+    hole.lineTo(radius, 0);
+    hole.lineTo(-radius, 0);
+    outline.holes.push(hole);
+    return outline;
+  }, [wall.length, height]);
+  // The extrusion runs 0 → 0.7 m along local +z; offset the mesh so the
+  // wall is centred on (x, z). For a vertical wall the mesh is rotated
+  // 90°, which maps local +z onto world +x.
+  const position: [number, number, number] =
+    wall.orientation === "horizontal" ? [wall.x, 0, wall.z - 0.35] : [wall.x - 0.35, 0, wall.z];
+  const rotation: [number, number, number] =
+    wall.orientation === "horizontal" ? [0, 0, 0] : [0, Math.PI / 2, 0];
+  return (
+    <mesh
+      position={position}
+      rotation={rotation}
+      receiveShadow
+      castShadow
+      onDoubleClick={(event) => {
+        if (!editable || !onWallSelect || dragged?.current) return;
+        event.stopPropagation();
+        onWallSelect(wall.id);
+      }}
+    >
+      <extrudeGeometry args={[shape, { depth: 0.7, bevelEnabled: false }]} />
+      <meshStandardMaterial
+        color={wallColor}
+        map={wallTexture}
+        roughness={wallPBR.roughness}
+        envMapIntensity={wallPBR.envMapIntensity}
+        emissive={highlight ? "#ffffff" : "#000000"}
+        emissiveIntensity={highlight ? 0.16 : 0}
+      />
+    </mesh>
+  );
 }
 
 function GalleryRoom({
@@ -2817,26 +3065,41 @@ function GalleryRoom({
           <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
         </mesh>
       )}
-      {room.partitionWalls.map((wall) => (
-        <mesh
-          key={wall.id}
-          position={[wall.x, (height - 0.25) / 2, wall.z]}
-          receiveShadow
-          castShadow
-          onDoubleClick={(event) => {
-            if (!editable || !onWallSelect || dragged?.current) return;
-            event.stopPropagation();
-            onWallSelect(wall.id);
-          }}
-        >
-          <boxGeometry
-            args={wall.orientation === "horizontal"
-              ? [wall.length, height - 0.25, 0.18]
-              : [0.18, height - 0.25, wall.length]}
+      {room.partitionWalls.map((wall) =>
+        wall.shape === "arch" ? (
+          <ArchPartitionWall
+            key={wall.id}
+            wall={wall}
+            height={height}
+            wallTexture={wallTexture}
+            wallColor={wall.color ?? room.sideWallColor}
+            wallPBR={wallPBR}
+            highlight={wallHighlight(wall.id)}
+            editable={editable}
+            onWallSelect={onWallSelect}
+            dragged={dragged}
           />
-          <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight(wall.id) ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
-        </mesh>
-      ))}
+        ) : (
+          <mesh
+            key={wall.id}
+            position={[wall.x, (height - 0.25) / 2, wall.z]}
+            receiveShadow
+            castShadow
+            onDoubleClick={(event) => {
+              if (!editable || !onWallSelect || dragged?.current) return;
+              event.stopPropagation();
+              onWallSelect(wall.id);
+            }}
+          >
+            <boxGeometry
+              args={wall.orientation === "horizontal"
+                ? [wall.length, height - 0.25, 0.18]
+                : [0.18, height - 0.25, wall.length]}
+            />
+            <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight(wall.id) ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
+          </mesh>
+        ),
+      )}
       {room.spotlights && (artworks.length > 0 ? (
         // One ceiling spotlight per artwork, aimed at the work itself —
         // from the ceiling, 1.5 m out from the wall, so every piece gets
@@ -3097,16 +3360,35 @@ function WalkControls({
       if (wall.orientation === "horizontal") {
         const crossesWall = Math.min(camera.position.z, nextZ) <= wall.z + 0.2
           && Math.max(camera.position.z, nextZ) >= wall.z - 0.2;
-        const overlapsWall = Math.min(localX, targetX) <= wall.x + wall.length / 2 + 0.35
+        let overlapsWall = Math.min(localX, targetX) <= wall.x + wall.length / 2 + 0.35
           && Math.max(localX, targetX) >= wall.x - wall.length / 2 - 0.35;
+        if (wall.shape === "arch") {
+          // The arch opening is a real passage: only the solid parts of
+          // the wall (outside the opening) block the visitor.
+          const openingHalf = 2 * archScale(roomLayouts[room.layout].height);
+          const segMin = Math.min(localX, targetX);
+          const segMax = Math.max(localX, targetX);
+          const overlapsLeftSolid = segMin <= wall.x - openingHalf + 0.35 && segMax >= wall.x - wall.length / 2 - 0.35;
+          const overlapsRightSolid = segMin <= wall.x + wall.length / 2 + 0.35 && segMax >= wall.x + openingHalf - 0.35;
+          overlapsWall = overlapsLeftSolid || overlapsRightSolid;
+        }
         if (crossesWall && overlapsWall) {
           nextZ = camera.position.z;
         }
       } else {
         const crossesWall = Math.min(localX, targetX) <= wall.x + 0.2
           && Math.max(localX, targetX) >= wall.x - 0.2;
-        const overlapsWall = Math.min(camera.position.z, nextZ) <= wall.z + wall.length / 2 + 0.35
+        let overlapsWall = Math.min(camera.position.z, nextZ) <= wall.z + wall.length / 2 + 0.35
           && Math.max(camera.position.z, nextZ) >= wall.z - wall.length / 2 - 0.35;
+        if (wall.shape === "arch") {
+          // Same arch passage, turned 90°: the opening runs along z.
+          const openingHalf = 2 * archScale(roomLayouts[room.layout].height);
+          const segMin = Math.min(camera.position.z, nextZ);
+          const segMax = Math.max(camera.position.z, nextZ);
+          const overlapsLeftSolid = segMin <= wall.z - openingHalf + 0.35 && segMax >= wall.z - wall.length / 2 - 0.35;
+          const overlapsRightSolid = segMin <= wall.z + wall.length / 2 + 0.35 && segMax >= wall.z + openingHalf - 0.35;
+          overlapsWall = overlapsLeftSolid || overlapsRightSolid;
+        }
         if (crossesWall && overlapsWall) {
           nextX = camera.position.x;
         }

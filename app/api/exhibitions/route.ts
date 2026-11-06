@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getCurrentUser, toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
-import { createGalleryRoom, ROOM_MODELS, roomModelLayout } from "@/lib/rooms";
+import { createGalleryRoom, ROOM_MODELS, roomModelLayout, seedStoneGalleryArtworks } from "@/lib/rooms";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -56,12 +56,18 @@ export async function POST(request: Request) {
   const hiddenLayouts = await getHiddenRoomLayouts();
   const layout = hiddenLayouts.includes(requestedLayout) ? "cube" : requestedLayout;
 
+  const room = createGalleryRoom(0, layout);
   const exhibition = await db.exhibition.create({
     data: {
       title: parsed.data.title,
       slug: randomUUID(),
       ownerId: user.id,
-      rooms: JSON.stringify([createGalleryRoom(0, layout)]),
+      rooms: JSON.stringify([room]),
+      // The Stone Gallery ships with its seven demo artworks pre-placed
+      // as normal artworks, so the room looks like the reference on
+      // opening — and each one can be edited, re-imaged or deleted in
+      // the editor like any artwork the owner adds by hand.
+      artworks: layout === "stone-gallery" ? { create: seedStoneGalleryArtworks(room.id) } : undefined,
     },
   });
   return NextResponse.json({ exhibition }, { status: 201 });

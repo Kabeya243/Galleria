@@ -223,6 +223,7 @@ export default function Editor({
   const [renameDraft, setRenameDraft] = useState("");
   const [confirmDeletePresetId, setConfirmDeletePresetId] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
+  const replaceImageRef = useRef<HTMLInputElement>(null);
   // Undo history: full editor snapshots (artworks + rooms + title +
   // description), so Ctrl+Z covers artworks, elements and room settings
   // alike. One snapshot per discrete action — never per keystroke (see
@@ -1053,6 +1054,9 @@ export default function Editor({
   // detail instead of failing with a cryptic error.
   function isAllowedImageUrl(url: string): boolean {
     if (/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i.test(url)) return true;
+    // Bundled placeholder artworks (Stone Gallery template): static
+    // images shipped with the app, so they are always there to load.
+    if (/^\/artworks\/stone-gallery\/[a-z0-9-]+\.(?:jpg|jpeg|webp)$/i.test(url)) return true;
     // New R2 uploads: a public URL under the configured R2 base. The base
     // is a public CDN address, so it is exposed to the browser as well.
     const r2Base = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? "").replace(/\/$/, "");
@@ -1352,51 +1356,79 @@ async function compressImage(file: File): Promise<File> {
     return signed.publicUrl;
   }
 
+  // Upload one image file and return its public URL (R2 when configured,
+  // otherwise the legacy database upload). Shared by adding a new
+  // artwork and by replacing the selected artwork's image.
+  async function uploadImageFile(file: File): Promise<string> {
+    const uploadFile = await compressImage(file).catch(() => file);
+    let url: string | null = null;
+    try {
+      url = await uploadToR2(uploadFile);
+    } catch (error) {
+      // A real R2 failure (not "not configured"): surface it, do not
+      // silently fall back — the file may be too large for the legacy
+      // route anyway, and the user should know the upload failed.
+      throw error;
+    }
+    if (!url) {
+      // R2 is not configured: legacy database upload.
+      const body = new FormData();
+      body.set("file", uploadFile);
+      const response = await fetch("/api/uploads", { method: "POST", body });
+      // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+      // an oversized request) is not JSON and used to throw a cryptic
+      // "Unexpected end of JSON input" instead of a readable error.
+      const text = await response.text();
+      let result: { error?: string; url?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as { error?: string; url?: string }) : {};
+      } catch {
+        result = {};
+      }
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413
+              ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
+              : "Could not upload this image."),
+        );
+      }
+      if (!result.url) throw new Error("Could not upload this image.");
+      url = result.url;
+    }
+    return url;
+  }
+
   async function uploadArtwork(file?: File) {
     if (!file) return;
     setBusy(true);
     setUploadError(null);
     try {
-      const uploadFile = await compressImage(file).catch(() => file);
-      let url: string | null = null;
-      try {
-        url = await uploadToR2(uploadFile);
-      } catch (error) {
-        // A real R2 failure (not "not configured"): surface it, do not
-        // silently fall back — the file may be too large for the legacy
-        // route anyway, and the user should know the upload failed.
-        throw error;
-      }
-      if (!url) {
-        // R2 is not configured: legacy database upload.
-        const body = new FormData();
-        body.set("file", uploadFile);
-        const response = await fetch("/api/uploads", { method: "POST", body });
-        // Read as text first: an error page (e.g. Vercel's plain-text 413 for
-        // an oversized request) is not JSON and used to throw a cryptic
-        // "Unexpected end of JSON input" instead of a readable error.
-        const text = await response.text();
-        let result: { error?: string; url?: string } = {};
-        try {
-          result = text ? (JSON.parse(text) as { error?: string; url?: string }) : {};
-        } catch {
-          result = {};
-        }
-        if (!response.ok) {
-          throw new Error(
-            result.error ??
-              (response.status === 413
-                ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
-                : "Could not upload this image."),
-          );
-        }
-        if (!result.url) throw new Error("Could not upload this image.");
-        url = result.url;
-      }
+      const url = await uploadImageFile(file);
       addArtwork(url);
       if (uploadRef.current) uploadRef.current.value = "";
     } catch (error) {
       console.error("Could not upload artwork.", error);
+      setUploadError(error instanceof Error ? error.message : "Could not upload this image.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Replace the selected artwork's image (e.g. a Stone Gallery
+  // placeholder) with an uploaded one. The artwork itself — title,
+  // position, size, frame — stays put, only the image changes.
+  async function replaceArtworkImage(file?: File) {
+    if (!file || !selected) return;
+    setBusy(true);
+    setUploadError(null);
+    try {
+      const url = await uploadImageFile(file);
+      snapshot();
+      updateArtwork(selected.id, (artwork) => ({ ...artwork, imageUrl: url }));
+      if (replaceImageRef.current) replaceImageRef.current.value = "";
+    } catch (error) {
+      console.error("Could not replace artwork image.", error);
       setUploadError(error instanceof Error ? error.message : "Could not upload this image.");
     } finally {
       setBusy(false);
@@ -1811,6 +1843,8 @@ async function compressImage(file: File): Promise<File> {
           {selected ? (
             <>
               <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
+              <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
+              <input ref={replaceImageRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void replaceArtworkImage(event.target.files?.[0])} />
               <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Position ${axis}`} step="0.1" value={selected.position[index]} {...editSessionProps} onCommit={(next) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = next; return { ...artwork, position }; })} /></div>)}</div></div>
               {showMeasure && (
                 <div className="property-section"><label>MEASUREMENTS <span>FROM REAL POSITIONS</span></label>

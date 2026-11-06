@@ -36,6 +36,7 @@ export default function ExhibitionCreateDialog({
     classic: { name: t("create", "modelClassic"), desc: t("create", "modelClassicDesc") },
     studio: { name: t("create", "modelStudio"), desc: t("create", "modelStudioDesc") },
     outdoor: { name: t("create", "modelOutdoor"), desc: t("create", "modelOutdoorDesc") },
+    stone: { name: t("create", "modelStone"), desc: t("create", "modelStoneDesc") },
   };
 
   async function submit(event: React.FormEvent) {

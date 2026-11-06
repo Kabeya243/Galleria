@@ -6,7 +6,7 @@ import { roomLayouts, type RoomLayout } from "@/lib/rooms";
 
 export const metadata = {
   title: "Galleries — SANAA",
-  description: "Five gallery rooms, each with its own light, walls and floor. Preview them in 3D and open one in the editor.",
+  description: "Six gallery rooms, each with its own light, walls and floor. Preview them in 3D and open one in the editor.",
 };
 
 export default async function GalleriesRoute() {

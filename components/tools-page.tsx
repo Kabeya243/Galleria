@@ -7,7 +7,10 @@ import {
   Archive,
   ArrowRight,
   BarChart3,
+  Bot,
+  Box,
   Calculator,
+  Clapperboard,
   ClipboardList,
   FileText,
   Frame,
@@ -18,6 +21,8 @@ import {
   Library,
   Palette,
   Presentation,
+  ScanEye,
+  Sparkles,
   Store,
   Users,
 } from "lucide-react";
@@ -118,6 +123,36 @@ const TOOLS = [
     icon: GraduationCap,
     title: "Art Education Studio",
     description: "Learning guides, questions and quizzes for your exhibitions — built for schools, families and curious visitors.",
+  },
+  {
+    href: "/tools/ai-architect",
+    icon: Sparkles,
+    title: "AI Exhibition Architect",
+    description: "Concepts, arrangements, templates, lighting and visitor journeys — suggestions from your own works, editable throughout.",
+  },
+  {
+    href: "/tools/artwork-intelligence",
+    icon: ScanEye,
+    title: "Artwork Intelligence",
+    description: "Draft metadata, tags, colours and descriptions for your artworks — always a draft you check before use.",
+  },
+  {
+    href: "/tools/ai-assistant",
+    icon: Bot,
+    title: "AI Creative Assistant",
+    description: "Ask about your own projects — what fits, what is missing, what to frame next — answered from your real data.",
+  },
+  {
+    href: "/tools/image-to-3d",
+    icon: Box,
+    title: "Image-to-3D & Asset Library",
+    description: "Import GLB models, preview them in 3D, and keep a library of licensed assets and references.",
+  },
+  {
+    href: "/tools/video-generator",
+    icon: Clapperboard,
+    title: "Exhibition Video Generator",
+    description: "Turn an exhibition into a walkthrough video — shots, titles and formats, recorded from your real 3D room.",
   },
 ] as const;
 

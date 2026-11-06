@@ -21,6 +21,11 @@ model User {
   exhibitions  Exhibition[]
   resetTokens  PasswordResetToken[]
   savedWorks   SavedWork[]
+  listings     Listing[]
+  teamsOwned   Team[]
+  teamMemberships TeamMember[]
+  teamComments TeamComment[]
+  teamActivities TeamActivity[]
 }
 
 model PasswordResetToken {
@@ -129,6 +134,123 @@ model ToolUse {
 
   @@index([tool])
   @@index([createdAt])
+}
+
+// Marketplace listings (Phase 6). A listing is public-facing: anyone can
+// browse active listings; only the seller can edit or withdraw theirs.
+// Payments are NOT handled here — checkout is a labelled Stripe
+// integration point, not a real charge. See the Marketplace tool.
+model Listing {
+  id            String    @id @default(cuid())
+  sellerId      String
+  seller        User      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  artworkId     String?
+  title         String
+  artist        String    @default("")
+  year          String    @default("")
+  medium        String    @default("")
+  dimensions    String    @default("")
+  description   String    @default("")
+  imageUrl      String?
+  price         Int?
+  currency      String    @default("USD")
+  kind          String    @default("original")
+  editionSize   Int?
+  editionNumber Int?
+  status        String    @default("active")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  inquiries     Inquiry[]
+
+  @@index([sellerId])
+  @@index([status])
+}
+
+// Purchase inquiries on a listing (Phase 6). Buyer contact details are
+// stored only so the seller can reply; nothing is shared elsewhere.
+model Inquiry {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId    String?
+  buyerName  String   @default("")
+  buyerEmail String   @default("")
+  message    String
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+
+  @@index([listingId])
+}
+
+// Team collaboration (Phase 6). A team owns shared exhibition access
+// (ProjectShare), comments and an activity log. Permissions are enforced
+// server-side in the teams API routes, never only in the UI.
+model Team {
+  id        String         @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  members   TeamMember[]
+  shares    ProjectShare[]
+  comments  TeamComment[]
+  activity  TeamActivity[]
+
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model ProjectShare {
+  id           String   @id @default(cuid())
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  exhibitionId String
+  permission   String   @default("view")
+  createdAt    DateTime @default(now())
+
+  @@unique([teamId, exhibitionId])
+  @@index([exhibitionId])
+}
+
+model TeamComment {
+  id           String   @id @default(cuid())
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  exhibitionId String?
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body         String
+  status       String   @default("open")
+  createdAt    DateTime @default(now())
+
+  @@index([teamId])
+  @@index([exhibitionId])
+}
+
+model TeamActivity {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  action    String
+  target    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([teamId, createdAt])
 }
 
 // User-saved work from the Creative Studio tools (Mockup Studio, Color

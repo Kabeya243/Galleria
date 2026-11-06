@@ -32,10 +32,11 @@ export default async function IntelligenceHub() {
           status: "owner-only",
         },
     {
+      href: "/tools/visitor-analytics",
       icon: BarChart3,
       title: "Your exhibition insights",
       description: "Visits, popular rooms and artworks for your own exhibitions, in one place.",
-      status: "development",
+      status: "ready",
     },
   ];
   return (

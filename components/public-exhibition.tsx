@@ -44,6 +44,7 @@ export default function PublicExhibition({
   exhibition,
 }: {
   exhibition: {
+    id: string;
     title: string;
     description: string;
     ownerName: string;
@@ -53,6 +54,25 @@ export default function PublicExhibition({
 }) {
   const [selected, setSelected] = useState<Artwork | undefined>();
   const [showInfo, setShowInfo] = useState(false);
+  // Anonymous visit tracking (see lib/visits.ts): the exhibition view
+  // itself is logged server-side; this only makes sure the visitor
+  // cookie exists, and logs each artwork-detail open. Fire-and-forget —
+  // a failed call must never disturb the visit.
+  useEffect(() => {
+    fetch("/api/visits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifyOnly: true }),
+    }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!selected) return;
+    fetch("/api/visits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exhibitionId: exhibition.id, artworkId: selected.id }),
+    }).catch(() => {});
+  }, [selected, exhibition.id]);
   const [activeRoomId, setActiveRoomId] = useState(exhibition.rooms[0]?.id ?? "");
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());

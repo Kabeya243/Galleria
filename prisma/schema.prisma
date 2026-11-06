@@ -97,6 +97,30 @@ model Upload {
 // No input values, form contents or calculator numbers are ever stored
 // here — only the tool slug, the user id (null when not signed in) and the
 // time. The table starts empty and grows from the day tracking ships.
+// One row per public exhibition view (and per artwork-detail open).
+// Exhibition.views stays as the blunt all-time counter; this table is
+// the history behind it: per-day counts, unique visitors (via an
+// anonymous random visitorKey cookie — no personal data, no IP stored),
+// and, where the browser/platform supplies them, country (from the
+// x-vercel-ip-country header only), device class (from the user-agent)
+// and referrer. Anything absent is stored as null, never invented.
+model VisitLog {
+  id           String   @id @default(cuid())
+  exhibitionId String
+  artworkId    String?
+  // The UTC-midnight date of the visit, so daily buckets are a plain
+  // group-by on this column.
+  day          DateTime
+  visitorKey   String
+  country      String?
+  device       String?
+  referrer     String?
+  createdAt    DateTime @default(now())
+
+  @@index([exhibitionId, day])
+  @@index([artworkId, day])
+}
+
 model ToolUse {
   id        String   @id @default(cuid())
   tool      String

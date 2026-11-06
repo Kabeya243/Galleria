@@ -120,6 +120,7 @@ export default async function AdminRoute({
     toolUseAllTime,
     toolUseLast30Days,
     recentToolUses,
+    visitLogDays,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -226,6 +227,12 @@ export default async function AdminRoute({
       take: 8,
       select: { id: true, tool: true, userId: true, createdAt: true },
     }),
+    // Per-day exhibition visits for the last 30 days (VisitLog.day is
+    // already the UTC-midnight date, so bucketing is a plain group-by).
+    db.visitLog.findMany({
+      where: { day: { gte: thirtyDaysAgo } },
+      select: { day: true },
+    }),
   ]);
 
   const userCount = userDates.length;
@@ -249,6 +256,22 @@ export default async function AdminRoute({
   const artworkDays = dailyCounts(artworkDates.map((a) => a.createdAt), 14);
   const signupsTotal = signupDays.reduce((sum, d) => sum + d.count, 0);
   const signupMax = Math.max(...signupDays.map((d) => d.count), 1);
+
+  // Visits per day for the last 30 days, from VisitLog (one row per
+  // exhibition view). Buckets keyed by the stored UTC date.
+  const visitDays = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (29 - i)),
+    );
+    return { date, count: 0 };
+  });
+  const visitDayIndex = new Map(visitDays.map((b, i) => [b.date.toISOString().slice(0, 10), i]));
+  for (const row of visitLogDays) {
+    const i = visitDayIndex.get(row.day.toISOString().slice(0, 10));
+    if (i !== undefined) visitDays[i].count += 1;
+  }
+  const visitsTotal30 = visitDays.reduce((sum, d) => sum + d.count, 0);
+  const visitMax = Math.max(...visitDays.map((d) => d.count), 1);
 
   const usersDelta = deltaTone(usersThisWeek, usersPrevWeek);
   const exhibitionsDelta = deltaTone(exhibitionsThisWeek, exhibitionsPrevWeek);
@@ -357,7 +380,7 @@ export default async function AdminRoute({
             <span className="ad-stat-label">Total visits</span>
             <strong className="ad-stat-value">{views}</strong>
             <span className="ad-stat-delta ad-delta-flat">All exhibitions, all time</span>
-            <span className="ad-stat-note">Total only — no daily breakdown yet</span>
+            <span className="ad-stat-note">{visitsTotal30} in the last 30 days (VisitLog)</span>
           </div>
         </div>
 
@@ -427,6 +450,53 @@ export default async function AdminRoute({
             )}
           </section>
         </div>
+
+        {/* Visits per day — last 30 days, from VisitLog (one row per
+            exhibition view; artwork-detail opens included). */}
+        <section className="ad-card" style={{ marginBottom: 20 }}>
+          <div className="ad-card-head">
+            <div>
+              <h2>Visits — last 30 days</h2>
+              <p className="ad-card-sub">Exhibition views per day, all exhibitions</p>
+            </div>
+            <strong className="ad-card-total">
+              {visitsTotal30} <span>visits</span>
+            </strong>
+          </div>
+          {visitsTotal30 === 0 ? (
+            <EmptyBox
+              title="No visits yet."
+              body="Visits are logged from the day Visitor Analytics ships — one row per public exhibition view. They will appear here day by day."
+            />
+          ) : (
+            <>
+              <div className="ad-bars">
+                {visitDays.map((d) => (
+                  <div
+                    key={d.date.toISOString()}
+                    className="ad-bar-wrap"
+                    title={`${d.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}: ${d.count} visit${d.count === 1 ? "" : "s"}`}
+                  >
+                    <span className="ad-bar-value">{d.count > 0 ? d.count : ""}</span>
+                    <div
+                      className={`ad-bar${d.count === visitMax && d.count > 0 ? " ad-bar-max" : ""}`}
+                      style={{ height: `${d.count > 0 ? Math.max((d.count / visitMax) * 100, 7) : 2}%` }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="ad-bar-labels">
+                {visitDays.map((d) => (
+                  <span key={d.date.toISOString()}>{d.date.getUTCDate()}</span>
+                ))}
+              </div>
+              <p className="ad-card-sub ad-chart-foot">
+                {visitDays[0].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} –{" "}
+                {visitDays[visitDays.length - 1].date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+              </p>
+            </>
+          )}
+        </section>
 
         {/* Countries + roles */}
         <div className="ad-layout-half">

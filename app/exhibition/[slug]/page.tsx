@@ -4,6 +4,7 @@ import PublicExhibition from "@/components/public-exhibition";
 import { toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
+import { logVisit, readVisitContext } from "@/lib/visits";
 
 type RouteProps = { params: Promise<{ slug: string }> };
 
@@ -37,9 +38,14 @@ export default async function PublicExhibitionPage({ params }: RouteProps) {
     data: { views: { increment: 1 } },
   });
 
+  // Per-day visit history behind the blunt views counter. Best-effort:
+  // logVisit never throws, so a logging failure cannot break the page.
+  const visit = await readVisitContext();
+  await logVisit({ exhibitionId: exhibition.id, ...visit });
   return (
     <PublicExhibition
       exhibition={{
+        id: exhibition.id,
         title: exhibition.title,
         description: exhibition.description,
         ownerName: exhibition.owner.name,

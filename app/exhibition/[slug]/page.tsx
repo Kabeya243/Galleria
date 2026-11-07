@@ -39,9 +39,14 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
   // Open Graph + Twitter per exhibition, so a shared link unfurls with
   // this show's own title, description and cover image. The image is
   // the first artwork with one; without any image the tags still carry
-  // title and description (no broken image).
-  const firstImage = exhibition.artworks.find((artwork) => artwork.imageUrl)?.imageUrl ?? null;
-  const images = firstImage ? [{ url: firstImage, alt: exhibition.title }] : [];
+  // title and description (no broken image). The image alt is the
+  // artwork's alt-text when it has one (caption/Gemini, validated by the
+  // artist), so the shared image is described, not just titled.
+  const firstArtwork = exhibition.artworks.find((artwork) => artwork.imageUrl);
+  const firstImage = firstArtwork?.imageUrl ?? null;
+  const images = firstImage
+    ? [{ url: firstImage, alt: firstArtwork?.altText?.trim() ? firstArtwork.altText.trim() : exhibition.title }]
+    : [];
   return {
     title: `${exhibition.title} — SANAA`,
     description,

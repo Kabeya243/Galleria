@@ -96,6 +96,7 @@ export function toClientArtwork(artwork: {
   text?: string | null;
   textFont?: string | null;
   palette?: string | null;
+  altText?: string | null;
   roomId: string;
 }) {
   return {
@@ -120,6 +121,7 @@ export function toClientArtwork(artwork: {
     text: artwork.text ?? null,
     textFont: artwork.textFont ?? null,
     palette: parsePalette(artwork.palette ?? null),
+    altText: artwork.altText ?? null,
     roomId: artwork.roomId,
   };
 }

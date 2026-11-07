@@ -83,7 +83,11 @@ export default function ArtworkDetailPanel({
   }
 
   const artist = artwork.artist || ownerName;
-  const alt = `${artwork.title} — ${artist}${artwork.year ? `, ${artwork.year}` : ""}`;
+  // The alt-text (caption/Gemini suggestion, validated by the artist) says
+  // what the work shows; without one, fall back to title + artist + year.
+  const alt = artwork.altText?.trim()
+    ? artwork.altText.trim()
+    : `${artwork.title} — ${artist}${artwork.year ? `, ${artwork.year}` : ""}`;
 
   return (
     <aside

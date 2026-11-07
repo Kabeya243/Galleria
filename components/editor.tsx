@@ -48,6 +48,8 @@ import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { dominantHex, extractPalette, HARMONY_LABELS, harmonyOf, harmonyScore, hueFamilyOf, HUE_FAMILY_LABELS, isWarmHex, suggestedFrameVariant, suggestedWallColor } from "@/lib/palette";
+import { DEFAULT_ARTWORK_DESCRIPTION, enrichWithGemini, generateCaption, isGeminiAvailable } from "@/lib/caption";
+import type { ArtworkCaption, CaptionSource, CaptionStatus } from "@/lib/caption";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 import { galleryCameraStart, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
@@ -189,6 +191,38 @@ export default function Editor({
   // from the manual "Extract palette" button.
   const [extractingPalette, setExtractingPalette] = useState(false);
   const paletteAttemptedRef = useRef<Set<string>>(new Set());
+  // Automatic description (captioning model, in the browser): the generation
+  // running right now (scoped to one artwork — the model downloads once
+  // and is cached), the inline message for the caption section, and the
+  // suggestion currently applied to an artwork (what was suggested and
+  // what the fields held before, so "Discard suggestion" restores
+  // exactly that — and only the fields the artist has not since edited).
+  // A failed generation never blocks an upload or a save; it just leaves
+  // the description/alt-text empty and the manual button retries it.
+  type CaptionSuggestion = {
+    artworkId: string;
+    imageUrl: string;
+    source: CaptionSource;
+    altText: string;
+    description: string;
+    previousDescription: string;
+    previousAltText: string | null;
+  };
+  const [captionStatus, setCaptionStatus] = useState<{ artworkId: string; status: CaptionStatus } | null>(null);
+  const [captionMessage, setCaptionMessage] = useState<{ artworkId: string; text: string } | null>(null);
+  const [captionSuggestion, setCaptionSuggestion] = useState<CaptionSuggestion | null>(null);
+  const captionAttemptedRef = useRef<Set<string>>(new Set());
+  // The caption last applied to each artwork (captioning model or Gemini): used to
+  // tell an artist's own text apart from a still-unchanged suggestion,
+  // so a new image replaces a stale suggestion but never the artist's
+  // words.
+  const captionAppliedRef = useRef<Map<string, { imageUrl: string; altText: string; description: string }>>(new Map());
+  // Gemini (optional, server-side): whether /api/describe can enrich
+  // (null = not checked yet), the richer suggestion it returned, and
+  // whether a request is running. Checked once when the editor loads.
+  const [geminiAvailable, setGeminiAvailable] = useState<boolean | null>(null);
+  const [geminiBusy, setGeminiBusy] = useState(false);
+  const [geminiSuggestion, setGeminiSuggestion] = useState<(ArtworkCaption & { artworkId: string }) | null>(null);
   const [panelTab, setPanelTab] = useState<"artworks" | "elements" | "layers">("artworks");
   const [selectedElementId, setSelectedElementId] = useState<string>();
   const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
@@ -388,6 +422,160 @@ export default function Editor({
       );
     }
   }
+
+  // Automatic description (captioning model / Gemini): apply a caption to an
+  // artwork's description + alt-text, but ONLY where the artist has not
+  // written their own text — an empty description, the default
+  // placeholder, or a still-unchanged earlier suggestion is replaced;
+  // the artist's own words are never overwritten. With force=true (the
+  // artist explicitly clicked "Use this text" on a Gemini suggestion)
+  // both fields are written. Returns the suggestion record when at
+  // least one field was written, so the inspector can offer "Discard
+  // suggestion".
+  function applyCaption(
+    artworkId: string,
+    imageUrl: string,
+    caption: ArtworkCaption,
+    force = false,
+  ): CaptionSuggestion | null {
+    const artwork = latestRef.current.artworks.find((item) => item.id === artworkId);
+    if (!artwork || artwork.text || artwork.imageUrl !== imageUrl) return null;
+    const previous = captionAppliedRef.current.get(artworkId);
+    const descriptionIsSuggestion = Boolean(previous && artwork.description === previous.description);
+    const altTextIsSuggestion = Boolean(previous && artwork.altText === previous.altText);
+    const writeDescription =
+      force ||
+      artwork.description.trim() === "" ||
+      artwork.description === DEFAULT_ARTWORK_DESCRIPTION ||
+      descriptionIsSuggestion;
+    const writeAltText = force || !artwork.altText?.trim() || altTextIsSuggestion;
+    if (!writeDescription && !writeAltText) return null;
+    const suggestion: CaptionSuggestion = {
+      artworkId,
+      imageUrl,
+      source: caption.source,
+      altText: caption.altText,
+      description: caption.description,
+      previousDescription: artwork.description,
+      previousAltText: artwork.altText ?? null,
+    };
+    updateArtwork(artworkId, (current) => ({
+      ...current,
+      description: writeDescription ? caption.description : current.description,
+      altText: writeAltText ? caption.altText : current.altText,
+    }));
+    captionAppliedRef.current.set(artworkId, {
+      imageUrl,
+      altText: caption.altText,
+      description: caption.description,
+    });
+    return suggestion;
+  }
+
+  // Generate a caption for an artwork's image in the background (captioning model,
+  // in the browser). Never blocks the upload or the save: the model
+  // downloads once (then is cached), and a failure just leaves the
+  // description/alt-text empty — the manual button retries it. The
+  // "already have your own text" note only shows for a manual retry
+  // (force), never for a background run.
+  async function describeArtwork(
+    artworkId: string,
+    source: File | string,
+    imageUrl: string,
+    force = false,
+  ): Promise<void> {
+    const key = `${artworkId}:${imageUrl}`;
+    if (!force && captionAttemptedRef.current.has(key)) return;
+    captionAttemptedRef.current.add(key);
+    setCaptionMessage(null);
+    setGeminiSuggestion(null);
+    const caption = await generateCaption(source, (status) =>
+      setCaptionStatus({ artworkId, status }),
+    );
+    setCaptionStatus((current) => (current?.artworkId === artworkId ? null : current));
+    if (!caption) {
+      setCaptionMessage({
+        artworkId,
+        text: "Could not generate a description for this image (offline or model unavailable). Use the Generate description button to retry.",
+      });
+      return;
+    }
+    const suggestion = applyCaption(artworkId, imageUrl, caption);
+    if (suggestion) {
+      setCaptionSuggestion(suggestion);
+    } else if (force) {
+      setCaptionMessage({
+        artworkId,
+        text: "You already have your own description and alt-text here — clear a field to let a suggestion fill it.",
+      });
+    }
+  }
+
+  // Manual retry for the selected artwork (button in the description
+  // section): bypasses the attempted-set, so a failed automatic read
+  // can be tried again.
+  async function generateSelectedCaption() {
+    if (!selected || !selected.imageUrl || selected.text) return;
+    await describeArtwork(selected.id, selected.imageUrl, selected.imageUrl, true);
+  }
+
+  // Discard the applied suggestion: each field goes back to what it
+  // held before — but only the fields the artist has not since edited,
+  // so their own words are never lost by discarding.
+  function discardCaptionSuggestion() {
+    if (!captionSuggestion) return;
+    const { artworkId, altText, description, previousDescription, previousAltText } = captionSuggestion;
+    updateArtwork(artworkId, (artwork) => ({
+      ...artwork,
+      description: artwork.description === description ? previousDescription : artwork.description,
+      altText: artwork.altText === altText ? (previousAltText ?? null) : artwork.altText,
+    }));
+    captionAppliedRef.current.delete(artworkId);
+    setCaptionSuggestion(null);
+  }
+
+  // Gemini (optional, server-side): ask for a richer description of the
+  // selected artwork's image. The suggestion is shown in a box — the
+  // artist chooses "Use this text" or "Dismiss"; nothing is overwritten
+  // without that click.
+  async function enrichSelectedWithGemini() {
+    if (!selected || !selected.imageUrl || selected.text) return;
+    setGeminiBusy(true);
+    setCaptionMessage(null);
+    setGeminiSuggestion(null);
+    const caption = await enrichWithGemini(selected.imageUrl);
+    setGeminiBusy(false);
+    if (!caption) {
+      setCaptionMessage({
+        artworkId: selected.id,
+        text: "Gemini did not answer — the current suggestion is kept.",
+      });
+      return;
+    }
+    setGeminiSuggestion({ ...caption, artworkId: selected.id });
+  }
+
+  function applyGeminiSuggestion() {
+    if (!selected || !selected.imageUrl || !geminiSuggestion) return;
+    const suggestion = applyCaption(selected.id, selected.imageUrl, geminiSuggestion, true);
+    if (suggestion) {
+      setCaptionSuggestion(suggestion);
+      setGeminiSuggestion(null);
+      setCaptionMessage(null);
+    }
+  }
+
+  // Whether the server can enrich with Gemini — checked once, so the
+  // "Enrich with Gemini" button only appears when it can actually work.
+  useEffect(() => {
+    let active = true;
+    void isGeminiAvailable().then((available) => {
+      if (active) setGeminiAvailable(available);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Hanging harmony for the selected artwork: other works in this room
   // with a palette, ranked by how well their dominant colour sits with
@@ -1711,8 +1899,8 @@ export default function Editor({
     setSaved(false);
   }
 
-  function addArtwork(imageUrl: string | null = null, palette: string[] | null = null) {
-    if (!activeRoom) return;
+  function addArtwork(imageUrl: string | null = null, palette: string[] | null = null): string | undefined {
+    if (!activeRoom) return undefined;
     const index = currentArtworks.length;
     // New artworks go on the wall the camera is looking at (every wall
     // can carry one, including an added cloison/suspendu), spread along
@@ -1741,6 +1929,7 @@ export default function Editor({
     setArtworks((current) => [...current, artwork]);
     selectArtwork(artwork.id);
     setSaved(false);
+    return artwork.id;
   }
 
 // Photos from a phone are often over Vercel's 4.5 MB request limit, which
@@ -1867,7 +2056,12 @@ async function compressImage(file: File): Promise<File> {
       // the upload. A failed read just leaves the palette empty; the
       // editor retries it lazily when the artwork is selected.
       const [url, palette] = await Promise.all([uploadImageFile(file), extractPalette(file)]);
-      addArtwork(url, palette);
+      const artworkId = addArtwork(url, palette);
+      // The description is generated in the background (captioning model, in the
+      // browser): the model downloads once, then is cached. It never
+      // blocks the upload; a failure just leaves the description and
+      // alt-text empty, and the manual button retries it.
+      if (artworkId) void describeArtwork(artworkId, file, url);
       if (uploadRef.current) uploadRef.current.value = "";
     } catch (error) {
       console.error("Could not upload artwork.", error);
@@ -1891,6 +2085,10 @@ async function compressImage(file: File): Promise<File> {
       // is cleared so the lazy pass re-reads it on selection instead of
       // keeping the old image's colours.
       updateArtwork(selected.id, (artwork) => ({ ...artwork, imageUrl: url, palette }));
+      // The description follows the new image (captioning model, in the background):
+      // a still-unchanged suggestion is replaced, the artist's own words
+      // are kept.
+      void describeArtwork(selected.id, file, url);
       if (replaceImageRef.current) replaceImageRef.current.value = "";
     } catch (error) {
       console.error("Could not replace artwork image.", error);
@@ -2168,7 +2366,7 @@ async function compressImage(file: File): Promise<File> {
               <div className="asset-list">
                 {currentArtworks.map((artwork, index) => (
                   <button className={`asset-row ${selectedId === artwork.id ? "selected" : ""}`} key={artwork.id} onClick={() => selectArtwork(artwork.id)}>
-                    <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.title} /> : <span />}</span>
+                    <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.altText ?? artwork.title} /> : <span />}</span>
                     <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.medium.split(" ")[0]}</small></span>
                     {selectedId === artwork.id && <span className="selected-mark"><Check size={12} /></span>}
                   </button>
@@ -2381,7 +2579,7 @@ async function compressImage(file: File): Promise<File> {
           )}
           {selected ? (
             <>
-              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
+              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.altText ?? selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
               {!selected.text && (
                 <>
                   <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
@@ -2505,6 +2703,58 @@ async function compressImage(file: File): Promise<File> {
                   <div className="property-section"><label>MEDIUM</label><input className="full-input" {...editSessionProps} value={selected.medium} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, medium: event.target.value }))} /></div>
                   <div className="property-section"><label>DIMENSIONS</label><input className="full-input" {...editSessionProps} value={selected.dimensions} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: event.target.value }))} /></div>
                   <div className="property-section"><label>DESCRIPTION</label><textarea className="full-input property-textarea" {...editSessionProps} value={selected.description} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, description: event.target.value }))} /></div>
+                  {!selected.text && selected.imageUrl && (
+                    <div className="property-section">
+                      <label>ALT TEXT <span>FOR SCREEN READERS & SEARCH</span></label>
+                      <input
+                        className="full-input"
+                        {...editSessionProps}
+                        value={selected.altText ?? ""}
+                        onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, altText: event.target.value.trim() === "" ? null : event.target.value }))}
+                        placeholder="One sentence describing what the artwork shows"
+                        maxLength={500}
+                      />
+                      {captionStatus?.artworkId === selected.id && (
+                        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                          {captionStatus.status === "loading-model"
+                            ? "Loading the description model (first time only — it is then cached)…"
+                            : "Describing this image…"}
+                        </p>
+                      )}
+                      {captionSuggestion?.artworkId === selected.id && (
+                        <p style={{ margin: "8px 0 0", color: "var(--ink)", fontSize: "8px", lineHeight: 1.6 }}>
+                          Suggested by {captionSuggestion.source === "caption" ? "the description model" : "Gemini"} — edit or discard before saving.{" "}
+                          <button type="button" onClick={discardCaptionSuggestion} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: "8px", cursor: "pointer", textDecoration: "underline", padding: 0 }}>
+                            Discard suggestion
+                          </button>
+                        </p>
+                      )}
+                      {captionMessage?.artworkId === selected.id && (
+                        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                          {captionMessage.text}
+                        </p>
+                      )}
+                      <div className="property-actions">
+                        <button type="button" onClick={() => void generateSelectedCaption()}>Generate description</button>
+                        {geminiAvailable && (
+                          <button type="button" onClick={() => void enrichSelectedWithGemini()} disabled={geminiBusy}>
+                            {geminiBusy ? "Asking Gemini…" : "Enrich with Gemini"}
+                          </button>
+                        )}
+                      </div>
+                      {geminiSuggestion?.artworkId === selected.id && (
+                        <div style={{ marginTop: "10px", padding: "8px", border: "1px solid var(--border)", borderRadius: "4px" }}>
+                          <p style={{ margin: "0 0 6px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>GEMINI SUGGESTS — CLICK TO USE</p>
+                          <p style={{ margin: "0 0 4px", color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>Alt-text: {geminiSuggestion.altText}</p>
+                          <p style={{ margin: "0 0 8px", color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>{geminiSuggestion.description}</p>
+                          <div className="property-actions">
+                            <button type="button" onClick={applyGeminiSuggestion}>Use this text</button>
+                            <button type="button" onClick={() => { setGeminiSuggestion(null); setCaptionMessage(null); }}>Dismiss</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {selected.text && (
                     <>
                       <div className="property-section"><label>CURATORIAL TEXT</label><textarea className="full-input property-textarea" rows={3} value={curatorialText} onChange={(event) => setCuratorialText(event.target.value)} maxLength={2000} /></div>

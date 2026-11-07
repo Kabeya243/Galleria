@@ -18,6 +18,11 @@ export type Artwork = {
   // first. Null until extracted — the editor computes it lazily when an
   // artwork with an image is selected.
   palette?: string[] | null;
+  // Alt-text for the artwork image (BLIP in the browser, or Gemini via
+  // /api/describe when configured): a one-sentence description in
+  // English, proposed at upload time and validated or corrected by the
+  // artist before saving. Null until generated or written.
+  altText?: string | null;
   // Curatorial wall text (the reference room's "Texte curatorial"):
   // when set, the artwork renders as a canvas text panel instead of an
   // image, in the chosen typeface ("d" Display gras, "s" Sans propre,

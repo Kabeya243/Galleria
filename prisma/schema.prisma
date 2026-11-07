@@ -97,6 +97,12 @@ model Artwork {
   // Stored as a JSON string (like rooms) so it works on SQLite and
   // Postgres alike. Null until extracted.
   palette      String?
+  // Alt-text for the artwork image (BLIP in the browser, or Gemini via
+  // /api/describe when configured): a one-sentence description in
+  // English, proposed at upload time and validated or corrected by the
+  // artist before saving. Used as the <img> alt on the public artwork
+  // page and for the Open Graph image. Null until generated or written.
+  altText      String?
   roomId       String     @default("room-main")
   createdAt    DateTime   @default(now())
   exhibitionId String

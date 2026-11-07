@@ -73,7 +73,7 @@ export default function LayersPanel({
                         onClick={(event) => onSelectItem(ref, event.shiftKey || event.ctrlKey || event.metaKey)}
                         title={artwork.hidden ? `${artwork.title} (hidden in 3D)` : artwork.title}
                       >
-                        <span className="asset-thumb">{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.title} /> : <span style={{ backgroundColor: artwork.color }} />}</span>
+                        <span className="asset-thumb">{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.altText ?? artwork.title} /> : <span style={{ backgroundColor: artwork.color }} />}</span>
                         <span className="asset-copy">
                           <strong>{artwork.title}</strong>
                           <small>

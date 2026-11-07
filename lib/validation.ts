@@ -135,6 +135,12 @@ const artworkSchema = z.object({
     .max(8)
     .nullable()
     .optional(),
+  // Alt-text for the artwork image (BLIP in the browser, or Gemini via
+  // /api/describe when configured): a one-sentence description in
+  // English, proposed at upload time and validated or corrected by the
+  // artist before saving. Optional — older artworks have none until one
+  // is generated or written.
+  altText: z.string().trim().max(500).nullable().optional(),
   // Curatorial wall text (the reference room's "Texte curatorial"):
   // when set, the artwork is a canvas text panel, not an image, in one
   // of the four typefaces (d Display gras, s Sans propre, g Serif,

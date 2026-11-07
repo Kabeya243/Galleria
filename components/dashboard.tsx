@@ -56,7 +56,7 @@ export default function Dashboard({
   topExhibitions,
   visitStats,
 }: {
-  user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
+  user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   exhibitionCount: number;
   stats: {
     exhibitions: StatDelta;
@@ -168,6 +168,9 @@ export default function Dashboard({
               </label>
               <Avatar name={user.name} avatarUrl={user.avatarUrl} className={styles.avatar} />
               <span className={styles.userName}>{user.name}</span>
+              <Link href={`/works/${user.id}`} className={styles.worksLink}>
+                {t("works", "myWorks")}
+              </Link>
               <button className={styles.createButton} onClick={() => setShowCreateDialog(true)} disabled={creating}>
                 <Plus size={16} /> {creating ? t("dashboard", "creating") : t("dashboard", "createExhibition")}
               </button>

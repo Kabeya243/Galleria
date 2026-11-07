@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Monitor, Moon, Sun } from "lucide-react";
 import Avatar from "@/components/avatar";
@@ -32,7 +33,7 @@ async function squareCropToJpeg(file: File, size = 512): Promise<File> {
 export default function SettingsPage({
   user,
 }: {
-  user: { name: string; email: string; avatarUrl: string | null; bio: string | null; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
+  user: { id: string; name: string; email: string; avatarUrl: string | null; bio: string | null; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
 }) {
   const router = useRouter();
   const t = useT();
@@ -304,6 +305,11 @@ export default function SettingsPage({
                   )}
                 </span>
                 <small>{t("settings", "avatarHint")}</small>
+                <span>
+                  <Link href={`/works/${user.id}`} target="_blank" rel="noreferrer">
+                    {t("works", "viewPublicPage")} ↗
+                  </Link>
+                </span>
               </div>
             </div>
             <form onSubmit={saveProfile}>

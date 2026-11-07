@@ -653,6 +653,33 @@ export const DICTIONARY = {
     couldNotCreate: { fr: "Impossible de créer une exposition.", en: "Could not create an exhibition." },
     couldNotDelete: { fr: "Impossible de supprimer cette exposition.", en: "Could not delete this exhibition." },
   },
+  // Public creator wall (/works/[id]) — "Mes travaux / designs / créations".
+  works: {
+    eyebrow: { fr: "MES TRAVAUX · DESIGNS · CRÉATIONS", en: "MY WORKS · DESIGNS · CREATIONS" },
+    filterByType: { fr: "Filtrer par type", en: "Filter by type" },
+    all: { fr: "Tout", en: "All" },
+    oeuvre: { fr: "Œuvres", en: "Artworks" },
+    design: { fr: "Designs", en: "Designs" },
+    creation: { fr: "Créations", en: "Creations" },
+    work: { fr: "œuvre", en: "work" },
+    works: { fr: "œuvres", en: "works" },
+    manageExhibitions: { fr: "Gérer mes expositions", en: "Manage my exhibitions" },
+    goToExhibitions: { fr: "Aller à mes expositions", en: "Go to my exhibitions" },
+    noWorksYet: { fr: "Aucune œuvre pour l'instant.", en: "No works yet." },
+    noWorksYetDesc: {
+      fr: "Créez une exposition et accrochez vos premières œuvres — elles apparaîtront ici.",
+      en: "Create an exhibition and hang your first works — they will show up here.",
+    },
+    noWorksInKind: { fr: "Rien dans cette catégorie pour l'instant.", en: "Nothing in this category yet." },
+    noWorksInKindDesc: {
+      fr: "Taguez vos œuvres depuis cette page (si c'est la vôtre) pour les faire apparaître ici.",
+      en: "Tag your works from this page (if it is yours) to make them appear here.",
+    },
+    type: { fr: "Type", en: "Type" },
+    couldNotSaveKind: { fr: "Impossible d'enregistrer ce type.", en: "Could not save this type." },
+    myWorks: { fr: "Mes travaux", en: "My works" },
+    viewPublicPage: { fr: "Voir ma page publique", en: "View my public page" },
+  },
   // Explore page (/explore) — other artists' public exhibitions.
   explore: {
     explore: { fr: "Explorer", en: "Explore" },

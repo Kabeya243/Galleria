@@ -15,6 +15,7 @@ export default async function SettingsRoute() {
   return (
     <SettingsPage
       user={{
+        id: user.id,
         name: user.name,
         email: user.email,
         avatarUrl: user.avatarUrl ?? null,

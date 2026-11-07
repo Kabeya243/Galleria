@@ -1,0 +1,8 @@
+# Python dependencies for the Atelier export serverless function
+# (api/atelier/export.py). Vercel installs these for the api/ runtime.
+# No FastAPI server is run — the file exposes a FastAPI `app` object
+# and Vercel serves it as an ASGI function.
+fastapi==0.115.12
+pillow==11.2.1
+reportlab==4.4.1
+PyJWT==2.10.1

@@ -414,18 +414,20 @@ export const roomLayouts = {
     floorCenterZ: 0,
     thumbnail: "salles-vertes",
   },
-  // Couloir sombre — the dark corridor: a 7 × 46 m hall, herringbone
-  // parquet, a vault, six panels, arches and track lights.
+  // Elegant Gallery (ex Couloir sombre) — the night gallery: a
+  // 7 × 46 m hall, herringbone parquet, a vault, six panels, arches
+  // and warm track spots. The internal key stays "couloir-sombre"
+  // (URLs, thumbnails, plan); only the displayed name changed.
   "couloir-sombre": {
-    label: "The Dark Corridor",
+    label: "Elegant Gallery",
     category: "Architectural",
-    description: "A dark corridor — a 7 × 46 m hall, herringbone parquet, a vault, six panels, arches and track lights.",
-    descriptionFr: "Couloir sombre — hall 7 × 46 m, parquet chevrons, voûte, six panneaux, arches et rails de spots.",
+    description: "An elegant night gallery — a 7 × 46 m hall, herringbone parquet, a vault, six panels, arches and warm track spots. After dark, each painting glows under its own light.",
+    descriptionFr: "Galerie élégante de nuit — hall 7 × 46 m, parquet chevrons, voûte, six panneaux, arches et spots chauds. La nuit, chaque tableau s'éclaire sous son propre projecteur.",
     width: 7,
     depth: 46,
     height: 5,
-    wallColor: "#8d877d",
-    sideWallColor: "#8d877d",
+    wallColor: "#453e38",
+    sideWallColor: "#453e38",
     floorColor: "#8a6a3a",
     wallTexture: "plaster",
     floorTexture: "parquet",

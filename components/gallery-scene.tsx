@@ -278,6 +278,11 @@ function SunlightRig({ sunValue, quality, sunColor }: { sunValue: number; qualit
       sun.shadow.map.dispose();
       sun.shadow.map = null;
     }
+    // The shadow-camera frustum props (shadow-camera-left={-22} …)
+    // are plain assignments: three.js only applies them through
+    // updateProjectionMatrix, otherwise the shadow stays clipped to
+    // the default ±5 m box in the middle of the room.
+    sun.shadow.camera.updateProjectionMatrix();
   }, [quality]);
   useFrame((_, delta) => {
     const sun = sunRef.current;
@@ -3127,6 +3132,25 @@ function GenericRoom({
   const floorCenterZ = roomFloorCenterZ(room.layout);
   const shell = useMemo(() => buildGalleryShell(room.layout), [room.layout]);
   useEffect(() => () => disposeGroup(shell.group), [shell]);
+  const qualityCfg = RENDER_QUALITY_CONFIG[quality ?? "high"];
+  // Fallback shadow sun for shells lit by hemisphere + points only
+  // (Vitrine, Loft, Musée, Parquet, Classique, Atrium blanc,
+  // Escalier, the three day halls): without it nothing in those rooms
+  // casts a shadow. High only — the quality ladder gates directional
+  // shadows there, so Medium/Low keep today's flat light. It hangs
+  // just under the ceiling, inside the room, so no roof or wall
+  // blocks it; a shell with its own sun skips it (shell.hasShadowSun).
+  const fallbackShadowExtent = Math.max(layout.width, layout.depth) / 2 + 3;
+  const fallbackSunRef = useRef<DirectionalLight>(null!);
+  const fallbackSunTarget = useMemo(() => new Object3D(), []);
+  useEffect(() => {
+    const sun = fallbackSunRef.current;
+    if (!sun) return;
+    // R3F's shadow-camera-* props are plain assignments: three.js
+    // only applies the frustum through updateProjectionMatrix,
+    // otherwise the shadow stays clipped to the default ±5 m box.
+    sun.shadow.camera.updateProjectionMatrix();
+  }, [fallbackShadowExtent]);
   // La Halle's hanging mobile rotates; every other shell is static.
   useFrame((_, dt) => {
     shell.tick?.(dt);
@@ -3155,6 +3179,31 @@ function GenericRoom({
   return (
     <group position={[offsetX, 0, offsetZ]}>
       <primitive object={shell.group} />
+      {/* Fallback shadow sun (see above): one modest directional with
+          a real shadow map, for shells that bring no shadow light. */}
+      {!shell.hasShadowSun && qualityCfg.directionalShadows && (
+        <>
+          <primitive object={fallbackSunTarget} position={[0, 0, floorCenterZ - layout.depth * 0.2]} />
+          <directionalLight
+            ref={fallbackSunRef}
+            position={[layout.width * 0.25, layout.height - 0.6, floorCenterZ + layout.depth * 0.2]}
+            target={fallbackSunTarget}
+            intensity={0.7}
+            color="#fff0d8"
+            castShadow
+            shadow-mapSize-width={qualityCfg.directionalShadowMapSize}
+            shadow-mapSize-height={qualityCfg.directionalShadowMapSize}
+            shadow-radius={4}
+            shadow-bias={-0.0002}
+            shadow-camera-left={-fallbackShadowExtent}
+            shadow-camera-right={fallbackShadowExtent}
+            shadow-camera-top={fallbackShadowExtent}
+            shadow-camera-bottom={-fallbackShadowExtent}
+            shadow-camera-near={0.5}
+            shadow-camera-far={layout.height + layout.depth}
+          />
+        </>
+      )}
       {/* Invisible walk-target floor: the shell's own meshes carry no
           click handlers, so this plane catches floor clicks in walk
           mode. Artwork and element clicks stop propagation first, so

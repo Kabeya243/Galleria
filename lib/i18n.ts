@@ -289,8 +289,8 @@ export const DICTIONARY = {
       en: "Green rooms — a 14 × 32 m hall, green walls, wood floor, a vault, three panels, two benches and a skylight.",
     },
     modelCouloirSombreDesc: {
-      fr: "Couloir sombre — hall 7 × 46 m, parquet chevrons, voûte, six panneaux, arches et rails de spots.",
-      en: "A dark corridor — a 7 × 46 m hall, herringbone parquet, a vault, six panels, arches and track lights.",
+      fr: "Galerie élégante de nuit — hall 7 × 46 m, parquet chevrons, voûte, six panneaux, arches et spots chauds. La nuit, chaque tableau s'éclaire sous son propre projecteur.",
+      en: "An elegant night gallery — a 7 × 46 m hall, herringbone parquet, a vault, six panels, arches and warm track spots. After dark, each painting glows under its own light.",
     },
     modelCouloirDoreDesc: {
       fr: "Couloir doré — hall 7 × 46 m, parquet chevrons, fenêtres en arche lumineuses, mur rouge au fond et taches de soleil au sol.",

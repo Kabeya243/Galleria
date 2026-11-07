@@ -53,6 +53,7 @@ export const PHOTO = {
   palmFrond: "palm-frond.jpg",
   palmTrunk: "palm-trunk.jpg",
   glassBrick: "glass-brick.jpg",
+  gravel: "gravel.jpg",
 } as const;
 
 export type PhotoFile = (typeof PHOTO)[keyof typeof PHOTO];

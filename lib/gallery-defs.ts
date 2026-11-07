@@ -406,7 +406,7 @@ function ellipseLines(rx: number, rz: number, steps: number): GalleryPlanLine[] 
 }
 
 // The parametric hall of Galeries_3D.html (s6–s9: Salles vertes,
-// Couloir sombre, Couloir doré, Plafond à voûtes) — one definition
+// Elegant Gallery, Couloir doré, Plafond à voûtes) — one definition
 // built from the source's hall(o) options. Panel positions, benches,
 // arches and windows follow the source exactly:
 // panels at z = L/2 − 5 − i·(L−10)/pn on both side walls, benches at

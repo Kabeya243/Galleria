@@ -34,7 +34,7 @@ export const GALLERY_NAME_DEFAULTS: GalleryNamesMap = {
   patio: { en: "The Oval Patio", fr: "Patio ovale" },
   escalier: { en: "The Stair Hall", fr: "Hall à escalier" },
   "salles-vertes": { en: "The Green Rooms", fr: "Salles vertes" },
-  "couloir-sombre": { en: "The Dark Corridor", fr: "Couloir sombre" },
+  "couloir-sombre": { en: "Elegant Gallery", fr: "Galerie élégante" },
   "couloir-dore": { en: "The Golden Corridor", fr: "Couloir doré" },
   voutes: { en: "The Vaulted Ceiling", fr: "Plafond à voûtes" },
   courbes: { en: "White Curves", fr: "Courbes blanches" },

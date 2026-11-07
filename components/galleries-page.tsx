@@ -627,7 +627,7 @@ function paintThumbnailOverlay(ctx: CanvasRenderingContext2D, thumbnail: Thumbna
     return;
   }
   if (thumbnail === "couloir-sombre") {
-    // Dark corridor in perspective, warm panels, arches, track lights.
+    // Elegant Gallery (night) in perspective, warm panels, arches, track spots.
     ctx.fillStyle = "#151413";
     ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = "#24201c";

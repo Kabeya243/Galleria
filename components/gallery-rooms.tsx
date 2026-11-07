@@ -719,6 +719,7 @@ function buildSerpentine(group: Group): void {
   sun.shadow.blurSamples = 16;
   sun.shadow.bias = -0.0003;
   Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 5, far: 110 });
+  sun.shadow.camera.updateProjectionMatrix(); // else the frustum stays ±5 m (see g11Sun)
   add(sun);
   add(sun.target);
 
@@ -1206,6 +1207,7 @@ function buildHalle(group: Group): { tick?: (dt: number) => void } {
   sun.shadow.blurSamples = 16;
   sun.shadow.bias = -0.0003;
   Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 5, far: 100 });
+  sun.shadow.camera.updateProjectionMatrix(); // else the frustum stays ±5 m (see g11Sun)
   add(sun);
   add(sun.target);
 
@@ -1880,6 +1882,7 @@ function troisSunL(
   d.shadow.blurSamples = 16;
   d.shadow.bias = -0.0003;
   Object.assign(d.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 2, far: 80 });
+  d.shadow.camera.updateProjectionMatrix(); // else the frustum stays ±5 m (see g11Sun)
   parent.add(d);
   parent.add(d.target);
 }
@@ -2607,9 +2610,15 @@ function g11Frame(parent: Group, w: number, h: number, t: Texture, x: number, y:
   g.rotation.y = ry;
   parent.add(g);
   const b = new Mesh(new BoxGeometry(w + 0.2, h + 0.2, 0.08), gMat(fc, 0.4, 0.5));
+  // The frame casts a real shadow onto its wall and the floor — the
+  // rooms' shadow-casting lights (hall sun, night rig, shell suns)
+  // need casters, and the floor and walls already receive shadows.
+  b.castShadow = true;
+  b.receiveShadow = true;
   g.add(b);
   const p = new Mesh(new PlaneGeometry(w, h), new MeshStandardMaterial({ map: t, roughness: 0.7 }));
   p.position.z = 0.045;
+  p.receiveShadow = true;
   g.add(p);
 }
 
@@ -2629,6 +2638,12 @@ function g11Sun(parent: Group, x: number, y: number, z: number, i: number, e = 2
   l.castShadow = true;
   l.shadow.mapSize.set(2048, 2048);
   Object.assign(l.shadow.camera, { left: -e, right: e, top: e, bottom: -e, near: 1, far: 90 });
+  // Three.js only applies a shadow-camera frustum change through
+  // updateProjectionMatrix — without this call the shadow stays
+  // clipped to the default ±5 m box (verified: the projection matrix
+  // keeps 0.2 = 2/10 until this runs). Every directional sun in this
+  // file needs it; see also the Serpentine / Halle / Arche suns.
+  l.shadow.camera.updateProjectionMatrix();
   l.shadow.bias = -0.0003;
   parent.add(l);
 }
@@ -2716,10 +2731,14 @@ function g11Tree(parent: Group, x: number, z: number, h: number): void {
   trunk.receiveShadow = true;
   parent.add(trunk);
   const leafMat = new MeshStandardMaterial({ map: photoTexture(PHOTO.foliage), roughness: 0.85 });
-  for (let i = 0; i < 9; i++) {
+  // Twelve canopy blobs instead of nine, spread a little wider: the
+  // crown reads as a real tree, not a flat green ball — and it throws
+  // a fuller shadow through the roof opening.
+  for (let i = 0; i < 12; i++) {
     const o = new Mesh(new IcosahedronGeometry(R(1.2, 2.1), 1), leafMat);
-    o.position.set(x + R(-2, 2), h * R(0.55, 1.05), z + R(-2, 2));
+    o.position.set(x + R(-2.2, 2.2), h * R(0.55, 1.05), z + R(-2.2, 2.2));
     o.castShadow = true;
+    o.receiveShadow = true;
     parent.add(o);
   }
   for (let i = 0; i < 3; i++) {
@@ -3002,9 +3021,13 @@ function buildPatio(group: Group): void {
     o.receiveShadow = true;
     group.add(o);
   };
-  disc(8.2, 5.4, new MeshStandardMaterial({ map: g11Speck("#1c1c1e", ["#3a3a3d", "#555558", "#0c0c0d"], 3, 3), roughness: 0.95 }), 0, 0, 0.03);
+  // The garden floor is real photographs now, not speckled dots: dark
+  // gravel and mown lawn, so the central garden reads as a real
+  // garden under the roof opening's shaft of light. The pale stone
+  // disc stays procedural — it is a plain stone circle.
+  disc(8.2, 5.4, new MeshStandardMaterial({ map: photoTexture(PHOTO.gravel, { repeat: [4, 3] }), roughness: 0.95 }), 0, 0, 0.03);
   disc(2.6, 2.6, new MeshStandardMaterial({ map: g11Speck("#e6e6e3", ["#cfcfcb", "#f5f5f2"], 2, 2), roughness: 0.9 }), 0, -0.8, 0.04);
-  disc(3.3, 1.9, new MeshStandardMaterial({ map: g11Speck("#4a8f36", ["#5aa844", "#3d7a2c", "#6bb552"], 3, 2), roughness: 0.95 }), 2.6, 2.3, 0.05);
+  disc(3.3, 1.9, new MeshStandardMaterial({ map: photoTexture(PHOTO.grass, { repeat: [2, 2] }), roughness: 1 }), 2.6, 2.3, 0.05);
   const T: [number, number, number][] = [
     [-4.5, -2, 12],
     [-2, -3.6, 13],
@@ -3040,6 +3063,10 @@ type Hall11Options = {
   v?: number;
   vaultTex?: CanvasTexture;
   vaultEmit?: number;
+  // Environment-map sheen on the vault (default 1): the night hall
+  // turns it down, so the white vault glows softly instead of
+  // glaring and flooding the parquet with its reflection.
+  vaultEnv?: number;
   flatCeil?: Material;
   pn?: number;
   fw?: number;
@@ -3079,7 +3106,7 @@ function hall11(parent: Group, o: Hall11Options): void {
   if (v) {
     const vault = new Mesh(
       new CylinderGeometry(v, v, L, 48, 1, true, Math.PI / 2, Math.PI),
-      new MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: o.vaultTex ?? null, side: BackSide, emissive: 0xffffff, emissiveIntensity: o.vaultEmit ?? 0 }),
+      new MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: o.vaultTex ?? null, side: BackSide, emissive: 0xffffff, emissiveIntensity: o.vaultEmit ?? 0, envMapIntensity: o.vaultEnv ?? 1 }),
     );
     vault.rotation.x = Math.PI / 2;
     vault.position.y = H;
@@ -3179,15 +3206,24 @@ function buildSallesVertes(group: Group): void {
   });
 }
 
-function buildCouloirSombre(group: Group): void {
+// Elegant Gallery (ex "Couloir sombre") — the night gallery, after
+// Kabeya's reference photo: a dark museum corridor at night, each
+// painting lit by its own warm spot, pools of light on the polished
+// herringbone parquet, the barrel vault glowing softly above.
+// Architecture unchanged (7 × 46 m, vault, six panels, arches, spot
+// rails) — only light and mood change. The internal layout key stays
+// "couloir-sombre" (URLs, thumbnails, plan); only the displayed name
+// changes (see lib/gallery-names.ts).
+function buildElegantGallery(group: Group): void {
   hall11(group, {
     W: 7,
     L: 46,
     H: 5,
-    wm: new MeshStandardMaterial({ color: 0x8d877d, roughness: 0.9 }),
-    fm: new MeshStandardMaterial({ map: g11Herr(36, 6, 24), roughness: 0.22, metalness: 0.05 }),
+    wm: new MeshStandardMaterial({ color: 0x453e38, roughness: 0.9 }),
+    fm: new MeshStandardMaterial({ map: g11Herr(22, 6, 24), roughness: 0.18, metalness: 0.05, envMapIntensity: 0.15 }),
     v: 3.5,
     vaultTex: g11Coffer(5, 14),
+    vaultEnv: 0.3,
     pn: 6,
     fw: 0.9,
     fh: 1.2,
@@ -3196,9 +3232,49 @@ function buildCouloirSombre(group: Group): void {
     end: new MeshStandardMaterial({ color: 0x24201c, roughness: 1 }),
     ar: true,
     tr: true,
-    hi: 0.18,
-    pi: 0.55,
+    // Night: barely any ambient, faint fill points — the spots below
+    // do the lighting, as in the reference photo.
+    hi: 0.05,
+    pi: 0.12,
   });
+  // One warm spot per pair of panels (three per side), aimed at the
+  // paintings — the pools of light on the parquet in the reference
+  // photo. No shadow maps here: the single dim directional below
+  // casts the frames' long shadows, so the spots stay cheap.
+  for (const s of [-1, 1] as const) {
+    for (const z of [15, 3, -9]) {
+      const spot = new SpotLight(0xffd9a0, 22, 12, 0.55, 0.7, 1.2);
+      spot.position.set(s * 2.2, 4.7, z);
+      spot.target.position.set(s * 3.45, 2.0, z);
+      group.add(spot);
+      group.add(spot.target);
+    }
+  }
+  // A dim warm directional down the hall's length: it casts the long
+  // soft shadows of frames and arches on the parquet (the vault and
+  // end walls cast no shadow, so the light reaches the floor).
+  const nightSun = new DirectionalLight(0xffe2b8, 0.5);
+  nightSun.position.set(0, 16, 18);
+  nightSun.target.position.set(0, 0, -14);
+  nightSun.castShadow = true;
+  nightSun.shadow.mapSize.set(1024, 1024);
+  Object.assign(nightSun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 60 });
+  nightSun.shadow.camera.updateProjectionMatrix(); // else the frustum stays ±5 m (see g11Sun)
+  nightSun.shadow.bias = -0.0003;
+  group.add(nightSun);
+  group.add(nightSun.target);
+  // A soft wash on the barrel vault, so it glows faintly above the
+  // dark walls as in the reference photo. Kept dim (0.15): brighter
+  // and the white vault glares and floods the polished parquet with
+  // its reflection.
+  for (const z of [10, -10]) {
+    const wash = new PointLight(0xffdfae, 0.15, 16, 1.5);
+    wash.position.set(0, 4.2, z);
+    group.add(wash);
+  }
+  // This shell brings its own shadow-casting light: GenericRoom must
+  // not add its fallback directional (it would flood the night).
+  group.userData.hasShadowSun = true;
 }
 
 function buildCouloirDore(group: Group): void {
@@ -3353,15 +3429,37 @@ function buildAtriumLattes(group: Group): void {
 // Dispatcher / disposal / environment / walk controls
 // ---------------------------------------------------------------------------
 
+// Layouts whose shell already brings a shadow-casting light (its own
+// directional sun or shadow spot): Serpentine, Halle and Arche (their
+// directional suns), Claire-Voie (shadow spot), Verrière (shadow
+// spot), Pavillon, Patio, Courbes and Atrium à lattes (g11Sun).
+// The other eleven shells are lit by hemisphere + points only —
+// GenericRoom adds a modest shadow directional for them (see
+// gallery-scene.tsx). A builder may also set
+// group.userData.hasShadowSun itself (the Elegant Gallery's night
+// rig does).
+const SHELL_SHADOW_SUN_LAYOUTS: ReadonlySet<RoomLayout> = new Set([
+  "serpentine",
+  "halle",
+  "arche",
+  "claire-voie",
+  "verriere",
+  "pavillon",
+  "patio",
+  "courbes",
+  "atrium-lattes",
+]);
+
 export function buildGalleryShell(layout: RoomLayout): {
   group: Group;
   tick?: (dt: number) => void;
+  hasShadowSun: boolean;
 } {
   const group = new Group();
   group.name = `gallery-shell-${layout}`;
   // Sunlight keeps its own JSX shell in gallery-scene.tsx; this
   // dispatcher only builds the twenty generic rooms.
-  if (layout === "sunlight") return { group };
+  if (layout === "sunlight") return { group, hasShadowSun: true };
   const builders: Record<Exclude<RoomLayout, "sunlight">, () => { tick?: (dt: number) => void } | void> = {
     serpentine: () => buildSerpentine(group),
     vitrine: () => buildVitrine(group),
@@ -3378,14 +3476,18 @@ export function buildGalleryShell(layout: RoomLayout): {
     patio: () => buildPatio(group),
     escalier: () => buildEscalier(group),
     "salles-vertes": () => buildSallesVertes(group),
-    "couloir-sombre": () => buildCouloirSombre(group),
+    "couloir-sombre": () => buildElegantGallery(group),
     "couloir-dore": () => buildCouloirDore(group),
     voutes: () => buildVoutes(group),
     courbes: () => buildCourbes(group),
     "atrium-lattes": () => buildAtriumLattes(group),
   };
   const result = builders[layout]();
-  return { group, tick: result?.tick };
+  return {
+    group,
+    tick: result?.tick,
+    hasShadowSun: SHELL_SHADOW_SUN_LAYOUTS.has(layout) || group.userData.hasShadowSun === true,
+  };
 }
 
 export function disposeGroup(group: Group): void {

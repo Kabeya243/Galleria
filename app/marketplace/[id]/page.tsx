@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ListingInquiryForm from "@/components/marketplace-inquiry-form";
-import { formatPrice } from "@/components/marketplace";
+import CurrencySelector, { RatesNote } from "@/components/currency-selector";
+import ListingPrice from "@/components/listing-price";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -82,7 +83,13 @@ export default async function ListingDetailPage({ params }: RouteProps) {
               {listing.artist}
               {listing.year ? ` · ${listing.year}` : ""}
             </p>
-            <p className="mp-detail-price">{formatPrice(listing.price, listing.currency)}</p>
+            <p className="mp-detail-price">
+              <ListingPrice price={listing.price} currency={listing.currency} variant="detail" />
+            </p>
+            <div className="mp-detail-currency">
+              <CurrencySelector id="mp-detail-currency" />
+              <RatesNote />
+            </div>
             <dl className="mp-detail-facts">
               <div>
                 <dt>Seller</dt>
@@ -183,6 +190,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
         .mp-detail-image-empty { display: grid; place-items: center; min-height: 320px; color: var(--muted); }
         .mp-detail-artist { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
         .mp-detail-price { margin: 14px 0 0; font: 450 28px/1.2 var(--font-display), Georgia, serif; }
+        .mp-detail-currency { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
         .mp-detail-facts { margin: 20px 0 0; display: grid; gap: 10px; }
         .mp-detail-facts > div { display: grid; grid-template-columns: 120px 1fr; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
         .mp-detail-facts dt { color: var(--muted); font-size: 12px; }

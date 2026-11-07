@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import ListingPrice from "@/components/listing-price";
 
 // Marketplace — the seller's tool. Create listings from your own
 // artworks, manage prices and status, and answer purchase inquiries.
@@ -402,7 +403,9 @@ export default function MarketplaceTool({
                     {listing.editionSize ? ` · ${listing.editionNumber ?? "—"}/${listing.editionSize}` : ""}
                     {listing.dimensions ? ` · ${listing.dimensions}` : ""}
                   </p>
-                  <p className="mp-card-price">{formatPrice(listing.price, listing.currency)}</p>
+                  <p className="mp-card-price">
+                    <ListingPrice price={listing.price} currency={listing.currency} variant="card" />
+                  </p>
                   <p className="mp-card-meta">
                     {listing.inquiryCount} {listing.inquiryCount === 1 ? "inquiry" : "inquiries"}
                   </p>

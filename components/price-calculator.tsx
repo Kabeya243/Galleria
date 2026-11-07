@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { convert, formatCurrency, formatRateDate } from "@/lib/currency";
+import { useExchangeRates } from "@/lib/use-exchange-rates";
 import styles from "./tools.module.css";
 
 const MEDIUMS = [
@@ -30,6 +32,7 @@ export default function PriceCalculator() {
   const [hours, setHours] = useState(120);
   const [materials, setMaterials] = useState(150);
   const [hourlyRate, setHourlyRate] = useState(25);
+  const rates = useExchangeRates();
 
   const result = useMemo(() => {
     const area = Math.max(0, widthCm) * Math.max(0, heightCm);
@@ -142,6 +145,47 @@ export default function PriceCalculator() {
           of the sale price — doubling your cost means you still cover what the piece cost
           you to make.
         </p>
+
+        {/* Multi-currency: the same suggested price in the buyer's currency. */}
+        <div className={styles.resultCurrencies}>
+          <p className={styles.resultCurrenciesTitle}>The same price in your buyer&apos;s currency</p>
+          {rates.status === "loading" && <p className={styles.ratesNote}>Loading exchange rates…</p>}
+          {rates.status === "unavailable" && (
+            <p className={styles.ratesNote}>
+              Exchange rates are unavailable right now — prices are shown in US dollars only.
+            </p>
+          )}
+          {rates.status === "ready" && (
+            <>
+              <dl className={styles.resultBreakdown}>
+                {(["EUR", "GBP", "CHF", "UGX"] as const).map((code) => {
+                  const recommended = convert(result.recommended, "USD", code, rates.rates);
+                  const low = convert(result.low, "USD", code, rates.rates);
+                  const high = convert(result.high, "USD", code, rates.rates);
+                  if (recommended === null || low === null || high === null) return null;
+                  return (
+                    <div key={code}>
+                      <dt>{code}</dt>
+                      <dd>
+                        {formatCurrency(recommended, code)}{" "}
+                        <span className={styles.resultCurrenciesRange}>
+                          ({formatCurrency(low, code)} – {formatCurrency(high, code)})
+                        </span>
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+              <p className={styles.ratesNote}>
+                ECB reference rates of {formatRateDate(rates.date)}, via Frankfurter (free, no
+                sign-up). Converted figures are approximate.
+                {rates.stale
+                  ? " Frankfurter did not answer — showing the last rates we have."
+                  : ""}
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

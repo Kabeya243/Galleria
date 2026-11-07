@@ -70,6 +70,11 @@ export default async function PresentSellRoute() {
         A short checklist before you share: prices set on the works, the room hung the way you want it,
         and a note ready for the person you are sending it to.
       </p>
+      <p className={styles.resultNote}>
+        Prices on the marketplace are shown in each visitor&apos;s own currency — US dollars, euros,
+        pounds, Swiss francs or Ugandan shillings — at the day&apos;s ECB reference rates.{" "}
+        <Link href="/marketplace">See the marketplace</Link>.
+      </p>
     </ToolsShell>
   );
 }

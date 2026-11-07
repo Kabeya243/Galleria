@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatPrice } from "@/components/marketplace";
+import CurrencySelector, { RatesNote } from "@/components/currency-selector";
+import ListingPrice from "@/components/listing-price";
 
 export const metadata: Metadata = {
   title: "Marketplace — SANAA",
@@ -137,7 +138,12 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
           </div>
         </div>
       ) : (
-        <div className="galleries-grid">
+        <>
+          <div className="mp-browse-currency">
+            <CurrencySelector id="mp-currency" />
+            <RatesNote />
+          </div>
+          <div className="galleries-grid">
           {listings.map((listing) => (
             <article key={listing.id} className="gallery-card">
               <Link href={`/marketplace/${listing.id}`} className="gallery-card-preview-button" aria-label={listing.title}>
@@ -163,7 +169,9 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
                   {listing.editionSize ? ` · ${listing.editionNumber ?? "—"}/${listing.editionSize}` : ""}
                   {listing.medium ? ` · ${listing.medium}` : ""}
                 </p>
-                <p className="mp-browse-price">{formatPrice(listing.price, listing.currency)}</p>
+                <p className="mp-browse-price">
+                  <ListingPrice price={listing.price} currency={listing.currency} variant="browse" />
+                </p>
                 <p className="gallery-card-finishes">by {listing.seller.name}</p>
                 <div className="gallery-card-actions">
                   <Link href={`/marketplace/${listing.id}`} className="galleries-open-button">
@@ -173,7 +181,8 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
               </div>
             </article>
           ))}
-        </div>
+          </div>
+        </>
       )}
 
       <style>{`
@@ -181,6 +190,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
         .mp-browse-filters input, .mp-browse-filters select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font: inherit; font-size: 13px; }
         .mp-browse-filters input[type="search"] { flex: 1 1 240px; }
         .mp-browse-filters input[type="number"] { width: 120px; }
+        .mp-browse-currency { max-width: 1350px; margin: 0 auto; padding: 18px 44px 0; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
         .mp-clear { color: var(--muted); font-size: 12px; }
         .mp-browse-image { display: block; width: 100%; height: 220px; object-fit: cover; background: var(--surface-2); }
         .mp-browse-image-empty { display: grid; place-items: center; color: var(--muted); font-size: 12px; }
@@ -189,6 +199,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
         .mp-browse-empty p { margin: 6px 0 0; color: var(--muted); line-height: 1.6; }
         @media (max-width: 640px) {
           .mp-browse-filters { padding: 8px 20px 0; }
+          .mp-browse-currency { padding: 14px 20px 0; }
           .mp-browse-filters input[type="number"] { flex: 1 1 120px; }
         }
       `}</style>

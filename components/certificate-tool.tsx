@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { convert, formatCurrency, formatRateDate } from "@/lib/currency";
+import { useExchangeRates } from "@/lib/use-exchange-rates";
 import styles from "./tools.module.css";
 
 export type CertificateArtwork = {
@@ -40,6 +42,10 @@ type CertificateConfig = {
   imageUrl: string | null;
   editionNumber: string;
   editionSize: string;
+  // Sale price in US dollars (optional, typed by the artist): shown on the
+  // certificate in USD and converted into the buyer's currencies. Empty
+  // means no price is printed.
+  priceUsd: string;
   issueDate: string; // yyyy-mm-dd
   place: string;
   signatureName: string;
@@ -98,6 +104,7 @@ function configForArtwork(artwork: CertificateArtwork, artistName: string): Cert
     imageUrl: artwork.imageUrl,
     editionNumber: "1",
     editionSize: "1",
+    priceUsd: "",
     issueDate: todayIso(),
     place: "Kampala, Uganda",
     signatureName: artwork.artist || artistName,
@@ -120,6 +127,7 @@ function configFromSaved(data: Record<string, unknown>, fallback: CertificateCon
   if (!["A4", "Letter"].includes(merged.paperSize)) merged.paperSize = "A4";
   if (!["portrait", "landscape"].includes(merged.orientation)) merged.orientation = "portrait";
   if (!["none", "single", "double", "gold"].includes(merged.border)) merged.border = "double";
+  if (typeof merged.priceUsd !== "string") merged.priceUsd = "";
   return merged;
 }
 
@@ -167,6 +175,15 @@ export default function CertificateTool({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const qrRef = useRef<HTMLCanvasElement | null>(null);
   const [qrError, setQrError] = useState(false);
+  const rates = useExchangeRates();
+
+  // The sale price as a whole number of US dollars, or null when the field
+  // is empty or not a number — then no price is printed at all.
+  const priceNumber = useMemo(() => {
+    if (!cfg) return null;
+    const parsed = Number(cfg.priceUsd);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+  }, [cfg?.priceUsd]);
 
   const selectedArtwork = useMemo(
     () => artworks.find((artwork) => artwork.id === cfg?.artworkId) ?? firstArtwork,
@@ -434,6 +451,15 @@ export default function CertificateTool({
             <span>Medium</span>
             <input value={cfg.medium} onChange={(event) => set("medium", event.target.value)} />
           </label>
+          <label className={styles.field}>
+            <span>Sale price (USD, optional)</span>
+            <input
+              inputMode="decimal"
+              placeholder="e.g. 1500 — leave empty to print no price"
+              value={cfg.priceUsd}
+              onChange={(event) => set("priceUsd", event.target.value)}
+            />
+          </label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <label className={styles.field}>
               <span>Edition number</span>
@@ -591,6 +617,35 @@ export default function CertificateTool({
                 <dt>Edition</dt>
                 <dd>{editionLabel(cfg)}</dd>
               </div>
+              {priceNumber !== null && (
+                <div>
+                  <dt>Price</dt>
+                  <dd>
+                    {formatCurrency(priceNumber, "USD")}
+                    {rates.status === "ready" && (
+                      <>
+                        {" "}
+                        ·{" "}
+                        {(["EUR", "GBP", "CHF", "UGX"] as const)
+                          .map((code) => {
+                            const value = convert(priceNumber, "USD", code, rates.rates);
+                            return value === null ? null : formatCurrency(value, code);
+                          })
+                          .filter((text): text is string => text !== null)
+                          .join(" · ")}
+                        <span style={{ color: "#666", fontWeight: 400 }}>
+                          {" "}
+                          (ECB reference rates of {formatRateDate(rates.date)}
+                          {rates.stale ? " — last rates available" : ""})
+                        </span>
+                      </>
+                    )}
+                    {rates.status === "unavailable" && (
+                      <span style={{ color: "#666", fontWeight: 400 }}> (exchange rates unavailable)</span>
+                    )}
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt>Certificate ID</dt>
                 <dd>{cfg.certificateId}</dd>

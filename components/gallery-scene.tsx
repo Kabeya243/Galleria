@@ -30,6 +30,7 @@ import {
   SUNLIGHT_WALK_SPEED,
   SUNLIGHT_WIDTH,
   sunlightHitWith,
+  sunlightSunColor,
 } from "@/lib/sunlight";
 import {
   createSunlightTextCanvas,
@@ -252,7 +253,7 @@ function sunlightSunBase(t: number): number {
 // The source's quality selector: pixel ratio and sun shadow size.
 const SUN_SHADOW_MAP_SIZE: Record<RenderQuality, number> = { high: 2048, medium: 1024, low: 512 };
 
-function SunlightRig({ sunValue, quality }: { sunValue: number; quality: RenderQuality }) {
+function SunlightRig({ sunValue, quality, sunColor }: { sunValue: number; quality: RenderQuality; sunColor?: string }) {
   const sunRef = useRef<DirectionalLight>(null!);
   const sunBase = useRef(2.6);
   const clockRef = useRef(0);
@@ -296,7 +297,7 @@ function SunlightRig({ sunValue, quality }: { sunValue: number; quality: RenderQ
         position={sunlightSunPosition(sunValue / 100)}
         target={sunTarget}
         intensity={2.6}
-        color="#fff0d8"
+        color={sunColor ?? "#fff0d8"}
         castShadow
         shadow-mapSize-width={SUN_SHADOW_MAP_SIZE[quality]}
         shadow-mapSize-height={SUN_SHADOW_MAP_SIZE[quality]}
@@ -3348,18 +3349,26 @@ function SunlightWalkControls({
         const q = Math.min(v * 1.5, L);
         const mx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + (dx / L) * q));
         const mz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + (dz / L) * q));
-        let ok = 0;
-        if (!sunlightHitWith(blocks, mx, localZ)) {
-          camera.position.x = ox + mx;
-          ok = 1;
-        }
-        if (!sunlightHitWith(blocks, camera.position.x - ox, mz)) {
-          camera.position.z = oz + mz;
-          ok = 1;
-        }
-        if (!ok) {
+        // If the bounds clamp leaves no room to move at all, the
+        // target is unreachable (a wall): stop walking instead of
+        // pressing against it forever.
+        if (mx === localX && mz === localZ) {
           destination.current = null;
           lookYaw.current = null;
+        } else {
+          let ok = 0;
+          if (!sunlightHitWith(blocks, mx, localZ)) {
+            camera.position.x = ox + mx;
+            ok = 1;
+          }
+          if (!sunlightHitWith(blocks, camera.position.x - ox, mz)) {
+            camera.position.z = oz + mz;
+            ok = 1;
+          }
+          if (!ok) {
+            destination.current = null;
+            lookYaw.current = null;
+          }
         }
         if (lookYaw.current !== null) {
           const step = Math.min(delta, 0.05) * 2.5;
@@ -3370,21 +3379,34 @@ function SunlightWalkControls({
       }
     }
     camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
-    // Marker ring on the walk target, pulsing like the source.
+    // Final guard: the camera can never leave the room, whatever moved
+    // it (keys, destination, teleport). The movement code above already
+    // clamps, but this last clamp is unconditional — a stale offset or
+    // a future caller that sets the camera directly can no longer push
+    // it through a wall into the grey void.
+    camera.position.x = ox + Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, camera.position.x - ox));
+    camera.position.z = oz + Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, camera.position.z - oz));
+    // Marker ring on the walk target, pulsing like the source. The
+    // ring is clamped to the room bounds (a target clicked on a wall
+    // sits outside the walkable area, so the raw point would hide the
+    // ring inside the wall): the visible ring is always the nearest
+    // reachable point inside the room.
     if (marker) {
       const dest = destination.current;
       marker.visible = dest !== null;
       if (dest) {
-        marker.position.set(dest.x, 0.02, dest.z);
-        (marker.material as MeshBasicMaterial).opacity = 0.55 + 0.3 * Math.sin(state.clock.elapsedTime * 9);
+        const mx = ox + Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, dest.x - ox));
+        const mz = oz + Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, dest.z - oz));
+        marker.position.set(mx, 0.02, mz);
+        (marker.material as MeshBasicMaterial).opacity = 0.75 + 0.25 * Math.sin(state.clock.elapsedTime * 9);
       }
     }
   });
 
   return (
-    <mesh ref={markerRef} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-      <ringGeometry args={[0.12, 0.18, 32]} />
-      <meshBasicMaterial color="#ffffff" transparent depthWrite={false} />
+    <mesh ref={markerRef} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={10}>
+      <ringGeometry args={[0.25, 0.35, 32]} />
+      <meshBasicMaterial color="#ffffff" transparent depthWrite={false} depthTest={false} />
     </mesh>
   );
 }
@@ -4095,7 +4117,18 @@ export default function GalleryScene({
       showGrid={showGrid}
       showMeasure={showMeasure}
       onFloorClick={walkMode ? (point) => {
-        destination.current = new Vector3(point.x, 0, point.z);
+        // Clamp the walk target to the active room's walkable bounds:
+        // a click on a wall (or outside the room) is brought back
+        // inside, so the camera and the marker ring stop at a
+        // reachable point instead of a wall.
+        const idx = Math.max(0, sceneRooms.findIndex((r) => r.id === (activeRoomId ?? room.id)));
+        const def = galleryDef(sceneRooms[idx].layout);
+        const b = def?.bounds ?? SUNLIGHT_BOUNDS;
+        const ox = offsets[idx] ?? 0;
+        const oz = zOffsets[idx] ?? 0;
+        const cx = ox + Math.max(b.minX, Math.min(b.maxX, point.x - ox));
+        const cz = oz + Math.max(b.minZ, Math.min(b.maxZ, point.z - oz));
+        destination.current = new Vector3(cx, 0, cz);
         lookYaw.current = null;
         onFloorClick?.(point);
       } : undefined}
@@ -4167,7 +4200,7 @@ export default function GalleryScene({
         {activeDef?.fog && <fog attach="fog" args={[activeDef.fog.color, activeDef.fog.near, activeDef.fog.far]} />}
         <ToneMappingRig exposure={qualityCfg.exposure} />
         {activeIsSunlight && <SunlightEnvironment />}
-        {activeIsSunlight && <SunlightRig sunValue={sunValue} quality={quality} />}
+        {activeIsSunlight && <SunlightRig sunValue={sunValue} quality={quality} sunColor={sunlightSunColor(startRoom.lightType)} />}
         {!activeIsSunlight && activeDef?.environment && <GalleryEnvironment />}
         {cameraStateRef && <CameraStateReporter cameraStateRef={cameraStateRef} />}
         {/* Artwork textures load through Suspense so a slow image suspends

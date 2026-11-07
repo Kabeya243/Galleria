@@ -3675,18 +3675,26 @@ export function GalleryWalkControls(props: {
         const q = Math.min(v * 1.5, L);
         const mx = Math.max(bounds.minX, Math.min(bounds.maxX, localX + (dx / L) * q));
         const mz = Math.max(bounds.minZ, Math.min(bounds.maxZ, localZ + (dz / L) * q));
-        let ok = 0;
-        if (!sunlightHitWith(blocks, mx, localZ)) {
-          camera.position.x = ox + mx;
-          ok = 1;
-        }
-        if (!sunlightHitWith(blocks, camera.position.x - ox, mz)) {
-          camera.position.z = oz + mz;
-          ok = 1;
-        }
-        if (!ok) {
+        // If the bounds clamp leaves no room to move at all, the
+        // target is unreachable (a wall): stop walking instead of
+        // pressing against it forever.
+        if (mx === localX && mz === localZ) {
           destination.current = null;
           lookYaw.current = null;
+        } else {
+          let ok = 0;
+          if (!sunlightHitWith(blocks, mx, localZ)) {
+            camera.position.x = ox + mx;
+            ok = 1;
+          }
+          if (!sunlightHitWith(blocks, camera.position.x - ox, mz)) {
+            camera.position.z = oz + mz;
+            ok = 1;
+          }
+          if (!ok) {
+            destination.current = null;
+            lookYaw.current = null;
+          }
         }
         if (lookYaw.current !== null) {
           const step = Math.min(delta, 0.05) * 2.5;
@@ -3697,21 +3705,34 @@ export function GalleryWalkControls(props: {
       }
     }
     camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
-    // Marker ring on the walk target, pulsing like the source.
+    // Final guard: the camera can never leave the room, whatever moved
+    // it (keys, destination, teleport). The movement code above already
+    // clamps, but this last clamp is unconditional — a stale offset or
+    // a future caller that sets the camera directly can no longer push
+    // it through a wall into the grey void.
+    camera.position.x = ox + Math.max(bounds.minX, Math.min(bounds.maxX, camera.position.x - ox));
+    camera.position.z = oz + Math.max(bounds.minZ, Math.min(bounds.maxZ, camera.position.z - oz));
+    // Marker ring on the walk target, pulsing like the source. The
+    // ring is clamped to the room bounds (a target clicked on a wall
+    // sits outside the walkable area, so the raw point would hide the
+    // ring inside the wall): the visible ring is always the nearest
+    // reachable point inside the room.
     if (marker) {
       const dest = destination.current;
       marker.visible = dest !== null;
       if (dest) {
-        marker.position.set(dest.x, 0.02, dest.z);
-        (marker.material as MeshBasicMaterial).opacity = 0.55 + 0.3 * Math.sin(state.clock.elapsedTime * 9);
+        const mx = ox + Math.max(bounds.minX, Math.min(bounds.maxX, dest.x - ox));
+        const mz = oz + Math.max(bounds.minZ, Math.min(bounds.maxZ, dest.z - oz));
+        marker.position.set(mx, 0.02, mz);
+        (marker.material as MeshBasicMaterial).opacity = 0.75 + 0.25 * Math.sin(state.clock.elapsedTime * 9);
       }
     }
   });
 
   return (
-    <mesh ref={markerRef} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-      <ringGeometry args={[0.12, 0.18, 32]} />
-      <meshBasicMaterial color="#ffffff" transparent depthWrite={false} />
+    <mesh ref={markerRef} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={10}>
+      <ringGeometry args={[0.25, 0.35, 32]} />
+      <meshBasicMaterial color="#ffffff" transparent depthWrite={false} depthTest={false} />
     </mesh>
   );
 }

@@ -63,6 +63,23 @@ export const SUNLIGHT_BLOCKS: SunlightBlock[] = [
   ...SUNLIGHT_PEDESTALS.map((pedestal) => ({ x: pedestal.x, z: pedestal.z, ry: 0, hl: pedestal.w / 2, hw: pedestal.w / 2 })),
 ];
 
+// Sun colour by light type (the reference file's light ambiances):
+// the room's light type drives the Sunlight sun colour, so the editor's
+// LIGHT TYPE selector visibly changes the light. "sunlight" is the
+// reference sun (#fff0d8); the other four are the file's ambiances
+// (soft #fff6ea, warm #ffe2b8, cool #dfeaff, stone warm #ffd9a0).
+export const SUN_COLOR_BY_LIGHT_TYPE: Record<string, string> = {
+  sunlight: "#fff0d8",
+  "spot-warm": "#ffe2b8",
+  "spot-cool": "#dfeaff",
+  ambient: "#fff6ea",
+  "stone-warm": "#ffd9a0",
+};
+
+export function sunlightSunColor(lightType?: string | null): string {
+  return SUN_COLOR_BY_LIGHT_TYPE[lightType ?? "sunlight"] ?? SUN_COLOR_BY_LIGHT_TYPE.sunlight;
+}
+
 // First-person navigation (from the source): the camera is bounded
 // inside the room, and the collision test keeps it out of the blocks.
 export const SUNLIGHT_BOUNDS = { minX: -10.4, maxX: 10.4, minZ: -13.4, maxZ: 11.4 };

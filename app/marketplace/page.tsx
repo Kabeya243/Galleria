@@ -130,6 +130,11 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
         )}
       </form>
 
+      <div className="mp-browse-currency">
+        <CurrencySelector id="mp-currency" />
+        <RatesNote />
+      </div>
+
       {listings.length === 0 ? (
         <div className="galleries-intro">
           <div className="mp-browse-empty">
@@ -138,12 +143,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
           </div>
         </div>
       ) : (
-        <>
-          <div className="mp-browse-currency">
-            <CurrencySelector id="mp-currency" />
-            <RatesNote />
-          </div>
-          <div className="galleries-grid">
+        <div className="galleries-grid">
           {listings.map((listing) => (
             <article key={listing.id} className="gallery-card">
               <Link href={`/marketplace/${listing.id}`} className="gallery-card-preview-button" aria-label={listing.title}>
@@ -182,7 +182,6 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
             </article>
           ))}
           </div>
-        </>
       )}
 
       <style>{`

@@ -3130,7 +3130,13 @@ function GenericRoom({
   const layout = roomLayouts[room.layout];
   const def = galleryDef(room.layout);
   const floorCenterZ = roomFloorCenterZ(room.layout);
-  const shell = useMemo(() => buildGalleryShell(room.layout), [room.layout]);
+  // The shell hides its baked template paintings once the room's
+  // template artworks were seeded as real artworks (room flag) — the
+  // seeded rows hang in their place, never both at once.
+  const shell = useMemo(
+    () => buildGalleryShell(room.layout, { hideTemplateArt: room.templateArtSeeded === true }),
+    [room.layout, room.templateArtSeeded],
+  );
   useEffect(() => () => disposeGroup(shell.group), [shell]);
   const qualityCfg = RENDER_QUALITY_CONFIG[quality ?? "high"];
   // Fallback shadow sun for shells lit by hemisphere + points only

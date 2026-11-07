@@ -782,6 +782,11 @@ export const galleryRoomSchema = z.object({
   // spotlights). Separate from the Asset Library `elements` above:
   // both systems coexist. Saved with the room, restored on load.
   sunlightElements: z.array(sunlightElementSchema).max(24).default([]),
+  // The room's template artworks have been seeded as real artworks
+  // (lib/template-artworks.ts): the shell then hides its baked
+  // paintings so they never show twice. False for rooms created
+  // before seeding existed — the editor seeds them once on load.
+  templateArtSeeded: z.boolean().default(false),
 });
 
 export type GalleryRoom = z.infer<typeof galleryRoomSchema>;
@@ -863,6 +868,7 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "sunlight"): G
       wallPaint: {},
       elements: [],
       sunlightElements: [],
+      templateArtSeeded: false,
     },
     layout,
   );

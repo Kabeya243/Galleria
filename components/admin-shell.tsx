@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  ClipboardCheck,
   Images,
   LayoutDashboard,
   LayoutGrid,
@@ -122,6 +123,12 @@ export default function AdminShell({
       href: "#tools",
       icon: <Wrench size={18} />,
       badge: counts?.tools,
+    },
+    {
+      id: "test-reports",
+      label: "Test reports",
+      href: "#test-reports",
+      icon: <ClipboardCheck size={18} />,
     },
   ];
   const needle = query.trim().toLowerCase();

@@ -94,6 +94,37 @@ function EmptyBox({ title, body }: { title: string; body: string }) {
   );
 }
 
+// Feature-test report (parts 1–5 of the SANAA extension mission), written
+// by scripts/test-new-features.mjs to public/test-reports/latest.json.
+// Read from disk on each admin visit; missing or unreadable file = empty
+// state, never a crash.
+type TestReportCheck = {
+  feature: string;
+  id: string;
+  name: string;
+  status: "pass" | "fail" | "skip";
+  detail: string;
+};
+type TestReport = {
+  generatedAt: string;
+  commit: string;
+  summary: { total: number; passed: number; failed: number; skipped: number };
+  checks: TestReportCheck[];
+};
+
+async function readTestReport(): Promise<TestReport | null> {
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const raw = await readFile(join(process.cwd(), "public", "test-reports", "latest.json"), "utf8");
+    const parsed = JSON.parse(raw) as TestReport;
+    if (!parsed || !Array.isArray(parsed.checks) || !parsed.summary) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export default async function AdminRoute({
   searchParams,
 }: {
@@ -128,6 +159,7 @@ export default async function AdminRoute({
     visitLogDays,
     hiddenRoomLayouts,
     galleryNames,
+    testReport,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -246,6 +278,8 @@ export default async function AdminRoute({
     // Gallery names in both languages, admin renames included (see the
     // Gallery names section below).
     getGalleryNames(),
+    // Feature-test report (see the Test reports section below).
+    readTestReport(),
   ]);
 
   const userCount = userDates.length;
@@ -911,6 +945,68 @@ export default async function AdminRoute({
           </p>
         </div>
         <AdminGalleryNames names={galleryNames} />
+      </section>
+
+      {/* Test reports — feature tests for the new tools (profile photos,
+          works wall, website builder, portfolio PDF). Written by
+          scripts/test-new-features.mjs to public/test-reports/latest.json. */}
+      <section id="test-reports" className="ad-section">
+        <div className="ad-section-head">
+          <h2>Test reports</h2>
+          <p>
+            Results of the automated feature tests for the new tools — profile photos, works wall, website
+            builder (51 templates) and portfolio PDF builder (50 templates). Re-run with{" "}
+            <code>node scripts/test-new-features.mjs --build</code>.
+          </p>
+        </div>
+        {!testReport ? (
+          <EmptyBox
+            title="No test report yet."
+            body="Run node scripts/test-new-features.mjs from the repo to generate public/test-reports/latest.json — it will show up here."
+          />
+        ) : (
+          <div className="ad-card ad-table-wrap">
+            <p style={{ margin: "0 0 12px", fontSize: 13 }}>
+              <strong>
+                {testReport.summary.passed}/{testReport.summary.total} passed
+              </strong>
+              {testReport.summary.failed > 0 && (
+                <> · <strong style={{ color: "#9a2b2b" }}>{testReport.summary.failed} failed</strong></>
+              )}
+              {testReport.summary.skipped > 0 && <> · {testReport.summary.skipped} skipped</>}
+              {" · "}generated {new Date(testReport.generatedAt).toLocaleString("en-GB")}
+              {" · "}commit <code>{testReport.commit}</code>
+            </p>
+            <table className="ad-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Check</th>
+                  <th>Status</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {testReport.checks.map((c) => (
+                  <tr key={c.id}>
+                    <td>{c.feature}</td>
+                    <td>{c.name}</td>
+                    <td>
+                      {c.status === "pass" ? (
+                        <strong style={{ color: "#2e7d32" }}>Passed</strong>
+                      ) : c.status === "fail" ? (
+                        <strong style={{ color: "#9a2b2b" }}>Failed</strong>
+                      ) : (
+                        <span style={{ color: "var(--muted)" }}>Skipped</span>
+                      )}
+                    </td>
+                    <td>{c.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <p className="ad-foot">

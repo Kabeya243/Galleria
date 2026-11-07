@@ -20,6 +20,7 @@
 import { roomLayouts, type RoomLayout } from "@/lib/rooms";
 import { SUNLIGHT_CAMERA_START, SUNLIGHT_FLOOR_CENTER_Z } from "@/lib/sunlight";
 import {
+  raycastHangWalls,
   sunlightPlaceOnWall,
   type HangWallFace,
   type HangWallHit,
@@ -1169,23 +1170,7 @@ export function galleryWallHit(
   direction: { x: number; y: number; z: number },
   layout: RoomLayout,
 ): HangWallHit | null {
-  let best: HangWallHit | null = null;
-  let bestT = Infinity;
-  for (const face of galleryHangWalls(layout)) {
-    const denom = direction.x * face.nx + direction.z * face.nz;
-    if (Math.abs(denom) < 1e-6) continue;
-    const t = ((face.cx - origin.x) * face.nx + (face.cz - origin.z) * face.nz) / denom;
-    if (!(t > 0) || t >= bestT) continue;
-    const px = origin.x + direction.x * t;
-    const py = origin.y + direction.y * t;
-    const pz = origin.z + direction.z * t;
-    const along = (px - face.cx) * face.ax + (pz - face.cz) * face.az;
-    if (Math.abs(along) > face.halfLen) continue;
-    if (py < face.minY || py > face.maxY) continue;
-    bestT = t;
-    best = { point: { x: px, y: py, z: pz }, normal: { x: face.nx, z: face.nz }, face };
-  }
-  return best;
+  return raycastHangWalls(origin, direction, galleryHangWalls(layout));
 }
 
 // Which hangable walls a position sits on (the reference rooms'

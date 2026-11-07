@@ -79,7 +79,11 @@ export function isPasswordValid(password: string): boolean {
 const artworkSchema = z.object({
   id: z.string().min(1).max(64),
   title: z.string().trim().min(1).max(120),
-  artist: z.string().max(120),
+  // Optional with an empty default: an artwork created before its
+  // artist is typed (a fresh upload, a curatorial text) must never
+  // block the save — the database column defaults to "" the same way,
+  // and the public panel falls back to the exhibition owner's name.
+  artist: z.string().max(120).optional().default(""),
   year: z.string().max(20),
   medium: z.string().max(160),
   dimensions: z.string().max(80),

@@ -55,6 +55,8 @@ import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, f
 import { galleryCameraStart, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import {
   createSunlightElement,
+  nearestHangWall,
+  rotationMatches,
   SUNLIGHT_ELEMENT_BOUNDS,
   SUNLIGHT_ELEMENT_DEFAULTS,
   SUNLIGHT_ELEMENT_TYPES,
@@ -709,9 +711,13 @@ export default function Editor({
       const next = update(artwork);
       // Auto-rotate: when the artwork moves onto a different wall, turn
       // it to face that wall. A move along the same wall keeps its
-      // rotation, so a deliberate tilt is never reset.
+      // rotation, so a deliberate tilt is never reset. An update that
+      // sets a rotation explicitly (the drag-end snap, "Fit to wall",
+      // the rotation slider) is authoritative: auto-rotate never
+      // overrides it.
       const moved = next.position[0] !== artwork.position[0] || next.position[1] !== artwork.position[1] || next.position[2] !== artwork.position[2];
-      if (moved && activeRoom && artwork.roomId === activeRoom.id) {
+      const explicitRotation = next.rotation !== artwork.rotation;
+      if (moved && !explicitRotation && activeRoom && artwork.roomId === activeRoom.id) {
         const before = wallsForArtwork(artwork, activeRoom);
         const after = wallsForArtwork(next, activeRoom);
         const beforeKey = before[0]?.key;
@@ -993,8 +999,10 @@ export default function Editor({
   // move, the dragged artwork snaps to the grid when it is on, and the
   // rest of the selection — plus every other member of the dragged
   // artwork's group — follows by the same delta. The dragged artwork
-  // keeps its wall auto-rotate (same rule as updateArtwork).
-  function handleSceneArtworkUpdate(id: string, patch: { position?: [number, number, number]; scale?: number }) {
+  // keeps its wall auto-rotate (same rule as updateArtwork), unless the
+  // scene set the rotation itself: a wall-aware drag turns the work to
+  // the wall the pointer is over, and that rotation is authoritative.
+  function handleSceneArtworkUpdate(id: string, patch: { position?: [number, number, number]; scale?: number; rotation?: number }) {
     const selectedArtworkIds = new Set(selectionRef.current.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
     setArtworks((current) => {
       const dragged = current.find((artwork) => artwork.id === id);
@@ -1008,7 +1016,9 @@ export default function Editor({
       return current.map((artwork) => {
         if (artwork.id === id) {
           let next: LayerArtwork = { ...artwork, position: target };
-          if (activeRoom && artwork.roomId === activeRoom.id) {
+          if (patch.rotation !== undefined) {
+            next = { ...next, rotation: patch.rotation };
+          } else if (activeRoom && artwork.roomId === activeRoom.id) {
             const before = wallsForArtwork(artwork, activeRoom);
             const after = wallsForArtwork(next, activeRoom);
             const beforeKey = before[0]?.key;
@@ -1377,17 +1387,29 @@ export default function Editor({
     if (!activeRoom) return;
     const artwork = artworks.find((item) => item.id === id);
     if (!artwork || artwork.roomId !== activeRoom.id) return;
-    const wall = wallsForArtwork(artwork, activeRoom)[0];
-    if (!wall) return;
+    // Which wall to snap onto: prefer the wall the artwork already
+    // faces — a wall-aware drag may have turned it onto a new wall, and
+    // the snap must keep that wall instead of yanking it back to the
+    // one it started on. No wall nearby (dropped mid-air past a wall's
+    // end): snap onto the nearest hangable face instead of leaving the
+    // work floating.
+    const faces = activeRoom.layout === "sunlight"
+      ? sunlightHangWalls(activeRoom.sunlightElements ?? [])
+      : galleryHangWalls(activeRoom.layout);
+    const walls = wallsForArtwork(artwork, activeRoom);
+    const wall = walls.find((item) => rotationMatches(item.rotation, artwork.rotation)) ?? walls[0];
+    let face = wall ? faces.find((item) => item.id === wall.key) : undefined;
+    if (!face) {
+      const nearest = nearestHangWall(
+        { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] },
+        faces,
+      );
+      if (!nearest) return;
+      face = nearest.face;
+    }
     const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
     const width = ((parsed?.widthCm ?? 80) / 100) * artwork.scale;
     const height = ((parsed?.heightCm ?? 100) / 100) * artwork.scale;
-    // A generic room snaps onto its own hangable faces (fixed walls,
-    // panels, partitions, screens…); Sunlight onto its hang walls.
-    const face = activeRoom.layout === "sunlight"
-      ? sunlightHangWalls(activeRoom.sunlightElements ?? []).find((item) => item.id === wall.key)
-      : galleryHangWalls(activeRoom.layout).find((item) => item.id === wall.key);
-    if (!face) return;
     const place = activeRoom.layout === "sunlight" ? sunlightPlaceOnWall : galleryPlaceOnWall;
     const { position, rotation } = place(
       { point: { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] }, normal: { x: face.nx, z: face.nz }, face },
@@ -1837,6 +1859,30 @@ export default function Editor({
     return { position: [0, 1.55, zCenter - layout.depth / 2 + 0.28], rotation: 0 };
   }
 
+  // The artist a newly created artwork or text carries: the most
+  // common non-empty artist among the works already in this show, so
+  // a solo show's texts and uploads carry the artist automatically
+  // instead of leaving the field undefined — an undefined artist
+  // fails the save validation ("expected string, received undefined")
+  // and blocks every save until the field is filled by hand. Empty
+  // when the show has no artist yet (the server defaults it to "").
+  function defaultArtist(): string {
+    const counts = new Map<string, number>();
+    for (const item of artworks) {
+      const name = item.artist?.trim();
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    let best = "";
+    let bestCount = 0;
+    for (const [name, count] of counts) {
+      if (count > bestCount) {
+        best = name;
+        bestCount = count;
+      }
+    }
+    return best;
+  }
+
   // Curatorial text (the reference room's "Texte curatorial"): a text
   // panel as an artwork, on the wall the camera is looking at. The
   // panel is 1.4 m wide; its height follows the wrapped text, and the
@@ -1855,6 +1901,7 @@ export default function Editor({
     const artwork: Artwork = {
       id: crypto.randomUUID(),
       title: "Texte curatorial",
+      artist: defaultArtist(),
       year: "",
       medium: "Curatorial text",
       dimensions: `140 × ${Math.round(size.height * 100)} cm`,
@@ -1911,6 +1958,7 @@ export default function Editor({
     const artwork: Artwork = {
       id: crypto.randomUUID(),
       title: `New artwork ${index + 1}`,
+      artist: defaultArtist(),
       year: "2025",
       medium: "Mixed media",
       dimensions: "80 × 100 cm",

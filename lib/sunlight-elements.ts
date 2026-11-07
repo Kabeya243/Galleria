@@ -291,20 +291,24 @@ export type HangWallHit = {
   face: HangWallFace;
 };
 
-// Raycast a ray against every hangable wall face (the file's wallHit,
-// extended to the added walls): the nearest face whose plane the ray
-// meets inside the wall's extent. The face normal always points back
-// at the ray origin, so an artwork placed on it faces the camera.
-// Returns null when the ray meets no wall (ceiling, floor, or out of
-// the room) — the caller falls back to the back wall.
-export function sunlightWallHit(
+// Raycast a ray against a list of hangable wall faces (the file's
+// wallHit, shared by Sunlight and the generic rooms): the nearest face
+// whose plane the ray meets inside the wall's extent. Only a face
+// whose normal points back at the ray origin counts — a freestanding
+// wall (cloison, suspendu, panel) carries both faces on the same
+// plane, and without this the first-listed face would win even when
+// the camera stands on the other side, hanging the work behind the
+// wall where it cannot be seen. Returns null when the ray meets no
+// wall (ceiling, floor, or out of the room) — the caller falls back
+// to the back wall.
+export function raycastHangWalls(
   origin: { x: number; y: number; z: number },
   direction: { x: number; y: number; z: number },
-  elements: SunlightElement[],
+  faces: HangWallFace[],
 ): HangWallHit | null {
   let best: HangWallHit | null = null;
   let bestT = Infinity;
-  for (const face of sunlightHangWalls(elements)) {
+  for (const face of faces) {
     // Ray-plane: t = ((C − O)·n) / (D·n). The plane is vertical, so
     // only the horizontal components matter.
     const denom = direction.x * face.nx + direction.z * face.nz;
@@ -318,10 +322,54 @@ export function sunlightWallHit(
     const along = (px - face.cx) * face.ax + (pz - face.cz) * face.az;
     if (Math.abs(along) > face.halfLen) continue;
     if (py < face.minY || py > face.maxY) continue;
+    // The face must look back at the ray origin: a freestanding wall's
+    // two faces share one plane, so the side facing the camera is the
+    // one whose normal points at it.
+    if ((origin.x - px) * face.nx + (origin.z - pz) * face.nz <= 0) continue;
     bestT = t;
     best = { point: { x: px, y: py, z: pz }, normal: { x: face.nx, z: face.nz }, face };
   }
   return best;
+}
+
+export function sunlightWallHit(
+  origin: { x: number; y: number; z: number },
+  direction: { x: number; y: number; z: number },
+  elements: SunlightElement[],
+): HangWallHit | null {
+  return raycastHangWalls(origin, direction, sunlightHangWalls(elements));
+}
+
+// The hangable face nearest to a position (by perpendicular distance
+// to the face plane): for a dropped artwork that landed past its
+// wall's end, so the drag-end snap can put it on the closest wall
+// instead of leaving it floating mid-air. Only faces the position
+// stands in front of (within 0.5 m past the wall's length and height)
+// count.
+export function nearestHangWall(
+  position: { x: number; y: number; z: number },
+  faces: HangWallFace[],
+): { face: HangWallFace; rotation: number; distance: number } | null {
+  let best: { face: HangWallFace; rotation: number; distance: number } | null = null;
+  for (const face of faces) {
+    const dist = (position.x - face.cx) * face.nx + (position.z - face.cz) * face.nz;
+    if (dist < -0.05) continue;
+    const along = (position.x - face.cx) * face.ax + (position.z - face.cz) * face.az;
+    if (Math.abs(along) > face.halfLen + 0.5) continue;
+    if (position.y < face.minY - 0.5 || position.y > face.maxY + 0.5) continue;
+    if (best && dist >= best.distance) continue;
+    best = { face, rotation: Math.atan2(face.nx, face.nz), distance: dist };
+  }
+  return best;
+}
+
+// Two wall rotations are the same wall when they agree modulo a full
+// turn (a wall at 0 and an artwork at 2π face the same way). Used when
+// a drag already turned an artwork onto a new wall: the snap keeps the
+// wall the artwork faces instead of yanking it back to the old one.
+export function rotationMatches(a: number, b: number, tolerance = 0.12): boolean {
+  const diff = Math.abs(a - b) % (Math.PI * 2);
+  return Math.min(diff, Math.PI * 2 - diff) <= tolerance;
 }
 
 // Which hangable walls a position sits on: every face whose plane the

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mail, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { Artwork } from "@/lib/demo-data";
+import { extractPalette } from "@/lib/palette";
 import PaletteSwatches from "@/components/palette-swatches";
 import { useT } from "@/lib/i18n";
 
@@ -89,6 +90,26 @@ export default function ArtworkDetailPanel({
     ? artwork.altText.trim()
     : `${artwork.title} — ${artist}${artwork.year ? `, ${artwork.year}` : ""}`;
 
+  // Colour palette: works created before ColorThief (or whose palette
+  // was never stored) have none on the record, so the panel reads it
+  // from the image itself, in the browser, the same way the editor
+  // does on selection. Read-only here — the palette is shown, never
+  // saved back. A failed read just leaves the section hidden.
+  const [extractedPalette, setExtractedPalette] = useState<string[] | null>(null);
+  useEffect(() => {
+    setExtractedPalette(null);
+    if (artwork.text || !artwork.imageUrl || (artwork.palette && artwork.palette.length > 0)) return;
+    let cancelled = false;
+    extractPalette(artwork.imageUrl).then((palette) => {
+      if (!cancelled && palette && palette.length > 0) setExtractedPalette(palette);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [artwork.id, artwork.imageUrl, artwork.palette, artwork.text]);
+  const displayPalette =
+    artwork.palette && artwork.palette.length > 0 ? artwork.palette : extractedPalette;
+
   return (
     <aside
       className="artwork-info-card artwork-detail-panel"
@@ -151,11 +172,11 @@ export default function ArtworkDetailPanel({
       </p>
       {artwork.description && <p>{artwork.description}</p>}
 
-      {!artwork.text && artwork.palette && artwork.palette.length > 0 && (
+      {!artwork.text && displayPalette && displayPalette.length > 0 && (
         <div style={{ marginTop: "14px" }}>
           <span className="panel-kicker">COLOUR PALETTE</span>
           <div style={{ marginTop: "8px" }}>
-            <PaletteSwatches palette={artwork.palette} size={22} label={`Colour palette of ${artwork.title}`} />
+            <PaletteSwatches palette={displayPalette} size={22} label={`Colour palette of ${artwork.title}`} />
           </div>
         </div>
       )}

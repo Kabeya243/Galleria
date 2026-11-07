@@ -33,14 +33,17 @@ import {
 } from "@/lib/sunlight";
 import {
   createSunlightTextCanvas,
+  raycastHangWalls,
   SUNLIGHT_ELEMENT_BOUNDS,
   SUNLIGHT_SPOT,
   sunlightElementCollisionBlocks,
+  sunlightHangWalls,
+  type HangWallFace,
   type SunlightElement,
   type SunlightElementType,
   type SunlightTextFont,
 } from "@/lib/sunlight-elements";
-import { galleryDef, isGalleryLayout, roomFloorCenterZ } from "@/lib/gallery-defs";
+import { galleryDef, galleryHangWalls, isGalleryLayout, roomFloorCenterZ } from "@/lib/gallery-defs";
 import { buildGalleryShell, disposeGroup, GalleryEnvironment, GalleryWalkControls } from "@/components/gallery-rooms";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
@@ -3470,24 +3473,43 @@ type ArtworkDragState = {
   startScale: number;
   startDist: number;
   clamp: { minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number };
+  // Framed half-size of the dragged artwork: the wall snap clamps the
+  // work inside the wall's length and height, so it never hangs
+  // half off a panel or past the ceiling.
+  halfW: number;
+  halfH: number;
 };
 
 // Editor drag: while an artwork drag is active, pointer moves on the canvas
 // are turned into a point on the artwork's wall plane and applied as a new
 // position (move) or a new scale (resize). The listeners live on the canvas
 // element, so the drag keeps working even when the pointer leaves the frame.
+//
+// Wall-aware (move only): when the pointer is over a hangable wall, the
+// artwork glides onto that wall — 0.1 m off, facing outward — and turns
+// to the wall's normal, so a drag from a panel to a side wall lands
+// facing the room instead of staying sideways at 46°. The grab offset
+// is kept (projected onto the wall), so the work does not jump to centre
+// under the pointer when it changes walls. Over empty space the drag
+// falls back to its wall plane. Drags only run in the editor's orbit
+// view, where the active room sits at offset 0, so the pointer ray and
+// the room-local wall faces share one frame.
 function DragHandler({
   dragRef,
+  walls,
   onArtworkUpdate,
   onDragEnd,
 }: {
   dragRef: React.RefObject<ArtworkDragState | null>;
-  onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
+  walls?: HangWallFace[];
+  onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number; rotation?: number }) => void;
   onDragEnd: (id: string) => void;
 }) {
   const { camera, gl } = useThree();
   const updateRef = useRef(onArtworkUpdate);
   updateRef.current = onArtworkUpdate;
+  const wallsRef = useRef(walls);
+  wallsRef.current = walls;
   const endRef = useRef(onDragEnd);
   endRef.current = onDragEnd;
   useEffect(() => {
@@ -3501,6 +3523,48 @@ function DragHandler({
       const rect = gl.domElement.getBoundingClientRect();
       ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
+      if (drag.mode === "move") {
+        const wallFaces = wallsRef.current;
+        if (wallFaces && wallFaces.length > 0) {
+          const wallHit = raycastHangWalls(
+            { x: raycaster.ray.origin.x, y: raycaster.ray.origin.y, z: raycaster.ray.origin.z },
+            { x: raycaster.ray.direction.x, y: raycaster.ray.direction.y, z: raycaster.ray.direction.z },
+            wallFaces,
+          );
+          if (wallHit) {
+            const face = wallHit.face;
+            const nx = wallHit.normal.x;
+            const nz = wallHit.normal.z;
+            // Grab offset projected onto the wall plane, so the pointer
+            // stays at the same spot on the artwork across the wall change.
+            const alongN = drag.grabOffset.x * nx + drag.grabOffset.z * nz;
+            const offX = drag.grabOffset.x - nx * alongN;
+            const offY = drag.grabOffset.y;
+            const offZ = drag.grabOffset.z - nz * alongN;
+            // Centre on the wall: the hit point, shifted by the grab
+            // offset, 0.1 m off the face — then clamped inside the wall.
+            const cx = wallHit.point.x - offX + nx * 0.1;
+            const cy = wallHit.point.y - offY;
+            const cz = wallHit.point.z - offZ + nz * 0.1;
+            const alongLo = -face.halfLen + drag.halfW;
+            const alongHi = face.halfLen - drag.halfW;
+            let along = (cx - face.cx) * face.ax + (cz - face.cz) * face.az;
+            along = Math.min(Math.max(along, alongLo), Math.max(alongLo, alongHi));
+            const yLo = face.minY + drag.halfH + 0.05;
+            const yHi = face.maxY - drag.halfH - 0.05;
+            const y = Math.min(Math.max(cy, yLo), Math.max(yLo, yHi));
+            update(drag.id, {
+              position: [
+                face.cx + face.ax * along + nx * 0.1,
+                y,
+                face.cz + face.az * along + nz * 0.1,
+              ],
+              rotation: Math.atan2(nx, nz),
+            });
+            return;
+          }
+        }
+      }
       if (!raycaster.ray.intersectPlane(drag.plane, hit)) return;
       if (drag.mode === "move") {
         const next = hit.clone().sub(drag.grabOffset);
@@ -3717,7 +3781,7 @@ export default function GalleryScene({
   // Editor only: drag artworks along their wall with the hand cursor and
   // resize them from the lime handle. Disabled while walking.
   editable?: boolean;
-  onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
+  onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number; rotation?: number }) => void;
   // Editor only: an artwork drag just ended — the editor hangs the
   // artwork on the wall under the drop point (rotation + position),
   // so a dragged artwork lands as if just hung on its new wall.
@@ -3812,6 +3876,18 @@ export default function GalleryScene({
   // pointerup. While a drag is active the orbit controls stay off, so the
   // camera never rotates while an artwork is being moved.
   const dragRef = useRef<ArtworkDragState | null>(null);
+  // Hangable wall faces of the active room (room walls, panels and any
+  // cloison/suspendu added): the drag raycasts them, so a dragged
+  // artwork glides onto whatever wall the pointer is over. Rebuilt
+  // when the room's added walls change, so a just-added cloison is
+  // hangable at once.
+  const dragWalls = useMemo<HangWallFace[]>(
+    () =>
+      room.layout === "sunlight"
+        ? sunlightHangWalls(room.sunlightElements ?? [])
+        : galleryHangWalls(room.layout),
+    [room.layout, room.sunlightElements],
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [dragCursor, setDragCursor] = useState<string | null>(null);
   const [hoveredArtwork, setHoveredArtwork] = useState<{ id: string; cursor: string } | null>(null);
@@ -3892,6 +3968,8 @@ export default function GalleryScene({
         minZ: zCenter - layout.depth / 2 + halfW,
         maxZ: zCenter + layout.depth / 2 - halfW,
       },
+      halfW,
+      halfH,
     };
     setIsDragging(true);
     setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
@@ -4116,6 +4194,7 @@ export default function GalleryScene({
         <Suspense fallback={null}>{artworkNodes}</Suspense>
         <DragHandler
           dragRef={dragRef}
+          walls={dragWalls}
           onArtworkUpdate={onArtworkUpdate}
           onDragEnd={(id) => {
             setIsDragging(false);

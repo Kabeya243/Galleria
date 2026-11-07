@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CEILING_FINISH_KEYS, FLOOR_PATTERN_KEYS } from "@/lib/editor-params";
 import { ELEMENT_DEFAULTS, roomElementSchema, type ElementType, type RoomElement } from "@/lib/elements";
 import { SUNLIGHT_CEILING_COLOR, SUNLIGHT_FLOOR_CENTER_Z, SUNLIGHT_FLOOR_COLOR, SUNLIGHT_HEIGHT, SUNLIGHT_WALL_COLOR } from "@/lib/sunlight";
 import { sunlightElementSchema } from "@/lib/sunlight-elements";
@@ -747,6 +748,21 @@ export const galleryRoomSchema = z.object({
   wallTexture: z.enum(["plaster", "concrete", "brick", "marble", "stone-plaster"]).default("plaster"),
   floorTexture: z.enum(["stone", "concrete", "wood", "marble", "parquet", "stone-concrete"]).default("stone"),
   ceilingTexture: z.enum(["plaster", "concrete", "brick", "marble", "wood"]).default("plaster"),
+  // Ceiling finish (Claude's CF table): one choice sets the ceiling
+  // colour AND roughness together, and syncs the ceiling colour
+  // picker. The roughness is stored alongside so the 3D slab reads it.
+  ceilingFinish: z.enum(CEILING_FINISH_KEYS).default("blanc"),
+  ceilingRoughness: z.number().min(0).max(1).default(0.95),
+  // Hide the ceiling (the "Masquer le plafond" checkbox, and the
+  // High / Plan camera views, which hide it to look in from above).
+  ceilingHidden: z.boolean().default(false),
+  // Floor pattern (Claude's fpat): procedurally generated parquet,
+  // herringbone or checkerboard instead of the room's own floor.
+  // "original" keeps the room's floor. A non-original pattern resets
+  // the floor colour to white, so the pattern reads true.
+  floorPattern: z.enum(FLOOR_PATTERN_KEYS).default("original"),
+  // Floor shine (0–95, default 70): floor roughness = 1 − shine / 100.
+  floorShine: z.number().min(0).max(95).default(70),
   spotlights: z.boolean().default(true),
   partitionWalls: z.array(partitionWallSchema).max(8).default([]),
   curatorialText: z.string().max(300).default(""),
@@ -791,6 +807,11 @@ export function applyLayoutPreset(room: GalleryRoom, layout: RoomLayout): Galler
     wallTexture: preset.wallTexture,
     floorTexture: preset.floorTexture,
     ceilingTexture: preset.ceilingTexture,
+    ceilingFinish: "blanc",
+    ceilingRoughness: 0.95,
+    ceilingHidden: false,
+    floorPattern: "original",
+    floorShine: 70,
     spotlights: preset.spotlights,
     lightType: preset.lightType,
     floorType: inferFloorType(preset.floorTexture, preset.floorColor),
@@ -827,6 +848,11 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "sunlight"): G
       wallTexture: roomLayouts[layout].wallTexture,
       floorTexture: roomLayouts[layout].floorTexture,
       ceilingTexture: roomLayouts[layout].ceilingTexture,
+      ceilingFinish: "blanc",
+      ceilingRoughness: 0.95,
+      ceilingHidden: false,
+      floorPattern: "original",
+      floorShine: 70,
       spotlights: roomLayouts[layout].spotlights,
       partitionWalls: [],
       curatorialText: "",

@@ -77,6 +77,27 @@ import {
   type SunlightElementType,
   type SunlightTextFont,
 } from "@/lib/sunlight-elements";
+import {
+  CEILING_FINISHES,
+  CEILING_FINISH_KEYS,
+  FLOOR_PATTERNS,
+  FLOOR_PATTERN_KEYS,
+  FLOOR_SHINE_MAX,
+  FLOOR_SHINE_MIN,
+  PARTITION_DIMS,
+  VIEW_PRESETS,
+  partitionDimsOf,
+  sunlightPartitionDimsOf,
+  type CameraViewPreset,
+  type CeilingFinishKey,
+  type FloorPatternKey,
+} from "@/lib/editor-params";
+import {
+  carriedArtworks,
+  grabCarriedArtworks,
+  releaseCarriedArtworks,
+  type PartitionPose,
+} from "@/lib/partition-carry";
 
 // The Elements palette: every placeable object. Each row shows a
 // faithful thumbnail (components/element-thumbnail.tsx) and can be
@@ -194,6 +215,36 @@ export default function Editor({
   // enter or leave. WASD / arrows / the walk pad / a floor tap move
   // the camera; a press on an artwork or element selects and drags it.
   const movementKeys = useRef(new Set<string>());
+  // Camera view presets (the toolbar's View buttons: Eye / Wide /
+  // High / Plan): the request carries a nonce, so the same view can
+  // be re-applied, and the scene eases the camera height toward it.
+  // Changing rooms resets the view to eye level.
+  const [cameraView, setCameraView] = useState<CameraViewPreset>("eye");
+  const [viewRequest, setViewRequest] = useState<{ nonce: number; view: CameraViewPreset } | null>(null);
+  const viewNonce = useRef(0);
+  function requestCameraView(view: CameraViewPreset) {
+    setCameraView(view);
+    viewNonce.current += 1;
+    setViewRequest({ nonce: viewNonce.current, view });
+  }
+  function resetCameraView() {
+    setCameraView("eye");
+    setViewRequest(null);
+  }
+  // WASD is ignored while typing (the walk controls guard the keys
+  // too): when the focus lands in a form field, any held walk keys
+  // are released, so the camera does not keep walking after the user
+  // starts typing.
+  useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.closest("input, textarea, select") || target.isContentEditable)) {
+        movementKeys.current.clear();
+      }
+    };
+    window.addEventListener("focusin", onFocusIn);
+    return () => window.removeEventListener("focusin", onFocusIn);
+  }, []);
   // Floor-plan teleport (minimap): a target in another room first
   // switches rooms, then walks to the artwork's stand point — the
   // same mechanism as the public viewer. Clicking a dot walks there
@@ -723,12 +774,43 @@ export default function Editor({
       return galleryWallsForPosition(
         { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] },
         room.layout,
+        room.elements,
       );
     }
     return sunlightWallsForPosition(
       { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] },
       room.sunlightElements ?? [],
     );
+  }
+
+  // Artworks carried by a partition (Claude's grab / release): the
+  // carried set is taken from the current artworks and the partition's
+  // pose before the change, and released onto the new pose — absolute
+  // positions, so rapid updates (a drag's pointermoves) never drift.
+  // The pose's length already includes the element's scale, so a
+  // resize-handle drag carries the artworks too.
+  function carryArtworksWithPartition(before: PartitionPose, after: PartitionPose, y0: number) {
+    const carried = grabCarriedArtworks(latestRef.current.artworks, before, y0);
+    if (!carried.length) return;
+    const released = releaseCarriedArtworks(carried, after, y0, before.length);
+    const byId = new Map(released.map((item) => [item.id, item]));
+    setArtworks((current) =>
+      current.map((artwork) => {
+        const next = byId.get(artwork.id);
+        return next ? { ...artwork, position: next.position, rotation: next.rotation } : artwork;
+      }),
+    );
+  }
+
+  // Deleting a partition deletes the artworks hanging on it too (the
+  // wall leaves the hangable list on its own, since the list is
+  // rebuilt from the room's elements). Runs inside the delete's undo
+  // session, so undo brings the artworks back with the partition.
+  function deleteCarriedArtworks(partition: PartitionPose, y0 = 0) {
+    const carried = carriedArtworks(latestRef.current.artworks, partition, y0);
+    if (!carried.length) return;
+    const ids = new Set(carried.map((artwork) => artwork.id));
+    setArtworks((current) => current.filter((artwork) => !ids.has(artwork.id)));
   }
 
   function updateArtwork(id: string, update: (artwork: Artwork) => Artwork) {
@@ -787,7 +869,7 @@ export default function Editor({
     if (!activeRoom) return [];
     return activeRoom.layout === "sunlight"
       ? sunlightHangWalls(activeRoom.sunlightElements ?? [])
-      : galleryHangWalls(activeRoom.layout);
+      : galleryHangWalls(activeRoom.layout, activeRoom.elements);
   }, [activeRoom]);
   const composeFaceOptions = useMemo(() => {
     const elements = activeRoom?.sunlightElements ?? [];
@@ -1087,6 +1169,25 @@ export default function Editor({
   // group follow by the same delta (within the same room).
   function handleSceneElementUpdate(id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) {
     const selectedElementIds = new Set(selectionRef.current.filter((ref) => ref.kind === "element").map((ref) => ref.id));
+    // Partition carry: if the dragged element is a partition, its
+    // artworks follow it — grabbed from the pre-move pose (latest
+    // render), released onto the new pose. The pose's length includes
+    // the element's scale, so a resize-handle drag carries them too.
+    const draggedBefore = latestRef.current.rooms
+      .flatMap((room) => room.elements)
+      .find((element) => element.id === id);
+    const beforeDims = draggedBefore?.type === "partition" ? partitionDimsOf(draggedBefore) : null;
+    const beforePose: PartitionPose | null =
+      beforeDims && draggedBefore && !draggedBefore.locked
+        ? {
+            x: draggedBefore.x,
+            z: draggedBefore.z,
+            rotation: draggedBefore.rotation,
+            length: beforeDims.length * (draggedBefore.scale ?? 1),
+            height: beforeDims.height,
+            thickness: beforeDims.thickness,
+          }
+        : null;
     setRooms((currentRooms) => {
       const owner = currentRooms.find((room) => room.elements.some((element) => element.id === id));
       if (!owner) return currentRooms;
@@ -1113,6 +1214,16 @@ export default function Editor({
           }
         : room));
     });
+    // The carried artworks follow the partition onto its new pose
+    // (the snapped target, or the new scale for a resize-handle drag).
+    if (beforePose && beforeDims) {
+      if (patch.scale !== undefined) {
+        carryArtworksWithPartition(beforePose, { ...beforePose, length: beforeDims.length * patch.scale }, 0);
+      } else if (patch.x !== undefined || patch.y !== undefined || patch.z !== undefined) {
+        const target = { x: snapIfGrid(patch.x ?? beforePose.x), z: snapIfGrid(patch.z ?? beforePose.z) };
+        carryArtworksWithPartition(beforePose, { ...beforePose, x: target.x, z: target.z }, 0);
+      }
+    }
     setSaved(false);
   }
 
@@ -1268,10 +1379,45 @@ export default function Editor({
     // the room that actually holds it.
     const owner = rooms.find((room) => room.elements.some((element) => element.id === id)) ?? activeRoom;
     if (!owner) return;
+    // Partition carry: moving, turning or resizing a partition in the
+    // inspector carries its artworks with it (grab before, release
+    // onto the merged element).
+    const element = owner.elements.find((item) => item.id === id);
+    const touchesPose =
+      element?.type === "partition" &&
+      (patch.x !== undefined || patch.z !== undefined || patch.rotation !== undefined || patch.length !== undefined || patch.height !== undefined || patch.thickness !== undefined);
+    const beforeDims = touchesPose && element ? partitionDimsOf(element) : null;
+    const beforePose: PartitionPose | null =
+      beforeDims && element
+        ? {
+            x: element.x,
+            z: element.z,
+            rotation: element.rotation,
+            length: beforeDims.length * (element.scale ?? 1),
+            height: beforeDims.height,
+            thickness: beforeDims.thickness,
+          }
+        : null;
     updateRoom(owner.id, (room) => ({
       ...room,
-      elements: room.elements.map((element) => (element.id === id ? { ...element, ...patch } : element)),
+      elements: room.elements.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     }));
+    if (beforePose && beforeDims && element) {
+      const merged = { ...element, ...patch };
+      const afterDims = partitionDimsOf(merged);
+      carryArtworksWithPartition(
+        beforePose,
+        {
+          x: merged.x,
+          z: merged.z,
+          rotation: merged.rotation,
+          length: afterDims.length * (merged.scale ?? 1),
+          height: afterDims.height,
+          thickness: afterDims.thickness,
+        },
+        0,
+      );
+    }
   }
 
   function addElement(type: ElementType) {
@@ -1314,9 +1460,26 @@ export default function Editor({
     const owner = rooms.find((room) => room.elements.some((element) => element.id === id));
     if (!owner) return;
     snapshot();
+    // A partition takes the artworks hanging on it with it (inside
+    // the same undo session, so undo brings them back together).
+    const element = owner.elements.find((item) => item.id === id);
+    if (element?.type === "partition") {
+      const dims = partitionDimsOf(element);
+      deleteCarriedArtworks(
+        {
+          x: element.x,
+          z: element.z,
+          rotation: element.rotation,
+          length: dims.length * (element.scale ?? 1),
+          height: dims.height,
+          thickness: dims.thickness,
+        },
+        0,
+      );
+    }
     updateRoom(owner.id, (room) => ({
       ...room,
-      elements: room.elements.filter((element) => element.id !== id),
+      elements: room.elements.filter((item) => item.id !== id),
     }));
     setSelectedElementId((current) => (current === id ? undefined : current));
   }
@@ -1354,10 +1517,45 @@ export default function Editor({
   function updateSunlightElement(id: string, patch: Partial<SunlightElement>) {
     const owner = rooms.find((room) => (room.sunlightElements ?? []).some((element) => element.id === id)) ?? activeRoom;
     if (!owner) return;
+    // Partition carry: moving, turning or resizing a cloison or
+    // suspendu in the inspector carries its artworks with it.
+    const element = (owner.sunlightElements ?? []).find((item) => item.id === id);
+    const touchesPose =
+      element &&
+      (element.type === "cloison" || element.type === "suspendu") &&
+      (patch.x !== undefined || patch.z !== undefined || patch.rotation !== undefined || patch.length !== undefined || patch.height !== undefined || patch.thickness !== undefined);
+    const beforeDims = touchesPose && element ? sunlightPartitionDimsOf(element) : null;
+    const beforePose: PartitionPose | null =
+      beforeDims && element
+        ? {
+            x: element.x,
+            z: element.z,
+            rotation: element.rotation,
+            length: beforeDims.length,
+            height: beforeDims.height,
+            thickness: beforeDims.thickness,
+          }
+        : null;
     updateRoom(owner.id, (room) => ({
       ...room,
-      sunlightElements: (room.sunlightElements ?? []).map((element) => (element.id === id ? { ...element, ...patch } : element)),
+      sunlightElements: (room.sunlightElements ?? []).map((item) => (item.id === id ? { ...item, ...patch } : item)),
     }));
+    if (beforePose && beforeDims && element) {
+      const merged = { ...element, ...patch };
+      const afterDims = sunlightPartitionDimsOf(merged);
+      carryArtworksWithPartition(
+        beforePose,
+        {
+          x: merged.x,
+          z: merged.z,
+          rotation: merged.rotation,
+          length: afterDims.length,
+          height: afterDims.height,
+          thickness: afterDims.thickness,
+        },
+        beforeDims.y0,
+      );
+    }
   }
 
   // Add a Sunlight element 3 m in front of the camera (the file's
@@ -1401,9 +1599,26 @@ export default function Editor({
     const owner = rooms.find((room) => (room.sunlightElements ?? []).some((element) => element.id === id));
     if (!owner) return;
     snapshot();
+    // A cloison or suspendu takes the artworks hanging on it with it
+    // (inside the same undo session).
+    const element = (owner.sunlightElements ?? []).find((item) => item.id === id);
+    if (element && (element.type === "cloison" || element.type === "suspendu")) {
+      const dims = sunlightPartitionDimsOf(element);
+      deleteCarriedArtworks(
+        {
+          x: element.x,
+          z: element.z,
+          rotation: element.rotation,
+          length: dims.length,
+          height: dims.height,
+          thickness: dims.thickness,
+        },
+        dims.y0,
+      );
+    }
     updateRoom(owner.id, (room) => ({
       ...room,
-      sunlightElements: (room.sunlightElements ?? []).filter((element) => element.id !== id),
+      sunlightElements: (room.sunlightElements ?? []).filter((item) => item.id !== id),
     }));
     setSelectedSunlightElementId((current) => (current === id ? undefined : current));
   }
@@ -1438,7 +1653,7 @@ export default function Editor({
     // work floating.
     const faces = activeRoom.layout === "sunlight"
       ? sunlightHangWalls(activeRoom.sunlightElements ?? [])
-      : galleryHangWalls(activeRoom.layout);
+      : galleryHangWalls(activeRoom.layout, activeRoom.elements);
     const walls = wallsForArtwork(artwork, activeRoom);
     const wall = walls.find((item) => rotationMatches(item.rotation, artwork.rotation)) ?? walls[0];
     let face = wall ? faces.find((item) => item.id === wall.key) : undefined;
@@ -1467,6 +1682,27 @@ export default function Editor({
 
   function handleSceneSunlightElementUpdate(id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) {
     if (patch.x === undefined && patch.z === undefined) return;
+    // Partition carry: if the dragged element is a cloison or
+    // suspendu, its artworks follow it — grabbed from the pre-move
+    // pose, released onto the snapped target.
+    const draggedBefore = latestRef.current.rooms
+      .flatMap((room) => room.sunlightElements ?? [])
+      .find((element) => element.id === id);
+    const beforeDims =
+      draggedBefore && (draggedBefore.type === "cloison" || draggedBefore.type === "suspendu")
+        ? sunlightPartitionDimsOf(draggedBefore)
+        : null;
+    const beforePose: PartitionPose | null =
+      beforeDims && draggedBefore
+        ? {
+            x: draggedBefore.x,
+            z: draggedBefore.z,
+            rotation: draggedBefore.rotation,
+            length: beforeDims.length,
+            height: beforeDims.height,
+            thickness: beforeDims.thickness,
+          }
+        : null;
     setRooms((currentRooms) => {
       const owner = currentRooms.find((room) => (room.sunlightElements ?? []).some((element) => element.id === id));
       if (!owner) return currentRooms;
@@ -1479,6 +1715,10 @@ export default function Editor({
           }
         : room));
     });
+    if (beforePose && beforeDims) {
+      const target = { x: snapIfGrid(patch.x ?? beforePose.x), z: snapIfGrid(patch.z ?? beforePose.z) };
+      carryArtworksWithPartition(beforePose, { ...beforePose, x: target.x, z: target.z }, beforeDims.y0);
+    }
     setSaved(false);
   }
 
@@ -1886,7 +2126,7 @@ export default function Editor({
       const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
       const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
       if (activeRoom.layout !== "sunlight") {
-        const hit = galleryWallHit(origin, direction, activeRoom.layout);
+        const hit = galleryWallHit(origin, direction, activeRoom.layout, activeRoom.elements);
         if (hit) return galleryPlaceOnWall(hit, height, width, alongOffset);
       } else {
         const hit = sunlightWallHit(origin, direction, activeRoom.sunlightElements ?? []);
@@ -1915,7 +2155,7 @@ export default function Editor({
     const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
     const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
     const hit = activeRoom.layout !== "sunlight"
-      ? galleryWallHit(origin, direction, activeRoom.layout)
+      ? galleryWallHit(origin, direction, activeRoom.layout, activeRoom.elements)
       : sunlightWallHit(origin, direction, activeRoom.sunlightElements ?? []);
     return hit?.face ?? null;
   }
@@ -2629,7 +2869,7 @@ async function compressImage(file: File): Promise<File> {
               onToggleLocked={toggleLocked}
             />
           )}
-          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — click an artwork, an element or a wall.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — WASD or the arrow keys to move, drag elsewhere to look, click the floor to walk to a spot.</li><li><strong>Floor plan</strong> — open the plan at the bottom left to jump between rooms and artworks.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. WASD moves you through the room; click the floor to walk to a spot. Click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
+          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — double-click (or double-tap) an artwork, an element or a wall to select it; Shift-click adds to the selection.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — WASD or the arrow keys to move, drag elsewhere to look, click the floor to walk to a spot.</li><li><strong>Floor plan</strong> — open the plan at the bottom left to jump between rooms and artworks.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. WASD moves you through the room; click the floor to walk to a spot. Click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
         </aside>
 
         <section className="editor-stage">
@@ -2646,6 +2886,11 @@ async function compressImage(file: File): Promise<File> {
               <button className="tool-button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={historyRef.current.future.length === 0}><Redo2 size={16} /></button>
             </div>
             <div className="stage-room-name"><span /> {activeRoom?.name.toUpperCase() ?? "ROOM"} <ChevronDown size={13} /></div>
+            <div className="tool-group" role="group" aria-label="Camera view">
+              {(Object.keys(VIEW_PRESETS) as CameraViewPreset[]).map((view) => (
+                <button key={view} type="button" className={`tool-button view-button${cameraView === view ? " active" : ""}`} aria-pressed={cameraView === view} title={view === "eye" ? "Eye level view" : view === "wide" ? "Wide view from the front-right corner" : view === "high" ? "High view from above (ceiling hidden)" : "Plan view from above (ceiling hidden)"} onClick={() => requestCameraView(view)}>{VIEW_PRESETS[view].label}</button>
+              ))}
+            </div>
             <div className="tool-group">
               {/* Phase 8: collapses the floating build panel on small
                   screens. Hidden on desktop via globals.css. */}
@@ -2690,7 +2935,7 @@ async function compressImage(file: File): Promise<File> {
             </div>
           )}
           <div className="scene-wrap">
-            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode walking input={movementKeys} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
+            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode walking input={movementKeys} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); resetCameraView(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} viewRequest={viewRequest} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
             {/* Floor plan + teleport (the same minimap as the public
                 viewer): the Sunlight room with its panels, one dot per
                 artwork and the live camera position. Clicking the plan
@@ -2717,7 +2962,7 @@ async function compressImage(file: File): Promise<File> {
               <button aria-label="Move backward" onPointerDown={() => movementKeys.current.add("KeyS")} onPointerUp={() => movementKeys.current.delete("KeyS")} onPointerLeave={() => movementKeys.current.delete("KeyS")} onPointerCancel={() => movementKeys.current.delete("KeyS")}><ArrowDown size={15} /></button>
               <button aria-label="Move right" onPointerDown={() => movementKeys.current.add("KeyD")} onPointerUp={() => movementKeys.current.delete("KeyD")} onPointerLeave={() => movementKeys.current.delete("KeyD")} onPointerCancel={() => movementKeys.current.delete("KeyD")}><ArrowRight size={15} /></button>
             </div>
-            <div className="scene-caption"><span className="scene-caption-dot" /> CLICK AN ARTWORK TO SELECT IT <span className="caption-divider">·</span> DRAG IT TO MOVE IT <span className="caption-divider">·</span> WASD TO WALK <span className="caption-divider">·</span> CLICK THE FLOOR TO WALK THERE <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK</div>
+            <div className="scene-caption"><span className="scene-caption-dot" /> DOUBLE-CLICK TO SELECT <span className="caption-divider">·</span> DRAG A SELECTED ITEM TO MOVE IT <span className="caption-divider">·</span> WASD TO WALK <span className="caption-divider">·</span> CLICK THE FLOOR TO WALK THERE <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up" aria-label="Move selected artwork up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down" aria-label="Move selected artwork down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale" aria-label="Increase scale of selected artwork"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale" aria-label="Decrease scale of selected artwork"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
@@ -3076,7 +3321,13 @@ async function compressImage(file: File): Promise<File> {
                   <div className="property-section"><label>ROTATION</label><div className="rotate-control"><button aria-label="Rotate counterclockwise" onClick={() => { snapshot(); updateElement(selectedElement.id, { rotation: selectedElement.rotation - Math.PI / 12 }); }}><RotateCw className="rotate-back" size={15} /></button><span>{Math.round((selectedElement.rotation * 180) / Math.PI)}°</span><button aria-label="Rotate clockwise" onClick={() => { snapshot(); updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 }); }}><RotateCw size={15} /></button></div></div>
                   <div className="property-section"><label>SIZE <span>UNIFORM</span></label><div className="range-control"><input aria-label="Element scale" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min="0.25" max="3" step="0.05" value={selectedElement.scale} onChange={(event) => updateElement(selectedElement.id, { scale: Number(event.target.value) })} /><span>{Math.round(selectedElement.scale * 100)}%</span></div></div>
                   {(selectedElement.type === "partition" || selectedElement.type === "shelf" || selectedElement.type === "track-light" || selectedElement.type === "wall-text" || selectedElement.type === "platform" || selectedElement.type === "stairs" || selectedElement.type === "arch") && (
-                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "RAIL LENGTH" : selectedElement.type === "wall-text" ? "TEXT WIDTH" : selectedElement.type === "platform" || selectedElement.type === "stairs" || selectedElement.type === "arch" ? "WIDTH" : "LENGTH"} <span>METERS</span></label><div className="range-control"><input aria-label="Element length in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={selectedElement.type === "track-light" ? 1 : 0.5} max={selectedElement.type === "partition" || selectedElement.type === "wall-text" ? 12 : 6} step="0.5" value={selectedElement.length} onChange={(event) => updateElement(selectedElement.id, { length: Number(event.target.value) })} /><span>{selectedElement.length} m</span></div></div>
+                    <div className="property-section"><label>{selectedElement.type === "track-light" ? "RAIL LENGTH" : selectedElement.type === "wall-text" ? "TEXT WIDTH" : selectedElement.type === "platform" || selectedElement.type === "stairs" || selectedElement.type === "arch" ? "WIDTH" : "LENGTH"} <span>METERS</span></label><div className="range-control"><input aria-label="Element length in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={selectedElement.type === "partition" || selectedElement.type === "track-light" ? 1 : 0.5} max={selectedElement.type === "partition" ? 14 : selectedElement.type === "wall-text" ? 12 : 6} step={selectedElement.type === "partition" ? 0.1 : 0.5} value={selectedElement.length} onChange={(event) => updateElement(selectedElement.id, { length: Number(event.target.value) })} /><span>{selectedElement.length} m</span></div></div>
+                  )}
+                  {selectedElement.type === "partition" && (
+                    <>
+                      <div className="property-section"><label>HEIGHT <span>METERS</span></label><div className="range-control"><input aria-label="Partition height in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={PARTITION_DIMS.height.min} max={PARTITION_DIMS.height.max} step={PARTITION_DIMS.height.step} value={partitionDimsOf(selectedElement).height} onChange={(event) => updateElement(selectedElement.id, { height: Number(event.target.value) })} /><span>{partitionDimsOf(selectedElement).height} m</span></div></div>
+                      <div className="property-section"><label>THICKNESS <span>METERS</span></label><div className="range-control"><input aria-label="Partition thickness in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={PARTITION_DIMS.thickness.min} max={PARTITION_DIMS.thickness.max} step={PARTITION_DIMS.thickness.step} value={partitionDimsOf(selectedElement).thickness} onChange={(event) => updateElement(selectedElement.id, { thickness: Number(event.target.value) })} /><span>{partitionDimsOf(selectedElement).thickness} m</span></div></div>
+                    </>
                   )}
                   {selectedElement.type === "plinth" && (
                     <div className="property-section"><label>HEIGHT</label><select className="full-input" {...editSessionProps} value={selectedElement.variant} onChange={(event) => updateElement(selectedElement.id, { variant: event.target.value })}>{PLINTH_VARIANTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
@@ -3113,6 +3364,13 @@ async function compressImage(file: File): Promise<File> {
                     );
                   })}</div></div>
                   <div className="property-section"><label>ROTATION <span>{((Math.round((selectedSunlightElement.rotation * 180) / Math.PI) % 360) + 360) % 360}°</span></label><div className="range-control"><input aria-label="3D element rotation in degrees" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min="0" max="360" step="1" value={((Math.round((selectedSunlightElement.rotation * 180) / Math.PI) % 360) + 360) % 360} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { rotation: (Number(event.target.value) * Math.PI) / 180 })} /><span>{((Math.round((selectedSunlightElement.rotation * 180) / Math.PI) % 360) + 360) % 360}°</span></div></div>
+                  {(selectedSunlightElement.type === "cloison" || selectedSunlightElement.type === "suspendu") && (
+                    <>
+                      <div className="property-section"><label>LENGTH <span>METERS</span></label><div className="range-control"><input aria-label="Partition length in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={PARTITION_DIMS.length.min} max={PARTITION_DIMS.length.max} step={PARTITION_DIMS.length.step} value={sunlightPartitionDimsOf(selectedSunlightElement).length} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { length: Number(event.target.value) })} /><span>{sunlightPartitionDimsOf(selectedSunlightElement).length} m</span></div></div>
+                      <div className="property-section"><label>HEIGHT <span>METERS</span></label><div className="range-control"><input aria-label="Partition height in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={PARTITION_DIMS.height.min} max={PARTITION_DIMS.height.max} step={PARTITION_DIMS.height.step} value={sunlightPartitionDimsOf(selectedSunlightElement).height} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { height: Number(event.target.value) })} /><span>{sunlightPartitionDimsOf(selectedSunlightElement).height} m</span></div></div>
+                      <div className="property-section"><label>THICKNESS <span>METERS</span></label><div className="range-control"><input aria-label="Partition thickness in metres" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={PARTITION_DIMS.thickness.min} max={PARTITION_DIMS.thickness.max} step={PARTITION_DIMS.thickness.step} value={sunlightPartitionDimsOf(selectedSunlightElement).thickness} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { thickness: Number(event.target.value) })} /><span>{sunlightPartitionDimsOf(selectedSunlightElement).thickness} m</span></div></div>
+                    </>
+                  )}
                   <div className="property-section"><label>COLOUR</label><div className="room-color-control"><input type="color" aria-label="3D element colour" {...editSessionProps} value={selectedSunlightElement.color} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { color: event.target.value })} /><span>{selectedSunlightElement.color}</span></div></div>
                   <div className="property-actions"><button className="delete-action" aria-label="Delete 3D element" onClick={removeSunlightElement}><Trash2 size={14} /></button></div>
                   <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>Drag it on the floor to move it. A cloison or suspendu is a wall — artworks and curatorial text can hang on it.</p>
@@ -3141,6 +3399,10 @@ async function compressImage(file: File): Promise<File> {
                       <div className="property-section"><label>BACK WALL</label><div className="room-color-control"><input type="color" aria-label="Back wall colour" {...editSessionProps} value={activeRoom.wallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallColor: event.target.value }))} /><span>{activeRoom.wallColor}</span></div></div>
                       <div className="property-section"><label>SIDE WALLS</label><div className="room-color-control"><input type="color" aria-label="Side walls colour" {...editSessionProps} value={activeRoom.sideWallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, sideWallColor: event.target.value }))} /><span>{activeRoom.sideWallColor}</span></div></div>
                       <div className="property-section"><label>CEILING</label><div className="room-color-control"><input type="color" aria-label="Ceiling colour" {...editSessionProps} value={activeRoom.ceilingColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingColor: event.target.value }))} /><span>{activeRoom.ceilingColor}</span></div></div>
+                      <div className="property-section"><label>CEILING FINISH</label><select className="full-input" {...editSessionProps} value={activeRoom.ceilingFinish ?? "blanc"} onChange={(event) => {
+                        const finish = CEILING_FINISHES[event.target.value as CeilingFinishKey];
+                        updateRoom(activeRoom.id, (room) => ({ ...room, ceilingFinish: event.target.value as CeilingFinishKey, ceilingColor: finish.color, ceilingRoughness: finish.roughness }));
+                      }}>{CEILING_FINISH_KEYS.map((key) => <option key={key} value={key}>{CEILING_FINISHES[key].label}</option>)}</select><label className="room-lighting-toggle" style={{ marginTop: 6 }}><input type="checkbox" checked={activeRoom.ceilingHidden ?? false} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingHidden: event.target.checked }))} /> Hide ceiling</label></div>
                       <div className="property-section"><label>FLOOR</label><div className="room-color-control"><input type="color" aria-label="Floor colour" {...editSessionProps} value={activeRoom.floorColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorColor: event.target.value }))} /><span>{activeRoom.floorColor}</span></div></div>
                       <div className="property-section"><label>WALL TEXTURE</label><select className="full-input" {...editSessionProps} value={activeRoom.wallTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallTexture: event.target.value as GalleryRoom["wallTexture"] }))}>{Object.entries(wallTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
                       <div className="property-section"><label>FLOOR TEXTURE</label><select className="full-input" {...editSessionProps} value={activeRoom.floorTexture} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorTexture: event.target.value as GalleryRoom["floorTexture"] }))}>{Object.entries(floorTextures).map(([texture, label]) => <option key={texture} value={texture}>{label}</option>)}</select></div>
@@ -3152,6 +3414,11 @@ async function compressImage(file: File): Promise<File> {
                         const preset = floorTypes[floorType];
                         updateRoom(activeRoom.id, (room) => ({ ...room, floorType, floorColor: preset.color, floorTexture: preset.texture as GalleryRoom["floorTexture"] }));
                       }}>{Object.entries(floorTypes).map(([type, details]) => <option key={type} value={type}>{details.label}</option>)}</select></div>
+                      <div className="property-section"><label>FLOOR PATTERN</label><select className="full-input" {...editSessionProps} value={activeRoom.floorPattern ?? "original"} onChange={(event) => {
+                        const pattern = event.target.value as FloorPatternKey;
+                        updateRoom(activeRoom.id, (room) => ({ ...room, floorPattern: pattern, floorColor: pattern === "original" ? room.floorColor : "#ffffff" }));
+                      }}>{FLOOR_PATTERN_KEYS.map((key) => <option key={key} value={key}>{FLOOR_PATTERNS[key].label}</option>)}</select></div>
+                      <div className="property-section"><label>FLOOR SHINE <span>{activeRoom.floorShine ?? 70}</span></label><div className="range-control"><input aria-label="Floor shine" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min={FLOOR_SHINE_MIN} max={FLOOR_SHINE_MAX} step="1" value={activeRoom.floorShine ?? 70} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, floorShine: Number(event.target.value) }))} /><span>{activeRoom.floorShine ?? 70}</span></div></div>
                       <div className="property-section">
                         <label>PARTITION WALLS <span>{activeRoom.partitionWalls.length}/8</span></label>
                         <div className="partition-wall-list">{activeRoom.partitionWalls.map((wall, index) => (

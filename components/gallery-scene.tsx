@@ -46,6 +46,9 @@ import {
 } from "@/lib/sunlight-elements";
 import { galleryDef, galleryHangWalls, isGalleryLayout, roomFloorCenterZ } from "@/lib/gallery-defs";
 import { buildGalleryShell, disposeGroup, GalleryEnvironment, GalleryWalkControls } from "@/components/gallery-rooms";
+import { FLOOR_SHINE_DEFAULT, partitionDimsOf, sunlightPartitionDimsOf } from "@/lib/editor-params";
+import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, type CameraViewPreset } from "@/lib/editor-params";
+import { floorPatternTexture } from "@/lib/floor-patterns";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
 // The renderer is Three.js in the browser: ACES tone mapping, a locally
@@ -1115,13 +1118,26 @@ function ArtworkFrame({
       rotation={[0, artwork.rotation, 0]}
       scale={artwork.scale}
       onClick={(event) => {
+        if (dragged?.current) return;
+        // In the editor a single click walks to the point: the click
+        // passes through to the floor (no stopPropagation, no
+        // selection) — selection is by double-click. In the public
+        // viewer a click still opens the detail sheet (onSelect sets
+        // `selected` there). It never walks up to the artwork — walking
+        // to a piece is via the mini-plan stand point, as in the
+        // reference file.
+        if (interactive) return;
+        event.stopPropagation();
+        onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
+      }}
+      onDoubleClick={(event) => {
+        // Editor selection is by double-click (or double-tap): a
+        // double-click within 350 ms and 28 px selects the artwork
+        // (additive with Shift/Ctrl/Cmd). The public viewer keeps its
+        // single-click sheet.
+        if (!interactive) return;
         event.stopPropagation();
         if (dragged?.current) return;
-        // A click selects the artwork. In the editor it opens the
-        // inspector; in the public viewer it opens the detail sheet
-        // (onSelect sets `selected` there). It never walks up to the
-        // artwork — walking to a piece is via the mini-plan stand
-        // point, as in the reference file.
         onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
@@ -1134,15 +1150,18 @@ function ArtworkFrame({
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        // Press selects and starts the drag in one gesture (the
-        // reference file's pointerdown): a tap selects without moving,
-        // a drag moves the piece. If the artwork is already selected
-        // — e.g. part of a multi-selection — the selection is kept so
-        // the whole selection drags together.
+        // A drag starts only from an already-selected piece (the
+        // editor's double-click selection): pressing an unselected
+        // piece does nothing, so a click on it walks to the point
+        // instead of moving it. Holding Shift/Ctrl/Cmd adds the piece
+        // to the selection first, then drags the whole selection
+        // together. If the artwork is already selected the selection
+        // is kept so a multi-selection drags together.
         if (!interactive) return;
         event.stopPropagation();
         if (!selected) {
-          onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
+          if (!(event.shiftKey || event.ctrlKey || event.metaKey)) return;
+          onSelect?.(artwork.id, true);
         }
         onDragStart?.(artwork.id, "move", event);
       }}
@@ -1742,10 +1761,13 @@ function ElementMesh({
     const xPos = align === "center" ? 0 : align === "right" ? W / 2 - 0.15 : -W / 2 + 0.15;
     return { W, titleLines, font, align, layout, titleSize, bodySize, lineH, titleH, bodyH, gap, contentH, top: contentH / 2, anchorX, xPos };
   })() : null;
+  // A partition reads its own dimensions (length / height / thickness,
+  // from the inspector sliders); its outline and panel follow them.
+  const partitionDims = element.type === "partition" ? partitionDimsOf(element) : null;
   // Selection outline and resize-handle placement, per type.
   const outline: { size: [number, number, number]; y: number; handle: [number, number, number] } =
     element.type === "partition"
-      ? { size: [element.length + 0.3, height - 0.2, 0.8], y: (height - 0.25) / 2, handle: [element.length / 2 + 0.18, 0.7, 0.12] }
+      ? { size: [partitionDims!.length + 0.3, partitionDims!.height - 0.2, 0.8], y: (partitionDims!.height - 0.25) / 2, handle: [partitionDims!.length / 2 + 0.18, 0.7, 0.12] }
       : element.type === "track-light"
         ? { size: [element.length + 0.3, 0.6, 0.8], y: 0, handle: [element.length / 2 + 0.18, 0, 0.12] }
         : element.type === "wall-text"
@@ -1783,10 +1805,20 @@ function ElementMesh({
       rotation={[0, element.rotation, 0]}
       scale={element.scale}
       onClick={(event) => {
+        if (dragged?.current) return;
+        // In the editor a single click walks to the point: the click
+        // passes through to the floor (no stopPropagation, no
+        // selection) — selection is by double-click. In the public
+        // view a click still selects where it applies.
+        if (interactive) return;
+        event.stopPropagation();
+        onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
+      }}
+      onDoubleClick={(event) => {
+        // Editor selection is by double-click (or double-tap).
+        if (!interactive) return;
         event.stopPropagation();
         if (dragged?.current) return;
-        // A click selects the element (editor inspector, or public
-        // view selection where it applies).
         onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
@@ -1799,14 +1831,17 @@ function ElementMesh({
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        // Press selects and starts the drag in one gesture (the
-        // reference file's pointerdown): a tap selects without moving,
-        // a drag moves the piece. If the element is already selected
-        // the selection is kept so a multi-selection drags together.
+        // A drag starts only from an already-selected piece (the
+        // editor's double-click selection): pressing an unselected
+        // piece does nothing, so a click on it walks to the point
+        // instead of moving it. Holding Shift/Ctrl/Cmd adds the piece
+        // to the selection first, then drags the whole selection
+        // together.
         if (!interactive) return;
         event.stopPropagation();
         if (!selected) {
-          onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
+          if (!(event.shiftKey || event.ctrlKey || event.metaKey)) return;
+          onSelect?.(element.id, true);
         }
         onDragStart?.(element.id, "move", event);
       }}
@@ -1820,19 +1855,21 @@ function ElementMesh({
       {element.type === "partition" && (
         <group>
           {/* Small feet, then a base plinth, then the wall panel — the
-              freestanding movable wall from the reference photos. */}
+              freestanding movable wall from the reference photos. The
+              panel follows the partition's own length, height and
+              thickness (inspector sliders), not the room's height. */}
           {[-1, 1].map((side) => (
-            <mesh key={side} position={[side * (element.length / 2 - 0.3), 0.07, 0]} castShadow>
+            <mesh key={side} position={[side * (partitionDims!.length / 2 - 0.3), 0.07, 0]} castShadow>
               <boxGeometry args={[0.1, 0.14, 0.45]} />
               <meshStandardMaterial color="#6b675f" roughness={0.7} />
             </mesh>
           ))}
           <mesh position={[0, 0.17, 0]} castShadow>
-            <boxGeometry args={[element.length + 0.2, 0.1, 0.6]} />
+            <boxGeometry args={[partitionDims!.length + 0.2, 0.1, 0.6]} />
             <meshStandardMaterial color={element.color} roughness={0.85} />
           </mesh>
-          <mesh position={[0, 0.22 + (height - 0.35) / 2, 0]} receiveShadow castShadow>
-            <boxGeometry args={[element.length, height - 0.35, 0.12]} />
+          <mesh position={[0, 0.22 + (partitionDims!.height - 0.35) / 2, 0]} receiveShadow castShadow>
+            <boxGeometry args={[partitionDims!.length, partitionDims!.height - 0.35, partitionDims!.thickness]} />
             <meshStandardMaterial color={element.color} roughness={0.85} />
           </mesh>
         </group>
@@ -2255,7 +2292,15 @@ function SunlightElementMesh({
   // Unified mode (the reference file): elements stay interactive while
   // walking — there is no separate walk mode that turns them off.
   const interactive = editable;
-  const outline = SUNLIGHT_ELEMENT_OUTLINE[element.type];
+  // A cloison or suspendu reads its own dimensions (length / height /
+  // thickness, from the inspector sliders); its outline follows them.
+  const partitionDims =
+    element.type === "cloison" || element.type === "suspendu" ? sunlightPartitionDimsOf(element) : null;
+  const outline: { size: [number, number, number]; y: number } = partitionDims
+    ? element.type === "cloison"
+      ? { size: [partitionDims.length + 0.3, partitionDims.height + 0.3, partitionDims.thickness + 0.3], y: partitionDims.height / 2 }
+      : { size: [partitionDims.length + 0.3, SUNLIGHT_HEIGHT - partitionDims.y0 + 0.3, partitionDims.thickness + 0.3], y: (SUNLIGHT_HEIGHT + partitionDims.y0) / 2 }
+    : SUNLIGHT_ELEMENT_OUTLINE[element.type];
   // The spotlight's target, inside the group so the beam follows it.
   const spotTarget = useMemo(() => new Object3D(), []);
   useEffect(() => () => {
@@ -2267,10 +2312,20 @@ function SunlightElementMesh({
       position={[element.x, 0, element.z]}
       rotation={[0, element.rotation, 0]}
       onClick={(event) => {
+        if (dragged?.current) return;
+        // In the editor a single click walks to the point: the click
+        // passes through to the floor (no stopPropagation, no
+        // selection) — selection is by double-click. In the public
+        // view a click still selects where it applies.
+        if (interactive) return;
+        event.stopPropagation();
+        onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
+      }}
+      onDoubleClick={(event) => {
+        // Editor selection is by double-click (or double-tap).
+        if (!interactive) return;
         event.stopPropagation();
         if (dragged?.current) return;
-        // A click selects the element (editor inspector, or public
-        // view selection where it applies).
         onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
@@ -2283,33 +2338,36 @@ function SunlightElementMesh({
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        // Press selects and starts the drag in one gesture (the
-        // reference file's pointerdown): a tap selects without moving,
-        // a drag moves the piece. If the element is already selected
-        // the selection is kept so a multi-selection drags together.
+        // A drag starts only from an already-selected piece (the
+        // editor's double-click selection): pressing an unselected
+        // piece does nothing, so a click on it walks to the point
+        // instead of moving it. Holding Shift/Ctrl/Cmd adds the piece
+        // to the selection first, then drags the whole selection
+        // together.
         if (!interactive) return;
         event.stopPropagation();
         if (!selected) {
-          onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
+          if (!(event.shiftKey || event.ctrlKey || event.metaKey)) return;
+          onSelect?.(element.id, true);
         }
         onDragStart?.(element.id, "move", event);
       }}
     >
       {element.type === "cloison" && (
-        <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
-          <boxGeometry args={[3, 3, 0.15]} />
+        <mesh position={[0, partitionDims!.height / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[partitionDims!.length, partitionDims!.height, partitionDims!.thickness]} />
           <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
         </mesh>
       )}
       {element.type === "suspendu" && (
         <>
-          <mesh position={[0, 2.3, 0]} castShadow receiveShadow>
-            <boxGeometry args={[3, 2.4, 0.1]} />
+          <mesh position={[0, partitionDims!.y0 + partitionDims!.height / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[partitionDims!.length, partitionDims!.height, partitionDims!.thickness]} />
             <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
           </mesh>
-          {[-1.2, 1.2].map((rodX) => (
-            <mesh key={rodX} position={[rodX, 4.25, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.02, 1.5, 0.02]} />
+          {[-partitionDims!.length / 2 + 0.3, partitionDims!.length / 2 - 0.3].map((rodX) => (
+            <mesh key={rodX} position={[rodX, (SUNLIGHT_HEIGHT + partitionDims!.y0 + partitionDims!.height) / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.02, SUNLIGHT_HEIGHT - partitionDims!.y0 - partitionDims!.height, 0.02]} />
               <meshStandardMaterial color="#1a1a1a" roughness={0.5} />
             </mesh>
           ))}
@@ -2622,6 +2680,7 @@ function SunlightRoom({
   showGrid,
   showMeasure,
   quality,
+  hideCeiling,
 }: {
   room: GalleryRoom;
   offsetX: number;
@@ -2648,8 +2707,21 @@ function SunlightRoom({
   showGrid?: boolean;
   showMeasure?: boolean;
   quality: RenderQuality;
+  // Transient ceiling hide (the High / Plan camera views): the ceiling
+  // assembly is hidden so the room reads from above. The persistent
+  // room.ceilingHidden (the "Hide ceiling" checkbox) does the same.
+  hideCeiling?: boolean;
 }) {
   const textures = useMemo(() => getSunlightTextures(), []);
+  // Floor pattern (Claude's fpat): a procedural parquet, herringbone
+  // or checkerboard instead of the room's concrete, with the floor
+  // shine (roughness = 1 − shine / 100) from the editor.
+  const floorPattern = useMemo(
+    () => floorPatternTexture(room.floorPattern ?? "original"),
+    [room.floorPattern],
+  );
+  const floorShine = room.floorShine ?? FLOOR_SHINE_DEFAULT;
+  const ceilingHidden = (room.ceilingHidden ?? false) || hideCeiling;
   // Ceiling slab: an extruded 28 × 30 rectangle with the seven skylight
   // openings cut out (the source's shape + ExtrudeGeometry).
   const slabGeometry = useMemo(() => {
@@ -2727,13 +2799,13 @@ function SunlightRoom({
 
   return (
     <group position={[offsetX, 0, offsetZ]}>
-      {/* Concrete floor */}
+      {/* Concrete floor (or the editor's floor pattern, with its shine) */}
       <mesh position={[0, 0, SUNLIGHT_FLOOR_CENTER_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow onClick={handleWalkClick}>
         <planeGeometry args={[SUNLIGHT_WIDTH, SUNLIGHT_DEPTH]} />
         <meshStandardMaterial
-          map={textures.floor ?? undefined}
-          color={textures.floor ? "#ffffff" : SUNLIGHT_FLOOR_COLOR}
-          roughness={0.3}
+          map={floorPattern ?? textures.floor ?? undefined}
+          color={floorPattern || textures.floor ? "#ffffff" : SUNLIGHT_FLOOR_COLOR}
+          roughness={1 - floorShine / 100}
           metalness={0.05}
           envMapIntensity={0.9}
         />
@@ -2755,9 +2827,11 @@ function SunlightRoom({
         <boxGeometry args={[0.3, 5, 26]} />
         <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
       </mesh>
-      {/* Ceiling slab with the seven skylight openings */}
-      <mesh geometry={slabGeometry} position={[0, SUNLIGHT_HEIGHT, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color={SUNLIGHT_CEILING_COLOR} roughness={0.95} />
+      {/* Ceiling slab with the seven skylight openings — colour and
+          roughness from the editor's ceiling finish; hidden when the
+          ceiling is hidden (checkbox or a top-down camera view). */}
+      <mesh geometry={slabGeometry} position={[0, SUNLIGHT_HEIGHT, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow visible={!ceilingHidden}>
+        <meshStandardMaterial color={room.ceilingColor ?? SUNLIGHT_CEILING_COLOR} roughness={room.ceilingRoughness ?? 0.95} />
       </mesh>
       {/* Cloud sky, 30 m above the ceiling */}
       <mesh position={[0, SUNLIGHT_HEIGHT + 30, -2]} rotation={[Math.PI / 2, 0, 0]}>
@@ -2771,7 +2845,7 @@ function SunlightRoom({
       {/* Skylight panels: diffusers (white + warm point light) and open
           sky panels (hidden by default); black trims around each opening. */}
       {SUNLIGHT_HOLES.map(([cx, cz, w, d, kind]) => (
-        <group key={`${cx},${cz}`}>
+        <group key={`${cx},${cz}`} visible={!ceilingHidden}>
           <mesh
             position={[cx, SUNLIGHT_HEIGHT + (kind === "s" ? 0.3 : 0.05), cz]}
             rotation={[Math.PI / 2, 0, 0]}
@@ -3042,6 +3116,11 @@ function GenericRoom({
   showGrid?: boolean;
   showMeasure?: boolean;
   quality: RenderQuality;
+  // Transient ceiling hide (the High / Plan camera views): declared
+  // for call-site parity with SunlightRoom, but ignored here — a
+  // generic shell is a closed box whose ceiling is part of its fixed
+  // geometry, so the view height is clamped under it instead.
+  hideCeiling?: boolean;
 }) {
   const layout = roomLayouts[room.layout];
   const def = galleryDef(room.layout);
@@ -3143,7 +3222,7 @@ function sunlightEntrance(offsets: number[], zOffsets: number[] | undefined, ind
 // First-person walk — the source's navigation, exact: drag to look
 // (yaw/pitch), WASD/arrows or on-screen buttons to move (3 m/s), click
 // the floor or a wall to walk to the target (marker ring), click an
-// artwork to open its sheet. Camera start (3.5, 1.65, 10.5), yaw .3,
+// artwork to open its sheet. Camera start (3.5, 1.6, 10.5), yaw .3,
 // pitch -.04. Collisions via the Sunlight blocks (panels + pedestals)
 // with the rotated-rectangle hit test; the camera is bounded inside
 // the room. Rooms are switched by teleport (mini-plan / room list),
@@ -3161,6 +3240,7 @@ function SunlightWalkControls({
   enabled,
   onRoomChange,
   resetSignal,
+  viewRequest,
 }: {
   rooms: GalleryRoom[];
   activeRoomId: string;
@@ -3177,10 +3257,18 @@ function SunlightWalkControls({
   enabled: boolean;
   onRoomChange?: (roomId: string) => void;
   resetSignal?: { current: number };
+  // Camera view preset requested by the editor's View buttons (Eye /
+  // Wide / High / Plan): the nonce changes on every click, so the
+  // same view can be re-applied.
+  viewRequest?: { nonce: number; view: CameraViewPreset } | null;
 }) {
   const { camera, gl } = useThree();
   const yawRef = useRef(SUNLIGHT_CAMERA_START.yaw);
   const pitchRef = useRef(SUNLIGHT_CAMERA_START.pitch);
+  // Smoothed camera height (Claude's camY): a view preset sets the
+  // target and every frame eases toward it, instead of jumping.
+  const camYRef = useRef(SUNLIGHT_CAMERA_START.y);
+  const lastViewNonce = useRef<number | null>(null);
   const currentRoomIndex = useRef(Math.max(0, rooms.findIndex((room) => room.id === activeRoomId)));
   const handledRoomId = useRef(activeRoomId);
   const onRoomChangeRef = useRef(onRoomChange);
@@ -3206,6 +3294,7 @@ function SunlightWalkControls({
       const startIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoomId));
       const start = sunlightEntrance(offsets, zOffsets, startIndex);
       camera.position.set(start.x, SUNLIGHT_CAMERA_START.y, start.z);
+      camYRef.current = SUNLIGHT_CAMERA_START.y;
       camera.rotation.order = "YXZ";
       yawRef.current = SUNLIGHT_CAMERA_START.yaw;
       pitchRef.current = SUNLIGHT_CAMERA_START.pitch;
@@ -3223,6 +3312,7 @@ function SunlightWalkControls({
     }
     const start = sunlightEntrance(offsets, zOffsets, requestedIndex);
     camera.position.set(start.x, SUNLIGHT_CAMERA_START.y, start.z);
+    camYRef.current = SUNLIGHT_CAMERA_START.y;
     yawRef.current = SUNLIGHT_CAMERA_START.yaw;
     pitchRef.current = SUNLIGHT_CAMERA_START.pitch;
     camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
@@ -3231,6 +3321,32 @@ function SunlightWalkControls({
     currentRoomIndex.current = requestedIndex;
     handledRoomId.current = activeRoomId;
   }, [activeRoomId, camera, destination, lookYaw, offsets, rooms, zOffsets]);
+
+  // Camera view preset (the editor's View buttons): apply the preset's
+  // pitch and, when it carries one, position and yaw; the height is
+  // eased toward in useFrame (camY). Eye keeps the current position
+  // and yaw and only levels the pitch and lowers the eye back to
+  // 1.6 m. The position is clamped to the room's walk bounds, so a
+  // preset can never park the camera inside a wall.
+  useEffect(() => {
+    if (!viewRequest || viewRequest.nonce === lastViewNonce.current) return;
+    lastViewNonce.current = viewRequest.nonce;
+    const preset = VIEW_PRESETS[viewRequest.view];
+    const roomIndex = currentRoomIndex.current;
+    const ox = offsets[roomIndex] ?? 0;
+    const oz = zOffsetOf(roomIndex);
+    pitchRef.current = preset.pitch;
+    if (preset.yaw !== undefined) yawRef.current = preset.yaw;
+    if (preset.x !== undefined) {
+      camera.position.x = ox + Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, preset.x));
+    }
+    if (preset.z !== undefined) {
+      camera.position.z = oz + Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, preset.z));
+    }
+    camYRef.current = preset.y;
+    destination.current = null;
+    lookYaw.current = null;
+  }, [viewRequest, camera, destination, lookYaw, offsets, zOffsets]);
 
   // Keyboard (WASD / arrows) and drag-to-look on the canvas.
   useEffect(() => {
@@ -3241,6 +3357,11 @@ function SunlightWalkControls({
     gl.domElement.tabIndex = 0;
     gl.domElement.focus({ preventScroll: true });
     const keyDown = (event: KeyboardEvent) => {
+      // Typing in a field (a name, a colour, a slider label…) must
+      // not walk: the keys are ignored while the focus is inside a
+      // form control or an editable element.
+      const target = event.target as HTMLElement | null;
+      if (target && (target.closest("input, textarea, select") || target.isContentEditable)) return;
       if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
         event.preventDefault();
         input.current.add(event.code);
@@ -3309,6 +3430,7 @@ function SunlightWalkControls({
       lastReset.current = resetSignal.current;
       const start = sunlightEntrance(offsets, zOffsets, 0);
       camera.position.set(start.x, SUNLIGHT_CAMERA_START.y, start.z);
+      camYRef.current = SUNLIGHT_CAMERA_START.y;
       yawRef.current = SUNLIGHT_CAMERA_START.yaw;
       pitchRef.current = SUNLIGHT_CAMERA_START.pitch;
       destination.current = null;
@@ -3394,13 +3516,18 @@ function SunlightWalkControls({
     // it through a wall into the grey void.
     camera.position.x = ox + Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, camera.position.x - ox));
     camera.position.z = oz + Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, camera.position.z - oz));
+    // Camera-height easing toward the active view preset (camY): the
+    // height glides instead of jumping. The y is never clamped to the
+    // walk bounds — a High / Plan view floats above the (hidden)
+    // ceiling on purpose.
+    camera.position.y += (camYRef.current - camera.position.y) * Math.min(1, delta * CAMERA_HEIGHT_EASE);
     // Walk-target marker on the destination, pulsing like the source.
     // The marker is clamped to the room bounds (a target clicked on a
     // wall sits outside the walkable area, so the raw point would hide
     // it inside the wall): the visible marker is always the nearest
     // reachable point inside the room. It is a thick ring + centre
     // dot, 0.9 m across — a flat ring alone reads as a ~15 px sliver
-    // at the grazing angles of a 1.65 m eye (that is why the 0.25–
+    // at the grazing angles of a 1.6 m eye (that is why the 0.25–
     // 0.35 m ring of 9441c8a was never seen in live verification), so
     // the band is thick, the dot anchors it, and the pulse scales the
     // whole marker as well as its opacity. It sits at y 0.03, above
@@ -3769,6 +3896,8 @@ export default function GalleryScene({
   cameraStateRef,
   quality: controlledQuality,
   onQualityChange,
+  viewRequest,
+  bare,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -3830,6 +3959,12 @@ export default function GalleryScene({
   showGrid?: boolean;
   showMeasure?: boolean;
   multiSelectedIds?: string[];
+  // Editor only: a camera view preset requested by the View buttons
+  // (Eye / Wide / High / Plan) — the nonce changes on every click.
+  viewRequest?: { nonce: number; view: CameraViewPreset } | null;
+  // Bare render (the gallery capture page): no quality toggle, no sun
+  // slider — just the room, so a screenshot is a clean entrance view.
+  bare?: boolean;
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   // Where each room sits in the shared 3D space (see roomPlanOffsets):
@@ -3911,8 +4046,8 @@ export default function GalleryScene({
     () =>
       room.layout === "sunlight"
         ? sunlightHangWalls(room.sunlightElements ?? [])
-        : galleryHangWalls(room.layout),
-    [room.layout, room.sunlightElements],
+        : galleryHangWalls(room.layout, room.elements),
+    [room.layout, room.sunlightElements, room.elements],
   );
   const [isDragging, setIsDragging] = useState(false);
   const [dragCursor, setDragCursor] = useState<string | null>(null);
@@ -3956,6 +4091,10 @@ export default function GalleryScene({
     // not repeated here — React state is async, the press is the
     // source of truth.
     dragActiveRef.current = true;
+    // Grabbing a piece stops any walk in progress (a double-click
+    // selection walks toward the piece first — the drag takes over).
+    destination.current = null;
+    lookYaw.current = null;
     onEditStart?.();
     const { width, height } = artworkSize(artwork);
     const layout = roomLayouts[room.layout];
@@ -4017,6 +4156,10 @@ export default function GalleryScene({
     // The pointerdown already selected this element, so the selection
     // check is not repeated here (React state is async).
     dragActiveRef.current = true;
+    // Grabbing a piece stops any walk in progress (a double-click
+    // selection walks toward the piece first — the drag takes over).
+    destination.current = null;
+    lookYaw.current = null;
     onEditStart?.();
     const layout = roomLayouts[ownerRoom.layout];
     const planeKind = ELEMENT_PLANES[element.type];
@@ -4079,6 +4222,10 @@ export default function GalleryScene({
     // The pointerdown already selected this element, so the selection
     // check is not repeated here (React state is async).
     dragActiveRef.current = true;
+    // Grabbing a piece stops any walk in progress (a double-click
+    // selection walks toward the piece first — the drag takes over).
+    destination.current = null;
+    lookYaw.current = null;
     onEditStart?.();
     const position = new Vector3(element.x, 0, element.z);
     const plane = new Plane(new Vector3(0, 1, 0), 0);
@@ -4112,6 +4259,11 @@ export default function GalleryScene({
   // floor and artworks are walk targets, not just the active room's;
   // rooms are switched by teleport (mini-plan / room list), never by
   // walking through a wall.
+  // The active view preset (the editor's View buttons): High / Plan
+  // hide the ceiling, so the room reads from above. Computed here,
+  // before the room nodes that pass it down.
+  const viewPreset = viewRequest ? VIEW_PRESETS[viewRequest.view] : null;
+  const hideCeiling = viewPreset?.hideCeiling ?? false;
   const artworkNodes = artworkRooms.map((sceneRoom, index) => {
     const RoomComponent = isGalleryLayout(sceneRoom.layout) ? GenericRoom : SunlightRoom;
     return (
@@ -4137,6 +4289,7 @@ export default function GalleryScene({
       onSunlightElementHover={setHoveredSunlightElement}
       showGrid={showGrid}
       showMeasure={showMeasure}
+      hideCeiling={hideCeiling}
       onFloorClick={walkMode ? (point) => {
         // Clamp the walk target to the active room's walkable bounds:
         // a click on a wall (or outside the room) is brought back
@@ -4171,7 +4324,7 @@ export default function GalleryScene({
   const activeIsSunlight = startRoom.layout === "sunlight";
   const startCam = activeIsSunlight
     ? SUNLIGHT_CAMERA_START
-    : { x: activeDef?.cameraStart.x ?? 0, y: activeDef?.cameraStart.y ?? 1.65, z: activeDef?.cameraStart.z ?? 8 };
+    : { x: activeDef?.cameraStart.x ?? 0, y: activeDef?.cameraStart.y ?? 1.6, z: activeDef?.cameraStart.z ?? 8 };
   const interiorView = interior === true && !walkMode;
   const interiorLimits = useMemo(() => {
     const layout = roomLayouts[room.layout];
@@ -4268,9 +4421,9 @@ export default function GalleryScene({
         )}
         {walkMode && input ? (
           activeIsSunlight ? (
-            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
           ) : (
-            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
           )
         ) : (
           <OrbitControls
@@ -4285,8 +4438,12 @@ export default function GalleryScene({
           />
         )}
       </Canvas>
-      <RenderQualityToggle quality={quality} onChange={handleQualityChange} canvasClassName={className} />
-      {activeIsSunlight && <SunSlider value={sunValue} onChange={setSunValue} canvasClassName={className} />}
+      {!bare && (
+        <>
+          <RenderQualityToggle quality={quality} onChange={handleQualityChange} canvasClassName={className} />
+          {activeIsSunlight && <SunSlider value={sunValue} onChange={setSunValue} canvasClassName={className} />}
+        </>
+      )}
     </div>
   );
 }

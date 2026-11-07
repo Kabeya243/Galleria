@@ -251,6 +251,7 @@ button { color: inherit; }
 .stage-toolbar { min-height: 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface-3); }
 .tool-group { display: flex; align-items: center; gap: 4px; }
 .tool-button { width: 28px; height: 27px; display: grid; place-items: center; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; }
+.tool-button.view-button { width: auto; height: 27px; padding: 0 8px; font: 600 8px "DM Sans", sans-serif; letter-spacing: .08em; }
 .tool-button:hover, .tool-button.active { color: var(--ink); background: var(--surface-2); }
 .tool-button:disabled { opacity: .4; cursor: default; }
 .tool-divider { height: 17px; width: 1px; margin: 0 4px; background: var(--border); }
@@ -660,10 +661,12 @@ button { color: inherit; }
 .walk-pad button {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: rgba(255, 255, 255, .22);
   box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
   font-size: 18px;
   font-weight: 600;
+  color: rgba(42, 38, 35, .55);
+  backdrop-filter: blur(2px);
   touch-action: none;
   user-select: none;
   cursor: pointer;

@@ -84,7 +84,7 @@ export function sunlightSunColor(lightType?: string | null): string {
 // inside the room, and the collision test keeps it out of the blocks.
 export const SUNLIGHT_BOUNDS = { minX: -10.4, maxX: 10.4, minZ: -13.4, maxZ: 11.4 };
 export const SUNLIGHT_WALK_SPEED = 3; // m/s
-export const SUNLIGHT_CAMERA_START = { x: 3.5, y: 1.65, z: 10.5, yaw: 0.3, pitch: -0.04 };
+export const SUNLIGHT_CAMERA_START = { x: 3.5, y: 1.6, z: 10.5, yaw: 0.3, pitch: -0.04 };
 
 // The rotated-rectangle hit test from the source: true when the point
 // is inside a block (with the 0.4 m body margin). sunlightHitWith

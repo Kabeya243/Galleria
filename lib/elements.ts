@@ -72,7 +72,13 @@ export const roomElementSchema = z.object({
   color: z.string().regex(/^#[\da-f]{6}$/i).default("#f5f2eb"),
   // Meaning depends on the type: partition panel length, shelf width,
   // track-light rail length (metres). Ignored by the other types.
-  length: z.number().min(0.5).max(12).default(4),
+  // The partition slider runs 1–14 m (Claude's pL bounds).
+  length: z.number().min(0.5).max(14).default(4),
+  // Partition dimensions (Claude's pH / pT sliders): panel height and
+  // thickness in metres. Only the partition type uses them; absent on
+  // older saves, resolved by partitionDimsOf in lib/editor-params.ts.
+  height: z.number().min(1).max(5).optional(),
+  thickness: z.number().min(0.05).max(0.6).optional(),
   // Per-type option: plinth height ("low" | "standard" | "tall").
   variant: z.string().max(32).default("standard"),
   // Wall text content (only the "wall-text" type uses these).
@@ -157,7 +163,7 @@ type ElementDefaults = {
 };
 
 export const ELEMENT_DEFAULTS: Record<ElementType, ElementDefaults> = {
-  partition: { label: "Partition wall", color: "#f5f2eb", length: 4, y: 0, wallOffset: 0 },
+  partition: { label: "Partition wall", color: "#f5f2eb", length: 3, y: 0, wallOffset: 0 },
   chair: { label: "Chair", color: "#8a6a45", length: 1, y: 0, wallOffset: 0 },
   bench: { label: "Long bench", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },
   table: { label: "Table", color: "#f5f2eb", length: 1, y: 0, wallOffset: 0 },

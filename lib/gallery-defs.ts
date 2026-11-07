@@ -19,6 +19,8 @@
 
 import { roomLayouts, type RoomLayout } from "@/lib/rooms";
 import { SUNLIGHT_CAMERA_START, SUNLIGHT_FLOOR_CENTER_Z } from "@/lib/sunlight";
+import { partitionDimsOf } from "@/lib/editor-params";
+import type { RoomElement } from "@/lib/elements";
 import {
   raycastHangWalls,
   sunlightPlaceOnWall,
@@ -500,7 +502,7 @@ function hallDef(o: HallDefOptions): GalleryDef {
     floorCenterZ: o.floorCenterZ,
     background: o.background,
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: o.L / 2 - 2, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: o.L / 2 - 2, yaw: 0, pitch: -0.03 },
     bounds: { minX: -hw + 0.3, maxX: hw - 0.3, minZ: -o.L / 2 + 0.3, maxZ: o.L / 2 - 0.3 },
     walkSpeed: 3.2,
     blocks,
@@ -518,7 +520,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     background: "#bcd6ee",
     fog: { color: "#cfe0f0", near: 70, far: 170 },
     environment: true,
-    cameraStart: { x: 7, y: 1.65, z: 21, yaw: 0.35, pitch: -0.03 },
+    cameraStart: { x: 7, y: 1.6, z: 21, yaw: 0.35, pitch: -0.03 },
     bounds: { minX: -24, maxX: 24, minZ: -36, maxZ: 32 },
     walkSpeed: 3,
     blocks: serpentineBlocks(),
@@ -532,7 +534,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: -6,
     background: "#dde4ec",
     environment: false,
-    cameraStart: { x: 0.5, y: 1.65, z: 8, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0.5, y: 1.6, z: 8, yaw: 0, pitch: -0.03 },
     bounds: { minX: -14, maxX: 14, minZ: -11.5, maxZ: 12 },
     walkSpeed: 3,
     blocks: [
@@ -568,7 +570,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: -2,
     background: "#2a2724",
     environment: false,
-    cameraStart: { x: 2, y: 1.65, z: 6.5, yaw: 0.15, pitch: -0.03 },
+    cameraStart: { x: 2, y: 1.6, z: 6.5, yaw: 0.15, pitch: -0.03 },
     bounds: { minX: -8.5, maxX: 8.5, minZ: -11.4, maxZ: 7.4 },
     walkSpeed: 3,
     blocks: [rectBlock(-3.4, 0.4, -4.2, -3.8), rectBlock(2.05, 5.15, -3.5, -2.5)],
@@ -593,7 +595,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0,
     background: "#c9d3dc",
     environment: true,
-    cameraStart: { x: -5, y: 1.65, z: 15, yaw: -0.1, pitch: -0.03 },
+    cameraStart: { x: -5, y: 1.6, z: 15, yaw: -0.1, pitch: -0.03 },
     bounds: { minX: -12, maxX: 11.4, minZ: -16, maxZ: 16 },
     walkSpeed: 3,
     blocks: HALLE_SEGMENTS.map(([ax, az, bx, bz]) => segmentBlock(ax, az, bx, bz)),
@@ -645,7 +647,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0,
     background: "#8c8680",
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: 9.5, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: 9.5, yaw: 0, pitch: -0.03 },
     bounds: { minX: -13, maxX: 13, minZ: -7, maxZ: 11 },
     walkSpeed: 3,
     blocks: [
@@ -670,7 +672,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: -1.5,
     background: "#6a6866",
     environment: true,
-    cameraStart: { x: -4.2, y: 1.65, z: 8.2, yaw: -0.35, pitch: -0.03 },
+    cameraStart: { x: -4.2, y: 1.6, z: 8.2, yaw: -0.35, pitch: -0.03 },
     bounds: { minX: -5.4, maxX: 4.4, minZ: -12.4, maxZ: 9.5 },
     walkSpeed: 3,
     blocks: [{ x: 1.2, z: -7.5, ry: 0, hl: 1, hw: 0.5 }],
@@ -689,7 +691,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0.5,
     background: "#8a8277",
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: 9, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: 9, yaw: 0, pitch: -0.03 },
     bounds: { minX: -11, maxX: 11, minZ: -9.4, maxZ: 11 },
     walkSpeed: 3,
     blocks: [
@@ -764,7 +766,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: -1,
     background: "#9cc3e6",
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: 5, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: 5, yaw: 0, pitch: -0.03 },
     // The union of the source's walkable rects (main hall, two side
     // rooms, two door passages), with blocks carving the walls and the
     // dead zones beside the side rooms out of the bounding rectangle.
@@ -824,7 +826,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0,
     background: "#2a2724",
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: 18, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: 18, yaw: 0, pitch: -0.03 },
     bounds: { minX: -3.7, maxX: 3.7, minZ: -19, maxZ: 19 },
     walkSpeed: 3.2,
     blocks: [
@@ -860,7 +862,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: -0.5,
     background: "#dfe3e8",
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: 11, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: 11, yaw: 0, pitch: -0.03 },
     bounds: { minX: -12.4, maxX: 12.4, minZ: -13.4, maxZ: 12.4 },
     walkSpeed: 3.2,
     blocks: [
@@ -905,7 +907,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0,
     background: "#7fb3e6",
     environment: true,
-    cameraStart: { x: -6, y: 1.65, z: 7, yaw: -0.64, pitch: 0.12 },
+    cameraStart: { x: -6, y: 1.6, z: 7, yaw: -0.64, pitch: 0.12 },
     bounds: { minX: -18, maxX: 18, minZ: -18, maxZ: 18 },
     walkSpeed: 3.2,
     blocks: [
@@ -950,7 +952,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0,
     background: "#dde2e8",
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: 8, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: 8, yaw: 0, pitch: -0.03 },
     bounds: { minX: -7.7, maxX: 7.7, minZ: -9.7, maxZ: 9.7 },
     walkSpeed: 3.2,
     blocks: [
@@ -1041,7 +1043,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0,
     background: "#a9d4ea",
     environment: true,
-    cameraStart: { x: 4, y: 1.65, z: 6, yaw: 0.6, pitch: -0.03 },
+    cameraStart: { x: 4, y: 1.6, z: 6, yaw: 0.6, pitch: -0.03 },
     // The source's two walkable rects (a cross) inside the ±11 m
     // square, with the four corners blocked out.
     bounds: { minX: -11, maxX: 11, minZ: -11, maxZ: 11 },
@@ -1087,7 +1089,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: 0,
     background: "#dfe6ec",
     environment: true,
-    cameraStart: { x: 0, y: 1.65, z: 7.5, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 0, y: 1.6, z: 7.5, yaw: 0, pitch: -0.03 },
     bounds: { minX: -6.7, maxX: 6.7, minZ: -8.7, maxZ: 8.7 },
     walkSpeed: 3.2,
     blocks: [
@@ -1152,13 +1154,32 @@ export function roomFloorCenterZ(layout: RoomLayout): number {
 // the room's plan offset, like sunlightEntrance).
 export function galleryCameraStart(layout: RoomLayout): { x: number; y: number; z: number; yaw: number; pitch: number } {
   if (layout === "sunlight") return SUNLIGHT_CAMERA_START;
-  return galleryDef(layout)?.cameraStart ?? { x: 0, y: 1.65, z: 8, yaw: 0, pitch: -0.03 };
+  return galleryDef(layout)?.cameraStart ?? { x: 0, y: 1.6, z: 8, yaw: 0, pitch: -0.03 };
 }
 
-// All hangable wall faces of a gallery (its fixed geometry). Unlike
-// Sunlight, these rooms have no addable walls, so the list is static.
-export function galleryHangWalls(layout: RoomLayout): HangWallFace[] {
-  return galleryDef(layout)?.hangWalls ?? [];
+// All hangable wall faces of a gallery: its fixed geometry, plus the
+// faces of any partition elements in the room (Claude's "cloisons are
+// walls" rule — a partition is a hangable wall, with its own length
+// and height). Partition faces carry the element's id, so a dropped
+// artwork can snap to them like any other wall.
+export function galleryHangWalls(layout: RoomLayout, elements?: RoomElement[]): HangWallFace[] {
+  const faces = [...(galleryDef(layout)?.hangWalls ?? [])];
+  for (const element of elements ?? []) {
+    if (element.type !== "partition") continue;
+    const dims = partitionDimsOf(element);
+    const nx = Math.sin(element.rotation);
+    const nz = Math.cos(element.rotation);
+    const ax = Math.cos(element.rotation);
+    const az = -Math.sin(element.rotation);
+    // The panel's visual length includes its scale (the resize handle
+    // scales the whole group), so the faces follow a resized panel.
+    const halfLen = (dims.length * (element.scale ?? 1)) / 2;
+    faces.push(
+      { id: `${element.id}+`, nx, nz, cx: element.x, cz: element.z, ax, az, halfLen, minY: 0, maxY: dims.height },
+      { id: `${element.id}-`, nx: -nx, nz: -nz, cx: element.x, cz: element.z, ax, az, halfLen, minY: 0, maxY: dims.height },
+    );
+  }
+  return faces;
 }
 
 // Raycast a ray against every hangable wall face (the reference rooms'
@@ -1169,8 +1190,9 @@ export function galleryWallHit(
   origin: { x: number; y: number; z: number },
   direction: { x: number; y: number; z: number },
   layout: RoomLayout,
+  elements?: RoomElement[],
 ): HangWallHit | null {
-  return raycastHangWalls(origin, direction, galleryHangWalls(layout));
+  return raycastHangWalls(origin, direction, galleryHangWalls(layout, elements));
 }
 
 // Which hangable walls a position sits on (the reference rooms'
@@ -1182,10 +1204,11 @@ export function galleryWallHit(
 export function galleryWallsForPosition(
   position: { x: number; y: number; z: number },
   layout: RoomLayout,
+  elements?: RoomElement[],
 ): { key: string; rotation: number }[] {
   const interior: { key: string; rotation: number }[] = [];
   const roomWalls: { key: string; rotation: number }[] = [];
-  for (const face of galleryHangWalls(layout)) {
+  for (const face of galleryHangWalls(layout, elements)) {
     const dist = (position.x - face.cx) * face.nx + (position.z - face.cz) * face.nz;
     if (dist < -0.05 || dist > 0.45) continue;
     const along = (position.x - face.cx) * face.ax + (position.z - face.cz) * face.az;

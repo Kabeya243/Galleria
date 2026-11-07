@@ -19,6 +19,7 @@
 import { z } from "zod";
 import type { SunlightBlock } from "@/lib/sunlight";
 import { SUNLIGHT_PANELS } from "@/lib/sunlight";
+import { sunlightPartitionDimsOf } from "@/lib/editor-params";
 
 // The fourteen addable pieces, in the file's select order.
 export const SUNLIGHT_ELEMENT_TYPES = [
@@ -55,6 +56,13 @@ export const sunlightElementSchema = z.object({
   z: z.number().min(-20).max(20),
   rotation: z.number().finite().min(-Math.PI * 8).max(Math.PI * 8).default(0),
   color: z.string().regex(/^#[\da-f]{6}$/i).default("#f2f2f0"),
+  // Partition dimensions (Claude's pL / pH / pT sliders, cloison and
+  // suspendu only): panel length, height and thickness in metres.
+  // Absent on older saves, resolved by sunlightPartitionDimsOf in
+  // lib/editor-params.ts.
+  length: z.number().min(0.5).max(14).optional(),
+  height: z.number().min(1).max(5).optional(),
+  thickness: z.number().min(0.05).max(0.6).optional(),
 });
 
 export type SunlightElement = z.infer<typeof sunlightElementSchema>;
@@ -92,13 +100,20 @@ export const SUNLIGHT_ELEMENT_BOUNDS = { minX: -10.3, maxX: 10.3, minZ: -13.3, m
 // Collision blocks of a room's Sunlight elements, for the walk
 // controls: the same rotated-rectangle shape as the room's own
 // blocks, following each element's position and rotation. Elements
-// without a block (the spotlight) contribute nothing.
+// without a block (the spotlight) contribute nothing. A cloison or
+// suspendu uses its own dimensions (length / thickness), so a resized
+// partition blocks exactly where it stands.
 export function sunlightElementCollisionBlocks(elements: SunlightElement[]): SunlightBlock[] {
   const blocks: SunlightBlock[] = [];
   for (const element of elements) {
     const defaults = SUNLIGHT_ELEMENT_DEFAULTS[element.type];
     if (!defaults || defaults.hl <= 0 || defaults.hw <= 0) continue;
-    blocks.push({ x: element.x, z: element.z, ry: element.rotation, hl: defaults.hl, hw: defaults.hw });
+    if (element.type === "cloison" || element.type === "suspendu") {
+      const dims = sunlightPartitionDimsOf(element);
+      blocks.push({ x: element.x, z: element.z, ry: element.rotation, hl: dims.length / 2, hw: dims.thickness / 2 });
+    } else {
+      blocks.push({ x: element.x, z: element.z, ry: element.rotation, hl: defaults.hl, hw: defaults.hw });
+    }
   }
   return blocks;
 }
@@ -264,20 +279,24 @@ export function sunlightHangWalls(elements: SunlightElement[]): HangWallFace[] {
       { id: `panel-${panel.x},${panel.z}-`, nx: -nx, nz: -nz, cx: panel.x, cz: panel.z, ax, az, halfLen: panel.len / 2, minY: 0, maxY: 4.4 },
     );
   }
-  // Added walls (both faces). Cloison: 3 × 3 m wall centred at y 1.5.
-  // Suspendu: 3 × 2.4 m wall centred at y 2.3 (hangs from the ceiling
-  // on two rods), so it spans y 1.1…3.5.
+  // Added walls (both faces). Cloison: a wall on the floor, height
+  // from its dimensions (default 3 m). Suspendu: hangs from the
+  // ceiling on two rods, its panel starting at y 1.1 (default 2.4 m
+  // high, so it spans y 1.1…3.5). The faces follow the element's own
+  // length and height, so a resized partition stays hangable over its
+  // whole surface.
   for (const element of elements) {
     if (element.type !== "cloison" && element.type !== "suspendu") continue;
+    const dims = sunlightPartitionDimsOf(element);
     const nx = Math.sin(element.rotation);
     const nz = Math.cos(element.rotation);
     const ax = Math.cos(element.rotation);
     const az = -Math.sin(element.rotation);
-    const minY = element.type === "cloison" ? 0 : 1.1;
-    const maxY = element.type === "cloison" ? 3 : 3.5;
+    const minY = dims.y0;
+    const maxY = dims.y0 + dims.height;
     faces.push(
-      { id: `${element.id}+`, nx, nz, cx: element.x, cz: element.z, ax, az, halfLen: 1.5, minY, maxY },
-      { id: `${element.id}-`, nx: -nx, nz: -nz, cx: element.x, cz: element.z, ax, az, halfLen: 1.5, minY, maxY },
+      { id: `${element.id}+`, nx, nz, cx: element.x, cz: element.z, ax, az, halfLen: dims.length / 2, minY, maxY },
+      { id: `${element.id}-`, nx: -nx, nz: -nz, cx: element.x, cz: element.z, ax, az, halfLen: dims.length / 2, minY, maxY },
     );
   }
   return faces;

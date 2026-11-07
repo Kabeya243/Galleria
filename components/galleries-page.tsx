@@ -170,6 +170,26 @@ function RoomPreviewCanvas({ room }: { room: GalleryPresetCard }) {
   return <canvas ref={ref} width={640} height={240} className="gallery-card-preview" aria-label={`${room.label} finishes preview`} />;
 }
 
+// The card's thumbnail: a real entrance capture of the gallery
+// (public/gallery-thumbnails/<key>.jpg, taken from the room's
+// entrance in 3D), falling back to the drawn finishes preview when
+// the capture is missing or fails to load — the page never breaks
+// over a missing image.
+function RoomPreview({ room }: { room: GalleryPresetCard }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <RoomPreviewCanvas room={room} />;
+  return (
+    <img
+      src={`/gallery-thumbnails/${room.key}.jpg`}
+      alt={`${room.label} entrance view`}
+      width={640}
+      height={240}
+      className="gallery-card-preview"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 // The distinctive feature of each gallery, drawn procedurally over
 // the finish bands so every card reads at a glance: serpentine walls,
 // the glazed front with its "exhibit" sign, dark loft beams, zigzag
@@ -1013,7 +1033,7 @@ export default function GalleriesPage({
         {filteredRooms.map((room) => (
           <article key={room.key} className={`gallery-card${room.key === selected ? " selected" : ""}`}>
             <button className="gallery-card-preview-button" onClick={() => viewIn3D(room.key)} aria-label={`${t("galleries", "previewIn3d")} — ${room.label}`}>
-              <RoomPreviewCanvas room={room} />
+              <RoomPreview room={room} />
             </button>
             <div className="gallery-card-body">
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>

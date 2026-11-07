@@ -70,8 +70,9 @@ import {
   type Side,
   type Texture,
 } from "three";
-import type { GalleryRoom, RoomLayout } from "@/lib/rooms";
+import { roomLayouts, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
 import { galleryDef } from "@/lib/gallery-defs";
+import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, type CameraViewPreset } from "@/lib/editor-params";
 import { PHOTO, photoTexture } from "@/lib/gallery-photos";
 import { sunlightHitWith } from "@/lib/sunlight";
 
@@ -3479,14 +3480,22 @@ export function GalleryWalkControls(props: {
   enabled: boolean;
   onRoomChange?: (roomId: string) => void;
   resetSignal?: { current: number };
+  // Camera view preset requested by the editor's View buttons (Eye /
+  // Wide / High / Plan): the nonce changes on every click, so the
+  // same view can be re-applied.
+  viewRequest?: { nonce: number; view: CameraViewPreset } | null;
 }) {
-  const { rooms, activeRoomId, offsets, zOffsets, input, destination, lookYaw, dragged, dragActive, enabled, onRoomChange, resetSignal } = props;
+  const { rooms, activeRoomId, offsets, zOffsets, input, destination, lookYaw, dragged, dragActive, enabled, onRoomChange, resetSignal, viewRequest } = props;
   const { camera, gl } = useThree();
   const defOf = (index: number) => galleryDef(rooms[index]?.layout ?? "sunlight");
   const startIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoomId));
   const startDef = defOf(startIndex) ?? galleryDef("sunlight")!;
   const yawRef = useRef(startDef.cameraStart.yaw);
   const pitchRef = useRef(startDef.cameraStart.pitch);
+  // Smoothed camera height (Claude's camY): a view preset sets the
+  // target and every frame eases toward it, instead of jumping.
+  const camYRef = useRef(startDef.cameraStart.y);
+  const lastViewNonce = useRef<number | null>(null);
   const currentRoomIndex = useRef(startIndex);
   const handledRoomId = useRef(activeRoomId);
   const onRoomChangeRef = useRef(onRoomChange);
@@ -3511,7 +3520,7 @@ export function GalleryWalkControls(props: {
       const def = defOf(index);
       return {
         x: offsets[index] + (def?.cameraStart.x ?? 0),
-        y: def?.cameraStart.y ?? 1.65,
+        y: def?.cameraStart.y ?? 1.6,
         z: zOffsetOf(index) + (def?.cameraStart.z ?? 0),
         yaw: def?.cameraStart.yaw ?? 0,
         pitch: def?.cameraStart.pitch ?? 0,
@@ -3530,6 +3539,7 @@ export function GalleryWalkControls(props: {
     if (!initialized.current) {
       const start = entrance(startIndex);
       camera.position.set(start.x, start.y, start.z);
+      camYRef.current = start.y;
       camera.rotation.order = "YXZ";
       yawRef.current = start.yaw;
       pitchRef.current = start.pitch;
@@ -3547,6 +3557,7 @@ export function GalleryWalkControls(props: {
     }
     const start = entrance(requestedIndex);
     camera.position.set(start.x, start.y, start.z);
+    camYRef.current = start.y;
     yawRef.current = start.yaw;
     pitchRef.current = start.pitch;
     camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
@@ -3558,6 +3569,39 @@ export function GalleryWalkControls(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRoomId, camera, destination, lookYaw, offsets, rooms, zOffsets]);
 
+  // Camera view preset (the editor's View buttons): apply the preset's
+  // pitch and, when it carries one, position and yaw; the height is
+  // eased toward in useFrame (camY). Eye keeps the current position
+  // and yaw and only levels the pitch and lowers the eye back to
+  // 1.6 m. The position is clamped to the room's walk bounds, so a
+  // preset can never park the camera inside a wall. The height is
+  // clamped to just under the room's ceiling — a generic shell is a
+  // closed box whose ceiling cannot be hidden, so a High / Plan view
+  // reads from just under it instead of from above the roof.
+  useEffect(() => {
+    if (!viewRequest || viewRequest.nonce === lastViewNonce.current) return;
+    lastViewNonce.current = viewRequest.nonce;
+    const preset = VIEW_PRESETS[viewRequest.view];
+    const roomIndex = currentRoomIndex.current;
+    const ox = offsets[roomIndex] ?? 0;
+    const oz = zOffsetOf(roomIndex);
+    const def = defOf(roomIndex);
+    const bounds = def?.bounds ?? { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
+    const roomHeight = roomLayouts[rooms[roomIndex]?.layout ?? "sunlight"].height;
+    pitchRef.current = preset.pitch;
+    if (preset.yaw !== undefined) yawRef.current = preset.yaw;
+    if (preset.x !== undefined) {
+      camera.position.x = ox + Math.max(bounds.minX, Math.min(bounds.maxX, preset.x));
+    }
+    if (preset.z !== undefined) {
+      camera.position.z = oz + Math.max(bounds.minZ, Math.min(bounds.maxZ, preset.z));
+    }
+    camYRef.current = Math.min(preset.y, roomHeight - 0.4);
+    destination.current = null;
+    lookYaw.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewRequest, camera, destination, lookYaw, offsets, zOffsets]);
+
   // Keyboard (WASD / arrows) and drag-to-look on the canvas.
   useEffect(() => {
     if (!enabled) {
@@ -3567,6 +3611,11 @@ export function GalleryWalkControls(props: {
     gl.domElement.tabIndex = 0;
     gl.domElement.focus({ preventScroll: true });
     const keyDown = (event: KeyboardEvent) => {
+      // Typing in a field (a name, a colour, a slider label…) must
+      // not walk: the keys are ignored while the focus is inside a
+      // form control or an editable element.
+      const target = event.target as HTMLElement | null;
+      if (target && (target.closest("input, textarea, select") || target.isContentEditable)) return;
       if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
         event.preventDefault();
         input.current.add(event.code);
@@ -3635,6 +3684,7 @@ export function GalleryWalkControls(props: {
       lastReset.current = resetSignal.current;
       const start = entrance(0);
       camera.position.set(start.x, start.y, start.z);
+      camYRef.current = start.y;
       yawRef.current = start.yaw;
       pitchRef.current = start.pitch;
       destination.current = null;
@@ -3720,13 +3770,18 @@ export function GalleryWalkControls(props: {
     // it through a wall into the grey void.
     camera.position.x = ox + Math.max(bounds.minX, Math.min(bounds.maxX, camera.position.x - ox));
     camera.position.z = oz + Math.max(bounds.minZ, Math.min(bounds.maxZ, camera.position.z - oz));
+    // Camera-height easing toward the active view preset (camY): the
+    // height glides instead of jumping. The y is never clamped to the
+    // walk bounds — it was already clamped to the room's height when
+    // the preset was applied.
+    camera.position.y += (camYRef.current - camera.position.y) * Math.min(1, delta * CAMERA_HEIGHT_EASE);
     // Walk-target marker on the destination, pulsing like the source.
     // The marker is clamped to the room bounds (a target clicked on a
     // wall sits outside the walkable area, so the raw point would hide
     // it inside the wall): the visible marker is always the nearest
     // reachable point inside the room. It is a thick ring + centre
     // dot, 0.9 m across — a flat ring alone reads as a ~15 px sliver
-    // at the grazing angles of a 1.65 m eye (that is why the 0.25–
+    // at the grazing angles of a 1.6 m eye (that is why the 0.25–
     // 0.35 m ring of 9441c8a was never seen in live verification), so
     // the band is thick, the dot anchors it, and the pulse scales the
     // whole marker as well as its opacity. It sits at y 0.03, above

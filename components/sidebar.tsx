@@ -15,6 +15,8 @@ import {
   Grid2X2,
   Home,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Presentation,
   Settings2,
   ShieldCheck,
@@ -158,15 +160,22 @@ export default function Sidebar({
   user,
   active,
   exhibitionCount,
+  collapsible,
 }: {
   // isAdmin is carried on the user object by getCurrentUser (lib/auth.ts);
   // the Admin links only render when it is true.
   user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   active: SidebarActive;
   exhibitionCount: number;
+  // Collapsible mode (editor page): a narrow icon-only rail by default,
+  // the full menu when unfolded. Clicking a nav icon while collapsed
+  // unfolds the menu; the toggle button folds it back. Without this
+  // prop the sidebar behaves exactly as before (always full).
+  collapsible?: boolean;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(collapsible ?? false);
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -216,11 +225,24 @@ export default function Sidebar({
         />
       )}
 
-      <aside id="sanaa-sidebar" className={`sidebar${open ? " open" : ""}`}>
-        <Link className="brand-lockup" href="/" aria-label={t("nav", "sanaaHome")} onClick={() => setOpen(false)}>
-          <span className="brand-mark">s.</span>
-          <span className="brand-name">SANAA</span>
-        </Link>
+      <aside id="sanaa-sidebar" className={`sidebar${open ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
+        <div className="sidebar-top-row">
+          <Link className="brand-lockup" href="/" aria-label={t("nav", "sanaaHome")} onClick={() => setOpen(false)}>
+            <span className="brand-mark">s.</span>
+            <span className="brand-name">SANAA</span>
+          </Link>
+          {collapsible ? (
+            <button
+              type="button"
+              className="sidebar-collapse-toggle"
+              aria-label={collapsed ? t("nav", "expandNav") : t("nav", "collapseNav")}
+              aria-expanded={!collapsed}
+              onClick={() => setCollapsed((value) => !value)}
+            >
+              {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+            </button>
+          ) : null}
+        </div>
 
         {/* The workspace box used to sit here ("Workspace" + the owner's
             name with a chevron), but it did nothing: a single workspace,
@@ -241,17 +263,35 @@ export default function Sidebar({
                     {t("nav", group.label)}
                   </Link>
                   <div className="side-nav">
-                    {items.map((item) => (
-                      <Link
-                        key={item.id}
-                        className={activeItemId === item.id ? "nav-item active" : "nav-item"}
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                      >
-                        <item.icon size={17} /> {t("nav", item.label)}
-                        {item.count && <span className="nav-count">{exhibitionCount}</span>}
-                      </Link>
-                    ))}
+                    {items.map((item) =>
+                      collapsed ? (
+                        // Collapsed rail: the icon unfolds the full menu
+                        // (it does not navigate — the label navigates
+                        // once the menu is open).
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={activeItemId === item.id ? "nav-item active" : "nav-item"}
+                          title={t("nav", item.label)}
+                          aria-label={t("nav", item.label)}
+                          onClick={() => setCollapsed(false)}
+                        >
+                          <item.icon size={17} />
+                          <span className="nav-item-label">{t("nav", item.label)}</span>
+                          {item.count && <span className="nav-count">{exhibitionCount}</span>}
+                        </button>
+                      ) : (
+                        <Link
+                          key={item.id}
+                          className={activeItemId === item.id ? "nav-item active" : "nav-item"}
+                          href={item.href}
+                          onClick={() => setOpen(false)}
+                        >
+                          <item.icon size={17} /> <span className="nav-item-label">{t("nav", item.label)}</span>
+                          {item.count && <span className="nav-count">{exhibitionCount}</span>}
+                        </Link>
+                      ),
+                    )}
                   </div>
                 </div>
               );

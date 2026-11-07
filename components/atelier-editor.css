@@ -508,3 +508,13 @@
   .atelier-scope .button-save { padding: 8px; font-size: 9px; }
   .atelier-scope .editor-topbar .button-dark { padding: 8px 9px; font-size: 10px; }
 }
+
+/* Standalone editor page (no platform shell): the editor owns the
+   viewport next to the collapsible platform sidebar (icons only by
+   default, full menu on expand). The saved-designs bar stays on top;
+   the editor shell fills the rest, edge to edge, no border/radius. */
+.atelier-standalone-page { display: flex; height: 100dvh; overflow: hidden; }
+.atelier-standalone-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.atelier-scope.atelier-standalone { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--atelier-panel-2); }
+.atelier-scope.atelier-standalone .atelier-projects-bar { flex-shrink: 0; padding: 12px 16px 0; margin-bottom: 10px; }
+.atelier-scope.atelier-standalone .editor-shell { height: auto; flex: 1; min-height: 0; border: 0; border-radius: 0; }

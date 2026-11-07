@@ -5,6 +5,9 @@
 // JS: this component renders its DOM (same ids as Atelier's editor.html),
 // loads the scripts in order, then calls window.AtelierEditor.init().
 // All errors are shown inline, never window.alert.
+// `standalone` renders the editor as its own full-viewport page
+// (no platform shell): the saved-designs bar stays on top and the
+// editor shell fills the rest, edge to edge.
 
 "use client";
 
@@ -24,7 +27,7 @@ declare global {
   }
 }
 
-export default function AtelierEditor({ artworks }: { artworks: ArtworkRef[] }) {
+export default function AtelierEditor({ artworks, standalone }: { artworks: ArtworkRef[]; standalone?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project") ?? "";
@@ -122,7 +125,7 @@ export default function AtelierEditor({ artworks }: { artworks: ArtworkRef[] }) 
   };
 
   return (
-    <div className="atelier-scope">
+    <div className={standalone ? "atelier-scope atelier-standalone" : "atelier-scope"}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
       <Script src="/vendor/fabric.min.js" strategy="afterInteractive" onLoad={() => setFabricReady(true)} onError={() => setScriptError("Fabric.js n’a pas pu être chargé.")} />
       <Script src="/atelier/editor.js" strategy="afterInteractive" onLoad={() => setEditorReady(true)} onError={() => setScriptError("Le script de l’éditeur n’a pas pu être chargé.")} />
@@ -166,7 +169,7 @@ export default function AtelierEditor({ artworks }: { artworks: ArtworkRef[] }) 
 
       <div className="editor-shell">
         <header className="editor-topbar">
-          <a className="editor-brand" href="/tools" title="Retour aux outils">
+          <a className="editor-brand" href="/" title="Retour à l'accueil">
             <span className="brand-mark">S.</span>SANAA
           </a>
           <div className="top-divider" />

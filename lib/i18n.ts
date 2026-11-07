@@ -128,6 +128,8 @@ export const DICTIONARY = {
     signOut: { fr: "Se déconnecter", en: "Sign out" },
     openNav: { fr: "Ouvrir la navigation", en: "Open navigation" },
     closeNav: { fr: "Fermer la navigation", en: "Close navigation" },
+    expandNav: { fr: "Déplier le menu", en: "Expand the menu" },
+    collapseNav: { fr: "Replier le menu", en: "Collapse the menu" },
     mainNav: { fr: "Navigation principale", en: "Main navigation" },
     sanaaHome: { fr: "Accueil SANAA", en: "SANAA home" },
   },

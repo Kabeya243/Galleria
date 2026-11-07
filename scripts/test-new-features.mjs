@@ -167,6 +167,14 @@ check("Portfolio PDF", "atelier-files", "Atelier editor, export function, API ro
   assert(read("components/tools-page.tsx").includes("/tools/portfolio-pdf"), "tools list missing portfolio-pdf entry");
   assert(read("lib/i18n.ts").includes("portfolioPdf:"), "i18n missing portfolioPdf keys");
   assert(read("lib/tool-use.ts").includes('"portfolio-pdf"'), "tool-use missing portfolio-pdf slug");
+  // Standalone editor page (8 Nov): no platform shell around the editor,
+  // a collapsible icon-only sidebar rail instead, editor in full view.
+  const editorPage = read("app/tools/portfolio-pdf/page.tsx");
+  assert(!editorPage.includes("ToolsShell"), "editor page still uses ToolsShell (platform menu must not wrap the editor)");
+  assert(editorPage.includes("collapsible"), "editor page missing collapsible sidebar");
+  assert(editorPage.includes("standalone"), "editor page missing standalone editor");
+  assert(read("components/sidebar.tsx").includes("collapsed"), "sidebar missing collapsed mode");
+  assert(read("components/atelier-editor.tsx").includes("atelier-standalone"), "editor missing standalone styles");
   return "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug";
 });
 

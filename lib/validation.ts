@@ -125,6 +125,16 @@ const artworkSchema = z.object({
     )
     .nullable()
     .optional(),
+  // Colour palette extracted from the artwork image (ColorThief, in the
+  // browser): up to 8 hex colours, dominant first. Optional — older
+  // artworks and artworks without an image have none, and the editor
+  // computes it lazily on selection.
+  palette: z
+    .array(z.string().regex(/^#[0-9a-f]{6}$/i))
+    .min(1)
+    .max(8)
+    .nullable()
+    .optional(),
   // Curatorial wall text (the reference room's "Texte curatorial"):
   // when set, the artwork is a canvas text panel, not an image, in one
   // of the four typefaces (d Display gras, s Sans propre, g Serif,

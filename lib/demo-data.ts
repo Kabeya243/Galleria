@@ -13,6 +13,11 @@ export type Artwork = {
   scale: number;
   imageUrl?: string | null;
   roomId: string;
+  // Colour palette extracted from the artwork image (ColorThief, in the
+  // browser, at upload/replace time): up to 8 hex colours, dominant
+  // first. Null until extracted — the editor computes it lazily when an
+  // artwork with an image is selected.
+  palette?: string[] | null;
   // Curatorial wall text (the reference room's "Texte curatorial"):
   // when set, the artwork renders as a canvas text panel instead of an
   // image, in the chosen typeface ("d" Display gras, "s" Sans propre,

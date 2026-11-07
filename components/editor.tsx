@@ -43,9 +43,11 @@ import ExhibitionPublishDialog, { type PublishVisibility } from "@/components/ex
 import FrameThumbnail from "@/components/frame-thumbnail";
 import GalleryScene, { artworkStandPoint, parseArtworkDimensions, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
 import LayersPanel, { type LayerArtwork, type LayerItemRef } from "@/components/layers-panel";
+import PaletteSwatches from "@/components/palette-swatches";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
+import { dominantHex, extractPalette, HARMONY_LABELS, harmonyOf, harmonyScore, hueFamilyOf, HUE_FAMILY_LABELS, isWarmHex, suggestedFrameVariant, suggestedWallColor } from "@/lib/palette";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 import { galleryCameraStart, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
@@ -181,6 +183,12 @@ export default function Editor({
   // draws the camera dot and its direction line from it.
   const cameraStateRef = useRef<CameraState | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
+  // Colour palette (ColorThief): whether the selected artwork's palette
+  // is being read right now, and which artwork+image pairs were already
+  // tried — a failed extraction is not retried on every selection, only
+  // from the manual "Extract palette" button.
+  const [extractingPalette, setExtractingPalette] = useState(false);
+  const paletteAttemptedRef = useRef<Set<string>>(new Set());
   const [panelTab, setPanelTab] = useState<"artworks" | "elements" | "layers">("artworks");
   const [selectedElementId, setSelectedElementId] = useState<string>();
   const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
@@ -336,6 +344,97 @@ export default function Editor({
     [rooms],
   );
   const sceneRoom = activeRoom ? sceneRooms.find((room) => room.id === activeRoom.id) ?? activeRoom : undefined;
+
+  // Colour palette, lazy pass: artworks saved before palettes existed
+  // (or whose extraction failed at upload) get theirs read when they
+  // are selected. The palette is stored on the artwork, so the next
+  // save persists it — extraction happens once per artwork+image.
+  const selectedIdForPalette = selected?.id;
+  const selectedImageForPalette = selected?.imageUrl ?? null;
+  const selectedHasPalette = Boolean(selected?.palette?.length);
+  const selectedIsText = Boolean(selected?.text);
+  useEffect(() => {
+    if (!selectedIdForPalette || !selectedImageForPalette || selectedHasPalette || selectedIsText) return;
+    const key = `${selectedIdForPalette}:${selectedImageForPalette}`;
+    if (paletteAttemptedRef.current.has(key)) return;
+    paletteAttemptedRef.current.add(key);
+    let cancelled = false;
+    setExtractingPalette(true);
+    void extractPalette(selectedImageForPalette).then((palette) => {
+      if (cancelled) return;
+      setExtractingPalette(false);
+      if (palette) {
+        updateArtwork(selectedIdForPalette, (artwork) =>
+          artwork.imageUrl === selectedImageForPalette ? { ...artwork, palette } : artwork,
+        );
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedIdForPalette, selectedImageForPalette, selectedHasPalette, selectedIsText]);
+
+  // Manual retry when the automatic read failed (button in the palette
+  // section). The attempted-set entry stays, so the effect above does
+  // not loop; a fresh selection retries once.
+  async function extractSelectedPalette() {
+    if (!selected || !selected.imageUrl || selected.text) return;
+    setExtractingPalette(true);
+    const palette = await extractPalette(selected.imageUrl);
+    setExtractingPalette(false);
+    if (palette) {
+      updateArtwork(selected.id, (artwork) =>
+        artwork.imageUrl === selected.imageUrl ? { ...artwork, palette } : artwork,
+      );
+    }
+  }
+
+  // Hanging harmony for the selected artwork: other works in this room
+  // with a palette, ranked by how well their dominant colour sits with
+  // this one's (analogous / complementary first, same family next).
+  const selectedDominant = dominantHex(selected?.palette ?? null);
+  const colourMatches = useMemo(() => {
+    if (!selected || !selectedDominant || selected.text) return [];
+    return currentArtworks
+      .filter((item) => item.id !== selected.id && !item.text && item.palette?.length)
+      .map((item) => {
+        const other = item.palette![0];
+        return { artwork: item, harmony: harmonyOf(selectedDominant, other), score: harmonyScore(selectedDominant, other) };
+      })
+      .filter((match) => match.score > 0)
+      .sort((a, b) => b.score - a.score || a.artwork.title.localeCompare(b.artwork.title))
+      .slice(0, 4);
+  }, [selected, selectedDominant, currentArtworks]);
+
+  // Wall and frame suggestions from the dominant colour — shown in
+  // the inspector, never applied on their own.
+  const wallSuggestion = useMemo(
+    () => (selectedDominant && !selected?.text ? suggestedWallColor(selectedDominant) : null),
+    [selectedDominant, selected?.text],
+  );
+  const frameSuggestion = useMemo(
+    () => (selectedDominant && !selected?.text ? suggestedFrameVariant(selectedDominant) : null),
+    [selectedDominant, selected?.text],
+  );
+
+  // Two works with the same dominant colour hung side by side muddy
+  // each other — flag the neighbours on this wall that share the
+  // selected work's dominant family, so the curator can space them out.
+  const sameFamilyWallNeighbours = useMemo(() => {
+    if (!selected || !selectedDominant || selected.text || !activeRoom) return [];
+    const key = wallsForArtwork(selected, activeRoom)[0]?.key;
+    if (!key) return [];
+    const family = hueFamilyOf(selectedDominant);
+    return artworks.filter(
+      (item) =>
+        item.roomId === selected.roomId &&
+        item.id !== selected.id &&
+        !item.text &&
+        item.palette?.length &&
+        hueFamilyOf(item.palette[0]) === family &&
+        wallsForArtwork(item, activeRoom)[0]?.key === key,
+    );
+  }, [selected, selectedDominant, activeRoom, artworks]);
 
   function snapshot() {
     const current = latestRef.current;
@@ -1612,7 +1711,7 @@ export default function Editor({
     setSaved(false);
   }
 
-  function addArtwork(imageUrl: string | null = null) {
+  function addArtwork(imageUrl: string | null = null, palette: string[] | null = null) {
     if (!activeRoom) return;
     const index = currentArtworks.length;
     // New artworks go on the wall the camera is looking at (every wall
@@ -1635,6 +1734,7 @@ export default function Editor({
       scale: 1,
       frame: "wood",
       imageUrl,
+      palette,
       roomId: activeRoom.id,
     };
     snapshot();
@@ -1762,8 +1862,12 @@ async function compressImage(file: File): Promise<File> {
     setBusy(true);
     setUploadError(null);
     try {
-      const url = await uploadImageFile(file);
-      addArtwork(url);
+      // The palette is read from the file itself while it uploads —
+      // decoding locally, so no extra network fetch and no wait after
+      // the upload. A failed read just leaves the palette empty; the
+      // editor retries it lazily when the artwork is selected.
+      const [url, palette] = await Promise.all([uploadImageFile(file), extractPalette(file)]);
+      addArtwork(url, palette);
       if (uploadRef.current) uploadRef.current.value = "";
     } catch (error) {
       console.error("Could not upload artwork.", error);
@@ -1781,9 +1885,12 @@ async function compressImage(file: File): Promise<File> {
     setBusy(true);
     setUploadError(null);
     try {
-      const url = await uploadImageFile(file);
+      const [url, palette] = await Promise.all([uploadImageFile(file), extractPalette(file)]);
       snapshot();
-      updateArtwork(selected.id, (artwork) => ({ ...artwork, imageUrl: url }));
+      // A new image gets a new palette; when the read fails the palette
+      // is cleared so the lazy pass re-reads it on selection instead of
+      // keeping the old image's colours.
+      updateArtwork(selected.id, (artwork) => ({ ...artwork, imageUrl: url, palette }));
       if (replaceImageRef.current) replaceImageRef.current.value = "";
     } catch (error) {
       console.error("Could not replace artwork image.", error);
@@ -2280,6 +2387,87 @@ async function compressImage(file: File): Promise<File> {
                   <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
                   <input ref={replaceImageRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void replaceArtworkImage(event.target.files?.[0])} />
                 </>
+              )}
+              {!selected.text && selected.imageUrl && (
+                <div className="property-section">
+                  <label>COLOUR PALETTE <span>{selected.palette?.length ? "CLICK A SWATCH TO COPY" : "FROM THE IMAGE"}</span></label>
+                  {selected.palette && selected.palette.length > 0 ? (
+                    <>
+                      <PaletteSwatches palette={selected.palette} />
+                      <p style={{ margin: "8px 0 0", color: "var(--ink)", fontSize: "9px", lineHeight: 1.6 }}>
+                        Dominant {selected.palette[0]} · {HUE_FAMILY_LABELS[hueFamilyOf(selected.palette[0])]}
+                        {isWarmHex(selected.palette[0]) ? " · warm" : " · cool"}
+                      </p>
+                      {sameFamilyWallNeighbours.length > 0 && (
+                        <p style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>
+                          {sameFamilyWallNeighbours.map((item) => item.title).join(", ")}{" "}
+                          {sameFamilyWallNeighbours.length === 1 ? "shares" : "share"} this dominant colour on the same
+                          wall — consider spacing them apart.
+                        </p>
+                      )}
+                      {colourMatches.length > 0 && (
+                        <>
+                          <p style={{ margin: "10px 0 6px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                            HARMONISES WITH — CLICK TO SELECT
+                          </p>
+                          {colourMatches.map(({ artwork, harmony }) => (
+                            <button
+                              key={artwork.id}
+                              type="button"
+                              onClick={() => selectArtwork(artwork.id)}
+                              title={`${artwork.title} — ${HARMONY_LABELS[harmony]} with ${selected.title}`}
+                              style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", padding: "4px 0", border: 0, borderBottom: "1px solid var(--border)", background: "none", color: "var(--ink)", fontSize: "9px", cursor: "pointer", textAlign: "left" }}
+                            >
+                              <span style={{ width: "12px", height: "12px", borderRadius: "2px", backgroundColor: artwork.palette![0], flexShrink: 0, border: "1px solid rgba(0,0,0,0.15)" }} />
+                              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artwork.title}</span>
+                              <span style={{ color: "var(--muted)", fontSize: "8px", whiteSpace: "nowrap" }}>{HARMONY_LABELS[harmony]}</span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      {wallSuggestion && frameSuggestion && (
+                        <>
+                          <p style={{ margin: "10px 0 6px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                            SUGGESTIONS — NEVER IMPOSED
+                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                            <span style={{ width: "12px", height: "12px", borderRadius: "2px", backgroundColor: wallSuggestion.hex, flexShrink: 0, border: "1px solid rgba(0,0,0,0.15)" }} />
+                            <span style={{ flex: 1, color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>
+                              Wall — try {wallSuggestion.hex}. {wallSuggestion.reason}
+                            </span>
+                            {activeRoom && activeRoom.wallColor.toLowerCase() !== wallSuggestion.hex.toLowerCase() && (
+                              <button
+                                type="button"
+                                style={{ padding: "3px 7px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--ink)", fontSize: "8px", cursor: "pointer", whiteSpace: "nowrap" }}
+                                onClick={() => { snapshot(); updateRoom(activeRoom.id, (room) => ({ ...room, wallColor: wallSuggestion.hex })); }}
+                              >
+                                Apply
+                              </button>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ flex: 1, color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>
+                              Frame — {FRAME_VARIANTS[frameSuggestion.variant]?.label ?? frameSuggestion.variant}. {frameSuggestion.reason}
+                            </span>
+                            {(selected.frame ?? "wood") !== frameSuggestion.variant && (
+                              <button
+                                type="button"
+                                style={{ padding: "3px 7px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-3)", color: "var(--ink)", fontSize: "8px", cursor: "pointer", whiteSpace: "nowrap" }}
+                                onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, frame: frameSuggestion.variant })); }}
+                              >
+                                Apply
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : extractingPalette ? (
+                    <p style={{ margin: 0, color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>Reading the colours in this image…</p>
+                  ) : (
+                    <div className="property-actions"><button type="button" onClick={() => void extractSelectedPalette()}>Extract palette</button></div>
+                  )}
+                </div>
               )}
               <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Position ${axis}`} step="0.1" value={selected.position[index]} {...editSessionProps} onCommit={(next) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = next; return { ...artwork, position }; })} /></div>)}</div></div>
               {showMeasure && (

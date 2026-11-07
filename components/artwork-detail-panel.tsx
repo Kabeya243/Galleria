@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mail, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { Artwork } from "@/lib/demo-data";
+import PaletteSwatches from "@/components/palette-swatches";
 import { useT } from "@/lib/i18n";
 
 // Artwork detail panel (public exhibition): the side panel that opens
@@ -145,6 +146,15 @@ export default function ArtworkDetailPanel({
         {artist} <i /> {artwork.year} <i /> {artwork.medium} <i /> {artwork.dimensions}
       </p>
       {artwork.description && <p>{artwork.description}</p>}
+
+      {!artwork.text && artwork.palette && artwork.palette.length > 0 && (
+        <div style={{ marginTop: "14px" }}>
+          <span className="panel-kicker">COLOUR PALETTE</span>
+          <div style={{ marginTop: "8px" }}>
+            <PaletteSwatches palette={artwork.palette} size={22} label={`Colour palette of ${artwork.title}`} />
+          </div>
+        </div>
+      )}
 
       {!showForm && !sent && (
         <button type="button" className="artwork-detail-contact" onClick={() => setShowForm(true)}>

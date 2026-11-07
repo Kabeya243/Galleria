@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { parsePalette } from "@/lib/palette";
 
 const COOKIE_NAME = "sanaa_session";
 const SESSION_DURATION = 60 * 60 * 24 * 30;
@@ -94,6 +95,7 @@ export function toClientArtwork(artwork: {
   imageUrl: string | null;
   text?: string | null;
   textFont?: string | null;
+  palette?: string | null;
   roomId: string;
 }) {
   return {
@@ -117,6 +119,7 @@ export function toClientArtwork(artwork: {
     imageUrl: artwork.imageUrl,
     text: artwork.text ?? null,
     textFont: artwork.textFont ?? null,
+    palette: parsePalette(artwork.palette ?? null),
     roomId: artwork.roomId,
   };
 }

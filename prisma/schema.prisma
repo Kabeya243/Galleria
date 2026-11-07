@@ -91,6 +91,12 @@ model Artwork {
   // image, in the chosen typeface. Null for ordinary artworks.
   text         String?
   textFont     String?
+  // Colour palette extracted from the artwork image (ColorThief, in the
+  // browser, at upload/replace time): a JSON array of up to 8 hex
+  // colours, dominant first, e.g. ["#1A1A1A","#C8321E","#F0E6D2"].
+  // Stored as a JSON string (like rooms) so it works on SQLite and
+  // Postgres alike. Null until extracted.
+  palette      String?
   roomId       String     @default("room-main")
   createdAt    DateTime   @default(now())
   exhibitionId String

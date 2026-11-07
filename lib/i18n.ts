@@ -848,8 +848,8 @@ export const DICTIONARY = {
     },
     portfolioPdf: { fr: "Portfolio PDF", en: "Portfolio PDF Builder" },
     portfolioPdfDesc: {
-      fr: "Un portfolio PDF imprimable à partir de vos œuvres — couverture, bio, œuvres avec légendes et contact, 50 mises en page originales.",
-      en: "A printable portfolio PDF from your works — cover, bio, works with captions and contact, 50 original layouts.",
+      fr: "Un éditeur de design complet : modèles, textes, formes, images et vos œuvres — exportez en vrai PDF vectoriel, JPG ou PNG haute résolution.",
+      en: "A full design editor: templates, text, shapes, images and your own works — export a real vector PDF, or high-resolution JPG/PNG.",
     },
     marketplace: { fr: "Place de marché", en: "Marketplace" },
     marketplaceDesc: {
@@ -1063,8 +1063,8 @@ export const DICTIONARY = {
     },
     portfolioPdf: { fr: "Portfolio PDF", en: "Portfolio PDF Builder" },
     portfolioPdfDesc: {
-      fr: "Un portfolio PDF imprimable à partir de vos œuvres — couverture, bio, œuvres avec légendes et contact, 50 mises en page originales.",
-      en: "A printable portfolio PDF from your works — cover, bio, works with captions and contact, 50 original layouts.",
+      fr: "Un éditeur de design complet : modèles, textes, formes, images et vos œuvres — exportez en vrai PDF vectoriel, JPG ou PNG haute résolution.",
+      en: "A full design editor: templates, text, shapes, images and your own works — export a real vector PDF, or high-resolution JPG/PNG.",
     },
     marketplace: { fr: "Place de marché", en: "Marketplace" },
     marketplaceDesc: {
@@ -1286,8 +1286,8 @@ export const DICTIONARY = {
     portfolioPdf: { fr: "Portfolio PDF", en: "Portfolio PDF Builder" },
     portfolioPdfEyebrow: { fr: "OUTILS · PORTFOLIO PDF", en: "TOOLS · PORTFOLIO PDF" },
     portfolioPdfDesc: {
-      fr: "Construisez un portfolio PDF imprimable à partir de vos propres œuvres. Choisissez une mise en page parmi 50 modèles originaux, modifiez la couverture, la bio et le contact, sélectionnez vos œuvres — puis exportez en PDF via la boîte d'impression du navigateur.",
-      en: "Build a printable portfolio PDF from your own artworks. Pick a layout from 50 original templates, edit the cover, bio and contact, select your works — then export as PDF through the browser print dialog.",
+      fr: "Créez affiches, publications, CV, invitations et présentations dans l’éditeur Atelier : 8 modèles originaux, textes, formes, images, calques, pages multiples — puis exportez en vrai PDF vectoriel, JPG ou PNG haute résolution.",
+      en: "Create posters, posts, CVs, invitations and presentations in the Atelier editor: 8 original templates, text, shapes, images, layers, multiple pages — then export a real vector PDF, or high-resolution JPG/PNG.",
     },
     teams: { fr: "Équipes et collaboration", en: "Teams & Collaboration" },
     teamsDesc: {

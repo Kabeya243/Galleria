@@ -1070,10 +1070,6 @@ function ArtworkFrame({
   artwork,
   selected,
   onSelect,
-  walkable,
-  onWalkTo,
-  offsetX,
-  offsetZ,
   dragged,
   editable,
   onDragStart,
@@ -1084,16 +1080,6 @@ function ArtworkFrame({
   // Second argument: Shift/Ctrl/Cmd was held — the editor adds the
   // artwork to the multi-selection instead of replacing it.
   onSelect?: (id: string, additive?: boolean) => void;
-  // In walk mode a click walks up to the artwork instead of just selecting
-  // it: stand 2.2 m in front of it, facing it. The click still selects the
-  // artwork, so its details stay visible in the inspector / info card.
-  walkable?: boolean;
-  onWalkTo?: (point: Vector3, yaw: number) => void;
-  offsetX?: number;
-  // World offset along Z of the room the artwork hangs in (0 except
-  // for the Stone Gallery halves) — the walk-to destination is in
-  // world coordinates, like the X above.
-  offsetZ?: number;
   dragged?: React.RefObject<boolean>;
   // Editor only: drag the artwork along its wall with the hand cursor,
   // and resize it from the lime handle at its bottom-right corner.
@@ -1103,7 +1089,9 @@ function ArtworkFrame({
 }) {
   const [x, y, z] = artwork.position;
   const { width, height } = artworkSize(artwork);
-  const interactive = editable && !walkable;
+  // Unified mode (the reference file): artworks stay interactive while
+  // walking — there is no separate walk mode that turns them off.
+  const interactive = editable;
   // Curatorial text (the reference room's "Texte curatorial"): the
   // artwork renders as a canvas text panel instead of an image. The
   // typeface is one of the four keys (d/s/g/m); anything else falls
@@ -1128,22 +1116,11 @@ function ArtworkFrame({
       onClick={(event) => {
         event.stopPropagation();
         if (dragged?.current) return;
-        // Walk mode keeps its single click (walk up to the artwork). In
-        // the editor a single click selects nothing — selection is a
-        // double-click, so a click never gets in the way of orbiting.
-        if (walkable && onWalkTo) {
-          const nx = Math.sin(artwork.rotation);
-          const nz = Math.cos(artwork.rotation);
-          onWalkTo(
-            new Vector3((offsetX ?? 0) + x + nx * 2.2, 0, (offsetZ ?? 0) + z + nz * 2.2),
-            Math.atan2(nx, nz),
-          );
-          onSelect?.(artwork.id);
-        }
-      }}
-      onDoubleClick={(event) => {
-        event.stopPropagation();
-        if (walkable || dragged?.current) return;
+        // A click selects the artwork. In the editor it opens the
+        // inspector; in the public viewer it opens the detail sheet
+        // (onSelect sets `selected` there). It never walks up to the
+        // artwork — walking to a piece is via the mini-plan stand
+        // point, as in the reference file.
         onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
@@ -1156,9 +1133,16 @@ function ArtworkFrame({
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        // Only a selected artwork drags: double-click it first, then drag.
-        if (!interactive || !selected) return;
+        // Press selects and starts the drag in one gesture (the
+        // reference file's pointerdown): a tap selects without moving,
+        // a drag moves the piece. If the artwork is already selected
+        // — e.g. part of a multi-selection — the selection is kept so
+        // the whole selection drags together.
+        if (!interactive) return;
         event.stopPropagation();
+        if (!selected) {
+          onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
+        }
         onDragStart?.(artwork.id, "move", event);
       }}
     >
@@ -1708,7 +1692,6 @@ function ElementMesh({
   room,
   selected,
   onSelect,
-  walkable,
   dragged,
   editable,
   onDragStart,
@@ -1721,7 +1704,6 @@ function ElementMesh({
   // Second argument: Shift/Ctrl/Cmd was held — the editor adds the
   // element to the multi-selection instead of replacing it.
   onSelect?: (id: string, additive?: boolean) => void;
-  walkable?: boolean;
   dragged?: React.RefObject<boolean>;
   editable?: boolean;
   onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
@@ -1729,7 +1711,9 @@ function ElementMesh({
   quality?: RenderQuality;
 }) {
   const { height } = roomLayouts[room.layout];
-  const interactive = editable && !walkable;
+  // Unified mode (the reference file): elements stay interactive while
+  // walking — there is no separate walk mode that turns them off.
+  const interactive = editable;
   const plane = ELEMENT_PLANES[element.type];
   const qualityCfg = RENDER_QUALITY_CONFIG[quality ?? "high"];
   // Wall-text geometry: title lines + body, laid out per the element's
@@ -1800,14 +1784,8 @@ function ElementMesh({
       onClick={(event) => {
         event.stopPropagation();
         if (dragged?.current) return;
-        // Outside the editor a single click still selects (public view).
-        // In the editor only a double-click selects.
-        if (!editable) onSelect?.(element.id);
-      }}
-      onDoubleClick={(event) => {
-        event.stopPropagation();
-        if (dragged?.current) return;
-        if (!editable) return;
+        // A click selects the element (editor inspector, or public
+        // view selection where it applies).
         onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
@@ -1820,9 +1798,15 @@ function ElementMesh({
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        // Only a selected element drags: double-click it first, then drag.
-        if (!interactive || !selected) return;
+        // Press selects and starts the drag in one gesture (the
+        // reference file's pointerdown): a tap selects without moving,
+        // a drag moves the piece. If the element is already selected
+        // the selection is kept so a multi-selection drags together.
+        if (!interactive) return;
         event.stopPropagation();
+        if (!selected) {
+          onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
+        }
         onDragStart?.(element.id, "move", event);
       }}
     >
@@ -2254,7 +2238,6 @@ function SunlightElementMesh({
   element,
   selected,
   onSelect,
-  walkable,
   dragged,
   editable,
   onDragStart,
@@ -2263,13 +2246,14 @@ function SunlightElementMesh({
   element: SunlightElement;
   selected: boolean;
   onSelect?: (id: string, additive?: boolean) => void;
-  walkable?: boolean;
   dragged?: React.RefObject<boolean>;
   editable?: boolean;
   onDragStart?: (id: string, mode: "move", event: ThreeEvent<PointerEvent>) => void;
   onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
 }) {
-  const interactive = editable && !walkable;
+  // Unified mode (the reference file): elements stay interactive while
+  // walking — there is no separate walk mode that turns them off.
+  const interactive = editable;
   const outline = SUNLIGHT_ELEMENT_OUTLINE[element.type];
   // The spotlight's target, inside the group so the beam follows it.
   const spotTarget = useMemo(() => new Object3D(), []);
@@ -2284,14 +2268,8 @@ function SunlightElementMesh({
       onClick={(event) => {
         event.stopPropagation();
         if (dragged?.current) return;
-        // Outside the editor a single click still selects (public view).
-        // In the editor only a double-click selects.
-        if (!editable) onSelect?.(element.id);
-      }}
-      onDoubleClick={(event) => {
-        event.stopPropagation();
-        if (dragged?.current) return;
-        if (!editable) return;
+        // A click selects the element (editor inspector, or public
+        // view selection where it applies).
         onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onPointerOver={(event) => {
@@ -2304,9 +2282,15 @@ function SunlightElementMesh({
         onHoverChange?.(null);
       }}
       onPointerDown={(event) => {
-        // Only a selected element drags: double-click it first, then drag.
-        if (!interactive || !selected) return;
+        // Press selects and starts the drag in one gesture (the
+        // reference file's pointerdown): a tap selects without moving,
+        // a drag moves the piece. If the element is already selected
+        // the selection is kept so a multi-selection drags together.
+        if (!interactive) return;
         event.stopPropagation();
+        if (!selected) {
+          onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
+        }
         onDragStart?.(element.id, "move", event);
       }}
     >
@@ -2622,7 +2606,6 @@ function SunlightRoom({
   onSelect,
   walkable,
   onFloorClick,
-  onWalkTo,
   dragged,
   editable,
   onDragStart,
@@ -2647,9 +2630,6 @@ function SunlightRoom({
   onSelect?: (id: string, additive?: boolean) => void;
   walkable: boolean;
   onFloorClick?: (point: Vector3) => void;
-  // Walk to an artwork: stand 2.2 m in front of it, facing it
-  // (ArtworkFrame computes the stand point from the artwork).
-  onWalkTo?: (point: Vector3, yaw: number) => void;
   dragged?: React.RefObject<boolean>;
   editable?: boolean;
   onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
@@ -2939,20 +2919,15 @@ function SunlightRoom({
           />
         </mesh>
       </group>
-      {/* Artworks — the SANAA frame system, unchanged. ArtworkFrame
-          reads the position, rotation and scale from the artwork
-          itself, and in walk mode it walks up to the artwork (2.2 m
-          in front, facing it) before selecting it. */}
+      {/* Artworks — the SANAA frame system, unchanged. A click selects
+          the artwork (editor inspector, or public detail sheet); the
+          walk up to a piece is via the mini-plan stand point. */}
       {artworks.map((artwork) => (
         <ArtworkFrame
           key={artwork.id}
           artwork={artwork}
           selected={selectedId === artwork.id}
           onSelect={onSelect}
-          walkable={walkable}
-          onWalkTo={onWalkTo}
-          offsetX={offsetX}
-          offsetZ={offsetZ}
           dragged={dragged}
           editable={editable}
           onDragStart={onDragStart}
@@ -2965,7 +2940,6 @@ function SunlightRoom({
           key={element.id}
           element={element}
           room={room}
-          walkable={walkable}
           onSelect={onSelectElement}
           selected={selectedElementId === element.id}
           editable={editable}
@@ -2982,7 +2956,6 @@ function SunlightRoom({
         <SunlightElementMesh
           key={element.id}
           element={element}
-          walkable={walkable}
           onSelect={onSelectSunlightElement}
           selected={selectedSunlightElementId === element.id}
           editable={editable}
@@ -3030,7 +3003,6 @@ function GenericRoom({
   onSelect,
   walkable,
   onFloorClick,
-  onWalkTo,
   dragged,
   editable,
   onDragStart,
@@ -3051,7 +3023,6 @@ function GenericRoom({
   onSelect?: (id: string, additive?: boolean) => void;
   walkable: boolean;
   onFloorClick?: (point: Vector3) => void;
-  onWalkTo?: (point: Vector3, yaw: number) => void;
   dragged?: React.RefObject<boolean>;
   editable?: boolean;
   onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
@@ -3119,10 +3090,6 @@ function GenericRoom({
           artwork={artwork}
           selected={selectedId === artwork.id}
           onSelect={onSelect}
-          walkable={walkable}
-          onWalkTo={onWalkTo}
-          offsetX={offsetX}
-          offsetZ={offsetZ}
           dragged={dragged}
           editable={editable}
           onDragStart={onDragStart}
@@ -3135,7 +3102,6 @@ function GenericRoom({
           key={element.id}
           element={element}
           room={room}
-          walkable={walkable}
           onSelect={onSelectElement}
           selected={selectedElementId === element.id}
           editable={editable}
@@ -3190,6 +3156,7 @@ function SunlightWalkControls({
   destination,
   lookYaw,
   dragged,
+  dragActive,
   enabled,
   onRoomChange,
   resetSignal,
@@ -3202,6 +3169,10 @@ function SunlightWalkControls({
   destination: { current: Vector3 | null };
   lookYaw: { current: number | null };
   dragged: { current: boolean };
+  // True while an artwork or element is being dragged (set by the
+  // drag handlers): the pointer then moves the piece, not the look.
+  // The drag flag is still updated so a drag never becomes a click.
+  dragActive?: { current: boolean };
   enabled: boolean;
   onRoomChange?: (roomId: string) => void;
   resetSignal?: { current: number };
@@ -3289,8 +3260,14 @@ function SunlightWalkControls({
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
       if (Math.abs(event.clientX - downX) > 6 || Math.abs(event.clientY - downY) > 6) dragged.current = true;
-      yawRef.current -= (event.clientX - lastX) * 0.004;
-      pitchRef.current = MathUtils.clamp(pitchRef.current - (event.clientY - lastY) * 0.004, -1.2, 1.2);
+      // While an artwork or element is being dragged the pointer moves
+      // the piece, not the look (the drag handler owns the pointer).
+      // lastX/lastY are still updated so the look does not jump when
+      // the drag ends.
+      if (!dragActive?.current) {
+        yawRef.current -= (event.clientX - lastX) * 0.004;
+        pitchRef.current = MathUtils.clamp(pitchRef.current - (event.clientY - lastY) * 0.004, -1.2, 1.2);
+      }
       lastX = event.clientX;
       lastY = event.clientY;
     };
@@ -3826,6 +3803,11 @@ export default function GalleryScene({
   const destination = useRef<Vector3 | null>(null);
   const lookYaw = useRef<number | null>(null);
   const dragged = useRef(false);
+  // True while an artwork or element is being dragged (set by the
+  // drag handlers, cleared on pointerup): the walk controls skip the
+  // look rotation while it is true, so the pointer moves the piece,
+  // not the camera — the reference file's dragArt.
+  const dragActiveRef = useRef(false);
   // Minimap teleport: a target in another room first switches rooms
   // (the camera re-enters at that room's entrance), then the pending
   // target is walked to once the room is active.
@@ -3873,8 +3855,9 @@ export default function GalleryScene({
   }, [activeRoomId, offsets, room.id, sceneRooms, zOffsets]);
   // Editor drag state: set on pointerdown on an artwork (or its resize
   // handle), read by DragHandler on every pointer move, cleared on
-  // pointerup. While a drag is active the orbit controls stay off, so the
-  // camera never rotates while an artwork is being moved.
+  // pointerup. While a drag is active the walk controls skip the look
+  // rotation (dragActiveRef), so the camera never turns while an
+  // artwork is being moved.
   const dragRef = useRef<ArtworkDragState | null>(null);
   // Hangable wall faces of the active room (room walls, panels and any
   // cloison/suspendu added): the drag raycasts them, so a dragged
@@ -3921,17 +3904,15 @@ export default function GalleryScene({
   // their own.
   const [sunValue, setSunValue] = useState(35);
 
-  // Every selected id (primary + multi-selection): any of them may start
-  // a drag, and the editor moves the rest of the selection with it.
-  const selectedIdSet = useMemo(
-    () => new Set([selectedId, selectedElementId, selectedSunlightElementId, ...(multiSelectedIds ?? [])].filter((id): id is string => Boolean(id))),
-    [selectedId, selectedElementId, selectedSunlightElementId, multiSelectedIds],
-  );
-
   const handleDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
-    if (!editable || walking) return;
+    if (!editable) return;
     const artwork = artworks.find((item) => item.id === id);
-    if (!artwork || !selectedIdSet.has(artwork.id)) return;
+    if (!artwork) return;
+    // The pointerdown already selected this artwork (a press selects
+    // and starts the drag in one gesture), so the selection check is
+    // not repeated here — React state is async, the press is the
+    // source of truth.
+    dragActiveRef.current = true;
     onEditStart?.();
     const { width, height } = artworkSize(artwork);
     const layout = roomLayouts[room.layout];
@@ -3978,19 +3959,21 @@ export default function GalleryScene({
   // Editor drag for elements: the drag plane follows the element type —
   // the floor plane for furniture and partition walls, the wall plane for
   // wall-mounted pieces, a horizontal plane at the element's height for
-  // the ceiling track light. Dragging only happens in the editor's orbit
-  // view, where the active room sits at offset 0, so element positions
-  // are room coordinates directly.
+  // the ceiling track light. Positions are room coordinates (the active
+  // room sits at offset 0 in the editor).
   const elementDragRef = useRef<ElementDragState | null>(null);
   const [hoveredElement, setHoveredElement] = useState<{ id: string; cursor: string } | null>(null);
 
   const handleElementDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
-    if (!editable || walking) return;
+    if (!editable) return;
     // Elements live in every room, not just the active one (walk mode
     // shows all rooms at once): find the room that holds this element.
     const ownerRoom = sceneRooms.find((sceneRoom) => (sceneRoom.elements ?? []).some((item) => item.id === id)) ?? room;
     const element = (ownerRoom.elements ?? []).find((item) => item.id === id);
-    if (!element || !selectedIdSet.has(element.id)) return;
+    if (!element) return;
+    // The pointerdown already selected this element, so the selection
+    // check is not repeated here (React state is async).
+    dragActiveRef.current = true;
     onEditStart?.();
     const layout = roomLayouts[ownerRoom.layout];
     const planeKind = ELEMENT_PLANES[element.type];
@@ -4040,17 +4023,19 @@ export default function GalleryScene({
   // floor plane (the file's moveO), y = 0, inside the file's bounds
   // (x ±10.3, z -13.3..11.3). The spotlight drags the same way — its
   // SpotLight and target are children of the group, so the beam moves
-  // with it — and it has no collision block to update. Dragging only
-  // happens in the editor's orbit view, where the active room sits at
-  // offset 0, so element positions are room coordinates directly.
+  // with it — and it has no collision block to update. Positions are
+  // room coordinates (the active room sits at offset 0 in the editor).
   const sunlightDragRef = useRef<ElementDragState | null>(null);
   const [hoveredSunlightElement, setHoveredSunlightElement] = useState<{ id: string; cursor: string } | null>(null);
 
   const handleSunlightElementDragStart = (id: string, mode: "move", event: ThreeEvent<PointerEvent>) => {
-    if (!editable || walking) return;
+    if (!editable) return;
     const ownerRoom = sceneRooms.find((sceneRoom) => (sceneRoom.sunlightElements ?? []).some((item) => item.id === id)) ?? room;
     const element = (ownerRoom.sunlightElements ?? []).find((item) => item.id === id);
-    if (!element || !selectedIdSet.has(element.id)) return;
+    if (!element) return;
+    // The pointerdown already selected this element, so the selection
+    // check is not repeated here (React state is async).
+    dragActiveRef.current = true;
     onEditStart?.();
     const position = new Vector3(element.x, 0, element.z);
     const plane = new Plane(new Vector3(0, 1, 0), 0);
@@ -4113,10 +4098,6 @@ export default function GalleryScene({
         destination.current = new Vector3(point.x, 0, point.z);
         lookYaw.current = null;
         onFloorClick?.(point);
-      } : undefined}
-      onWalkTo={walkMode ? (point, yaw) => {
-        destination.current = point;
-        lookYaw.current = yaw;
       } : undefined}
       dragged={dragged}
       quality={quality}
@@ -4197,6 +4178,7 @@ export default function GalleryScene({
           walls={dragWalls}
           onArtworkUpdate={onArtworkUpdate}
           onDragEnd={(id) => {
+            dragActiveRef.current = false;
             setIsDragging(false);
             setDragCursor(null);
             onArtworkDragEnd?.(id);
@@ -4207,6 +4189,7 @@ export default function GalleryScene({
           dragRef={elementDragRef}
           onElementUpdate={onElementUpdate}
           onDragEnd={() => {
+            dragActiveRef.current = false;
             setIsDragging(false);
             setDragCursor(null);
             onEditEnd?.();
@@ -4219,20 +4202,21 @@ export default function GalleryScene({
           dragRef={sunlightDragRef}
           onElementUpdate={onSunlightElementUpdate}
           onDragEnd={() => {
+            dragActiveRef.current = false;
             setIsDragging(false);
             setDragCursor(null);
             onEditEnd?.();
           }}
         />
-        <ElementDropHandler room={room} enabled={Boolean(editable) && !walking} onDrop={onElementDrop} />
+        <ElementDropHandler room={room} enabled={Boolean(editable)} onDrop={onElementDrop} />
         {interiorView && (
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled zCenter={room.layout === "sunlight" ? 0 : roomFloorCenterZ(room.layout)} />
         )}
         {walkMode && input ? (
           activeIsSunlight ? (
-            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
           ) : (
-            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
           )
         ) : (
           <OrbitControls

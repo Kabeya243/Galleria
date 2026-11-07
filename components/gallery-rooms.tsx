@@ -3472,11 +3472,15 @@ export function GalleryWalkControls(props: {
   destination: { current: Vector3 | null };
   lookYaw: { current: number | null };
   dragged: { current: boolean };
+  // True while an artwork or element is being dragged (set by the
+  // drag handlers): the pointer then moves the piece, not the look.
+  // The drag flag is still updated so a drag never becomes a click.
+  dragActive?: { current: boolean };
   enabled: boolean;
   onRoomChange?: (roomId: string) => void;
   resetSignal?: { current: number };
 }) {
-  const { rooms, activeRoomId, offsets, zOffsets, input, destination, lookYaw, dragged, enabled, onRoomChange, resetSignal } = props;
+  const { rooms, activeRoomId, offsets, zOffsets, input, destination, lookYaw, dragged, dragActive, enabled, onRoomChange, resetSignal } = props;
   const { camera, gl } = useThree();
   const defOf = (index: number) => galleryDef(rooms[index]?.layout ?? "sunlight");
   const startIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoomId));
@@ -3583,8 +3587,14 @@ export function GalleryWalkControls(props: {
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
       if (Math.abs(event.clientX - downX) > 6 || Math.abs(event.clientY - downY) > 6) dragged.current = true;
-      yawRef.current -= (event.clientX - lastX) * 0.004;
-      pitchRef.current = MathUtils.clamp(pitchRef.current - (event.clientY - lastY) * 0.004, -1.2, 1.2);
+      // While an artwork or element is being dragged the pointer moves
+      // the piece, not the look (the drag handler owns the pointer).
+      // lastX/lastY are still updated so the look does not jump when
+      // the drag ends.
+      if (!dragActive?.current) {
+        yawRef.current -= (event.clientX - lastX) * 0.004;
+        pitchRef.current = MathUtils.clamp(pitchRef.current - (event.clientY - lastY) * 0.004, -1.2, 1.2);
+      }
       lastX = event.clientX;
       lastY = event.clientY;
     };

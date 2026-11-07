@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   Check,
   ChevronDown,
   CircleHelp,
@@ -12,7 +14,6 @@ import {
   Expand,
   Eye,
   EyeOff,
-  Footprints,
   Grid2X2,
   Group,
   History,
@@ -22,7 +23,6 @@ import {
   Lightbulb,
   Lock,
   Minus,
-  Move,
   Paintbrush,
   PanelLeft,
   Plus,
@@ -189,12 +189,15 @@ export default function Editor({
   const [artworks, setArtworks] = useState<LayerArtwork[]>([]);
   const [rooms, setRooms] = useState<GalleryRoom[]>([]);
   const [activeRoomId, setActiveRoomId] = useState("");
-  const [walking, setWalking] = useState(false);
+  // The editor is always in first person (the reference file's single
+  // mode): walking and editing are the same view, there is no mode to
+  // enter or leave. WASD / arrows / the walk pad / a floor tap move
+  // the camera; a press on an artwork or element selects and drags it.
   const movementKeys = useRef(new Set<string>());
   // Floor-plan teleport (minimap): a target in another room first
   // switches rooms, then walks to the artwork's stand point — the
-  // same mechanism as the public viewer. Clicking a dot also enters
-  // walk mode, so the plan works from the edit view too.
+  // same mechanism as the public viewer. Clicking a dot walks there
+  // directly, since the editor is always in first person.
   const [teleportTarget, setTeleportTarget] = useState<TeleportTarget | null>(null);
   const teleportNonce = useRef(0);
   // Live camera state for the minimap: GalleryScene writes the
@@ -927,40 +930,34 @@ export default function Editor({
     setMultiSelected([]);
   }
 
-  // Floor-plan teleport (minimap): walk to the artwork's stand point,
-  // entering walk mode first when the editor is still in the edit
-  // view. The scene switches rooms itself when the artwork is in
-  // another room (see the teleport effect in GalleryScene).
+  // Floor-plan teleport (minimap): walk to the artwork's stand point.
+  // The scene switches rooms itself when the artwork is in another
+  // room (see the teleport effect in GalleryScene).
   function handleTeleport(artwork: Artwork) {
     const stand = artworkStandPoint(artwork);
     teleportNonce.current += 1;
     setTeleportTarget({ roomId: artwork.roomId, ...stand, nonce: teleportNonce.current });
-    if (!walking) setWalking(true);
   }
 
   // Floor-plan point teleport (minimap): walk to a point clicked on
-  // the plan, entering walk mode first when the editor is still in
-  // the edit view. The yaw stays null — walk there, keep the current
+  // the plan. The yaw stays null — walk there, keep the current
   // direction (the same teleportTarget path as an artwork dot).
   function handleTeleportPoint(roomId: string, x: number, z: number) {
     teleportNonce.current += 1;
     setTeleportTarget({ roomId, x, z, yaw: null, nonce: teleportNonce.current });
-    if (!walking) setWalking(true);
   }
 
   // Floor-plan room click (minimap): a room name in the plan is a
-  // teleport too, not just an edit-view switch — it enters walk mode
-  // at that room's entrance (the same teleportTarget path as an
-  // artwork dot, so the scene switches rooms and walks in). The left
-  // panel's room list stays the edit-view way to switch rooms without
-  // entering walk mode.
+  // teleport too, not just an edit-view switch — it walks to that
+  // room's entrance (the same teleportTarget path as an artwork dot,
+  // so the scene switches rooms and walks in). The left panel's room
+  // list stays the way to switch rooms without walking.
   function handleRoomTeleport(roomId: string) {
     const room = rooms.find((candidate) => candidate.id === roomId);
     if (!room) return;
     const start = galleryCameraStart(room.layout);
     teleportNonce.current += 1;
     setTeleportTarget({ roomId, x: start.x, z: start.z, yaw: start.yaw, nonce: teleportNonce.current });
-    if (!walking) setWalking(true);
   }
 
   // The Layers panel selects by ref and switches to the item's room.
@@ -1377,10 +1374,10 @@ export default function Editor({
     const number = currentSunlightElements.filter((element) => element.type === type).length;
     const camera = cameraStateRef.current;
     // The camera state is in world coordinates; the active room sits at
-    // offset 0 in the edit view (in walk mode, subtract its plan
-    // offset). A single Sunlight room has offset 0 either way.
+    // its plan offset in the shared space (a single Sunlight room has
+    // offset 0). Subtract it to get room coordinates.
     const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
-    const offsetX = walking ? (roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0) : 0;
+    const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
     let x = 0;
     let z = 0;
     if (camera) {
@@ -1487,11 +1484,10 @@ export default function Editor({
 
   // Delete key removes the whole selection (artworks and elements) —
   // the same delete the inspector button does, without reaching for the
-  // mouse. Never fires while typing in a field, and never while walking.
+  // mouse. Never fires while typing in a field.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Delete" && event.key !== "Backspace") return;
-      if (walking) return;
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
       if (selectionRefs.length > 0) {
@@ -1506,15 +1502,13 @@ export default function Editor({
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectionRefs, selectedSunlightElementId, walking]);
+  }, [selectionRefs, selectedSunlightElementId]);
 
   // Ctrl+Z / Cmd+Z undoes one real action (artworks, elements, room
   // settings); Ctrl+Shift+Z / Ctrl+Y redoes it. Never fires while typing
-  // in a field, so the browser's own text undo keeps working there, and
-  // never while walking.
+  // in a field, so the browser's own text undo keeps working there.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (walking) return;
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
       if (!event.ctrlKey && !event.metaKey) return;
@@ -1531,7 +1525,7 @@ export default function Editor({
     return () => window.removeEventListener("keydown", onKeyDown);
     // undo/redo read state through refs, so they stay correct.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walking]);
+  }, []);
 
   // Measurement readouts for the inspector: the selected artwork's
   // centre height and its distances to the neighbours on the same wall,
@@ -1887,10 +1881,9 @@ export default function Editor({
         z: -Math.cos(camera.pitch) * Math.cos(camera.yaw),
       };
       // The camera state is in world coordinates; convert to the active
-      // room's local frame (offset 0 in the edit view, the plan offset
-      // in walk mode).
+      // room's local frame (subtract the room's plan offset).
       const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
-      const offsetX = walking ? (roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0) : 0;
+      const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
       const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
       if (activeRoom.layout !== "sunlight") {
         const hit = galleryWallHit(origin, direction, activeRoom.layout);
@@ -1919,7 +1912,7 @@ export default function Editor({
       z: -Math.cos(camera.pitch) * Math.cos(camera.yaw),
     };
     const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
-    const offsetX = walking ? (roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0) : 0;
+    const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
     const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
     const hit = activeRoom.layout !== "sunlight"
       ? galleryWallHit(origin, direction, activeRoom.layout)
@@ -2636,16 +2629,12 @@ async function compressImage(file: File): Promise<File> {
               onToggleLocked={toggleLocked}
             />
           )}
-          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — double-click an artwork, an element or a wall.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — double-click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — switch on the footprints button, then WASD to move and drag to look.</li><li><strong>Floor plan</strong> — open the plan at the bottom left to jump between rooms and artworks.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. Double-click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
+          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — click an artwork, an element or a wall.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — WASD or the arrow keys to move, drag elsewhere to look, click the floor to walk to a spot.</li><li><strong>Floor plan</strong> — open the plan at the bottom left to jump between rooms and artworks.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. WASD moves you through the room; click the floor to walk to a spot. Click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
         </aside>
 
         <section className="editor-stage">
           <div className="stage-toolbar">
             <div className="tool-group">
-              {/* Phase 8: was a dead button (no onClick) — select/move is
-                  the default drag mode, so this exits walk mode back
-                  to it instead of doing nothing. */}
-              <button className="tool-button active" aria-label="Select and move" aria-pressed={!walking} title="Select and move — drag artworks to move them" onClick={() => setWalking(false)}><Move size={16} /></button>
               <button className="tool-button" aria-label="Rotate selected artwork or element" onClick={() => {
                 snapshot();
                 if (selected) updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }));
@@ -2655,8 +2644,6 @@ async function compressImage(file: File): Promise<File> {
               <span className="tool-divider" />
               <button className="tool-button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={historyRef.current.past.length === 0}><Undo2 size={16} /></button>
               <button className="tool-button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={historyRef.current.future.length === 0}><Redo2 size={16} /></button>
-              <span className="tool-divider" />
-              <button className={`tool-button${walking ? " active" : ""}`} aria-label="Walk through the rooms" title="Walk through the rooms" onClick={() => setWalking((value) => !value)}><Footprints size={16} /></button>
             </div>
             <div className="stage-room-name"><span /> {activeRoom?.name.toUpperCase() ?? "ROOM"} <ChevronDown size={13} /></div>
             <div className="tool-group">
@@ -2703,14 +2690,14 @@ async function compressImage(file: File): Promise<File> {
             </div>
           )}
           <div className="scene-wrap">
-            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
+            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode walking input={movementKeys} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
             {/* Floor plan + teleport (the same minimap as the public
                 viewer): the Sunlight room with its panels, one dot per
                 artwork and the live camera position. Clicking the plan
                 walks to that point; clicking a dot walks to that
-                artwork (entering walk mode first). Collapsible, so it
-                never covers the room when closed — the plan navigation
-                the room relies on, now in the editor too. */}
+                artwork. Collapsible, so it never covers the room when
+                closed — the plan navigation the room relies on, now in
+                the editor too. */}
             <ExhibitionMinimap
               rooms={sceneRooms}
               artworks={artworks}
@@ -2721,7 +2708,16 @@ async function compressImage(file: File): Promise<File> {
               onTeleportPoint={handleTeleportPoint}
               onRoomChange={handleRoomTeleport}
             />
-            <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>
+            {/* On-screen walk pad (the same as the public viewer):
+                hold an arrow to walk — WASD and the arrow keys work
+                the same way. */}
+            <div className="walk-pad">
+              <button aria-label="Move forward" onPointerDown={() => movementKeys.current.add("KeyW")} onPointerUp={() => movementKeys.current.delete("KeyW")} onPointerLeave={() => movementKeys.current.delete("KeyW")} onPointerCancel={() => movementKeys.current.delete("KeyW")}><ArrowUp size={15} /></button>
+              <button aria-label="Move left" onPointerDown={() => movementKeys.current.add("KeyA")} onPointerUp={() => movementKeys.current.delete("KeyA")} onPointerLeave={() => movementKeys.current.delete("KeyA")} onPointerCancel={() => movementKeys.current.delete("KeyA")}><ArrowLeft size={15} /></button>
+              <button aria-label="Move backward" onPointerDown={() => movementKeys.current.add("KeyS")} onPointerUp={() => movementKeys.current.delete("KeyS")} onPointerLeave={() => movementKeys.current.delete("KeyS")} onPointerCancel={() => movementKeys.current.delete("KeyS")}><ArrowDown size={15} /></button>
+              <button aria-label="Move right" onPointerDown={() => movementKeys.current.add("KeyD")} onPointerUp={() => movementKeys.current.delete("KeyD")} onPointerLeave={() => movementKeys.current.delete("KeyD")} onPointerCancel={() => movementKeys.current.delete("KeyD")}><ArrowRight size={15} /></button>
+            </div>
+            <div className="scene-caption"><span className="scene-caption-dot" /> CLICK AN ARTWORK TO SELECT IT <span className="caption-divider">·</span> DRAG IT TO MOVE IT <span className="caption-divider">·</span> WASD TO WALK <span className="caption-divider">·</span> CLICK THE FLOOR TO WALK THERE <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up" aria-label="Move selected artwork up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down" aria-label="Move selected artwork down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale" aria-label="Increase scale of selected artwork"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale" aria-label="Decrease scale of selected artwork"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>

@@ -28,6 +28,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "rectangle-packer": "^1.0.4",
     "sharp": "^0.35.5",
     "three": "^0.178.0",
     "zod": "^4.1.5"

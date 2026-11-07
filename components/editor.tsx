@@ -18,6 +18,7 @@ import {
   History,
   Info,
   Layers,
+  LayoutGrid,
   Lightbulb,
   Lock,
   Minus,
@@ -49,6 +50,7 @@ import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, Fram
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { dominantHex, extractPalette, HARMONY_LABELS, harmonyOf, harmonyScore, hueFamilyOf, HUE_FAMILY_LABELS, isWarmHex, suggestedFrameVariant, suggestedWallColor } from "@/lib/palette";
 import { DEFAULT_ARTWORK_DESCRIPTION, enrichWithGemini, generateCaption, isGeminiAvailable } from "@/lib/caption";
+import { composeWall, dominantFamilyOf, wallFaceLabel, type ComposeItem } from "@/lib/compose-wall";
 import type { ArtworkCaption, CaptionSource, CaptionStatus } from "@/lib/caption";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
@@ -67,6 +69,7 @@ import {
   sunlightTextArtworkSize,
   sunlightWallHit,
   sunlightWallsForPosition,
+  type HangWallFace,
   type SunlightElement,
   type SunlightElementType,
   type SunlightTextFont,
@@ -238,6 +241,14 @@ export default function Editor({
   const [curatorialText, setCuratorialText] = useState("");
   const [curatorialTextFont, setCuratorialTextFont] = useState<SunlightTextFont>("d");
   const [sunlightMessage, setSunlightMessage] = useState<string | null>(null);
+  // Automatic wall composition ("Composer ce mur", see
+  // lib/compose-wall.ts): whether the compose panel is open, which
+  // wall it targets, and the inline result message. The panel opens
+  // from the multi-selection bar; the message is shown in the panel,
+  // never a native alert.
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeWallId, setComposeWallId] = useState<string | null>(null);
+  const [composeMessage, setComposeMessage] = useState<string | null>(null);
   // 3D builder: 0.5 m floor grid (drags snap to 0.25 m while it is on),
   // measurement guides, and the stage-settings toggle (shows the room
   // settings panel — the same UI the inspector falls back to).
@@ -744,6 +755,29 @@ export default function Editor({
   }, [selectedId, selectedElementId, multiSelected]);
   const selectionRef = useRef(selectionRefs);
   useEffect(() => { selectionRef.current = selectionRefs; });
+
+  // Automatic wall composition ("Composer ce mur"): the artworks it
+  // can hang — the selected artworks of the active room, excluding
+  // curatorial texts (they are artworks in the model, but the
+  // size/dominant rules do not apply to them). Elements and artworks
+  // from other rooms are ignored.
+  const composeCandidates = useMemo(() => {
+    if (!activeRoom) return [];
+    const selectedIds = new Set(selectionRefs.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
+    return artworks.filter((artwork) => selectedIds.has(artwork.id) && artwork.roomId === activeRoom.id && !artwork.text);
+  }, [selectionRefs, artworks, activeRoom]);
+  // Every hangable face of the active room (room walls, Sunlight
+  // panels, added cloisons/suspendus), for the wall picker.
+  const composeFaces = useMemo(() => {
+    if (!activeRoom) return [];
+    return activeRoom.layout === "sunlight"
+      ? sunlightHangWalls(activeRoom.sunlightElements ?? [])
+      : galleryHangWalls(activeRoom.layout);
+  }, [activeRoom]);
+  const composeFaceOptions = useMemo(() => {
+    const elements = activeRoom?.sunlightElements ?? [];
+    return composeFaces.map((face) => ({ id: face.id, label: wallFaceLabel(face, elements) }));
+  }, [composeFaces, activeRoom]);
 
   // Selection is exclusive unless Shift/Ctrl/Cmd is held: picking an
   // artwork clears any element or wall, and vice versa, so the inspector
@@ -1859,6 +1893,74 @@ export default function Editor({
     return { position: [0, 1.55, zCenter - layout.depth / 2 + 0.28], rotation: 0 };
   }
 
+  // The hangable face the camera is looking at (the same raycast
+  // placeOnCameraWall uses, but returning the face instead of a
+  // position): the default wall for a composition, so the curator
+  // usually does not have to pick one. Null when the camera looks at
+  // no wall (or before the scene reports a camera).
+  function cameraWallFace(): HangWallFace | null {
+    const camera = cameraStateRef.current;
+    if (!camera || !activeRoom) return null;
+    const direction = {
+      x: -Math.cos(camera.pitch) * Math.sin(camera.yaw),
+      y: Math.sin(camera.pitch),
+      z: -Math.cos(camera.pitch) * Math.cos(camera.yaw),
+    };
+    const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
+    const offsetX = walking ? (roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0) : 0;
+    const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
+    const hit = activeRoom.layout !== "sunlight"
+      ? galleryWallHit(origin, direction, activeRoom.layout)
+      : sunlightWallHit(origin, direction, activeRoom.sunlightElements ?? []);
+    return hit?.face ?? null;
+  }
+
+  // Open the compose panel, defaulting to the wall the camera is
+  // looking at (or the room's first hangable wall).
+  function openComposePanel() {
+    const face = cameraWallFace() ?? composeFaces[0];
+    setComposeWallId(face?.id ?? null);
+    setComposeMessage(null);
+    setComposeOpen(true);
+  }
+
+  // Automatic wall composition ("Composer ce mur"): place the selected
+  // artworks of the active room on the chosen wall — one row at eye
+  // level when they fit, otherwise as many as the wall holds (see
+  // lib/compose-wall.ts). One snapshot, one state update: the whole
+  // composition undoes in a single step, and the curator drags
+  // anything that does not please them afterwards.
+  function applyComposition() {
+    if (!activeRoom) return;
+    const face = composeFaces.find((item) => item.id === composeWallId)
+      ?? cameraWallFace()
+      ?? composeFaces[0];
+    if (!face) {
+      setComposeMessage("This room has no hangable wall to compose on.");
+      return;
+    }
+    const items: ComposeItem[] = composeCandidates.map((artwork) => {
+      const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
+      return {
+        id: artwork.id,
+        title: artwork.title,
+        width: ((parsed?.widthCm ?? 80) / 100) * artwork.scale,
+        height: ((parsed?.heightCm ?? 100) / 100) * artwork.scale,
+        dominantFamily: dominantFamilyOf(artwork.palette),
+      };
+    });
+    const result = composeWall(items, face);
+    setComposeMessage(result.message);
+    if (result.placements.length === 0) return;
+    const byId = new Map(result.placements.map((placement) => [placement.id, placement]));
+    snapshot();
+    setArtworks((current) => current.map((artwork) => {
+      const placement = byId.get(artwork.id);
+      return placement ? { ...artwork, position: placement.position, rotation: placement.rotation } : artwork;
+    }));
+    setSaved(false);
+  }
+
   // The artist a newly created artwork or text carries: the most
   // common non-empty artist among the works already in this show, so
   // a solo show's texts and uploads carry the artist automatically
@@ -2564,7 +2666,28 @@ async function compressImage(file: File): Promise<File> {
               {selectionRefs.length > 1 && (
                 <button type="button" title="Delete all selected items" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--danger, #b3261e)", fontSize: "9px", cursor: "pointer" }} onClick={deleteSelection}><Trash2 size={12} /> Delete</button>
               )}
+              {composeCandidates.length >= 2 && (
+                <button type="button" title="Compose the selected artworks on a wall — one row at eye level, 12 cm apart" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={openComposePanel}><LayoutGrid size={12} /> Compose wall</button>
+              )}
               <span style={{ color: "var(--muted)" }}>Shift-click in 3D or in Layers adds to the selection; dragging moves all selected items together.</span>
+            </div>
+          )}
+          {composeOpen && composeCandidates.length >= 2 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderBottom: "1px solid var(--border)", background: "var(--surface-3)", color: "var(--ink)", fontSize: "9px", flexWrap: "wrap" }}>
+              <span>Compose {composeCandidates.length} artworks on</span>
+              <select
+                value={composeFaceOptions.some((option) => option.id === composeWallId) ? (composeWallId ?? "") : (composeFaceOptions[0]?.id ?? "")}
+                onChange={(event) => setComposeWallId(event.target.value || null)}
+                aria-label="Wall to compose on"
+                style={{ padding: "4px 6px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer", maxWidth: "240px" }}
+              >
+                {composeFaceOptions.map((option) => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
+              <button type="button" title="Place the selected artworks on this wall" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={applyComposition}>Compose</button>
+              <button type="button" title="Close the compose panel" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => setComposeOpen(false)}>Close</button>
+              {composeMessage && <span role="status" style={{ color: "var(--muted)", lineHeight: 1.5 }}>{composeMessage}</span>}
             </div>
           )}
           <div className="scene-wrap">

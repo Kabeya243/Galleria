@@ -534,13 +534,17 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     floorCenterZ: -6,
     background: "#dde4ec",
     environment: false,
-    cameraStart: { x: 0.5, y: 1.6, z: 8, yaw: 0, pitch: -0.03 },
+    cameraStart: { x: 3.1, y: 1.6, z: 8, yaw: 0, pitch: -0.03 },
     bounds: { minX: -14, maxX: 14, minZ: -11.5, maxZ: 12 },
     walkSpeed: 3,
     blocks: [
       rectBlock(8.6, 40, -13, 0),
       rectBlock(-40, -8.6, -13, 0),
-      rectBlock(-20, 3.15, -0.3, 0.3),
+      // The glass front at z = 0: the entrance is the open doorway
+      // x 1.6…4.6 (two panes removed, see buildVitrine) — the
+      // collision gap matches it, so the visitor can walk in and out.
+      // With the 0.4 m body margin the walkable passage is 2.3 m wide.
+      rectBlock(-20, 1.55, -0.3, 0.3),
       rectBlock(4.65, 20, -0.3, 0.3),
       rectBlock(-8.6, -7.7, -13, 0),
       rectBlock(7.7, 8.6, -13, 0),

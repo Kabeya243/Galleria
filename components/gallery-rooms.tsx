@@ -1025,16 +1025,22 @@ function buildVitrine(group: Group): void {
   const sgm = new Mesh(new PlaneGeometry(3.4, 0.85), new MeshBasicMaterial({ map: sg, transparent: true }));
   sgm.position.set(-4, 4, 0.3);
   group.add(sgm);
-  // Glass front with mullions (the door gap is x 3.2…4.6).
+  // Glass front with mullions. The entrance is an open doorway
+  // x 1.6…4.6 (two panes removed, no glass, no centre mullion): the
+  // visitor arrives in front of it (camera start x 3.1) and walks
+  // straight in. The mullions at 1.6 and 4.6 frame the doorway.
   const gm = new MeshPhysicalMaterial({ color: 0xcfe0ea, transparent: true, opacity: 0.14, roughness: 0.05, metalness: 0, side: DoubleSide });
   const xs = [-8, -4.8, -1.6, 1.6, 3.2, 4.6, 6.2, 8];
   for (let i = 0; i < xs.length - 1; i++) {
     const a = xs[i];
     const b = xs[i + 1];
-    if (a === 3.2 && b === 4.6) continue;
+    if (a >= 1.6 && b <= 4.6) continue;
     pl(b - a, 3.2, gm, (a + b) / 2, 1.6, 0);
   }
-  for (const x of xs) bx(0.06, 3.2, 0.1, gMat(0x8a8d92, 0.4, 0.7), x, 1.6, 0, false);
+  for (const x of xs) {
+    if (x === 3.2) continue;
+    bx(0.06, 3.2, 0.1, gMat(0x8a8d92, 0.4, 0.7), x, 1.6, 0, false);
+  }
   bx(16, 0.12, 0.14, gMat(0x8a8d92, 0.4, 0.7), 0, 3.2, 0, false);
   // Interior shell.
   const wm = gMat(0xf5f4f0, 0.95);

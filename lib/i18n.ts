@@ -846,6 +846,11 @@ export const DICTIONARY = {
       fr: "Impression prête pour la production : dimensions, fonds perdus, marges et contrôles honnêtes de résolution, avec PDF.",
       en: "Production-ready print: dimensions, bleed, margins and honest resolution checks, with PDFs.",
     },
+    portfolioPdf: { fr: "Portfolio PDF", en: "Portfolio PDF Builder" },
+    portfolioPdfDesc: {
+      fr: "Un portfolio PDF imprimable à partir de vos œuvres — couverture, bio, œuvres avec légendes et contact, 50 mises en page originales.",
+      en: "A printable portfolio PDF from your works — cover, bio, works with captions and contact, 50 original layouts.",
+    },
     marketplace: { fr: "Place de marché", en: "Marketplace" },
     marketplaceDesc: {
       fr: "Mettez en vente originaux, éditions et tirages — parcourez les annonces et répondez aux demandes des acheteurs.",
@@ -1055,6 +1060,11 @@ export const DICTIONARY = {
     printStudioDesc: {
       fr: "Impression prête pour la production : dimensions, fonds perdus, marges et contrôles honnêtes de résolution, avec PDF.",
       en: "Production-ready print: dimensions, bleed, margins and honest resolution checks, with PDFs.",
+    },
+    portfolioPdf: { fr: "Portfolio PDF", en: "Portfolio PDF Builder" },
+    portfolioPdfDesc: {
+      fr: "Un portfolio PDF imprimable à partir de vos œuvres — couverture, bio, œuvres avec légendes et contact, 50 mises en page originales.",
+      en: "A printable portfolio PDF from your works — cover, bio, works with captions and contact, 50 original layouts.",
     },
     marketplace: { fr: "Place de marché", en: "Marketplace" },
     marketplaceDesc: {
@@ -1272,6 +1282,12 @@ export const DICTIONARY = {
     printStudioDesc: {
       fr: "Des supports prêts pour la production à partir de vos propres œuvres — affiches, cartels, pages de catalogue et certificats. Vraies dimensions d'impression, fonds perdus et marges de sécurité, un contrôle DPI calculé à partir des pixels réels de l'image, et un PDF de production avec traits de coupe.",
       en: "Production-ready materials from your own artworks — posters, wall labels, catalogue pages and certificates. Real print dimensions, bleed and safe margins, a DPI check computed from the image's actual pixels, and a production PDF with crop marks.",
+    },
+    portfolioPdf: { fr: "Portfolio PDF", en: "Portfolio PDF Builder" },
+    portfolioPdfEyebrow: { fr: "OUTILS · PORTFOLIO PDF", en: "TOOLS · PORTFOLIO PDF" },
+    portfolioPdfDesc: {
+      fr: "Construisez un portfolio PDF imprimable à partir de vos propres œuvres. Choisissez une mise en page parmi 50 modèles originaux, modifiez la couverture, la bio et le contact, sélectionnez vos œuvres — puis exportez en PDF via la boîte d'impression du navigateur.",
+      en: "Build a printable portfolio PDF from your own artworks. Pick a layout from 50 original templates, edit the cover, bio and contact, select your works — then export as PDF through the browser print dialog.",
     },
     teams: { fr: "Équipes et collaboration", en: "Teams & Collaboration" },
     teamsDesc: {

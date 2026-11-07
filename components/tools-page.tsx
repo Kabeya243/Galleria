@@ -185,6 +185,12 @@ const TOOLS = [
     description: "printStudioDesc",
   },
   {
+    href: "/tools/portfolio-pdf",
+    icon: FileText,
+    title: "portfolioPdf",
+    description: "portfolioPdfDesc",
+  },
+  {
     href: "/marketplace",
     icon: Store,
     title: "marketplace",

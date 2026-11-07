@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Footprints, Hand, Keyboard, List, MousePointer2, Volume2, VolumeX } from "lucide-react";
+import Avatar from "@/components/avatar";
 import type { RenderQuality } from "@/lib/render-quality";
 import { RENDER_QUALITIES, recommendQuality } from "@/lib/render-quality";
 import { useT } from "@/lib/i18n";
@@ -14,6 +15,7 @@ import { useT } from "@/lib/i18n";
 export default function ExhibitionEntryScreen({
   title,
   ownerName,
+  ownerAvatarUrl,
   artworkCount,
   roomCount,
   quality,
@@ -25,6 +27,7 @@ export default function ExhibitionEntryScreen({
 }: {
   title: string;
   ownerName: string;
+  ownerAvatarUrl?: string | null;
   artworkCount: number;
   roomCount: number;
   quality: RenderQuality;
@@ -51,7 +54,10 @@ export default function ExhibitionEntryScreen({
 
   return (
     <div className="exhibition-entry" role="dialog" aria-modal="true" aria-label={title}>
-      <span className="panel-kicker">{ownerName.toUpperCase()} PRESENTS</span>
+      <div className="entry-creator">
+        <Avatar name={ownerName} avatarUrl={ownerAvatarUrl} className="entry-creator-avatar" />
+        <span className="panel-kicker">{ownerName.toUpperCase()} PRESENTS</span>
+      </div>
       <h1>{title}</h1>
       <p className="entry-meta">
         {artworkCount} {t("listView", "artworks")} · {roomCount} {t("minimap", "room").toLowerCase()}

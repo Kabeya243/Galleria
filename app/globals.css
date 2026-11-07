@@ -372,6 +372,9 @@ button { color: inherit; }
 .public-title { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .public-title span { color: #98958b; font: 500 7px "DM Sans", sans-serif; letter-spacing: .16em; }
 .public-title strong { color: var(--ink); font: 600 13px "DM Sans", sans-serif; }
+.public-creator-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--paper); display: grid; place-items: center; font: 700 10px "DM Sans", sans-serif; }
+.entry-creator { display: flex; align-items: center; gap: 10px; }
+.entry-creator-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--ink); color: var(--paper); display: grid; place-items: center; font: 700 13px "DM Sans", sans-serif; flex: none; }
 .public-info-button, .public-fullscreen { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid #d9d6ce; border-radius: 50%; color: var(--muted); background: var(--surface); cursor: pointer; }
 .public-room-label { position: absolute; left: 27px; top: 91px; display: flex; align-items: center; gap: 9px; color: #75766d; font: 500 8px "DM Sans", sans-serif; letter-spacing: .14em; }
 .public-room-label span { color: #9e7856; }

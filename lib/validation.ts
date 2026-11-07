@@ -38,6 +38,11 @@ export const registrationSchema = credentialsSchema.extend({
 
 export const profileUpdateSchema = z.object({
   name: z.string().trim().min(2).max(60),
+  // Profile extras (avatar photo URL from the R2 upload proxy, short bio).
+  // Stored in the "profile" SavedWork row, not on the User table — see
+  // lib/profile.ts. Nullable so the avatar can be removed (null clears it).
+  avatarUrl: z.string().trim().url().max(500).nullable().optional(),
+  bio: z.string().trim().max(500).nullable().optional(),
 });
 
 export const passwordChangeSchema = z.object({

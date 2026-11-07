@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, List, Maximize2, Minimize2 } from "lucide-react";
 import { useProgress } from "@react-three/drei";
+import Avatar from "@/components/avatar";
 import GalleryScene, { artworkStandPoint, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
 import ArtworkDetailPanel from "@/components/artwork-detail-panel";
 import ExhibitionMinimap from "@/components/exhibition-minimap";
@@ -76,6 +77,7 @@ export default function PublicExhibition({
     title: string;
     description: string;
     ownerName: string;
+    ownerAvatarUrl?: string | null;
     rooms: GalleryRoom[];
     artworks: Artwork[];
   };
@@ -305,7 +307,7 @@ export default function PublicExhibition({
       />}
       <header className="public-topbar">
         <Link href="/" className="public-back"><ArrowLeft size={16} /> SANAA</Link>
-        <div className="public-title"><span>{exhibition.ownerName.toUpperCase()} PRESENTS</span><strong>{exhibition.title}</strong></div>
+        <div className="public-title"><Avatar name={exhibition.ownerName} avatarUrl={exhibition.ownerAvatarUrl} className="public-creator-avatar" /><span>{exhibition.ownerName.toUpperCase()} PRESENTS</span><strong>{exhibition.title}</strong></div>
         <div className="public-topbar-actions">
           <LanguageSwitcher />
           <button className="public-info-button" aria-label={t("listView", "listView")} aria-pressed={showListView} onClick={() => setShowListView((value) => !value)}><List size={16} /></button>
@@ -333,6 +335,7 @@ export default function PublicExhibition({
         <ExhibitionEntryScreen
           title={exhibition.title}
           ownerName={exhibition.ownerName}
+          ownerAvatarUrl={exhibition.ownerAvatarUrl}
           artworkCount={exhibition.artworks.length}
           roomCount={exhibition.rooms.length}
           quality={quality}

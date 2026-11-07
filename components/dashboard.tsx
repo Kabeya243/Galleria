@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Avatar from "@/components/avatar";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import { useT } from "@/lib/i18n";
@@ -55,7 +56,7 @@ export default function Dashboard({
   topExhibitions,
   visitStats,
 }: {
-  user: { name: string; email: string; isAdmin?: boolean };
+  user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   exhibitionCount: number;
   stats: {
     exhibitions: StatDelta;
@@ -75,13 +76,6 @@ export default function Dashboard({
   const [createError, setCreateError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const firstName = user.name.split(" ")[0] || user.name;
-  const initials = user.name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
 
   const filteredExhibitions = topExhibitions.filter((exhibition) =>
     exhibition.title.toLowerCase().includes(query.trim().toLowerCase()),
@@ -172,9 +166,7 @@ export default function Dashboard({
                   aria-label={t("dashboard", "searchAria")}
                 />
               </label>
-              <span className={styles.avatar} aria-hidden="true">
-                {initials}
-              </span>
+              <Avatar name={user.name} avatarUrl={user.avatarUrl} className={styles.avatar} />
               <span className={styles.userName}>{user.name}</span>
               <button className={styles.createButton} onClick={() => setShowCreateDialog(true)} disabled={creating}>
                 <Plus size={16} /> {creating ? t("dashboard", "creating") : t("dashboard", "createExhibition")}

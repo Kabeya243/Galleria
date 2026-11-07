@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Avatar from "@/components/avatar";
 import { useT, type DictionarySection } from "@/lib/i18n";
 import {
   Archive,
@@ -160,7 +161,7 @@ export default function Sidebar({
 }: {
   // isAdmin is carried on the user object by getCurrentUser (lib/auth.ts);
   // the Admin links only render when it is true.
-  user: { name: string; email: string; isAdmin?: boolean };
+  user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   active: SidebarActive;
   exhibitionCount: number;
 }) {
@@ -261,7 +262,7 @@ export default function Sidebar({
         <div className="sidebar-spacer" />
         <div className="sidebar-bottom">
           <div className="profile-chip">
-            <div className="profile-avatar">{user.name.slice(0, 2).toUpperCase()}</div>
+            <Avatar name={user.name} avatarUrl={user.avatarUrl} className="profile-avatar" />
             <div className="profile-copy">
               <strong>{user.name}</strong>
               <span>{user.email}</span>

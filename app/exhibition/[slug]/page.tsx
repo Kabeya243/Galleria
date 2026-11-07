@@ -5,6 +5,7 @@ import PublicExhibition from "@/components/public-exhibition";
 import ExhibitionPasswordGate from "@/components/exhibition-password-gate";
 import { toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getUserProfile } from "@/lib/profile";
 import { parseGalleryRooms } from "@/lib/rooms";
 import { logVisit, readVisitContext } from "@/lib/visits";
 
@@ -169,6 +170,7 @@ export default async function PublicExhibitionPage({ params }: RouteProps) {
         title: exhibition.title,
         description: exhibition.description,
         ownerName: exhibition.owner.name,
+        ownerAvatarUrl: (await getUserProfile(exhibition.ownerId)).avatarUrl,
         rooms: parseGalleryRooms(exhibition.rooms),
         artworks: exhibition.artworks.map(toClientArtwork),
       }}

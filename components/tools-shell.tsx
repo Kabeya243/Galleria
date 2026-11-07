@@ -21,7 +21,7 @@ export default function ToolsShell({
   eyebrowOverride,
   children,
 }: {
-  user: { id: string; name: string; email: string; isAdmin?: boolean };
+  user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   exhibitionCount: number;
   title: DictionarySection<"toolpages">;
   eyebrow?: DictionarySection<"toolpages">;

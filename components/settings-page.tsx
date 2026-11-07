@@ -1,24 +1,49 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Monitor, Moon, Sun } from "lucide-react";
+import Avatar from "@/components/avatar";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import LanguageSwitcher from "@/components/language-switcher";
 import { useLocale, useT } from "@/lib/i18n";
 import { applyTheme, getStoredTheme, type ThemeChoice } from "@/lib/theme";
 
+// Square-crop an image file to a 512 px JPEG (centre crop) in the browser,
+// so the avatar upload is small and always square before it reaches R2.
+async function squareCropToJpeg(file: File, size = 512): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const sx = Math.floor((bitmap.width - side) / 2);
+  const sy = Math.floor((bitmap.height - side) / 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not prepare this image.");
+  ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, size, size);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) throw new Error("Could not prepare this image.");
+  return new File([blob], "avatar.jpg", { type: "image/jpeg" });
+}
+
 export default function SettingsPage({
   user,
 }: {
-  user: { name: string; email: string; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
+  user: { name: string; email: string; avatarUrl: string | null; bio: string | null; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
 }) {
   const router = useRouter();
   const t = useT();
   const { locale } = useLocale();
   const [theme, setTheme] = useState<ThemeChoice>("system");
   const [name, setName] = useState(user.name);
+  const [bio, setBio] = useState(user.bio ?? "");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatarUrl);
+  const [avatarNote, setAvatarNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [profileNote, setProfileNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -53,7 +78,7 @@ export default function SettingsPage({
       const response = await fetch("/api/settings/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, bio: bio.trim() === "" ? null : bio.trim() }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? t("settings", "couldNotUpdateProfile"));
@@ -66,6 +91,62 @@ export default function SettingsPage({
       });
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function uploadAvatar(file: File) {
+    setAvatarNote(null);
+    setUploadingAvatar(true);
+    try {
+      const cropped = await squareCropToJpeg(file);
+      const form = new FormData();
+      form.append("file", cropped);
+      const up = await fetch("/api/uploads/r2", { method: "POST", body: form });
+      const upJson = await up.json();
+      if (!up.ok) throw new Error(upJson.error ?? t("settings", "couldNotUploadAvatar"));
+      const url = upJson.url as string;
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, avatarUrl: url }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error ?? t("settings", "couldNotUpdateProfile"));
+      setAvatarUrl(url);
+      setAvatarNote({ ok: true, text: t("settings", "avatarSaved") });
+      router.refresh();
+    } catch (error) {
+      setAvatarNote({
+        ok: false,
+        text: error instanceof Error ? error.message : t("settings", "couldNotUploadAvatar"),
+      });
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarNote(null);
+    setUploadingAvatar(true);
+    try {
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, avatarUrl: null }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error ?? t("settings", "couldNotUpdateProfile"));
+      setAvatarUrl(null);
+      setAvatarNote({ ok: true, text: t("settings", "avatarRemoved") });
+      router.refresh();
+    } catch (error) {
+      setAvatarNote({
+        ok: false,
+        text: error instanceof Error ? error.message : t("settings", "couldNotUpdateProfile"),
+      });
+    } finally {
+      setUploadingAvatar(false);
     }
   }
 
@@ -186,13 +267,43 @@ export default function SettingsPage({
             <h2>{t("settings", "profile")}</h2>
             <p>{t("settings", "profileDesc")}</p>
             <div className="settings-profile-head">
-              <div className="settings-avatar">{user.name.slice(0, 2).toUpperCase()}</div>
+              <Avatar name={user.name} avatarUrl={avatarUrl} className="settings-avatar" />
               <div>
                 <strong>{user.name}</strong>
                 <span>
                   {t("settings", "memberSince")} {memberSince} · {user.exhibitionCount}{" "}
                   {user.exhibitionCount === 1 ? t("settings", "exhibition") : t("settings", "exhibitions")}
                 </span>
+                <span className="settings-row" style={{ marginTop: 8 }}>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/avif"
+                    hidden
+                    aria-label={t("settings", "uploadAvatar")}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void uploadAvatar(file);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="settings-save"
+                    disabled={uploadingAvatar}
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    {uploadingAvatar ? t("settings", "uploading") : t("settings", "uploadAvatar")}
+                  </button>
+                  {avatarUrl && (
+                    <button type="button" className="settings-delete" disabled={uploadingAvatar} onClick={() => void removeAvatar()}>
+                      {t("settings", "removeAvatar")}
+                    </button>
+                  )}
+                  {avatarNote && (
+                    <span className={`settings-note ${avatarNote.ok ? "ok" : "err"}`}>{avatarNote.text}</span>
+                  )}
+                </span>
+                <small>{t("settings", "avatarHint")}</small>
               </div>
             </div>
             <form onSubmit={saveProfile}>
@@ -206,6 +317,18 @@ export default function SettingsPage({
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
+              </div>
+              <div className="settings-field">
+                <label htmlFor="settings-bio">{t("settings", "yourBio")}</label>
+                <textarea
+                  id="settings-bio"
+                  rows={3}
+                  maxLength={500}
+                  value={bio}
+                  onChange={(event) => setBio(event.target.value)}
+                  placeholder={t("settings", "bioPlaceholder")}
+                />
+                <small>{t("settings", "bioHint")}</small>
               </div>
               <div className="settings-field">
                 <label htmlFor="settings-email">{t("settings", "email")}</label>

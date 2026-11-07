@@ -17,6 +17,8 @@ export default async function SettingsRoute() {
       user={{
         name: user.name,
         email: user.email,
+        avatarUrl: user.avatarUrl ?? null,
+        bio: user.bio ?? null,
         createdAt: full?.createdAt.toISOString() ?? null,
         exhibitionCount,
       }}

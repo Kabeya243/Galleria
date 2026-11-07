@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { getUserProfile } from "@/lib/profile";
 import { parsePalette } from "@/lib/palette";
 
 const COOKIE_NAME = "sanaa_session";
@@ -66,14 +67,20 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, name: true, role: true, country: true },
-  });
+  const [user, profile] = await Promise.all([
+    db.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, role: true, country: true },
+    }),
+    // Profile extras (avatar photo + bio) live in a SavedWork row, not on
+    // the User table — see lib/profile.ts. One indexed query, merged here
+    // so every page sees user.avatarUrl / user.bio.
+    getUserProfile(userId),
+  ]);
   if (!user) return null;
   // Carried on the user object so every page can show the Admin link
   // without threading a separate prop through the whole app.
-  return { ...user, isAdmin: isAdminEmail(user.email) };
+  return { ...user, avatarUrl: profile.avatarUrl, bio: profile.bio, isAdmin: isAdminEmail(user.email) };
 }
 
 export function toClientArtwork(artwork: {

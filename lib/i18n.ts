@@ -424,6 +424,28 @@ export const DICTIONARY = {
     saveChanges: { fr: "Enregistrer les modifications", en: "Save changes" },
     saving: { fr: "Enregistrement…", en: "Saving…" },
     saved: { fr: "Enregistré.", en: "Saved." },
+    uploadAvatar: { fr: "Mettre une photo de profil", en: "Upload a profile photo" },
+    uploading: { fr: "Envoi…", en: "Uploading…" },
+    removeAvatar: { fr: "Retirer la photo", en: "Remove photo" },
+    avatarSaved: { fr: "Photo de profil enregistrée.", en: "Profile photo saved." },
+    avatarRemoved: { fr: "Photo de profil retirée.", en: "Profile photo removed." },
+    couldNotUploadAvatar: {
+      fr: "Impossible de mettre en ligne cette photo.",
+      en: "Could not upload this photo.",
+    },
+    avatarHint: {
+      fr: "JPG, PNG ou WebP. La photo est recadrée en carré.",
+      en: "JPG, PNG or WebP. The photo is cropped square.",
+    },
+    yourBio: { fr: "Votre biographie", en: "Your biography" },
+    bioPlaceholder: {
+      fr: "Quelques lignes sur vous et votre travail…",
+      en: "A few lines about you and your work…",
+    },
+    bioHint: {
+      fr: "Affichée sur votre page publique « Mes travaux » et sur votre site d'artiste.",
+      en: "Shown on your public “My works” page and on your artist site.",
+    },
     couldNotUpdateProfile: {
       fr: "Impossible de mettre à jour votre profil pour le moment.",
       en: "Could not update your profile right now.",

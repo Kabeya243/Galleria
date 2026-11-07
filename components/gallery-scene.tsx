@@ -1124,22 +1124,20 @@ function ArtworkFrame({
       scale={artwork.scale}
       onClick={(event) => {
         if (dragged?.current) return;
-        // In the editor a single click walks to the point: the click
-        // passes through to the floor (no stopPropagation, no
-        // selection) — selection is by double-click. In the public
-        // viewer a click still opens the detail sheet (onSelect sets
-        // `selected` there). It never walks up to the artwork — walking
-        // to a piece is via the mini-plan stand point, as in the
-        // reference file.
-        if (interactive) return;
+        // A click on an artwork selects it — and ONLY selects it. The
+        // event stops here, so it never reaches the floor plane (or
+        // wall) behind the piece and never sets a walk destination:
+        // the camera does not move. In the public viewer the same
+        // click opens the detail sheet (onSelect sets `selected`
+        // there). Walking up to a piece is via the mini-plan stand
+        // point, as in the reference file.
         event.stopPropagation();
         onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
       }}
       onDoubleClick={(event) => {
-        // Editor selection is by double-click (or double-tap): a
-        // double-click within 350 ms and 28 px selects the artwork
-        // (additive with Shift/Ctrl/Cmd). The public viewer keeps its
-        // single-click sheet.
+        // Double-click (or double-tap) also selects, additive with
+        // Shift/Ctrl/Cmd — a second click after the single-click
+        // selection above, so it re-selects the same piece.
         if (!interactive) return;
         event.stopPropagation();
         if (dragged?.current) return;
@@ -1148,7 +1146,11 @@ function ArtworkFrame({
       onPointerOver={(event) => {
         if (!interactive) return;
         event.stopPropagation();
-        onHoverChange?.({ id: artwork.id, cursor: selected ? "grab" : "default" });
+        // Hovering an artwork shows it is selectable: the pointer
+        // (hand) on an unselected piece, the grab hand once it is
+        // selected and draggable. The wrapper div takes this cursor
+        // (GalleryScene, hoveredArtwork).
+        onHoverChange?.({ id: artwork.id, cursor: selected ? "grab" : "pointer" });
       }}
       onPointerOut={() => {
         if (!interactive) return;
@@ -1156,12 +1158,12 @@ function ArtworkFrame({
       }}
       onPointerDown={(event) => {
         // A drag starts only from an already-selected piece (the
-        // editor's double-click selection): pressing an unselected
-        // piece does nothing, so a click on it walks to the point
-        // instead of moving it. Holding Shift/Ctrl/Cmd adds the piece
-        // to the selection first, then drags the whole selection
-        // together. If the artwork is already selected the selection
-        // is kept so a multi-selection drags together.
+        // editor's click selection): pressing an unselected piece
+        // does nothing, so a click on it selects it instead of moving
+        // it. Holding Shift/Ctrl/Cmd adds the piece to the selection
+        // first, then drags the whole selection together. If the artwork
+        // is already selected the selection is kept so a
+        // multi-selection drags together.
         if (!interactive) return;
         event.stopPropagation();
         if (!selected) {
@@ -4137,6 +4139,16 @@ export default function GalleryScene({
   // their own.
   const [sunValue, setSunValue] = useState(35);
 
+  // Selecting an artwork from the 3D scene stops any walk in progress:
+  // a click that selects must not also move the camera, so a destination
+  // set by an earlier floor click is cancelled and the look target is
+  // released. The rooms call this instead of onSelect directly.
+  const handleArtworkSelect = useCallback((id: string, additive?: boolean) => {
+    destination.current = null;
+    lookYaw.current = null;
+    onSelect?.(id, additive);
+  }, [onSelect]);
+
   const handleDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
     if (!editable) return;
     const artwork = artworks.find((item) => item.id === id);
@@ -4329,7 +4341,7 @@ export default function GalleryScene({
       offsetZ={artworkZOffsets[index]}
       artworks={artworks.filter((artwork) => artwork.roomId === sceneRoom.id)}
       selectedId={selectedId}
-      onSelect={onSelect}
+      onSelect={handleArtworkSelect}
       walkable={walkMode && walking === true}
       editable={editable}
       onDragStart={handleDragStart}

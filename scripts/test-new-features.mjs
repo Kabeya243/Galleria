@@ -1,6 +1,7 @@
 // Feature tests for the SANAA extension mission (parts 1–5):
 // profile photos, works wall, website builder (51 templates), portfolio
-// PDF builder (50 templates) and the admin test report itself.
+// PDF builder (Atelier editor, 8 templates, server-side export) and the
+// admin test report itself.
 //
 // Run: node scripts/test-new-features.mjs [--build]
 //   --build  also runs `npm run build` (slow, ~3 min) and records it.
@@ -15,7 +16,7 @@
 // "manual" checks in the report).
 
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -122,38 +123,53 @@ check("Website builder", "site-render", "Preview renders hero styles + radius; b
 });
 
 // ---------- Part 4 — Portfolio PDF, 50 templates ----------
-check("Portfolio PDF", "pdf-count", "50 PDF templates, unique ids, 10 families", () => {
-  const src = read("lib/pdf-templates.ts");
-  // Template entries are one-line objects: id, label, family — the family
-  // list entries have no `family:` field, so this matches templates only.
-  const tplIds = [...src.matchAll(/id: "([a-z0-9-]+)", label: "[^"]+", family: "/g)].map((m) => m[1]);
-  assert(tplIds.length === 50, `expected 50 templates, found ${tplIds.length}`);
-  assert(new Set(tplIds).size === 50, "duplicate template ids");
-  const fams = [...src.matchAll(/family: "([a-z-]+)"/g)].map((m) => m[1]);
-  assert(new Set(fams).size === 10, `expected 10 families, found ${new Set(fams).size}`);
-  return `50 templates, 10 families (${[...new Set(fams)].join(", ")})`;
+check("Portfolio PDF", "atelier-templates", "8 Atelier templates, unique ids, old 50 deleted", () => {
+  const dir = join(ROOT, "lib", "atelier-templates");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
+  const ids = files.map((f) => JSON.parse(read(`lib/atelier-templates/${f}`)).id);
+  assert(ids.length === 8, `expected 8 templates, found ${ids.length}`);
+  assert(new Set(ids).size === 8, "duplicate template ids");
+  assert(!exists("lib/pdf-templates.ts"), "old 50-template file still present");
+  return `8 templates (${ids.join(", ")})`;
 });
-check("Portfolio PDF", "pdf-files", "Print renderer, builder, route, tools entry, i18n", () => {
-  for (const f of ["components/portfolio-print.tsx", "components/portfolio-pdf-builder.tsx", "app/tools/portfolio-pdf/page.tsx"]) {
+check("Portfolio PDF", "atelier-files", "Atelier editor, export function, API routes, tools entry, i18n", () => {
+  for (const f of [
+    "components/atelier-editor.tsx",
+    "components/atelier-editor.css",
+    "public/atelier/editor.js",
+    "public/vendor/fabric.min.js",
+    "api/atelier/export.py",
+    "api/requirements.txt",
+    "app/api/atelier/templates/route.ts",
+    "app/api/atelier/projects/route.ts",
+    "app/api/atelier/uploads/route.ts",
+    "app/api/atelier/file/[...key]/route.ts",
+    "app/tools/portfolio-pdf/page.tsx",
+  ]) {
     assert(exists(f), `missing ${f}`);
   }
-  const print = read("components/portfolio-print.tsx");
-  assert(print.includes("@media print"), "portfolio-print missing print stylesheet");
-  assert(read("components/portfolio-pdf-builder.tsx").includes("window.print()"), "builder missing window.print() export");
+  assert(!exists("components/portfolio-pdf-builder.tsx"), "old builder still present");
+  assert(!exists("components/portfolio-print.tsx"), "old print renderer still present");
+  assert(!read("public/atelier/editor.js").includes("window.print()"), "editor still uses window.print()");
+  assert(!read("public/atelier/editor.js").includes("window.alert("), "editor uses window.alert");
+  assert(read("api/atelier/export.py").includes("def export_pdf"), "export function missing PDF renderer");
   assert(read("components/tools-page.tsx").includes("/tools/portfolio-pdf"), "tools list missing portfolio-pdf entry");
   assert(read("lib/i18n.ts").includes("portfolioPdf:"), "i18n missing portfolioPdf keys");
   assert(read("lib/tool-use.ts").includes('"portfolio-pdf"'), "tool-use missing portfolio-pdf slug");
-  return "print renderer + builder + route + tools entry + EN/FR keys + tool slug";
+  return "editor + local Fabric.js + Python export + R2 API routes + tools entry + EN/FR keys + tool slug";
 });
 
 // ---------- Cross-cutting ----------
 check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [
-    "lib/profile.ts", "lib/works.ts", "lib/site-templates.ts", "lib/pdf-templates.ts",
+    "lib/profile.ts", "lib/works.ts", "lib/site-templates.ts", "lib/atelier-templates.ts",
+    "lib/atelier-validate.ts", "lib/atelier-store.ts",
     "components/avatar.tsx", "components/works-page.tsx", "components/website-builder.tsx",
-    "components/site-preview.tsx", "components/portfolio-print.tsx", "components/portfolio-pdf-builder.tsx",
+    "components/site-preview.tsx", "components/atelier-editor.tsx",
     "components/settings-page.tsx", "components/dashboard.tsx",
     "app/works/[id]/page.tsx", "app/api/work-kinds/route.ts", "app/tools/portfolio-pdf/page.tsx",
+    "app/api/atelier/templates/route.ts", "app/api/atelier/projects/route.ts",
+    "app/api/atelier/uploads/route.ts", "app/api/atelier/file/[...key]/route.ts",
   ];
   const offenders = files.filter((f) => exists(f) && /window\.alert\s*\(/.test(read(f)));
   assert(offenders.length === 0, `window.alert in: ${offenders.join(", ")}`);
@@ -291,7 +307,7 @@ await smoke();
 skip("Manual (browser)", "manual-avatar", "Upload a profile photo, see it on dashboard + public creator card", "needs a live browser session (subagent cannot drive the browser)");
 skip("Manual (browser)", "manual-works", "Tag a work's kind on /works/[id] as the owner, filter the wall", "needs a live browser session");
 skip("Manual (browser)", "manual-site", "Pick a site template, edit, preview, publish a site", "needs a live browser session");
-skip("Manual (browser)", "manual-pdf", "Pick a PDF template, export via print dialog, save the portfolio", "needs a live browser session");
+skip("Manual (browser)", "manual-pdf", "Open an Atelier template, edit, save, export a real PDF", "needs a live browser session (subagent cannot drive the browser)");
 
 // ---------- Report ----------
 let commit = "unknown";

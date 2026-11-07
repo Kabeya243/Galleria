@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-07T15:16:05.080Z",
-  "commit": "8f56cfe",
+  "generatedAt": "2026-11-07T23:04:18.500Z",
+  "commit": "d8778b5",
   "summary": {
     "total": 22,
-    "passed": 16,
+    "passed": 15,
     "failed": 0,
-    "skipped": 6
+    "skipped": 7
   },
   "checks": [
     {
@@ -66,24 +66,24 @@
     },
     {
       "feature": "Portfolio PDF",
-      "id": "pdf-count",
-      "name": "50 PDF templates, unique ids, 10 families",
+      "id": "atelier-templates",
+      "name": "8 Atelier templates, unique ids, old 50 deleted",
       "status": "pass",
-      "detail": "50 templates, 10 families (classic, minimal, dark, editorial, earth, botanical, ocean, sunset, bold, pastel)"
+      "detail": "8 templates (a4-poster, community-flyer, creative-resume, garden-invitation, instagram-post, instagram-story, makers-business-card, studio-presentation)"
     },
     {
       "feature": "Portfolio PDF",
-      "id": "pdf-files",
-      "name": "Print renderer, builder, route, tools entry, i18n",
+      "id": "atelier-files",
+      "name": "Atelier editor, export function, API routes, tools entry, i18n",
       "status": "pass",
-      "detail": "print renderer + builder + route + tools entry + EN/FR keys + tool slug"
+      "detail": "editor + local Fabric.js + Python export + R2 API routes + tools entry + EN/FR keys + tool slug"
     },
     {
       "feature": "Code quality",
       "id": "no-alert",
       "name": "No window.alert in the new code",
       "status": "pass",
-      "detail": "15 new/changed files checked"
+      "detail": "20 new/changed files checked"
     },
     {
       "feature": "Code quality",
@@ -96,8 +96,8 @@
       "feature": "Code quality",
       "id": "build",
       "name": "Production build passes (npm run build)",
-      "status": "pass",
-      "detail": "npm run build exit 0"
+      "status": "skip",
+      "detail": "not run — pass --build to include it"
     },
     {
       "feature": "Smoke tests",
@@ -158,9 +158,9 @@
     {
       "feature": "Manual (browser)",
       "id": "manual-pdf",
-      "name": "Pick a PDF template, export via print dialog, save the portfolio",
+      "name": "Open an Atelier template, edit, save, export a real PDF",
       "status": "skip",
-      "detail": "needs a live browser session"
+      "detail": "needs a live browser session (subagent cannot drive the browser)"
     }
   ]
 }

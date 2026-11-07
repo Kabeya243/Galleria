@@ -7,6 +7,9 @@ import GalleryScene from "@/components/gallery-scene";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import { ceilingTextures, createGalleryRoom, floorTextures, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, type RoomCategory, type RoomLayout } from "@/lib/rooms";
+import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
+import { useLocale } from "@/lib/i18n";
+import { useGalleryNames } from "@/lib/use-gallery-names";
 import type { ThumbnailKey } from "@/lib/gallery-defs";
 
 export type GalleryPresetCard = {
@@ -333,7 +336,7 @@ function paintThumbnailOverlay(ctx: CanvasRenderingContext2D, thumbnail: Thumbna
     ctx.fillStyle = "#1a1a1a";
     ctx.font = "bold 15px Helvetica, Arial, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("TITRE DE L'EXPOSITION", 60, wallTop + 118);
+    ctx.fillText("EXHIBITION TITLE", 60, wallTop + 118);
     ctx.fillStyle = "#3e4044";
     ctx.fillRect(0, floorTop, w, h - floorTop);
     return;
@@ -785,13 +788,29 @@ function paintThumbnailOverlay(ctx: CanvasRenderingContext2D, thumbnail: Thumbna
 
 export default function GalleriesPage({
   rooms,
+  galleryNames,
   user,
   ownExhibitionCount,
 }: {
   rooms: GalleryPresetCard[];
+  galleryNames: GalleryNamesMap;
   user: { id: string; name: string; email: string; isAdmin?: boolean } | null;
   ownExhibitionCount: number;
 }) {
+  const { locale } = useLocale();
+  // Gallery names in the visitor's language (admin renames included):
+  // the server map seeds the first paint, the hook refreshes it.
+  const nameOverrides = useGalleryNames(galleryNames);
+  // Rooms with their display name for the current locale — every label
+  // on this page (cards, search, detail, favourites) reads this list.
+  const displayRooms = useMemo(
+    () =>
+      rooms.map((room) => ({
+        ...room,
+        label: galleryLabel(room.key, locale, nameOverrides),
+      })),
+    [rooms, locale, nameOverrides],
+  );
   const [selected, setSelected] = useState<RoomLayout>("sunlight");
   const [opening, setOpening] = useState<RoomLayout | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
@@ -831,16 +850,16 @@ export default function GalleriesPage({
 
   const filteredRooms = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return rooms.filter((room) => {
+    return displayRooms.filter((room) => {
       if (category === "Favourites" && !favourites.includes(room.key)) return false;
       if (category !== "All" && category !== "Favourites" && room.category !== category) return false;
       if (needle && ![room.label, room.description, room.category].join(" ").toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [rooms, query, category, favourites]);
+  }, [displayRooms, query, category, favourites]);
   const movementKeys = useRef(new Set<string>());
   const viewerRef = useRef<HTMLDivElement>(null);
-  const selectedRoom = rooms.find((room) => room.key === selected) ?? rooms[0];
+  const selectedRoom = displayRooms.find((room) => room.key === selected) ?? displayRooms[0];
   const viewerRoom = useMemo(() => createGalleryRoom(0, selected), [selected]);
 
   function viewIn3D(layout: RoomLayout) {
@@ -865,7 +884,7 @@ export default function GalleriesPage({
         headers: { "Content-Type": "application/json" },
         // The title is mandatory (feature 7): the room's own label names
         // the show.
-        body: JSON.stringify({ title: roomLayouts[layout].label, model }),
+        body: JSON.stringify({ title: galleryLabel(layout, locale, nameOverrides), model }),
       });
       if (createResponse.status === 401) {
         window.location.assign("/login");
@@ -887,9 +906,9 @@ export default function GalleriesPage({
   const galleriesContent = (
     <>
       <section className="galleries-intro">
-        <p className="eyebrow">{rooms.length} ROOMS · ONE COLLECTION</p>
+        <p className="eyebrow">{displayRooms.length} ROOMS · ONE COLLECTION</p>
         <h1>Galleries<span className="title-period">.</span></h1>
-        <p>{rooms.length} gallery rooms, each with its own light, walls and floor. Pick one to walk through, or open it in the editor and hang your work.</p>
+        <p>{displayRooms.length} gallery rooms, each with its own light, walls and floor. Pick one to walk through, or open it in the editor and hang your work.</p>
       </section>
 
       {openError && (
@@ -946,7 +965,7 @@ export default function GalleriesPage({
           <div role="group" aria-label="Filter by category" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(["All", "Favourites", ...roomCategories] as const).map((chip) => {
               const active = category === chip;
-              const count = chip === "All" ? rooms.length : chip === "Favourites" ? favourites.length : rooms.filter((room) => room.category === chip).length;
+              const count = chip === "All" ? displayRooms.length : chip === "Favourites" ? favourites.length : displayRooms.filter((room) => room.category === chip).length;
               return (
                 <button
                   key={chip}
@@ -972,9 +991,9 @@ export default function GalleriesPage({
           </div>
         </div>
         <p style={{ margin: "10px 0 0", color: "var(--muted)", fontSize: 11 }}>
-          {filteredRooms.length === rooms.length
-            ? `Showing all ${rooms.length} rooms.`
-            : `Showing ${filteredRooms.length} of ${rooms.length} rooms.`}{" "}
+          {filteredRooms.length === displayRooms.length
+            ? `Showing all ${displayRooms.length} rooms.`
+            : `Showing ${filteredRooms.length} of ${displayRooms.length} rooms.`}{" "}
           Favourites are saved in this browser only — they do not sync to your account yet.
         </p>
       </section>

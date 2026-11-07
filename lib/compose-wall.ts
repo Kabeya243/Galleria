@@ -1,4 +1,4 @@
-// Automatic wall composition ("Composer ce mur") — rectangle-packer
+// Automatic wall composition ("Compose wall") — rectangle-packer
 // (Guillotine bin packing) + curatorial rules, projected onto a 3D
 // wall. Pure functions (no React): the editor builds ComposeItems
 // from its selected artworks and applies the returned placements in a
@@ -108,7 +108,7 @@ export function wallFaceLabel(face: HangWallFace, elements?: SunlightElement[]):
     return `${name} · faces ${dir} · ${len} m`;
   }
   // Sunlight added walls: "{elementId}+" / "{elementId}-" — name the
-  // element (e.g. "Mur au milieu (cloison) 1").
+  // element (e.g. "Middle wall (partition) 1").
   if (elements) {
     const elementId = base.replace(/[+-]$/, "");
     const element = elements.find((item) => item.id === elementId);

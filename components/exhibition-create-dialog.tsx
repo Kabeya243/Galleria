@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ROOM_MODELS, roomLayouts, type RoomModelId } from "@/lib/rooms";
-import { useT } from "@/lib/i18n";
+import { ROOM_MODELS, type RoomModelId } from "@/lib/rooms";
+import { galleryLabel } from "@/lib/gallery-names";
+import { useLocale, useT } from "@/lib/i18n";
+import { useGalleryNames } from "@/lib/use-gallery-names";
 import { useHiddenRoomLayouts } from "@/lib/use-hidden-room-layouts";
 
 // Create-exhibition dialog (feature 7): the title is mandatory and the
@@ -18,6 +20,9 @@ export default function ExhibitionCreateDialog({
   onCreate: (title: string, model: RoomModelId) => Promise<void>;
 }) {
   const t = useT();
+  const { locale } = useLocale();
+  // Gallery names in the visitor's language (admin renames included).
+  const nameOverrides = useGalleryNames();
   const [title, setTitle] = useState("");
   const [model, setModel] = useState<RoomModelId>("sunlight");
   const [creating, setCreating] = useState(false);
@@ -33,27 +38,27 @@ export default function ExhibitionCreateDialog({
     : (visibleModels[0]?.id ?? "sunlight");
 
   const modelText: Record<RoomModelId, { name: string; desc: string }> = {
-    sunlight: { name: t("create", "modelSunlight"), desc: t("create", "modelSunlightDesc") },
-    serpentine: { name: t("create", "modelSerpentine"), desc: t("create", "modelSerpentineDesc") },
-    vitrine: { name: t("create", "modelVitrine"), desc: t("create", "modelVitrineDesc") },
-    loft: { name: t("create", "modelLoft"), desc: t("create", "modelLoftDesc") },
-    halle: { name: t("create", "modelHalle"), desc: t("create", "modelHalleDesc") },
-    arche: { name: t("create", "modelArche"), desc: t("create", "modelArcheDesc") },
-    musee: { name: t("create", "modelMusee"), desc: t("create", "modelMuseeDesc") },
-    "claire-voie": { name: t("create", "modelClaireVoie"), desc: t("create", "modelClaireVoieDesc") },
-    parquet: { name: t("create", "modelParquet"), desc: t("create", "modelParquetDesc") },
-    verriere: { name: t("create", "modelVerriere"), desc: t("create", "modelVerriereDesc") },
-    pavillon: { name: t("create", "modelPavillon"), desc: t("create", "modelPavillonDesc") },
-    classique: { name: t("create", "modelClassique"), desc: t("create", "modelClassiqueDesc") },
-    "atrium-blanc": { name: t("create", "modelAtriumBlanc"), desc: t("create", "modelAtriumBlancDesc") },
-    patio: { name: t("create", "modelPatio"), desc: t("create", "modelPatioDesc") },
-    escalier: { name: t("create", "modelEscalier"), desc: t("create", "modelEscalierDesc") },
-    "salles-vertes": { name: t("create", "modelSallesVertes"), desc: t("create", "modelSallesVertesDesc") },
-    "couloir-sombre": { name: t("create", "modelCouloirSombre"), desc: t("create", "modelCouloirSombreDesc") },
-    "couloir-dore": { name: t("create", "modelCouloirDore"), desc: t("create", "modelCouloirDoreDesc") },
-    voutes: { name: t("create", "modelVoutes"), desc: t("create", "modelVoutesDesc") },
-    courbes: { name: t("create", "modelCourbes"), desc: t("create", "modelCourbesDesc") },
-    "atrium-lattes": { name: t("create", "modelAtriumLattes"), desc: t("create", "modelAtriumLattesDesc") },
+    sunlight: { name: galleryLabel("sunlight", locale, nameOverrides), desc: t("create", "modelSunlightDesc") },
+    serpentine: { name: galleryLabel("serpentine", locale, nameOverrides), desc: t("create", "modelSerpentineDesc") },
+    vitrine: { name: galleryLabel("vitrine", locale, nameOverrides), desc: t("create", "modelVitrineDesc") },
+    loft: { name: galleryLabel("loft", locale, nameOverrides), desc: t("create", "modelLoftDesc") },
+    halle: { name: galleryLabel("halle", locale, nameOverrides), desc: t("create", "modelHalleDesc") },
+    arche: { name: galleryLabel("arche", locale, nameOverrides), desc: t("create", "modelArcheDesc") },
+    musee: { name: galleryLabel("musee", locale, nameOverrides), desc: t("create", "modelMuseeDesc") },
+    "claire-voie": { name: galleryLabel("claire-voie", locale, nameOverrides), desc: t("create", "modelClaireVoieDesc") },
+    parquet: { name: galleryLabel("parquet", locale, nameOverrides), desc: t("create", "modelParquetDesc") },
+    verriere: { name: galleryLabel("verriere", locale, nameOverrides), desc: t("create", "modelVerriereDesc") },
+    pavillon: { name: galleryLabel("pavillon", locale, nameOverrides), desc: t("create", "modelPavillonDesc") },
+    classique: { name: galleryLabel("classique", locale, nameOverrides), desc: t("create", "modelClassiqueDesc") },
+    "atrium-blanc": { name: galleryLabel("atrium-blanc", locale, nameOverrides), desc: t("create", "modelAtriumBlancDesc") },
+    patio: { name: galleryLabel("patio", locale, nameOverrides), desc: t("create", "modelPatioDesc") },
+    escalier: { name: galleryLabel("escalier", locale, nameOverrides), desc: t("create", "modelEscalierDesc") },
+    "salles-vertes": { name: galleryLabel("salles-vertes", locale, nameOverrides), desc: t("create", "modelSallesVertesDesc") },
+    "couloir-sombre": { name: galleryLabel("couloir-sombre", locale, nameOverrides), desc: t("create", "modelCouloirSombreDesc") },
+    "couloir-dore": { name: galleryLabel("couloir-dore", locale, nameOverrides), desc: t("create", "modelCouloirDoreDesc") },
+    voutes: { name: galleryLabel("voutes", locale, nameOverrides), desc: t("create", "modelVoutesDesc") },
+    courbes: { name: galleryLabel("courbes", locale, nameOverrides), desc: t("create", "modelCourbesDesc") },
+    "atrium-lattes": { name: galleryLabel("atrium-lattes", locale, nameOverrides), desc: t("create", "modelAtriumLattesDesc") },
   };
 
   async function submit(event: React.FormEvent) {
@@ -114,7 +119,7 @@ export default function ExhibitionCreateDialog({
                   />
                   <span className="create-dialog-model-name">{modelText[candidate.id].name}</span>
                   <span className="create-dialog-model-layout">
-                    {roomLayouts[candidate.layout].label}
+                    {galleryLabel(candidate.layout, locale, nameOverrides)}
                   </span>
                   <span className="create-dialog-model-desc">{modelText[candidate.id].desc}</span>
                 </label>

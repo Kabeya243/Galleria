@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Monitor, Moon, Sun } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
+import LanguageSwitcher from "@/components/language-switcher";
+import { useT } from "@/lib/i18n";
 import { applyTheme, getStoredTheme, type ThemeChoice } from "@/lib/theme";
 
 export default function SettingsPage({
@@ -13,6 +15,7 @@ export default function SettingsPage({
   user: { name: string; email: string; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
 }) {
   const router = useRouter();
+  const t = useT();
   const [theme, setTheme] = useState<ThemeChoice>("system");
   const [name, setName] = useState(user.name);
   const [profileNote, setProfileNote] = useState<{ ok: boolean; text: string } | null>(null);
@@ -170,6 +173,12 @@ export default function SettingsPage({
                 </button>
               ))}
             </div>
+          </section>
+
+          <section className="settings-section">
+            <h2>{t("settings", "language")}</h2>
+            <p>{t("settings", "languageDesc")}</p>
+            <LanguageSwitcher />
           </section>
 
           <section className="settings-section">

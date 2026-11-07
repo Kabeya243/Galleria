@@ -1,12 +1,13 @@
 import GalleriesPage, { type GalleryPresetCard } from "@/components/galleries-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getGalleryNames } from "@/lib/gallery-names-server";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
 import { roomLayouts, HIDDEN_LAYOUT_KEYS, type RoomLayout } from "@/lib/rooms";
 
 export const metadata = {
   title: "Galleries — SANAA",
-  description: "Twenty-one galleries — the Sunlight Gallery, nine more from six reference files, and eleven from Galeries_3D.html: Pavillon de lumière, Galerie classique, Atrium blanc, Patio ovale, Hall à escalier, Salles vertes, Couloir sombre, Couloir doré, Plafond à voûtes, Courbes blanches and Atrium à lattes. Preview each in 3D and open it in the editor.",
+  description: "Twenty-one galleries — the Sunlight Gallery, nine more from six reference files, and eleven from Galeries_3D.html: Pavilion of Light, The Classical Gallery, The White Atrium, The Oval Patio, The Stair Hall, The Green Rooms, The Dark Corridor, The Golden Corridor, The Vaulted Ceiling, White Curves and The Slatted Atrium. Preview each in 3D and open it in the editor.",
 };
 
 export default async function GalleriesRoute() {
@@ -14,6 +15,9 @@ export default async function GalleriesRoute() {
   const ownExhibitionCount = user ? await db.exhibition.count({ where: { ownerId: user.id } }) : 0;
   // Templates the owner hid in the admin never reach the catalogue.
   const hidden = new Set(await getHiddenRoomLayouts());
+  // Gallery names (English + French, admin overrides included) — the
+  // client picks the language; the server renders English by default.
+  const galleryNames = await getGalleryNames();
   const rooms = (Object.keys(roomLayouts) as RoomLayout[])
     // Twenty-one templates: Sunlight plus the nine galleries added in
     // November 2026 plus the eleven from Galeries_3D.html, added the
@@ -40,5 +44,5 @@ export default async function GalleriesRoute() {
       thumbnail: preset.thumbnail,
     };
   });
-  return <GalleriesPage rooms={rooms} user={user} ownExhibitionCount={ownExhibitionCount} />;
+  return <GalleriesPage rooms={rooms} galleryNames={galleryNames} user={user} ownExhibitionCount={ownExhibitionCount} />;
 }

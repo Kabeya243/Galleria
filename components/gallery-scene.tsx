@@ -1107,7 +1107,7 @@ function ArtworkFrame({
   // Curatorial text (the reference room's "Texte curatorial"): the
   // artwork renders as a canvas text panel instead of an image. The
   // typeface is one of the four keys (d/s/g/m); anything else falls
-  // back to Display gras.
+  // back to Bold display.
   const textFont: SunlightTextFont =
     artwork.textFont === "s" || artwork.textFont === "g" || artwork.textFont === "m" ? artwork.textFont : "d";
   // The frame finish chosen in the inspector (wood, metal, gold, black,

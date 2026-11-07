@@ -1,8 +1,10 @@
 import Link from "next/link";
 import AdminGalleries from "@/components/admin-galleries";
+import AdminGalleryNames from "@/components/admin-gallery-names";
 import AdminShell from "@/components/admin-shell";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { getGalleryNames } from "@/lib/gallery-names-server";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
 import { HIDDEN_LAYOUT_KEYS, ROOM_MODELS, roomLayouts, type RoomLayout } from "@/lib/rooms";
 import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
@@ -125,6 +127,7 @@ export default async function AdminRoute({
     recentToolUses,
     visitLogDays,
     hiddenRoomLayouts,
+    galleryNames,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -240,6 +243,9 @@ export default async function AdminRoute({
     // Room templates the owner hid in the admin (see the Galleries
     // section below): the list lives in code, this only masks ids.
     getHiddenRoomLayouts(),
+    // Gallery names in both languages, admin renames included (see the
+    // Gallery names section below).
+    getGalleryNames(),
   ]);
 
   const userCount = userDates.length;
@@ -897,6 +903,14 @@ export default async function AdminRoute({
           </p>
         </div>
         <AdminGalleries templates={galleryTemplates} hidden={hiddenRoomLayouts} />
+        <div className="ad-section-head" style={{ marginTop: 28 }}>
+          <h3>Gallery names</h3>
+          <p>
+            Rename any gallery in English and in French. The new name shows on the catalogue, in the
+            creation dialog and in the editor, in the matching language.
+          </p>
+        </div>
+        <AdminGalleryNames names={galleryNames} />
       </section>
 
       <p className="ad-foot">

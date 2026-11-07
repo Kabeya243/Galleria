@@ -59,7 +59,7 @@ export const roomLayouts = {
   // walls in an S, photographs on both faces, a stone plaza and a grey
   // carpet, mall facades around. 22 × 44 m of carpet, wall height 2.7 m.
   serpentine: {
-    label: "La Serpentine",
+    label: "The Serpentine",
     category: "Architectural",
     description: "An open-air art fair — four curved white serpentine walls under the sky, photographs on both faces, a stone plaza and a grey carpet.",
     width: 22,
@@ -82,7 +82,7 @@ export const roomLayouts = {
   // sign, a glass front with mullions, a 16 × 16 m white interior shell
   // with a concrete floor, pedestals, shelves and a desk.
   vitrine: {
-    label: "La Vitrine",
+    label: "The Vitrine",
     category: "Architectural",
     description: "A bright glass-front gallery — a brick facade with its “exhibit” sign, a glazed front, a concrete floor, pedestals and shelves.",
     width: 16,
@@ -105,7 +105,7 @@ export const roomLayouts = {
   // with beams, white walls, rails and spotlights, bold colour on the
   // walls. 18 × 20 m, 4.3 m high.
   loft: {
-    label: "Le Loft Béton",
+    label: "The Concrete Loft",
     category: "Architectural",
     description: "A dark concrete loft — beams, rails and spotlights, bold colour on white walls, a partition and a bench.",
     width: 18,
@@ -129,7 +129,7 @@ export const roomLayouts = {
   // with works on both sides, platforms, lounge furniture, glass
   // cases, a hanging faceted mobile and kites.
   halle: {
-    label: "La Halle Design",
+    label: "The Design Hall",
     category: "Architectural",
     description: "A 25 × 34 m design hall — zigzag folding screens, platforms and lounge furniture, a hanging faceted mobile and kites.",
     width: 25,
@@ -152,7 +152,7 @@ export const roomLayouts = {
   // 20 × 24 m, 6.5 m high, stone/plaster walls, a dividing wall with a
   // round arch, a niche, rubble, timber beams and track lights.
   arche: {
-    label: "L'Arche",
+    label: "The Arch",
     category: "Architectural",
     description: "A stone gallery — a round-arch dividing wall, a niche, rubble and timber beams. The original Stone Gallery.",
     width: 20,
@@ -175,7 +175,7 @@ export const roomLayouts = {
   // skylight, herringbone parquet 40 × 40 m, angled panels and wire
   // benches.
   musee: {
-    label: "Le Musée Bleu",
+    label: "The Blue Museum",
     category: "Architectural",
     description: "A museum room — a curved blue wall, a coffered skylight, herringbone parquet and angled panels.",
     width: 40,
@@ -198,7 +198,7 @@ export const roomLayouts = {
   // huge folk painting, a wall of text vinyl and a high clerestory
   // window. 11 × 23 m, 7.6 m high.
   "claire-voie": {
-    label: "La Claire-Voie",
+    label: "The Clerestory",
     category: "Architectural",
     description: "A dark-floored gallery — a huge folk painting, a wall of text vinyl, white benches and a high clerestory window.",
     width: 11,
@@ -222,7 +222,7 @@ export const roomLayouts = {
   // fragments, pedestals with sculptures, a standing mobile, a pale
   // green ottoman and a salon hang on the back wall.
   parquet: {
-    label: "Le Parquet",
+    label: "The Parquet",
     category: "Architectural",
     description: "A herringbone-parquet room — V-shaped partitions, pedestals with sculptures, a standing mobile and a salon hang.",
     width: 24,
@@ -245,7 +245,7 @@ export const roomLayouts = {
   // plank floor, a coffered ceiling with skylights, a stone/window band
   // at the back and five angled panels with paintings.
   verriere: {
-    label: "La Verrière",
+    label: "The Glass Roof",
     category: "Architectural",
     description: "A 40 × 32 m hall under a coffered skylight ceiling — five angled panels with paintings, a bench and a label stand.",
     width: 40,
@@ -268,7 +268,7 @@ export const roomLayouts = {
   // with glass-brick walls, two side rooms, a lawn and palm trees
   // outside. Floor centre z = −1.
   pavillon: {
-    label: "Pavillon de lumière",
+    label: "Pavilion of Light",
     category: "Architectural",
     description: "A light pavilion — wood floor, glass-brick walls, two side rooms, palms and a lawn outside.",
     width: 8,
@@ -290,7 +290,7 @@ export const roomLayouts = {
   // Galerie classique — the classical gallery: an 8 × 40 m hall under
   // a coffered vault, granite columns, skylights in the vault.
   classique: {
-    label: "Galerie classique",
+    label: "The Classical Gallery",
     category: "Architectural",
     description: "A classical gallery — an 8 × 40 m hall under a coffered vault, granite columns, skylights above.",
     width: 8,
@@ -312,7 +312,7 @@ export const roomLayouts = {
   // Atrium blanc — the white atrium: a 26 × 27 m lacquered marble hall,
   // four columns, a black drum suspended from the ceiling.
   "atrium-blanc": {
-    label: "Atrium blanc",
+    label: "The White Atrium",
     category: "Architectural",
     description: "A white atrium — lacquered marble floor, four columns, a black drum suspended overhead.",
     width: 26,
@@ -334,7 +334,7 @@ export const roomLayouts = {
   // Patio ovale — the oval patio: a 44 × 44 m marble plaza under a roof
   // pierced by an oval opening, trees, black gravel and a lawn.
   patio: {
-    label: "Patio ovale",
+    label: "The Oval Patio",
     category: "Architectural",
     description: "An oval patio — a marble plaza under a roof pierced by an oval opening, trees, black gravel and a lawn.",
     width: 44,
@@ -356,7 +356,7 @@ export const roomLayouts = {
   // Hall à escalier — the stair hall: a 16 × 20 m hall with a 14-step
   // staircase, a central column, a mezzanine and glass.
   escalier: {
-    label: "Hall à escalier",
+    label: "The Stair Hall",
     category: "Architectural",
     description: "A stair hall — 16 × 20 m, a 14-step staircase, a central column, a mezzanine and glass.",
     width: 16,
@@ -378,7 +378,7 @@ export const roomLayouts = {
   // Salles vertes — the green rooms: a 14 × 32 m hall, green walls, wood
   // floor, a vault, three panels, two benches and a skylight.
   "salles-vertes": {
-    label: "Salles vertes",
+    label: "The Green Rooms",
     category: "Architectural",
     description: "Green rooms — a 14 × 32 m hall, green walls, wood floor, a vault, three panels and a skylight.",
     width: 14,
@@ -400,7 +400,7 @@ export const roomLayouts = {
   // Couloir sombre — the dark corridor: a 7 × 46 m hall, herringbone
   // parquet, a vault, six panels, arches and track lights.
   "couloir-sombre": {
-    label: "Couloir sombre",
+    label: "The Dark Corridor",
     category: "Architectural",
     description: "A dark corridor — a 7 × 46 m hall, herringbone parquet, a vault, six panels, arches and track lights.",
     width: 7,
@@ -423,7 +423,7 @@ export const roomLayouts = {
   // parquet, luminous arched windows, a red wall at the far end and
   // sun patches on the floor.
   "couloir-dore": {
-    label: "Couloir doré",
+    label: "The Golden Corridor",
     category: "Architectural",
     description: "A golden corridor — a 7 × 46 m hall, herringbone parquet, luminous arched windows and a red end wall.",
     width: 7,
@@ -445,7 +445,7 @@ export const roomLayouts = {
   // Plafond à voûtes — the vaulted ceiling: a 10 × 30 m hall, wood
   // floor, a scale-pattern ceiling, two panels and two benches.
   voutes: {
-    label: "Plafond à voûtes",
+    label: "The Vaulted Ceiling",
     category: "Architectural",
     description: "A vaulted ceiling — a 10 × 30 m hall, wood floor, a scale-pattern ceiling, two panels and two benches.",
     width: 10,
@@ -468,7 +468,7 @@ export const roomLayouts = {
   // H 6.5), a curved white wall, a glazed section, a roof, palms and
   // a lawn outside.
   courbes: {
-    label: "Courbes blanches",
+    label: "White Curves",
     category: "Architectural",
     description: "White curves — a circular gallery, a curved white wall, a glazed section, palms and a lawn outside.",
     width: 25,
@@ -491,7 +491,7 @@ export const roomLayouts = {
   // wood floor, a large window onto the outside, mullions, a mezzanine
   // and staircases.
   "atrium-lattes": {
-    label: "Atrium à lattes",
+    label: "The Slatted Atrium",
     category: "Architectural",
     description: "A slatted atrium — 14 × 18 m, slatted walls, wood floor, a large window, a mezzanine and staircases.",
     width: 14,

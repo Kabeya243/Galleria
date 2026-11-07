@@ -54,6 +54,9 @@ import { composeWall, dominantFamilyOf, wallFaceLabel, type ComposeItem } from "
 import type { ArtworkCaption, CaptionSource, CaptionStatus } from "@/lib/caption";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
+import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
+import { useLocale } from "@/lib/i18n";
+import { useGalleryNames } from "@/lib/use-gallery-names";
 import { galleryCameraStart, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import {
   createSunlightElement,
@@ -166,14 +169,23 @@ function NumberField({
 export default function Editor({
   exhibitionId,
   hiddenLayouts = [],
+  galleryNames = {},
 }: {
   exhibitionId: string;
   // Layout ids the owner hid in the admin: not offered as a gallery
   // choice (the room's own layout always stays available, so a room
   // built with a hidden template still shows its own layout).
   hiddenLayouts?: string[];
+  // Gallery names in both languages (admin renames included): the
+  // server seeds the first paint, the hook refreshes them.
+  galleryNames?: Partial<GalleryNamesMap>;
 }) {
   const hiddenLayoutSet = useMemo(() => new Set(hiddenLayouts), [hiddenLayouts]);
+  const { locale } = useLocale();
+  const nameOverrides = useGalleryNames(galleryNames);
+  // Display name of a gallery in the current language (admin renames
+  // included) — room list, status bar and the GALLERY selector.
+  const roomLabel = (layout: RoomLayout) => galleryLabel(layout, locale, nameOverrides);
   const [artworks, setArtworks] = useState<LayerArtwork[]>([]);
   const [rooms, setRooms] = useState<GalleryRoom[]>([]);
   const [activeRoomId, setActiveRoomId] = useState("");
@@ -241,7 +253,7 @@ export default function Editor({
   const [curatorialText, setCuratorialText] = useState("");
   const [curatorialTextFont, setCuratorialTextFont] = useState<SunlightTextFont>("d");
   const [sunlightMessage, setSunlightMessage] = useState<string | null>(null);
-  // Automatic wall composition ("Composer ce mur", see
+  // Automatic wall composition ("Compose wall", see
   // lib/compose-wall.ts): whether the compose panel is open, which
   // wall it targets, and the inline result message. The panel opens
   // from the multi-selection bar; the message is shown in the panel,
@@ -756,7 +768,7 @@ export default function Editor({
   const selectionRef = useRef(selectionRefs);
   useEffect(() => { selectionRef.current = selectionRefs; });
 
-  // Automatic wall composition ("Composer ce mur"): the artworks it
+  // Automatic wall composition ("Compose wall"): the artworks it
   // can hang — the selected artworks of the active room, excluding
   // curatorial texts (they are artworks in the model, but the
   // size/dominant rules do not apply to them). Elements and artworks
@@ -1924,7 +1936,7 @@ export default function Editor({
     setComposeOpen(true);
   }
 
-  // Automatic wall composition ("Composer ce mur"): place the selected
+  // Automatic wall composition ("Compose wall"): place the selected
   // artworks of the active room on the chosen wall — one row at eye
   // level when they fit, otherwise as many as the wall holds (see
   // lib/compose-wall.ts). One snapshot, one state update: the whole
@@ -2002,7 +2014,7 @@ export default function Editor({
     const { position, rotation } = placeOnCameraWall(size.width, size.height);
     const artwork: Artwork = {
       id: crypto.randomUUID(),
-      title: "Texte curatorial",
+      title: "Curatorial text",
       artist: defaultArtist(),
       year: "",
       medium: "Curatorial text",
@@ -2500,7 +2512,7 @@ async function compressImage(file: File): Promise<File> {
                 onClick={() => { setActiveRoomId(room.id); clearSelection(); }}
               >
                 <span className="room-number">{String(index + 1).padStart(2, "0")}</span>
-                <span><strong>{room.name}</strong><small>{roomLayouts[room.layout].label} · {artworks.filter((artwork) => artwork.roomId === room.id).length} artworks</small></span>
+                <span><strong>{room.name}</strong><small>{roomLabel(room.layout)} · {artworks.filter((artwork) => artwork.roomId === room.id).length} artworks</small></span>
                 <ChevronDown size={15} />
               </button>
             ))}
@@ -2714,7 +2726,7 @@ async function compressImage(file: File): Promise<File> {
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up" aria-label="Move selected artwork up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down" aria-label="Move selected artwork down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale" aria-label="Increase scale of selected artwork"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale" aria-label="Decrease scale of selected artwork"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
           </div>
-          <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLayouts[activeRoom.layout].label : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks{showGrid ? <><span className="status-dot-separator">·</span> Grid on — drags snap to 0.25 m</> : null}</span><span>{autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
+          <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLabel(activeRoom.layout) : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks{showGrid ? <><span className="status-dot-separator">·</span> Grid on — drags snap to 0.25 m</> : null}</span><span>{autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
         </section>
 
         <aside className="editor-properties-panel">
@@ -3129,7 +3141,7 @@ async function compressImage(file: File): Promise<File> {
                     )}
                     {activeRoom && <>
                       <div className="property-section"><label>ROOM NAME</label><input className="full-input" {...editSessionProps} value={activeRoom.name} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, name: event.target.value.slice(0, 60) }))} /></div>
-                      <div className="property-section"><label>GALLERY</label><select className="full-input" {...editSessionProps} value={activeRoom.layout} onChange={(event) => updateRoom(activeRoom.id, (room) => applyLayoutPreset(room, event.target.value as RoomLayout))}>{Object.entries(roomLayouts).filter(([layout]) => (!hiddenLayoutSet.has(layout) && !HIDDEN_LAYOUT_KEYS.has(layout as RoomLayout)) || layout === activeRoom.layout).map(([layout, details]) => <option key={layout} value={layout}>{details.label} · {details.width} × {details.depth} m</option>)}</select></div>
+                      <div className="property-section"><label>GALLERY</label><select className="full-input" {...editSessionProps} value={activeRoom.layout} onChange={(event) => updateRoom(activeRoom.id, (room) => applyLayoutPreset(room, event.target.value as RoomLayout))}>{Object.entries(roomLayouts).filter(([layout]) => (!hiddenLayoutSet.has(layout) && !HIDDEN_LAYOUT_KEYS.has(layout as RoomLayout)) || layout === activeRoom.layout).map(([layout, details]) => <option key={layout} value={layout}>{roomLabel(layout as RoomLayout)} · {details.width} × {details.depth} m</option>)}</select></div>
                       <div className="property-section"><label>BACK WALL</label><div className="room-color-control"><input type="color" aria-label="Back wall colour" {...editSessionProps} value={activeRoom.wallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, wallColor: event.target.value }))} /><span>{activeRoom.wallColor}</span></div></div>
                       <div className="property-section"><label>SIDE WALLS</label><div className="room-color-control"><input type="color" aria-label="Side walls colour" {...editSessionProps} value={activeRoom.sideWallColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, sideWallColor: event.target.value }))} /><span>{activeRoom.sideWallColor}</span></div></div>
                       <div className="property-section"><label>CEILING</label><div className="room-color-control"><input type="color" aria-label="Ceiling colour" {...editSessionProps} value={activeRoom.ceilingColor} onChange={(event) => updateRoom(activeRoom.id, (room) => ({ ...room, ceilingColor: event.target.value }))} /><span>{activeRoom.ceilingColor}</span></div></div>

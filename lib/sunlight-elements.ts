@@ -67,19 +67,19 @@ export const SUNLIGHT_ELEMENT_DEFAULTS: Record<
   SunlightElementType,
   { label: string; color: string; hl: number; hw: number }
 > = {
-  cloison: { label: "Mur au milieu (cloison)", color: "#f2f2f0", hl: 1.5, hw: 0.1 },
-  suspendu: { label: "Mur suspendu", color: "#f2f2f0", hl: 1.5, hw: 0.1 },
-  colonne: { label: "Colonne", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
-  socle60: { label: "Socle 60 cm", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
-  socle90: { label: "Socle 90 cm", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
-  socle120: { label: "Socle 120 cm", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
-  vitrine: { label: "Vitrine", color: "#f2f2f0", hl: 0.3, hw: 0.3 },
-  banc: { label: "Banc", color: "#b98a5a", hl: 1.1, hw: 0.25 },
-  club: { label: "Fauteuil club", color: "#8b4a2b", hl: 0.45, hw: 0.45 },
-  bergere: { label: "Fauteuil bergère", color: "#2f5d62", hl: 0.45, hw: 0.45 },
-  scandi: { label: "Fauteuil scandinave", color: "#d9c9b0", hl: 0.4, hw: 0.4 },
-  coque: { label: "Fauteuil coque", color: "#e0572a", hl: 0.45, hw: 0.45 },
-  tub: { label: "Fauteuil tonneau", color: "#5a5a5e", hl: 0.45, hw: 0.45 },
+  cloison: { label: "Middle wall (partition)", color: "#f2f2f0", hl: 1.5, hw: 0.1 },
+  suspendu: { label: "Hanging wall", color: "#f2f2f0", hl: 1.5, hw: 0.1 },
+  colonne: { label: "Column", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
+  socle60: { label: "Pedestal 60 cm", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
+  socle90: { label: "Pedestal 90 cm", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
+  socle120: { label: "Pedestal 120 cm", color: "#f2f2f0", hl: 0.25, hw: 0.25 },
+  vitrine: { label: "Display case", color: "#f2f2f0", hl: 0.3, hw: 0.3 },
+  banc: { label: "Bench", color: "#b98a5a", hl: 1.1, hw: 0.25 },
+  club: { label: "Club armchair", color: "#8b4a2b", hl: 0.45, hw: 0.45 },
+  bergere: { label: "Bergère armchair", color: "#2f5d62", hl: 0.45, hw: 0.45 },
+  scandi: { label: "Scandinavian armchair", color: "#d9c9b0", hl: 0.4, hw: 0.4 },
+  coque: { label: "Shell armchair", color: "#e0572a", hl: 0.45, hw: 0.45 },
+  tub: { label: "Barrel armchair", color: "#5a5a5e", hl: 0.45, hw: 0.45 },
   // The spotlight fixture is two small cylinders at the ceiling; it
   // has no collision block (hl = hw = 0) and never blocks the walk.
   spot: { label: "Spotlight", color: "#1a1a1a", hl: 0, hw: 0 },
@@ -128,10 +128,10 @@ export function createSunlightElement(
 // select order.
 
 export const SUNLIGHT_TEXT_FONTS = {
-  d: { label: "Display gras", font: "bold 40px Georgia" },
-  s: { label: "Sans propre", font: "34px Helvetica,Arial,sans-serif" },
+  d: { label: "Bold display", font: "bold 40px Georgia" },
+  s: { label: "Clean sans", font: "34px Helvetica,Arial,sans-serif" },
   g: { label: "Serif", font: "34px Georgia" },
-  m: { label: "Machine à écrire", font: "32px Courier New,monospace" },
+  m: { label: "Typewriter", font: "32px Courier New,monospace" },
 } as const;
 
 export type SunlightTextFont = keyof typeof SUNLIGHT_TEXT_FONTS;

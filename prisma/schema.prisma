@@ -322,3 +322,15 @@ model HiddenRoomTemplate {
   layout    String   @unique
   createdAt DateTime @default(now())
 }
+
+// Gallery names as renamed by the owner in the admin panel. Templates
+// live in code (lib/rooms.ts) with English + French default names
+// (lib/gallery-names.ts); a row here overrides both names for one
+// layout, so a rename survives reloads and redeploys. No row means the
+// code defaults apply.
+model GalleryName {
+  layout    String   @id
+  nameEn    String
+  nameFr    String
+  updatedAt DateTime @updatedAt
+}

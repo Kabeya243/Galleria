@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VSMShadowMap, type DirectionalLight } from "three";
+import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, Group, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VSMShadowMap, type DirectionalLight } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
@@ -3187,7 +3187,15 @@ function SunlightWalkControls({
   onRoomChangeRef.current = onRoomChange;
   const initialized = useRef(false);
   const lastReset = useRef(resetSignal?.current ?? 0);
-  const markerRef = useRef<Mesh>(null);
+  const markerRef = useRef<Group>(null);
+  // One shared unlit white material for the marker's ring + dot: fog
+  // off so it never tints toward a room's fog colour, depth test off
+  // so it always draws on top of the floor.
+  const markerMaterial = useMemo(
+    () => new MeshBasicMaterial({ color: "#ffffff", transparent: true, depthWrite: false, depthTest: false, fog: false }),
+    [],
+  );
+  useEffect(() => () => markerMaterial.dispose(), [markerMaterial]);
   const zOffsetOf = (index: number) => zOffsets?.[index] ?? 0;
 
   // First mount: place the camera at the start. A room change (teleport
@@ -3386,28 +3394,41 @@ function SunlightWalkControls({
     // it through a wall into the grey void.
     camera.position.x = ox + Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, camera.position.x - ox));
     camera.position.z = oz + Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, camera.position.z - oz));
-    // Marker ring on the walk target, pulsing like the source. The
-    // ring is clamped to the room bounds (a target clicked on a wall
-    // sits outside the walkable area, so the raw point would hide the
-    // ring inside the wall): the visible ring is always the nearest
-    // reachable point inside the room.
+    // Walk-target marker on the destination, pulsing like the source.
+    // The marker is clamped to the room bounds (a target clicked on a
+    // wall sits outside the walkable area, so the raw point would hide
+    // it inside the wall): the visible marker is always the nearest
+    // reachable point inside the room. It is a thick ring + centre
+    // dot, 0.9 m across — a flat ring alone reads as a ~15 px sliver
+    // at the grazing angles of a 1.65 m eye (that is why the 0.25–
+    // 0.35 m ring of 9441c8a was never seen in live verification), so
+    // the band is thick, the dot anchors it, and the pulse scales the
+    // whole marker as well as its opacity. It sits at y 0.03, above
+    // the invisible click plane (0.02) and the floor, so it never
+    // z-fights.
     if (marker) {
       const dest = destination.current;
       marker.visible = dest !== null;
       if (dest) {
         const mx = ox + Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, dest.x - ox));
         const mz = oz + Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, dest.z - oz));
-        marker.position.set(mx, 0.02, mz);
-        (marker.material as MeshBasicMaterial).opacity = 0.75 + 0.25 * Math.sin(state.clock.elapsedTime * 9);
+        marker.position.set(mx, 0.03, mz);
+        const pulse = 0.5 + 0.5 * Math.sin(state.clock.elapsedTime * 6);
+        marker.scale.setScalar(1 + 0.18 * pulse);
+        markerMaterial.opacity = 0.85 + 0.15 * pulse;
       }
     }
   });
 
   return (
-    <mesh ref={markerRef} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={10}>
-      <ringGeometry args={[0.25, 0.35, 32]} />
-      <meshBasicMaterial color="#ffffff" transparent depthWrite={false} depthTest={false} />
-    </mesh>
+    <group ref={markerRef} visible={false} renderOrder={10}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={10} material={markerMaterial}>
+        <ringGeometry args={[0.3, 0.45, 48]} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={10} material={markerMaterial}>
+        <circleGeometry args={[0.1, 32]} />
+      </mesh>
+    </group>
   );
 }
 

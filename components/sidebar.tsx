@@ -259,7 +259,6 @@ export default function Sidebar({
           </nav>
         </div>
 
-        <div className="sidebar-spacer" />
         <div className="sidebar-bottom">
           <div className="profile-chip">
             <Avatar name={user.name} avatarUrl={user.avatarUrl} className="profile-avatar" />

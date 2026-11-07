@@ -7,6 +7,7 @@ import GalleryScene from "@/components/gallery-scene";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import { ceilingTextures, createGalleryRoom, floorTextures, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, type RoomCategory, type RoomLayout } from "@/lib/rooms";
+import type { ThumbnailKey } from "@/lib/gallery-defs";
 
 export type GalleryPresetCard = {
   key: RoomLayout;
@@ -23,6 +24,9 @@ export type GalleryPresetCard = {
   wallTexture: keyof typeof wallTextures;
   floorTexture: keyof typeof floorTextures;
   ceilingTexture: keyof typeof ceilingTextures;
+  // Which distinctive feature the preview draws on top of the finish
+  // bands — each card shows its own gallery at a glance.
+  thumbnail: ThumbnailKey;
 };
 
 // The room card's finish line: dimensions plus the wall and floor
@@ -153,8 +157,630 @@ function RoomPreviewCanvas({ room }: { room: GalleryPresetCard }) {
     paintPattern(ctx, room.floorTexture, room.floorColor, 0, h * 0.7, w, h * 0.3);
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, h * 0.7 - 1, w, 2);
+    // The gallery's own trait, drawn over the bands (Sunlight keeps
+    // its plain finishes — no overlay).
+    paintThumbnailOverlay(ctx, room.thumbnail, w, h);
   }, [room]);
   return <canvas ref={ref} width={640} height={240} className="gallery-card-preview" aria-label={`${room.label} finishes preview`} />;
+}
+
+// The distinctive feature of each gallery, drawn procedurally over
+// the finish bands so every card reads at a glance: serpentine walls,
+// the glazed front with its "exhibit" sign, dark loft beams, zigzag
+// screens, the round arch, the curved blue wall under a coffered
+// skylight, the huge folk painting, herringbone parquet, the coffered
+// skylight ceiling with its five angled panels. Canvas 640 × 240:
+// ceiling 0–12%, wall 12–70%, floor 70–100%.
+function paintThumbnailOverlay(ctx: CanvasRenderingContext2D, thumbnail: ThumbnailKey, w: number, h: number) {
+  const wallTop = h * 0.12;
+  const wallH = h * 0.58;
+  const wallBottom = h * 0.7;
+  const floorTop = h * 0.7;
+  if (thumbnail === "sunlight") return;
+  if (thumbnail === "serpentine") {
+    // Four curved white walls in an S, seen from above the plaza.
+    ctx.fillStyle = "#bcd6ee";
+    ctx.fillRect(0, 0, w, wallTop);
+    ctx.lineCap = "round";
+    for (let k = 0; k < 4; k++) {
+      const x0 = 60 + k * 150;
+      const path = () => {
+        ctx.beginPath();
+        ctx.moveTo(x0, wallBottom + 8);
+        ctx.bezierCurveTo(x0 + 90, wallTop + 20, x0 - 90, wallTop + wallH * 0.55, x0, wallTop + wallH - 8);
+      };
+      ctx.strokeStyle = "#c9c9c2";
+      ctx.lineWidth = 19;
+      path();
+      ctx.stroke();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 14;
+      path();
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#6f7176";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    return;
+  }
+  if (thumbnail === "vitrine") {
+    // Glazed front: mullions over glass, brick band and "exhibit".
+    ctx.fillStyle = "#8a5a44";
+    ctx.fillRect(0, wallTop, w, 14);
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(w / 2 - 90, wallTop + 22, 180, 34);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px Helvetica, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("exhibit", w / 2, wallTop + 46);
+    ctx.strokeStyle = "#e8e8e6";
+    ctx.lineWidth = 5;
+    for (let x = 40; x < w; x += 90) {
+      ctx.beginPath();
+      ctx.moveTo(x, wallTop + 66);
+      ctx.lineTo(x, wallBottom);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(190, 215, 235, 0.35)";
+    ctx.fillRect(0, wallTop + 66, w, wallBottom - wallTop - 66);
+    return;
+  }
+  if (thumbnail === "loft") {
+    // Dark loft: heavy beams under a concrete ceiling, bold colour.
+    ctx.fillStyle = "#2a2724";
+    ctx.fillRect(0, 0, w, wallTop + 26);
+    ctx.fillStyle = "#1a1715";
+    for (let x = 20; x < w; x += 110) ctx.fillRect(x, wallTop, 26, 26);
+    ctx.fillStyle = "#e8c020";
+    ctx.fillRect(90, wallTop + 46, 120, 84);
+    ctx.fillStyle = "#c22a2a";
+    ctx.fillRect(280, wallTop + 66, 90, 64);
+    ctx.fillStyle = "#2f6a8a";
+    ctx.fillRect(440, wallTop + 56, 110, 74);
+    return;
+  }
+  if (thumbnail === "halle") {
+    // Zigzag folding screens with works, seen in elevation.
+    ctx.strokeStyle = "#3a3836";
+    ctx.lineWidth = 3;
+    ctx.fillStyle = "#f4f2ee";
+    ctx.beginPath();
+    let x = 30;
+    let y = wallBottom - 10;
+    ctx.moveTo(x, y);
+    const peaks: [number, number][] = [];
+    for (let i = 0; i < 6; i++) {
+      x += 95;
+      y = i % 2 === 0 ? wallTop + 18 : wallBottom - 10;
+      ctx.lineTo(x, y);
+      peaks.push([x, y]);
+    }
+    ctx.lineTo(x, wallBottom - 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#c8341e";
+    ctx.fillRect(150, wallTop + 60, 44, 56);
+    ctx.fillStyle = "#2a4d7a";
+    ctx.fillRect(330, wallTop + 46, 44, 56);
+    ctx.fillStyle = "#e8c020";
+    ctx.fillRect(480, wallTop + 66, 40, 50);
+    return;
+  }
+  if (thumbnail === "arche") {
+    // The round arch in the stone dividing wall.
+    ctx.fillStyle = "#b8ab94";
+    ctx.fillRect(0, wallTop, w, wallH);
+    ctx.fillStyle = "#8f8672";
+    ctx.beginPath();
+    ctx.arc(w / 2, wallBottom - 6, 74, Math.PI, 0);
+    ctx.lineTo(w / 2 + 74, wallBottom);
+    ctx.lineTo(w / 2 - 74, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#efe9dc";
+    ctx.beginPath();
+    ctx.arc(w / 2, wallBottom - 6, 58, Math.PI, 0);
+    ctx.lineTo(w / 2 + 58, wallBottom);
+    ctx.lineTo(w / 2 - 58, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#4a3528";
+    ctx.fillRect(40, wallTop + 16, w - 80, 8);
+    return;
+  }
+  if (thumbnail === "musee") {
+    // Curved blue wall under a coffered skylight.
+    ctx.fillStyle = "#f3f1ed";
+    ctx.fillRect(0, 0, w, wallTop);
+    ctx.strokeStyle = "#7a6755";
+    ctx.lineWidth = 2;
+    for (let x = 0; x < w; x += 46) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, wallTop);
+      ctx.stroke();
+    }
+    for (let y = 0; y < wallTop; y += 12) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#7f9db8";
+    ctx.beginPath();
+    ctx.moveTo(0, wallBottom);
+    ctx.quadraticCurveTo(w / 2, wallTop - 30, w, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f2ede4";
+    ctx.fillRect(w / 2 - 60, wallTop + 66, 120, 62);
+    ctx.fillStyle = "#2a4d7a";
+    ctx.fillRect(w / 2 - 48, wallTop + 76, 96, 42);
+    return;
+  }
+  if (thumbnail === "claire-voie") {
+    // The huge folk painting on a dark floor.
+    ctx.fillStyle = "#f1efea";
+    ctx.fillRect(0, wallTop, w, wallH);
+    ctx.fillStyle = "#e8a020";
+    ctx.fillRect(60, wallTop + 24, w - 120, wallH - 48);
+    ctx.fillStyle = "#c22a2a";
+    ctx.beginPath();
+    ctx.arc(170, wallTop + 78, 34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#2f6a2a";
+    ctx.fillRect(280, wallTop + 60, 120, 60);
+    ctx.fillStyle = "#1a1a1a";
+    ctx.font = "bold 15px Helvetica, Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("TITRE DE L'EXPOSITION", 60, wallTop + 118);
+    ctx.fillStyle = "#3e4044";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    return;
+  }
+  if (thumbnail === "parquet") {
+    // Herringbone parquet across the floor band.
+    ctx.fillStyle = "#c59c63";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    ctx.strokeStyle = "rgba(90, 55, 25, 0.55)";
+    ctx.lineWidth = 2;
+    const s = 26;
+    for (let row = 0; row < 3; row++) {
+      const y = floorTop + row * s;
+      for (let x = -s; x < w + s; x += s * 2) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + s, y + s);
+        ctx.moveTo(x + s, y);
+        ctx.lineTo(x + 2 * s, y + s);
+        ctx.stroke();
+      }
+    }
+    // V partitions + salon hang on the back wall.
+    ctx.fillStyle = "#f4f2ee";
+    ctx.beginPath();
+    ctx.moveTo(180, wallBottom);
+    ctx.lineTo(300, wallTop + 30);
+    ctx.lineTo(420, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#b78450";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(180, wallBottom);
+    ctx.lineTo(300, wallTop + 30);
+    ctx.lineTo(420, wallBottom);
+    ctx.stroke();
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(240, wallTop + 52, 40, 48);
+    ctx.fillStyle = "#c8341e";
+    ctx.fillRect(320, wallTop + 62, 34, 40);
+    return;
+  }
+  if (thumbnail === "verriere") {
+    // Coffered skylight ceiling and five angled panels.
+    ctx.fillStyle = "#f3f1ed";
+    ctx.fillRect(0, 0, w, wallTop);
+    ctx.strokeStyle = "#7c6e5d";
+    ctx.lineWidth = 3;
+    for (let x = 0; x < w; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, wallTop);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(190, 215, 235, 0.6)";
+    for (let x = 8; x < w; x += 128) ctx.fillRect(x, 4, 48, wallTop - 8);
+    const colors = ["#2e4a62", "#d2a64a", "#7a7d4f", "#1a1a1a", "#b34a34"];
+    for (let i = 0; i < 5; i++) {
+      const x = 56 + i * 112;
+      ctx.save();
+      ctx.translate(x, wallTop + 74);
+      ctx.rotate(i % 2 === 0 ? -0.08 : 0.08);
+      ctx.fillStyle = "#f5f3ee";
+      ctx.fillRect(-34, -52, 68, 104);
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(-22, -34, 44, 44);
+      ctx.restore();
+    }
+    return;
+  }
+  if (thumbnail === "pavillon") {
+    // Glass-brick pavilion under a blue sky, palms and a lawn.
+    ctx.fillStyle = "#9cc3e6";
+    ctx.fillRect(0, 0, w, wallTop + 40);
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(140, 40, 90, 22, 0, 0, Math.PI * 2);
+    ctx.ellipse(430, 30, 110, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Glass-brick walls: a glowing grid.
+    ctx.fillStyle = "#dfe9ee";
+    ctx.fillRect(150, wallTop + 20, w - 300, wallH - 20);
+    ctx.strokeStyle = "rgba(120, 140, 150, 0.7)";
+    ctx.lineWidth = 2;
+    for (let x = 150; x <= w - 150; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, wallTop + 20);
+      ctx.lineTo(x, wallBottom);
+      ctx.stroke();
+    }
+    for (let y = wallTop + 20; y <= wallBottom; y += 26) {
+      ctx.beginPath();
+      ctx.moveTo(150, y);
+      ctx.lineTo(w - 150, y);
+      ctx.stroke();
+    }
+    // Side rooms with a painting each.
+    ctx.fillStyle = "#f4f2ee";
+    ctx.fillRect(30, wallTop + 46, 100, wallH - 66);
+    ctx.fillRect(w - 130, wallTop + 46, 100, wallH - 66);
+    ctx.fillStyle = "#2a4fa0";
+    ctx.fillRect(56, wallTop + 66, 48, 60);
+    ctx.fillStyle = "#f2c230";
+    ctx.fillRect(66, wallTop + 76, 28, 28);
+    ctx.fillStyle = "#4a7a4a";
+    ctx.fillRect(w - 104, wallTop + 66, 48, 60);
+    // Palms.
+    ctx.strokeStyle = "#3f7a2c";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    for (const [px, py] of [[60, wallTop + 30], [w - 60, wallTop + 30]] as const) {
+      for (let a = -0.9; a <= 0.9; a += 0.45) {
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.quadraticCurveTo(px + Math.sin(a) * 46, py - 44, px + Math.sin(a) * 66, py - 58);
+        ctx.stroke();
+      }
+    }
+    ctx.fillStyle = "#4d6b3a";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    return;
+  }
+  if (thumbnail === "classique") {
+    // Coffered vault over granite columns, skylight glow.
+    ctx.fillStyle = "#2a2724";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#cfc8b8";
+    ctx.beginPath();
+    ctx.moveTo(40, wallBottom);
+    ctx.quadraticCurveTo(w / 2, wallTop - 46, w - 40, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#8a857c";
+    ctx.lineWidth = 2;
+    for (let x = 90; x < w - 60; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, wallTop + 10);
+      ctx.lineTo(x, wallBottom - 6);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#fff3de";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, wallTop + 6, 70, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#e3ddd0";
+    for (const x of [120, 300, 480]) ctx.fillRect(x - 9, wallTop + 56, 18, wallBottom - wallTop - 56);
+    ctx.fillStyle = "#8a3a1c";
+    ctx.fillRect(180, wallTop + 76, 54, 66);
+    ctx.fillStyle = "#c9863a";
+    ctx.fillRect(370, wallTop + 76, 54, 66);
+    return;
+  }
+  if (thumbnail === "atrium-blanc") {
+    // White atrium, black drum suspended, light rays.
+    ctx.fillStyle = "#f7f7f6";
+    ctx.fillRect(0, 0, w, wallBottom);
+    ctx.fillStyle = "#e8e8e6";
+    for (let x = 0; x < w; x += 44) ctx.fillRect(x, 0, 1, wallBottom);
+    ctx.fillStyle = "#151515";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, wallTop + 44, 150, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.lineWidth = 1.5;
+    for (let x = w / 2 - 120; x <= w / 2 + 120; x += 24) {
+      ctx.beginPath();
+      ctx.moveTo(x, wallTop + 66);
+      ctx.lineTo(x + 8, wallBottom - 8);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#f6f6f5";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    ctx.fillStyle = "rgba(21, 21, 21, 0.35)";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, floorTop + 14, 150, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fafafa";
+    for (const x of [110, 490]) ctx.fillRect(x - 12, wallTop + 80, 24, wallBottom - wallTop - 80);
+    return;
+  }
+  if (thumbnail === "patio") {
+    // Oval roof opening, trees, black gravel disc.
+    ctx.fillStyle = "#dedee0";
+    ctx.fillRect(0, 0, w, wallTop + 30);
+    ctx.fillStyle = "#7fb3e6";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, wallTop + 14, 170, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f0f0ee";
+    ctx.fillRect(0, wallTop + 30, w, wallH - 30);
+    ctx.fillStyle = "#1c1c1e";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, wallBottom - 16, 190, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#4a8f36";
+    ctx.beginPath();
+    ctx.ellipse(w / 2 + 60, wallBottom - 20, 70, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#3f7a2c";
+    for (const [tx, ty, tr] of [[170, wallTop + 74, 34], [300, wallTop + 58, 40], [430, wallTop + 78, 30]] as const) {
+      ctx.beginPath();
+      ctx.arc(tx, ty, tr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#6b5a45";
+      ctx.fillRect(tx - 3, ty, 6, wallBottom - ty - 24);
+      ctx.fillStyle = "#3f7a2c";
+    }
+    return;
+  }
+  if (thumbnail === "escalier") {
+    // Stair hall: steps climbing left, column, big painting right.
+    ctx.fillStyle = "#f6f6f4";
+    ctx.fillRect(0, 0, w, wallBottom);
+    ctx.fillStyle = "#2a2c30";
+    let sx = 60;
+    let sy = wallBottom - 12;
+    for (let i = 0; i < 7; i++) {
+      ctx.fillRect(sx, sy - 16, 52, 16);
+      sx += 52;
+      sy -= 16;
+    }
+    ctx.fillStyle = "#f6f6f4";
+    ctx.fillRect(430, wallTop + 10, 130, 24);
+    ctx.fillStyle = "#e8e2d0";
+    ctx.fillRect(400, wallTop + 46, 170, 90);
+    ctx.fillStyle = "#f2b02a";
+    ctx.fillRect(420, wallTop + 62, 50, 58);
+    ctx.fillStyle = "#e0572a";
+    ctx.fillRect(490, wallTop + 62, 50, 58);
+    ctx.fillStyle = "#6d7078";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    ctx.fillStyle = "#f6f6f4";
+    ctx.fillRect(300, wallTop + 30, 20, wallBottom - wallTop - 30);
+    return;
+  }
+  if (thumbnail === "salles-vertes") {
+    // Green walls, vault, skylight strip, panels.
+    ctx.fillStyle = "#3d6b5e";
+    ctx.fillRect(0, 0, w, wallBottom);
+    ctx.fillStyle = "#e6e1d6";
+    ctx.beginPath();
+    ctx.moveTo(0, wallTop + 26);
+    ctx.quadraticCurveTo(w / 2, wallTop - 34, w, wallTop + 26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(w / 2 - 90, wallTop + 2, 180, 8);
+    ctx.fillStyle = "#d4b48a";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    ctx.strokeStyle = "rgba(90, 55, 25, 0.5)";
+    ctx.lineWidth = 2;
+    for (let x = -20; x < w; x += 40) {
+      ctx.beginPath();
+      ctx.moveTo(x, floorTop);
+      ctx.lineTo(x + 20, h);
+      ctx.stroke();
+    }
+    for (const [px, col] of [[150, "#8a3a1c"], [300, "#c9863a"], [450, "#3a4a5a"]] as const) {
+      ctx.fillStyle = "#f5f3ee";
+      ctx.fillRect(px - 34, wallTop + 56, 68, 88);
+      ctx.fillStyle = col;
+      ctx.fillRect(px - 22, wallTop + 68, 44, 52);
+    }
+    return;
+  }
+  if (thumbnail === "couloir-sombre") {
+    // Dark corridor in perspective, warm panels, arches, track lights.
+    ctx.fillStyle = "#151413";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#24201c";
+    ctx.beginPath();
+    ctx.moveTo(w / 2 - 60, wallTop + 10);
+    ctx.lineTo(w / 2 + 60, wallTop + 10);
+    ctx.lineTo(w - 40, wallBottom);
+    ctx.lineTo(40, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#8d877d";
+    ctx.beginPath();
+    ctx.moveTo(w / 2 - 60, wallTop + 10);
+    ctx.lineTo(w / 2 + 60, wallTop + 10);
+    ctx.lineTo(w / 2 + 60, wallTop + 46);
+    ctx.lineTo(w / 2 - 60, wallTop + 46);
+    ctx.closePath();
+    ctx.fill();
+    for (const [px, pw, col] of [[90, 46, "#8a3a1c"], [220, 40, "#c9863a"], [350, 40, "#3a4a5a"], [470, 46, "#d8c9a8"]] as const) {
+      ctx.fillStyle = col;
+      ctx.fillRect(px, wallTop + 66, pw, 56);
+    }
+    ctx.fillStyle = "#fff2d0";
+    for (let x = 60; x < w; x += 90) {
+      ctx.beginPath();
+      ctx.arc(x, wallTop + 40, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "#1b1815";
+    ctx.lineWidth = 5;
+    for (const x of [150, 450]) {
+      ctx.beginPath();
+      ctx.arc(x, wallBottom - 10, 26, Math.PI, 0);
+      ctx.stroke();
+    }
+    return;
+  }
+  if (thumbnail === "couloir-dore") {
+    // Golden corridor: arched windows glowing, red end wall, sun patches.
+    ctx.fillStyle = "#f3efe6";
+    ctx.fillRect(0, 0, w, wallBottom);
+    ctx.fillStyle = "#9b2a24";
+    ctx.fillRect(w / 2 - 60, wallTop + 20, 120, wallH - 20);
+    ctx.fillStyle = "#fff6e0";
+    for (const x of [90, 210, 390, 510]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 26, wallBottom - 8);
+      ctx.lineTo(x - 26, wallTop + 66);
+      ctx.arc(x, wallTop + 66, 26, Math.PI, 0);
+      ctx.lineTo(x + 26, wallBottom - 8);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.strokeStyle = "#e8dcc8";
+    ctx.lineWidth = 3;
+    for (const x of [90, 210, 390, 510]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 26, wallBottom - 8);
+      ctx.lineTo(x - 26, wallTop + 66);
+      ctx.arc(x, wallTop + 66, 26, Math.PI, 0);
+      ctx.lineTo(x + 26, wallBottom - 8);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#c9a877";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    ctx.fillStyle = "rgba(255, 240, 176, 0.55)";
+    for (const [fx, fy] of [[120, floorTop + 10], [300, floorTop + 26], [450, floorTop + 8]] as const)
+      ctx.fillRect(fx, fy, 110, 16);
+    return;
+  }
+  if (thumbnail === "voutes") {
+    // Scale-pattern ceiling, wood floor, two panels, gold sphere.
+    ctx.fillStyle = "#f8f8f6";
+    ctx.fillRect(0, 0, w, wallBottom);
+    ctx.fillStyle = "#d6d1c5";
+    ctx.fillRect(0, 0, w, wallTop + 8);
+    ctx.fillStyle = "#ffffff";
+    for (let x = 20; x < w; x += 64) {
+      ctx.beginPath();
+      ctx.arc(x, wallTop + 8, 28, Math.PI, 0);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#d4b48a";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    for (const [px, col] of [[190, "#e0572a"], [410, "#f2c230"]] as const) {
+      ctx.fillStyle = "#f4f4f0";
+      ctx.fillRect(px - 36, wallTop + 54, 72, 84);
+      ctx.fillStyle = col;
+      ctx.fillRect(px - 24, wallTop + 66, 48, 50);
+    }
+    ctx.fillStyle = "#e8d9b4";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, wallTop + 96, 26, 34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (thumbnail === "courbes") {
+    // Circular gallery: the curved white wall, glazed section, palms.
+    ctx.fillStyle = "#a9d4ea";
+    ctx.fillRect(0, 0, w, wallTop + 30);
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(150, 36, 90, 20, 0, 0, Math.PI * 2);
+    ctx.ellipse(440, 26, 100, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f4f4f2";
+    ctx.beginPath();
+    ctx.moveTo(0, wallBottom);
+    ctx.quadraticCurveTo(w / 2, wallTop - 40, w, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(160, 200, 220, 0.85)";
+    ctx.beginPath();
+    ctx.moveTo(w - 190, wallBottom);
+    ctx.quadraticCurveTo(w - 60, wallTop + 10, w, wallTop + 60);
+    ctx.lineTo(w, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#24272b";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, floorTop + 26, 240, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#3f7a2c";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    for (const [px, py] of [[70, wallTop + 44], [w - 70, wallTop + 44]] as const) {
+      for (let a = -0.9; a <= 0.9; a += 0.45) {
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.quadraticCurveTo(px + Math.sin(a) * 40, py - 36, px + Math.sin(a) * 56, py - 48);
+        ctx.stroke();
+      }
+    }
+    return;
+  }
+  if (thumbnail === "atrium-lattes") {
+    // Slatted atrium: slat lines, a large garden window, mezzanine.
+    ctx.fillStyle = "#f8f8f6";
+    ctx.fillRect(0, 0, w, wallBottom);
+    ctx.strokeStyle = "rgba(120, 120, 125, 0.4)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < w; x += 12) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, wallBottom);
+      ctx.stroke();
+    }
+    // The garden window.
+    ctx.fillStyle = "#7fb3e6";
+    ctx.fillRect(w / 2 - 130, wallTop + 16, 260, wallH - 40);
+    ctx.fillStyle = "#3f7a2c";
+    ctx.beginPath();
+    ctx.arc(w / 2 - 70, wallTop + 100, 44, 0, Math.PI * 2);
+    ctx.arc(w / 2 + 60, wallTop + 110, 52, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#4d6b3a";
+    ctx.fillRect(w / 2 - 130, wallTop + 118, 260, wallH - 142);
+    ctx.strokeStyle = "#f8f8f6";
+    ctx.lineWidth = 4;
+    for (let x = w / 2 - 130; x <= w / 2 + 130; x += 43) {
+      ctx.beginPath();
+      ctx.moveTo(x, wallTop + 16);
+      ctx.lineTo(x, wallBottom - 24);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(w / 2 - 130, wallTop + 76);
+    ctx.lineTo(w / 2 + 130, wallTop + 76);
+    ctx.stroke();
+    // Mezzanine + staircases.
+    ctx.fillStyle = "#e6eaec";
+    ctx.fillRect(60, wallTop + 96, 130, 16);
+    ctx.fillStyle = "#55585c";
+    for (let i = 0; i < 5; i++) ctx.fillRect(60 + i * 14, wallBottom - 14 - i * 10, 40, 6);
+    for (let i = 0; i < 5; i++) ctx.fillRect(w - 100 - i * 14, wallBottom - 14 - i * 10, 40, 6);
+    ctx.fillStyle = "#d4b48a";
+    ctx.fillRect(0, floorTop, w, h - floorTop);
+    return;
+  }
 }
 
 export default function GalleriesPage({

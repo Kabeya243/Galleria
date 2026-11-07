@@ -40,6 +40,8 @@ import {
   type SunlightElementType,
   type SunlightTextFont,
 } from "@/lib/sunlight-elements";
+import { galleryDef, isGalleryLayout, roomFloorCenterZ } from "@/lib/gallery-defs";
+import { buildGalleryShell, disposeGroup, GalleryEnvironment, GalleryWalkControls } from "@/components/gallery-rooms";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
 // The renderer is Three.js in the browser: ACES tone mapping, a locally
@@ -3006,6 +3008,159 @@ function SunlightRoom({
     </group>
   );
 }
+// GenericRoom — one of the nine galleries added in November 2026
+// (La Serpentine, La Vitrine, Le Loft Béton, La Halle Design,
+// L'Arche, Le Musée Bleu, La Claire-Voie, Le Parquet, La Verrière).
+// The shell is the imperative three.js group built in
+// components/gallery-rooms.tsx from Kabeya's reference file; the
+// SANAA systems around it (artworks, Asset Library elements, grid,
+// measure, curatorial text, walk clicks) are the same as Sunlight's.
+// The shell brings its own lights — no Sunlight rig here, so a dark
+// loft stays dark and a stone gallery stays warm. Sunlight 3D
+// elements are not rendered here: they belong to the Sunlight room.
+function GenericRoom({
+  room,
+  offsetX,
+  offsetZ,
+  artworks,
+  selectedId,
+  onSelect,
+  walkable,
+  onFloorClick,
+  onWalkTo,
+  dragged,
+  editable,
+  onDragStart,
+  onHoverChange,
+  selectedElementId,
+  onSelectElement,
+  onElementDragStart,
+  onElementHover,
+  showGrid,
+  showMeasure,
+  quality,
+}: {
+  room: GalleryRoom;
+  offsetX: number;
+  offsetZ: number;
+  artworks: Artwork[];
+  selectedId?: string | null;
+  onSelect?: (id: string, additive?: boolean) => void;
+  walkable: boolean;
+  onFloorClick?: (point: Vector3) => void;
+  onWalkTo?: (point: Vector3, yaw: number) => void;
+  dragged?: React.RefObject<boolean>;
+  editable?: boolean;
+  onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
+  onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
+  selectedElementId?: string | null;
+  onSelectElement?: (id: string, additive?: boolean) => void;
+  onElementDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
+  onElementHover?: (hover: { id: string; cursor: string } | null) => void;
+  // Sunlight 3D elements: declared for call-site parity with
+  // SunlightRoom (GalleryScene passes the same props to both), but
+  // never rendered here — they belong to the Sunlight room.
+  selectedSunlightElementId?: string | null;
+  onSelectSunlightElement?: (id: string, additive?: boolean) => void;
+  onSunlightElementDragStart?: (id: string, mode: "move", event: ThreeEvent<PointerEvent>) => void;
+  onSunlightElementHover?: (hover: { id: string; cursor: string } | null) => void;
+  showGrid?: boolean;
+  showMeasure?: boolean;
+  quality: RenderQuality;
+}) {
+  const layout = roomLayouts[room.layout];
+  const def = galleryDef(room.layout);
+  const floorCenterZ = roomFloorCenterZ(room.layout);
+  const shell = useMemo(() => buildGalleryShell(room.layout), [room.layout]);
+  useEffect(() => () => disposeGroup(shell.group), [shell]);
+  // La Halle's hanging mobile rotates; every other shell is static.
+  useFrame((_, dt) => {
+    shell.tick?.(dt);
+  });
+  const bounds = def?.bounds ?? {
+    minX: -layout.width / 2,
+    maxX: layout.width / 2,
+    minZ: floorCenterZ - layout.depth / 2,
+    maxZ: floorCenterZ + layout.depth / 2,
+  };
+
+  // Clicking the floor starts the walk to that point (in walk mode),
+  // clamped to the room's own bounds.
+  const handleWalkClick = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      if (!walkable || dragged?.current) return;
+      event.stopPropagation();
+      const point = event.point.clone();
+      point.x = Math.max(offsetX + bounds.minX, Math.min(offsetX + bounds.maxX, point.x));
+      point.z = Math.max(offsetZ + bounds.minZ, Math.min(offsetZ + bounds.maxZ, point.z));
+      onFloorClick?.(point);
+    },
+    [walkable, dragged, offsetX, offsetZ, bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, onFloorClick],
+  );
+
+  return (
+    <group position={[offsetX, 0, offsetZ]}>
+      <primitive object={shell.group} />
+      {/* Invisible walk-target floor: the shell's own meshes carry no
+          click handlers, so this plane catches floor clicks in walk
+          mode. Artwork and element clicks stop propagation first, so
+          they still select / walk up to the piece. */}
+      <mesh position={[0, 0.02, floorCenterZ]} rotation={[-Math.PI / 2, 0, 0]} onClick={handleWalkClick}>
+        <planeGeometry args={[layout.width, layout.depth]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {/* Artworks — the SANAA frame system, unchanged. */}
+      {artworks.map((artwork) => (
+        <ArtworkFrame
+          key={artwork.id}
+          artwork={artwork}
+          selected={selectedId === artwork.id}
+          onSelect={onSelect}
+          walkable={walkable}
+          onWalkTo={onWalkTo}
+          offsetX={offsetX}
+          offsetZ={offsetZ}
+          dragged={dragged}
+          editable={editable}
+          onDragStart={onDragStart}
+          onHoverChange={onHoverChange}
+        />
+      ))}
+      {/* Placeable 3D elements — the Asset Library, unchanged. */}
+      {room.elements?.map((element) => (
+        <ElementMesh
+          key={element.id}
+          element={element}
+          room={room}
+          walkable={walkable}
+          onSelect={onSelectElement}
+          selected={selectedElementId === element.id}
+          editable={editable}
+          onDragStart={onElementDragStart}
+          onHoverChange={onElementHover}
+          quality={quality}
+        />
+      ))}
+      {/* Measurement guides and the editor grid, centred on the room's
+          floor centre (not on z = 0). */}
+      {showMeasure && (
+        <MeasurementGuides artworks={artworks} selectedId={selectedId ?? undefined} width={layout.width} depth={layout.depth} zCenter={floorCenterZ} />
+      )}
+      {showGrid && (
+        <group position={[0, 0, floorCenterZ]}>
+          <FloorGrid width={layout.width} depth={layout.depth} />
+        </group>
+      )}
+      {/* Curatorial text on the back wall, when set — at the height
+          and z the room's def gives (0.14 m in front of the wall). */}
+      {room.curatorialText && def?.curatorialText && (
+        <group position={[0, def.curatorialText.y, def.curatorialText.z]}>
+          <CuratorialTextPlane text={room.curatorialText} maxWidthM={9} wallColor={layout.wallColor} />
+        </group>
+      )}
+    </group>
+  );
+}
 // Start position of a Sunlight room (world coordinates): the source's
 // camera start, offset by the room's world offset.
 function sunlightEntrance(offsets: number[], zOffsets: number[] | undefined, index: number): { x: number; z: number } {
@@ -3279,10 +3434,14 @@ function InteriorCameraRig({
   roomKey,
   depth,
   enabled,
+  zCenter = 0,
 }: {
   roomKey: string;
   depth: number;
   enabled: boolean;
+  // Room-local z of the floor centre (0 for centred rooms, −1 for
+  // Sunlight, the def's floorCenterZ for the generic rooms).
+  zCenter?: number;
 }) {
   const camera = useThree((state) => state.camera);
   const controls = useThree((state) => state.controls) as unknown as {
@@ -3291,14 +3450,14 @@ function InteriorCameraRig({
   } | null;
   useEffect(() => {
     if (!enabled) return;
-    camera.position.set(0, 2.0, depth / 2 - 1.8);
+    camera.position.set(0, 2.0, zCenter + depth / 2 - 1.8);
     if (controls) {
-      controls.target.set(0, 1.8, 0);
+      controls.target.set(0, 1.8, zCenter);
       controls.update();
     } else {
-      camera.lookAt(0, 1.8, 0);
+      camera.lookAt(0, 1.8, zCenter);
     }
-  }, [camera, controls, depth, enabled, roomKey]);
+  }, [camera, controls, depth, enabled, roomKey, zCenter]);
   return null;
 }
 
@@ -3410,6 +3569,10 @@ function ElementDropHandler({
       event.preventDefault();
       const currentRoom = roomRef.current;
       const { width, depth, height } = roomLayouts[currentRoom.layout];
+      // Room-local z of the floor centre (Sunlight −1, the generic
+      // rooms their def's floorCenterZ): the wall plane and the drop
+      // clamp are centred on the room, not on z = 0.
+      const zCenter = roomFloorCenterZ(currentRoom.layout);
       const rect = el.getBoundingClientRect();
       const ndc = new Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       const raycaster = new Raycaster();
@@ -3419,7 +3582,7 @@ function ElementDropHandler({
       let point: Vector3 | null = null;
       if (planeKind === "wall") {
         const wallOffset = ELEMENT_DEFAULTS[type].wallOffset;
-        const wallPlane = new Plane(new Vector3(0, 0, 1), depth / 2 - wallOffset);
+        const wallPlane = new Plane(new Vector3(0, 0, 1), -(zCenter - depth / 2 + wallOffset));
         if (raycaster.ray.intersectPlane(wallPlane, hit)) point = hit.clone();
       } else if (planeKind === "ceiling") {
         const y = Math.max(2.5, height - 0.4);
@@ -3428,7 +3591,7 @@ function ElementDropHandler({
       if (!point && raycaster.ray.intersectPlane(new Plane(new Vector3(0, 1, 0), 0), hit)) point = hit.clone();
       if (!point) return;
       point.x = Math.min(width / 2 - 0.5, Math.max(-width / 2 + 0.5, point.x));
-      point.z = Math.min(depth / 2 - 0.5, Math.max(-depth / 2 + 0.5, point.z));
+      point.z = Math.min(zCenter + depth / 2 - 0.5, Math.max(zCenter - depth / 2 + 0.5, point.z));
       dropRef.current?.(type, { x: point.x, y: point.y, z: point.z });
     };
     el.addEventListener("dragover", onDragOver);
@@ -3710,9 +3873,9 @@ export default function GalleryScene({
     grabOffset.addScaledVector(normal, -grabOffset.dot(normal));
     const hitOnPlane = event.point.clone().addScaledVector(normal, -event.point.clone().sub(position).dot(normal));
     const startDist = Math.max(0.1, hitOnPlane.distanceTo(position));
-    // The Sunlight room is not centred on z = 0: its floor is centred
-    // at z = -1, so the room spans z -14..12, not -13..13.
-    const zCenter = room.layout === "sunlight" ? SUNLIGHT_FLOOR_CENTER_Z : 0;
+    // The room is not centred on z = 0 (Sunlight −1, the generic
+    // rooms their def's floorCenterZ): the drag clamp reads it.
+    const zCenter = roomFloorCenterZ(room.layout);
     dragRef.current = {
       id,
       mode,
@@ -3771,8 +3934,9 @@ export default function GalleryScene({
     // shelves slide up and down their wall.
     const minY = planeKind === "wall" && (element.type === "window" || element.type === "wall-text" || element.type === "shelf") ? 1.0 : element.y;
     const maxY = planeKind === "wall" && (element.type === "window" || element.type === "wall-text" || element.type === "shelf") ? 3.2 : element.y;
-    // The Sunlight room is not centred on z = 0 (floor centre z = -1).
-    const zCenter = ownerRoom.layout === "sunlight" ? SUNLIGHT_FLOOR_CENTER_Z : 0;
+    // The room is not centred on z = 0 (Sunlight −1, the generic
+    // rooms their def's floorCenterZ).
+    const zCenter = roomFloorCenterZ(ownerRoom.layout);
     elementDragRef.current = {
       id,
       mode,
@@ -3837,13 +4001,15 @@ export default function GalleryScene({
     setDragCursor("grabbing");
   };
 
-  // The Sunlight Gallery is the only room: one solid room per
-  // exhibition, no side doorways, no arch, no shared walls. In walk
-  // mode every room's floor and artworks are walk targets, not just
-  // the active room's; rooms are switched by teleport (mini-plan /
-  // room list), never by walking through a wall.
-  const artworkNodes = artworkRooms.map((sceneRoom, index) => (
-    <SunlightRoom
+  // Rooms are self-contained: one solid room per exhibition, no side
+  // doorways, no arch, no shared walls. In walk mode every room's
+  // floor and artworks are walk targets, not just the active room's;
+  // rooms are switched by teleport (mini-plan / room list), never by
+  // walking through a wall.
+  const artworkNodes = artworkRooms.map((sceneRoom, index) => {
+    const RoomComponent = isGalleryLayout(sceneRoom.layout) ? GenericRoom : SunlightRoom;
+    return (
+    <RoomComponent
       key={sceneRoom.id}
       room={sceneRoom}
       offsetX={artworkOffsets[index]}
@@ -3877,12 +4043,22 @@ export default function GalleryScene({
       dragged={dragged}
       quality={quality}
     />
-  ));
+    );
+  });
   const startRoom = sceneRooms[Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)))];
   const startIndex = Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)));
   const startOffset = offsets[startIndex];
   const startZOffset = zOffsets[startIndex];
   const startDepth = roomLayouts[startRoom.layout].depth;
+  // The active room's definition: Sunlight keeps its own lighting
+  // (sun + hemisphere + IBL + sun slider); a generic room reads its
+  // background, fog and environment flag from its def, and its shells
+  // bring their own lights.
+  const activeDef = galleryDef(startRoom.layout);
+  const activeIsSunlight = startRoom.layout === "sunlight";
+  const startCam = activeIsSunlight
+    ? SUNLIGHT_CAMERA_START
+    : { x: activeDef?.cameraStart.x ?? 0, y: activeDef?.cameraStart.y ?? 1.65, z: activeDef?.cameraStart.z ?? 8 };
   const interiorView = interior === true && !walkMode;
   const interiorLimits = useMemo(() => {
     const layout = roomLayouts[room.layout];
@@ -3920,15 +4096,20 @@ export default function GalleryScene({
       }}
       onPointerUp={() => { dragStartPoint.current = null; }}
     >
-      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset + SUNLIGHT_CAMERA_START.x, SUNLIGHT_CAMERA_START.y, startZOffset + SUNLIGHT_CAMERA_START.z] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 66 : 43 }} dpr={qualityCfg.dpr} shadows="variance">
-        {/* Sunlight Gallery: the source's pale sky backdrop (#dfe6ee),
-            no fog. The sun, hemisphere and IBL live in SunlightRig /
-            SunlightEnvironment; the skylight diffusers carry their own
-            warm point lights inside SunlightRoom. */}
-        <color attach="background" args={["#dfe6ee"]} />
+      <Canvas camera={{ position: interiorView ? [0, 2.0, (room.layout === "sunlight" ? 0 : roomFloorCenterZ(room.layout)) + startDepth / 2 - 1.8] : walkMode ? [startOffset + startCam.x, startCam.y, startZOffset + startCam.z] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 66 : 43 }} dpr={qualityCfg.dpr} shadows="variance">
+        {/* Backdrop: Sunlight keeps the source's pale sky (#dfe6ee),
+            no fog; a generic room reads its background (and fog, when
+            its source has one) from its def. The sun, hemisphere and
+            IBL live in SunlightRig / SunlightEnvironment for Sunlight
+            only; a generic room with an environment scene gets the
+            shared PMREM gradient instead, and its shell brings its own
+            lights either way. */}
+        <color attach="background" args={[activeDef?.background ?? "#dfe6ee"]} />
+        {activeDef?.fog && <fog attach="fog" args={[activeDef.fog.color, activeDef.fog.near, activeDef.fog.far]} />}
         <ToneMappingRig exposure={qualityCfg.exposure} />
-        <SunlightEnvironment />
-        <SunlightRig sunValue={sunValue} quality={quality} />
+        {activeIsSunlight && <SunlightEnvironment />}
+        {activeIsSunlight && <SunlightRig sunValue={sunValue} quality={quality} />}
+        {!activeIsSunlight && activeDef?.environment && <GalleryEnvironment />}
         {cameraStateRef && <CameraStateReporter cameraStateRef={cameraStateRef} />}
         {/* Artwork textures load through Suspense so a slow image suspends
             only the artworks — never the whole room or page. */}
@@ -3966,10 +4147,14 @@ export default function GalleryScene({
         />
         <ElementDropHandler room={room} enabled={Boolean(editable) && !walking} onDrop={onElementDrop} />
         {interiorView && (
-          <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
+          <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled zCenter={room.layout === "sunlight" ? 0 : roomFloorCenterZ(room.layout)} />
         )}
         {walkMode && input ? (
-          <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+          activeIsSunlight ? (
+            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+          ) : (
+            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+          )
         ) : (
           <OrbitControls
             makeDefault
@@ -3978,13 +4163,13 @@ export default function GalleryScene({
             maxDistance={interiorView ? interiorLimits.maxDistance : Math.max(roomLayouts[room.layout].width, roomLayouts[room.layout].depth) + 6}
             minPolarAngle={interiorView ? interiorLimits.minPolarAngle : 0}
             maxPolarAngle={interiorView ? interiorLimits.maxPolarAngle : Math.PI / 2.03}
-            target={interiorView ? [0, 1.8, 0] : [0, 2.1, -roomLayouts[room.layout].depth / 2]}
+            target={interiorView ? [0, 1.8, room.layout === "sunlight" ? 0 : roomFloorCenterZ(room.layout)] : activeIsSunlight ? [0, 2.1, -roomLayouts[room.layout].depth / 2] : [0, 2.1, roomFloorCenterZ(room.layout)]}
             enableDamping
           />
         )}
       </Canvas>
       <RenderQualityToggle quality={quality} onChange={handleQualityChange} canvasClassName={className} />
-      <SunSlider value={sunValue} onChange={setSunValue} canvasClassName={className} />
+      {activeIsSunlight && <SunSlider value={sunValue} onChange={setSunValue} canvasClassName={className} />}
     </div>
   );
 }

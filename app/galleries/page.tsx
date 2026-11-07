@@ -6,7 +6,7 @@ import { roomLayouts, HIDDEN_LAYOUT_KEYS, type RoomLayout } from "@/lib/rooms";
 
 export const metadata = {
   title: "Galleries — SANAA",
-  description: "The Sunlight Gallery: a bright 22 × 26 m hall under seven skylights. Preview it in 3D and open it in the editor.",
+  description: "Twenty-one galleries — the Sunlight Gallery, nine more from six reference files, and eleven from Galeries_3D.html: Pavillon de lumière, Galerie classique, Atrium blanc, Patio ovale, Hall à escalier, Salles vertes, Couloir sombre, Couloir doré, Plafond à voûtes, Courbes blanches and Atrium à lattes. Preview each in 3D and open it in the editor.",
 };
 
 export default async function GalleriesRoute() {
@@ -15,7 +15,10 @@ export default async function GalleriesRoute() {
   // Templates the owner hid in the admin never reach the catalogue.
   const hidden = new Set(await getHiddenRoomLayouts());
   const rooms = (Object.keys(roomLayouts) as RoomLayout[])
-    // Sunlight Gallery is the only template.
+    // Twenty-one templates: Sunlight plus the nine galleries added in
+    // November 2026 plus the eleven from Galeries_3D.html, added the
+    // same month. Templates the owner hid in the admin never reach
+    // the catalogue.
     .filter((key) => !hidden.has(key) && !HIDDEN_LAYOUT_KEYS.has(key))
     .map((key): GalleryPresetCard => {
     const preset = roomLayouts[key];
@@ -34,6 +37,7 @@ export default async function GalleriesRoute() {
       wallTexture: preset.wallTexture,
       floorTexture: preset.floorTexture,
       ceilingTexture: preset.ceilingTexture,
+      thumbnail: preset.thumbnail,
     };
   });
   return <GalleriesPage rooms={rooms} user={user} ownExhibitionCount={ownExhibitionCount} />;

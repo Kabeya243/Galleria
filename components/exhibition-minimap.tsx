@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, X } from "lucide-react";
 import type { Artwork } from "@/lib/demo-data";
-import { roomPlanOffsets, type GalleryRoom } from "@/lib/rooms";
+import { roomLayouts, roomPlanOffsets, type GalleryRoom } from "@/lib/rooms";
+import { galleryDef, roomFloorCenterZ } from "@/lib/gallery-defs";
 import {
   SUNLIGHT_MAP_HEIGHT,
   SUNLIGHT_MAP_WIDTH,
@@ -55,11 +56,21 @@ export default function ExhibitionMinimap({
   // roomPlanOffsets), so the plan matches the space the visitor walks
   // through. A single Sunlight room per exhibition: the plan shows
   // that room.
-  const offsets = useMemo(() => roomPlanOffsets(rooms).x, [rooms]);
+  const planOffsets = useMemo(() => roomPlanOffsets(rooms), [rooms]);
+  const offsets = planOffsets.x;
   const activeRoom = rooms.find((room) => room.id === activeRoomId) ?? rooms[0];
   const activeIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoom?.id));
   const activeOffsetX = offsets[activeIndex] ?? 0;
+  const activeOffsetZ = planOffsets.z[activeIndex] ?? 0;
   const activeArtworks = activeRoom ? artworks.filter((artwork) => artwork.roomId === activeRoom.id) : [];
+  const activeIsSunlight = activeRoom?.layout === "sunlight";
+  // Generic rooms: the plan is drawn in the same 240 × 280 box, the
+  // room's own footprint keeping its ratio inside it (see
+  // genericPlanMap below).
+  const genericMap = useMemo(
+    () => (activeRoom && !activeIsSunlight ? genericPlanMap(activeRoom.layout) : null),
+    [activeRoom, activeIsSunlight],
+  );
 
   // Redraw the plan every frame while open: the camera dot and its
   // direction line move live with the camera.
@@ -71,12 +82,16 @@ export default function ExhibitionMinimap({
     if (!ctx) return;
     let raf = 0;
     const draw = () => {
-      drawSunlightMinimap(ctx, activeArtworks, selectedArtworkId, cameraStateRef?.current ?? null, activeOffsetX, activeRoom.sunlightElements ?? []);
+      if (activeIsSunlight) {
+        drawSunlightMinimap(ctx, activeArtworks, selectedArtworkId, cameraStateRef?.current ?? null, activeOffsetX, activeRoom.sunlightElements ?? []);
+      } else if (genericMap && activeRoom) {
+        drawGenericMinimap(ctx, genericMap, galleryDef(activeRoom.layout), activeArtworks, selectedArtworkId, cameraStateRef?.current ?? null, activeOffsetX, activeOffsetZ);
+      }
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [open, activeArtworks, selectedArtworkId, cameraStateRef, activeOffsetX, activeRoom]);
+  }, [open, activeArtworks, selectedArtworkId, cameraStateRef, activeOffsetX, activeOffsetZ, activeRoom, activeIsSunlight, genericMap]);
 
   if (rooms.length === 0 || !activeRoom) return null;
 
@@ -84,7 +99,9 @@ export default function ExhibitionMinimap({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const point = sunlightMapPoint(event.clientX, event.clientY, rect);
+    const point = activeIsSunlight || !genericMap
+      ? sunlightMapPoint(event.clientX, event.clientY, rect)
+      : genericPlanPoint(genericMap, event.clientX, event.clientY, rect);
     // A click near an artwork dot (within ~0.6 m) walks to that
     // artwork; anywhere else walks to the clicked point.
     const near = activeArtworks.find((artwork) => {
@@ -240,6 +257,133 @@ function drawSunlightMinimap(
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(sunlightMapX(localX + dx), sunlightMapZ(cameraState.z + dz));
+    ctx.strokeStyle = "#1f6feb";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#1f6feb";
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+// --- Generic rooms ---------------------------------------------------------
+// The same 240 × 280 box as Sunlight's plan, the room's own footprint
+// keeping its ratio inside it (centred, 4 px margin): the outline,
+// the room's plan lines (panels, partitions, screens), orange artwork
+// dots and the live camera — same marks as Sunlight, different shape.
+type GenericPlanMap = {
+  scale: number;
+  padX: number;
+  padY: number;
+  width: number;
+  depth: number;
+  floorCenterZ: number;
+  bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
+};
+
+function genericPlanMap(layout: import("@/lib/rooms").RoomLayout): GenericPlanMap {
+  const { width, depth } = roomLayouts[layout];
+  const floorCenterZ = roomFloorCenterZ(layout);
+  const def = galleryDef(layout);
+  const scale = Math.min((SUNLIGHT_MAP_WIDTH - 8) / width, (SUNLIGHT_MAP_HEIGHT - 8) / depth);
+  return {
+    scale,
+    padX: (SUNLIGHT_MAP_WIDTH - width * scale) / 2,
+    padY: (SUNLIGHT_MAP_HEIGHT - depth * scale) / 2,
+    width,
+    depth,
+    floorCenterZ,
+    bounds: def?.bounds ?? {
+      minX: -width / 2,
+      maxX: width / 2,
+      minZ: floorCenterZ - depth / 2,
+      maxZ: floorCenterZ + depth / 2,
+    },
+  };
+}
+
+function genericMapX(map: GenericPlanMap, x: number): number {
+  return map.padX + (x + map.width / 2) * map.scale;
+}
+
+function genericMapZ(map: GenericPlanMap, z: number): number {
+  return map.padY + (z - (map.floorCenterZ - map.depth / 2)) * map.scale;
+}
+
+function genericPlanPoint(
+  map: GenericPlanMap,
+  clientX: number,
+  clientY: number,
+  rect: { left: number; top: number; width: number; height: number },
+): { x: number; z: number } {
+  const px = ((clientX - rect.left) / rect.width) * SUNLIGHT_MAP_WIDTH;
+  const py = ((clientY - rect.top) / rect.height) * SUNLIGHT_MAP_HEIGHT;
+  return {
+    x: Math.max(map.bounds.minX, Math.min(map.bounds.maxX, (px - map.padX) / map.scale - map.width / 2)),
+    z: Math.max(map.bounds.minZ, Math.min(map.bounds.maxZ, (py - map.padY) / map.scale + map.floorCenterZ - map.depth / 2)),
+  };
+}
+
+function drawGenericMinimap(
+  ctx: CanvasRenderingContext2D,
+  map: GenericPlanMap,
+  def: import("@/lib/gallery-defs").GalleryDef | null,
+  artworks: Artwork[],
+  selectedArtworkId: string | undefined,
+  cameraState: CameraState | null,
+  offsetX: number,
+  offsetZ: number,
+) {
+  const W = SUNLIGHT_MAP_WIDTH;
+  const H = SUNLIGHT_MAP_HEIGHT;
+  ctx.clearRect(0, 0, W, H);
+  // Room: white fill, black outline.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(map.padX + 1, map.padY + 1, map.width * map.scale - 2, map.depth * map.scale - 2);
+  // Plan lines (panels, partitions, screens): grey lines.
+  ctx.strokeStyle = "#333333";
+  ctx.lineWidth = 3;
+  for (const line of def?.planLines ?? []) {
+    ctx.beginPath();
+    ctx.moveTo(genericMapX(map, line.x1), genericMapZ(map, line.z1));
+    ctx.lineTo(genericMapX(map, line.x2), genericMapZ(map, line.z2));
+    ctx.stroke();
+  }
+  // Artworks: orange dots (bigger when selected) — the source's
+  // #BA7517.
+  for (const artwork of artworks) {
+    const cx = genericMapX(map, artwork.position[0]);
+    const cy = genericMapZ(map, artwork.position[2]);
+    const isSelected = artwork.id === selectedArtworkId;
+    ctx.beginPath();
+    ctx.arc(cx, cy, isSelected ? 7 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = isSelected ? "#ffffff" : "#BA7517";
+    ctx.fill();
+    ctx.strokeStyle = "#BA7517";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  // Camera: blue dot + a short direction line (yaw 0 faces -Z) — the
+  // source's #1f6feb. World coordinates shifted back by the room's
+  // offset to land on the plan.
+  if (cameraState) {
+    const localX = cameraState.x - offsetX;
+    const localZ = cameraState.z - offsetZ;
+    const cx = genericMapX(map, localX);
+    const cy = genericMapZ(map, localZ);
+    const len = 2; // metres
+    const dx = -Math.sin(cameraState.yaw) * len;
+    const dz = -Math.cos(cameraState.yaw) * len;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(genericMapX(map, localX + dx), genericMapZ(map, localZ + dz));
     ctx.strokeStyle = "#1f6feb";
     ctx.lineWidth = 2;
     ctx.stroke();

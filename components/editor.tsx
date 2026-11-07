@@ -42,13 +42,13 @@ import ExhibitionMinimap from "@/components/exhibition-minimap";
 import ExhibitionPublishDialog, { type PublishVisibility } from "@/components/exhibition-publish-dialog";
 import FrameThumbnail from "@/components/frame-thumbnail";
 import GalleryScene, { artworkStandPoint, parseArtworkDimensions, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
-import { SUNLIGHT_CAMERA_START } from "@/lib/sunlight";
 import LayersPanel, { type LayerArtwork, type LayerItemRef } from "@/components/layers-panel";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
+import { galleryCameraStart, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import {
   createSunlightElement,
   SUNLIGHT_ELEMENT_BOUNDS,
@@ -404,6 +404,12 @@ export default function Editor({
   // match at once; the caller prefers the wall the artwork was already
   // on, so sliding along one wall never flips it to the next.
   function wallsForArtwork(artwork: Artwork, room: GalleryRoom): { key: string; rotation: number }[] {
+    if (room.layout !== "sunlight") {
+      return galleryWallsForPosition(
+        { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] },
+        room.layout,
+      );
+    }
     return sunlightWallsForPosition(
       { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] },
       room.sunlightElements ?? [],
@@ -612,8 +618,9 @@ export default function Editor({
   function handleRoomTeleport(roomId: string) {
     const room = rooms.find((candidate) => candidate.id === roomId);
     if (!room) return;
+    const start = galleryCameraStart(room.layout);
     teleportNonce.current += 1;
-    setTeleportTarget({ roomId, x: SUNLIGHT_CAMERA_START.x, z: SUNLIGHT_CAMERA_START.z, yaw: SUNLIGHT_CAMERA_START.yaw, nonce: teleportNonce.current });
+    setTeleportTarget({ roomId, x: start.x, z: start.z, yaw: start.yaw, nonce: teleportNonce.current });
     if (!walking) setWalking(true);
   }
 
@@ -930,7 +937,7 @@ export default function Editor({
   function addElement(type: ElementType) {
     if (!activeRoom) return;
     const number = currentElements.filter((element) => element.type === type).length;
-    const element = createElement(type, roomLayouts[activeRoom.layout], number);
+    const element = createElement(type, roomLayouts[activeRoom.layout], number, roomFloorCenterZ(activeRoom.layout));
     snapshot();
     updateRoom(activeRoom.id, (room) => ({ ...room, elements: [...room.elements, element] }));
     selectElement(element.id);
@@ -943,7 +950,7 @@ export default function Editor({
     if (!activeRoom) return;
     const layout = roomLayouts[activeRoom.layout];
     const number = currentElements.filter((element) => element.type === type).length;
-    const element = createElement(type, layout, number);
+    const element = createElement(type, layout, number, roomFloorCenterZ(activeRoom.layout));
     const plane = ELEMENT_PLANES[type];
     const y = plane === "floor"
       ? 0
@@ -1085,12 +1092,17 @@ export default function Editor({
     if (!artwork || artwork.roomId !== activeRoom.id) return;
     const wall = wallsForArtwork(artwork, activeRoom)[0];
     if (!wall) return;
-    const face = sunlightHangWalls(activeRoom.sunlightElements ?? []).find((item) => item.id === wall.key);
-    if (!face) return;
     const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
     const width = ((parsed?.widthCm ?? 80) / 100) * artwork.scale;
     const height = ((parsed?.heightCm ?? 100) / 100) * artwork.scale;
-    const { position, rotation } = sunlightPlaceOnWall(
+    // A generic room snaps onto its own hangable faces (fixed walls,
+    // panels, partitions, screens…); Sunlight onto its hang walls.
+    const face = activeRoom.layout === "sunlight"
+      ? sunlightHangWalls(activeRoom.sunlightElements ?? []).find((item) => item.id === wall.key)
+      : galleryHangWalls(activeRoom.layout).find((item) => item.id === wall.key);
+    if (!face) return;
+    const place = activeRoom.layout === "sunlight" ? sunlightPlaceOnWall : galleryPlaceOnWall;
+    const { position, rotation } = place(
       { point: { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] }, normal: { x: face.nx, z: face.nz }, face },
       height,
       width,
@@ -1525,11 +1537,17 @@ export default function Editor({
       const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
       const offsetX = walking ? (roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0) : 0;
       const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
-      const hit = sunlightWallHit(origin, direction, activeRoom.sunlightElements ?? []);
-      if (hit) return sunlightPlaceOnWall(hit, height, width, alongOffset);
+      if (activeRoom.layout !== "sunlight") {
+        const hit = galleryWallHit(origin, direction, activeRoom.layout);
+        if (hit) return galleryPlaceOnWall(hit, height, width, alongOffset);
+      } else {
+        const hit = sunlightWallHit(origin, direction, activeRoom.sunlightElements ?? []);
+        if (hit) return sunlightPlaceOnWall(hit, height, width, alongOffset);
+      }
     }
-    const { depth } = roomLayouts[activeRoom?.layout ?? "sunlight"];
-    return { position: [0, 1.55, -depth / 2 + 0.28], rotation: 0 };
+    const layout = roomLayouts[activeRoom?.layout ?? "sunlight"];
+    const zCenter = roomFloorCenterZ(activeRoom?.layout ?? "sunlight");
+    return { position: [0, 1.55, zCenter - layout.depth / 2 + 0.28], rotation: 0 };
   }
 
   // Curatorial text (the reference room's "Texte curatorial"): a text
@@ -2107,7 +2125,9 @@ async function compressImage(file: File): Promise<File> {
                   fauteuils, spotlights). Separate from the Asset Library
                   above; both systems coexist. Added 3 m in front of the
                   camera, then dragged on the floor; spotlights are
-                  capped at 8. */}
+                  capped at 8. Sunlight only: the generic rooms have no
+                  reference-room pieces. */}
+              {activeRoom?.layout === "sunlight" && (
               <div className="property-section">
                 <label>3D ELEMENTS <span>REFERENCE ROOM</span></label>
                 <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: 8, lineHeight: 1.6 }}>Partitions, columns, plinths, vitrines, benches, armchairs and spotlights from the reference room — placed 3 m in front of the camera.</p>
@@ -2135,6 +2155,7 @@ async function compressImage(file: File): Promise<File> {
                   )}
                 </div>
               </div>
+              )}
             </>
           ) : (
             <LayersPanel

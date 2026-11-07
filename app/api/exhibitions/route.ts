@@ -49,10 +49,11 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  // Sunlight Gallery is the only model: every new exhibition starts
-  // with one Sunlight room. An unknown or retired model id falls back
-  // to Sunlight (roomModelLayout), and a hidden-layout fallback has
-  // no alternative to fall back to.
+  // Twenty-one models now: the Sunlight Gallery, the nine galleries
+  // added in November 2026, and the eleven from Galeries_3D.html,
+  // added the same month. An unknown or retired model id falls back to
+  // Sunlight (roomModelLayout), and a hidden-layout fallback has no
+  // alternative to fall back to.
   const layout = roomModelLayout(parsed.data.model ?? "sunlight");
 
   const room = createGalleryRoom(0, layout);
@@ -63,12 +64,15 @@ export async function POST(request: Request) {
       slug: randomUUID(),
       ownerId: user.id,
       rooms: JSON.stringify(rooms),
-      // The Sunlight Gallery ships with its four demo artworks
-      // pre-placed on the freestanding panels as normal artworks, so
-      // the room looks like the reference on opening — and each one
-      // can be edited, re-imaged or deleted in the editor like any
-      // artwork the owner adds by hand.
-      artworks: { create: seedSunlightArtworks(room.id) },
+      // Sunlight only: the Sunlight Gallery ships with its four demo
+      // artworks pre-placed on the freestanding panels as normal
+      // artworks, so the room looks like the reference on opening —
+      // and each one can be edited, re-imaged or deleted in the
+      // editor like any artwork the owner adds by hand. The nine new
+      // galleries start empty: their demo paintings belong to the
+      // shell, not to the exhibition, and the owner hangs their own
+      // works on the walls.
+      artworks: { create: layout === "sunlight" ? seedSunlightArtworks(room.id) : [] },
     },
   });
   return NextResponse.json({ exhibition }, { status: 201 });

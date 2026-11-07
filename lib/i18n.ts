@@ -182,6 +182,106 @@ export const DICTIONARY = {
       fr: "Grande salle lumineuse sous sept verrières — lumière du jour, sol béton, panneaux autoportants.",
       en: "Bright hall under seven skylights — daylight, concrete floor, freestanding panels.",
     },
+    modelSerpentine: { fr: "La Serpentine", en: "La Serpentine" },
+    modelSerpentineDesc: {
+      fr: "Foire en plein air — quatre murs blancs serpentins sous le ciel, photos sur les deux faces, place en pierre et moquette grise.",
+      en: "An open-air art fair — four curved white serpentine walls under the sky, photographs on both faces, a stone plaza and a grey carpet.",
+    },
+    modelVitrine: { fr: "La Vitrine", en: "La Vitrine" },
+    modelVitrineDesc: {
+      fr: "Galerie à façade vitrée — façade brique avec son enseigne « exhibit », devanture vitrée, sol béton, socles et étagères.",
+      en: "A bright glass-front gallery — a brick facade with its “exhibit” sign, a glazed front, a concrete floor, pedestals and shelves.",
+    },
+    modelLoft: { fr: "Le Loft Béton", en: "Le Loft Béton" },
+    modelLoftDesc: {
+      fr: "Loft sombre en béton — poutres, rails et spots, couleurs franches sur murs blancs, cloison et banc.",
+      en: "A dark concrete loft — beams, rails and spotlights, bold colour on white walls, a partition and a bench.",
+    },
+    modelHalle: { fr: "La Halle Design", en: "La Halle Design" },
+    modelHalleDesc: {
+      fr: "Grande halle design 25 × 34 m — paravents pliants en zigzag, plateformes et mobilier lounge, mobile suspendu à facettes et cerfs-volants.",
+      en: "A 25 × 34 m design hall — zigzag folding screens, platforms and lounge furniture, a hanging faceted mobile and kites.",
+    },
+    modelArche: { fr: "L'Arche", en: "L'Arche" },
+    modelArcheDesc: {
+      fr: "Galerie en pierre — mur de séparation à arche ronde, niche, gravats et poutres en bois. La Galerie en Pierre d'origine.",
+      en: "A stone gallery — a round-arch dividing wall, a niche, rubble and timber beams. The original Stone Gallery.",
+    },
+    modelMusee: { fr: "Le Musée Bleu", en: "Le Musée Bleu" },
+    modelMuseeDesc: {
+      fr: "Salle de musée — mur bleu courbe, verrière en caissons, parquet chevrons et panneaux inclinés.",
+      en: "A museum room — a curved blue wall, a coffered skylight, herringbone parquet and angled panels.",
+    },
+    modelClaireVoie: { fr: "La Claire-Voie", en: "La Claire-Voie" },
+    modelClaireVoieDesc: {
+      fr: "Galerie au sol sombre — immense peinture folk, mur de vinyle texte, bancs blancs et haute fenêtre claire-voie.",
+      en: "A dark-floored gallery — a huge folk painting, a wall of text vinyl, white benches and a high clerestory window.",
+    },
+    modelParquet: { fr: "Le Parquet", en: "Le Parquet" },
+    modelParquetDesc: {
+      fr: "Salle au parquet chevrons — cloisons en V, socles avec sculptures, mobile debout et accrochage salon.",
+      en: "A herringbone-parquet room — V-shaped partitions, pedestals with sculptures, a standing mobile and a salon hang.",
+    },
+    modelVerriere: { fr: "La Verrière", en: "La Verrière" },
+    modelVerriereDesc: {
+      fr: "Grande halle 40 × 32 m sous plafond à caissons et verrières — cinq panneaux inclinés avec peintures, banc et pupitre d'étiquette.",
+      en: "A 40 × 32 m hall under a coffered skylight ceiling — five angled panels with paintings, a bench and a label stand.",
+    },
+    modelPavillon: { fr: "Pavillon de lumière", en: "Pavillon de lumière" },
+    modelPavillonDesc: {
+      fr: "Pavillon lumineux — sol bois, murs en briques de verre, deux salles latérales, palmiers et pelouse dehors.",
+      en: "A light pavilion — wood floor, glass-brick walls, two side rooms, palm trees and a lawn outside.",
+    },
+    modelClassique: { fr: "Galerie classique", en: "Galerie classique" },
+    modelClassiqueDesc: {
+      fr: "Galerie classique — salle 8 × 40 m sous voûte à caissons, colonnes de granit, verrières dans la voûte.",
+      en: "A classical gallery — an 8 × 40 m hall under a coffered vault, granite columns, skylights in the vault.",
+    },
+    modelAtriumBlanc: { fr: "Atrium blanc", en: "Atrium blanc" },
+    modelAtriumBlancDesc: {
+      fr: "Atrium blanc — sol laqué marbre, quatre colonnes, tambour noir suspendu au plafond.",
+      en: "A white atrium — lacquered marble floor, four columns, a black drum suspended from the ceiling.",
+    },
+    modelPatio: { fr: "Patio ovale", en: "Patio ovale" },
+    modelPatioDesc: {
+      fr: "Patio ovale — place de marbre sous une toiture percée d'un ovale, arbres, gravier noir et pelouse.",
+      en: "An oval patio — a marble plaza under a roof pierced by an oval opening, trees, black gravel and a lawn.",
+    },
+    modelEscalier: { fr: "Hall à escalier", en: "Hall à escalier" },
+    modelEscalierDesc: {
+      fr: "Hall à escalier — 16 × 20 m, escalier de 14 marches, colonne centrale, mezzanine et verre.",
+      en: "A stair hall — 16 × 20 m, a 14-step staircase, a central column, a mezzanine and glass.",
+    },
+    modelSallesVertes: { fr: "Salles vertes", en: "Salles vertes" },
+    modelSallesVertesDesc: {
+      fr: "Salles vertes — hall 14 × 32 m, murs verts, parquet bois, voûte, trois panneaux, deux bancs et verrière.",
+      en: "Green rooms — a 14 × 32 m hall, green walls, wood floor, a vault, three panels, two benches and a skylight.",
+    },
+    modelCouloirSombre: { fr: "Couloir sombre", en: "Couloir sombre" },
+    modelCouloirSombreDesc: {
+      fr: "Couloir sombre — hall 7 × 46 m, parquet chevrons, voûte, six panneaux, arches et rails de spots.",
+      en: "A dark corridor — a 7 × 46 m hall, herringbone parquet, a vault, six panels, arches and track lights.",
+    },
+    modelCouloirDore: { fr: "Couloir doré", en: "Couloir doré" },
+    modelCouloirDoreDesc: {
+      fr: "Couloir doré — hall 7 × 46 m, parquet chevrons, fenêtres en arche lumineuses, mur rouge au fond et taches de soleil au sol.",
+      en: "A golden corridor — a 7 × 46 m hall, herringbone parquet, luminous arched windows, a red end wall and sun patches on the floor.",
+    },
+    modelVoutes: { fr: "Plafond à voûtes", en: "Plafond à voûtes" },
+    modelVoutesDesc: {
+      fr: "Plafond à voûtes — hall 10 × 30 m, parquet bois, plafond à écailles, deux panneaux et deux bancs.",
+      en: "A vaulted ceiling — a 10 × 30 m hall, wood floor, a scale-pattern ceiling, two panels and two benches.",
+    },
+    modelCourbes: { fr: "Courbes blanches", en: "Courbes blanches" },
+    modelCourbesDesc: {
+      fr: "Courbes blanches — galerie circulaire, mur courbe blanc, section vitrée, palmiers et pelouse dehors.",
+      en: "White curves — a circular gallery, a curved white wall, a glazed section, palm trees and a lawn outside.",
+    },
+    modelAtriumLattes: { fr: "Atrium à lattes", en: "Atrium à lattes" },
+    modelAtriumLattesDesc: {
+      fr: "Atrium à lattes — 14 × 18 m, murs à lattes, parquet bois, grande fenêtre sur l'extérieur, mezzanine et escaliers.",
+      en: "A slatted atrium — 14 × 18 m, slatted walls, wood floor, a large window onto the outside, a mezzanine and staircases.",
+    },
     create: { fr: "Créer", en: "Create" },
     creating: { fr: "Création…", en: "Creating…" },
   },

@@ -189,13 +189,17 @@ export function createElement(
   type: ElementType,
   dims: { width: number; depth: number; height: number },
   number: number,
+  // Room-local z of the floor centre (Sunlight −1, the generic rooms
+  // their def's floorCenterZ): wall pieces land on the back wall,
+  // which sits at zCenter − depth / 2.
+  zCenter = 0,
 ): RoomElement {
   const { width, depth, height } = dims;
   const defaults = ELEMENT_DEFAULTS[type];
   const plane = ELEMENT_PLANES[type];
   const spread = (number % 3) - 1; // -1, 0, 1: stagger repeat additions
   const x = plane === "floor" ? spread * Math.min(3, width / 4) : spread * 1.5;
-  const z = plane === "wall" ? -depth / 2 + defaults.wallOffset : plane === "ceiling" ? 0 : spread * 1.2;
+  const z = plane === "wall" ? zCenter - depth / 2 + defaults.wallOffset : plane === "ceiling" ? 0 : spread * 1.2;
   const y = type === "track-light" ? Math.max(2.5, height - 0.4) : defaults.y;
   return {
     id: crypto.randomUUID(),

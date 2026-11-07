@@ -6,9 +6,10 @@ import { useT } from "@/lib/i18n";
 import { useHiddenRoomLayouts } from "@/lib/use-hidden-room-layouts";
 
 // Create-exhibition dialog (feature 7): the title is mandatory and the
-// visitor picks a room model for the first room. Sunlight Gallery is
-// the only model left. The model only seeds the first room — rooms can
-// still be added in the editor afterwards.
+// visitor picks a room model for the first room — one of the
+// twenty-one models (Sunlight Gallery first, the default). The model
+// only seeds the first room — rooms can still be added in the editor
+// afterwards.
 export default function ExhibitionCreateDialog({
   onClose,
   onCreate,
@@ -33,6 +34,26 @@ export default function ExhibitionCreateDialog({
 
   const modelText: Record<RoomModelId, { name: string; desc: string }> = {
     sunlight: { name: t("create", "modelSunlight"), desc: t("create", "modelSunlightDesc") },
+    serpentine: { name: t("create", "modelSerpentine"), desc: t("create", "modelSerpentineDesc") },
+    vitrine: { name: t("create", "modelVitrine"), desc: t("create", "modelVitrineDesc") },
+    loft: { name: t("create", "modelLoft"), desc: t("create", "modelLoftDesc") },
+    halle: { name: t("create", "modelHalle"), desc: t("create", "modelHalleDesc") },
+    arche: { name: t("create", "modelArche"), desc: t("create", "modelArcheDesc") },
+    musee: { name: t("create", "modelMusee"), desc: t("create", "modelMuseeDesc") },
+    "claire-voie": { name: t("create", "modelClaireVoie"), desc: t("create", "modelClaireVoieDesc") },
+    parquet: { name: t("create", "modelParquet"), desc: t("create", "modelParquetDesc") },
+    verriere: { name: t("create", "modelVerriere"), desc: t("create", "modelVerriereDesc") },
+    pavillon: { name: t("create", "modelPavillon"), desc: t("create", "modelPavillonDesc") },
+    classique: { name: t("create", "modelClassique"), desc: t("create", "modelClassiqueDesc") },
+    "atrium-blanc": { name: t("create", "modelAtriumBlanc"), desc: t("create", "modelAtriumBlancDesc") },
+    patio: { name: t("create", "modelPatio"), desc: t("create", "modelPatioDesc") },
+    escalier: { name: t("create", "modelEscalier"), desc: t("create", "modelEscalierDesc") },
+    "salles-vertes": { name: t("create", "modelSallesVertes"), desc: t("create", "modelSallesVertesDesc") },
+    "couloir-sombre": { name: t("create", "modelCouloirSombre"), desc: t("create", "modelCouloirSombreDesc") },
+    "couloir-dore": { name: t("create", "modelCouloirDore"), desc: t("create", "modelCouloirDoreDesc") },
+    voutes: { name: t("create", "modelVoutes"), desc: t("create", "modelVoutesDesc") },
+    courbes: { name: t("create", "modelCourbes"), desc: t("create", "modelCourbesDesc") },
+    "atrium-lattes": { name: t("create", "modelAtriumLattes"), desc: t("create", "modelAtriumLattesDesc") },
   };
 
   async function submit(event: React.FormEvent) {

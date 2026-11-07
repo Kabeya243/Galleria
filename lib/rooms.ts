@@ -1,26 +1,28 @@
 import { z } from "zod";
 import { ELEMENT_DEFAULTS, roomElementSchema, type ElementType, type RoomElement } from "@/lib/elements";
-import { SUNLIGHT_CEILING_COLOR, SUNLIGHT_FLOOR_COLOR, SUNLIGHT_HEIGHT, SUNLIGHT_WALL_COLOR } from "@/lib/sunlight";
+import { SUNLIGHT_CEILING_COLOR, SUNLIGHT_FLOOR_CENTER_Z, SUNLIGHT_FLOOR_COLOR, SUNLIGHT_HEIGHT, SUNLIGHT_WALL_COLOR } from "@/lib/sunlight";
 import { sunlightElementSchema } from "@/lib/sunlight-elements";
 
 // Template categories for the galleries catalogue. Every preset belongs
 // to exactly one category, shown as a filter chip on the galleries page.
-// Sunlight Gallery is the only template, and it is architectural.
+// All twenty-one templates are architectural.
 export const roomCategories = [
   "Architectural",
 ] as const;
 
 export type RoomCategory = (typeof roomCategories)[number];
 
-// The gallery collection: ONE template — the Sunlight Gallery, ported
-// exactly from Kabeya's Three.js reference room ("Galerie lumière").
-// It is the only model offered when an exhibition is created and the
-// only one in the /galleries catalogue. The old templates (White Cube,
-// Grand Light Hall, Totem Studio, Glass Pavilion, Skylight Gallery,
-// Stone Gallery and its halves) were removed in November 2026; their
-// layout keys are migrated to Sunlight on load (see parseGalleryRooms),
-// so exhibitions saved with one still open — with their artworks —
-// instead of failing validation.
+// The gallery collection: the Sunlight Gallery (ported exactly from
+// Kabeya's Three.js reference room "Galerie lumière") plus the nine
+// galleries from his six reference files, added in November 2026, plus
+// the eleven galleries from Galeries_3D.html, added the same month —
+// each ported exactly as designed (dimensions, walls, floor, light,
+// panels, furniture), with its own creative name. The old templates
+// (White Cube, Grand Light Hall, Totem Studio, Glass Pavilion,
+// Skylight Gallery, Stone Gallery and its halves) were removed in
+// November 2026; their layout keys are migrated to Sunlight on load
+// (see parseGalleryRooms), so exhibitions saved with one still open —
+// with their artworks — instead of failing validation.
 export const roomLayouts = {
   // Sunlight Gallery — a bright 22 × 26 m hall, 5 m high, under seven
   // skylights (four white diffusers, three open sky panels), a
@@ -46,16 +48,498 @@ export const roomLayouts = {
     spotlights: false,
     lightType: "sunlight",
     partitions: [],
+    // Room-local z of the floor centre (the Sunlight floor spans
+    // z −14…12, centre −1): navigation bounds, drag clamps and the
+    // minimap all read it instead of assuming a room centred on 0.
+    floorCenterZ: SUNLIGHT_FLOOR_CENTER_Z,
+    // Which distinctive feature the catalogue card's thumbnail draws.
+    thumbnail: "sunlight",
+  },
+  // La Serpentine — the outdoor serpentine art fair: four curved white
+  // walls in an S, photographs on both faces, a stone plaza and a grey
+  // carpet, mall facades around. 22 × 44 m of carpet, wall height 2.7 m.
+  serpentine: {
+    label: "La Serpentine",
+    category: "Architectural",
+    description: "An open-air art fair — four curved white serpentine walls under the sky, photographs on both faces, a stone plaza and a grey carpet.",
+    width: 22,
+    depth: 44,
+    height: 2.7,
+    wallColor: "#f8f8f6",
+    sideWallColor: "#f8f8f6",
+    floorColor: "#6f7176",
+    wallTexture: "plaster",
+    floorTexture: "stone",
+    ceilingColor: "#bcd6ee",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -2,
+    thumbnail: "serpentine",
+  },
+  // La Vitrine — the EXHIBIT gallery: a brick facade with the "exhibit"
+  // sign, a glass front with mullions, a 16 × 16 m white interior shell
+  // with a concrete floor, pedestals, shelves and a desk.
+  vitrine: {
+    label: "La Vitrine",
+    category: "Architectural",
+    description: "A bright glass-front gallery — a brick facade with its “exhibit” sign, a glazed front, a concrete floor, pedestals and shelves.",
+    width: 16,
+    depth: 16,
+    height: 4,
+    wallColor: "#f5f4f0",
+    sideWallColor: "#f5f4f0",
+    floorColor: "#c4c0b8",
+    wallTexture: "plaster",
+    floorTexture: "concrete",
+    ceilingColor: "#fafaf8",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -6,
+    thumbnail: "vitrine",
+  },
+  // Le Loft Béton — the dark concrete loft: concrete floor and ceiling
+  // with beams, white walls, rails and spotlights, bold colour on the
+  // walls. 18 × 20 m, 4.3 m high.
+  loft: {
+    label: "Le Loft Béton",
+    category: "Architectural",
+    description: "A dark concrete loft — beams, rails and spotlights, bold colour on white walls, a partition and a bench.",
+    width: 18,
+    depth: 20,
+    height: 4.3,
+    wallColor: "#f4f2ee",
+    sideWallColor: "#f4f2ee",
+    floorColor: "#a8a399",
+    wallTexture: "plaster",
+    floorTexture: "concrete",
+    ceilingColor: "#8f8a80",
+    ceilingTexture: "concrete",
+    spotlights: true,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -2,
+    thumbnail: "loft",
+  },
+  // La Halle Design — the big design hall: 25 × 34 m, 8.2 m high, grey
+  // carpet, a glass curtain wall with blinds, zigzag folding screens
+  // with works on both sides, platforms, lounge furniture, glass
+  // cases, a hanging faceted mobile and kites.
+  halle: {
+    label: "La Halle Design",
+    category: "Architectural",
+    description: "A 25 × 34 m design hall — zigzag folding screens, platforms and lounge furniture, a hanging faceted mobile and kites.",
+    width: 25,
+    depth: 34,
+    height: 8.2,
+    wallColor: "#efede8",
+    sideWallColor: "#efede8",
+    floorColor: "#7b7976",
+    wallTexture: "plaster",
+    floorTexture: "stone",
+    ceilingColor: "#f3f1ed",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "halle",
+  },
+  // L'Arche — the stone gallery (SANAA's original Stone Gallery):
+  // 20 × 24 m, 6.5 m high, stone/plaster walls, a dividing wall with a
+  // round arch, a niche, rubble, timber beams and track lights.
+  arche: {
+    label: "L'Arche",
+    category: "Architectural",
+    description: "A stone gallery — a round-arch dividing wall, a niche, rubble and timber beams. The original Stone Gallery.",
+    width: 20,
+    depth: 24,
+    height: 6.5,
+    wallColor: "#b8ab94",
+    sideWallColor: "#b8ab94",
+    floorColor: "#b5b0a5",
+    wallTexture: "stone-plaster",
+    floorTexture: "stone-concrete",
+    ceilingColor: "#d8d2c4",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -3,
+    thumbnail: "arche",
+  },
+  // Le Musée Bleu — the museum room: a curved blue wall, a coffered
+  // skylight, herringbone parquet 40 × 40 m, angled panels and wire
+  // benches.
+  musee: {
+    label: "Le Musée Bleu",
+    category: "Architectural",
+    description: "A museum room — a curved blue wall, a coffered skylight, herringbone parquet and angled panels.",
+    width: 40,
+    depth: 40,
+    height: 6.5,
+    wallColor: "#cbc7c1",
+    sideWallColor: "#cbc7c1",
+    floorColor: "#b98a5e",
+    wallTexture: "plaster",
+    floorTexture: "parquet",
+    ceilingColor: "#f6f4f0",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "musee",
+  },
+  // La Claire-Voie — the gallery with the dark floor, white benches, a
+  // huge folk painting, a wall of text vinyl and a high clerestory
+  // window. 11 × 23 m, 7.6 m high.
+  "claire-voie": {
+    label: "La Claire-Voie",
+    category: "Architectural",
+    description: "A dark-floored gallery — a huge folk painting, a wall of text vinyl, white benches and a high clerestory window.",
+    width: 11,
+    depth: 23,
+    height: 7.6,
+    wallColor: "#f1efea",
+    sideWallColor: "#f1efea",
+    floorColor: "#3e4044",
+    wallTexture: "plaster",
+    floorTexture: "stone",
+    ceilingColor: "#f6f4f0",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -1.5,
+    thumbnail: "claire-voie",
+  },
+  // Le Parquet — the herringbone-parquet room: 24 × 23 m, 7.2 m high,
+  // V-shaped partitions with a wooden lintel, foreground wall
+  // fragments, pedestals with sculptures, a standing mobile, a pale
+  // green ottoman and a salon hang on the back wall.
+  parquet: {
+    label: "Le Parquet",
+    category: "Architectural",
+    description: "A herringbone-parquet room — V-shaped partitions, pedestals with sculptures, a standing mobile and a salon hang.",
+    width: 24,
+    depth: 23,
+    height: 7.2,
+    wallColor: "#f3f1ec",
+    sideWallColor: "#f3f1ec",
+    floorColor: "#a9805a",
+    wallTexture: "plaster",
+    floorTexture: "parquet",
+    ceilingColor: "#f6f4f0",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0.5,
+    thumbnail: "parquet",
+  },
+  // La Verrière — the virtual gallery: 40 × 32 m, 7.5 m high, a wood
+  // plank floor, a coffered ceiling with skylights, a stone/window band
+  // at the back and five angled panels with paintings.
+  verriere: {
+    label: "La Verrière",
+    category: "Architectural",
+    description: "A 40 × 32 m hall under a coffered skylight ceiling — five angled panels with paintings, a bench and a label stand.",
+    width: 40,
+    depth: 32,
+    height: 7.5,
+    wallColor: "#f6f5f2",
+    sideWallColor: "#f6f5f2",
+    floorColor: "#c9a877",
+    wallTexture: "plaster",
+    floorTexture: "wood",
+    ceilingColor: "#a09590",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -4,
+    thumbnail: "verriere",
+  },
+  // Pavillon de lumière — the light pavilion: an 8 × 14 m wood pavilion
+  // with glass-brick walls, two side rooms, a lawn and palm trees
+  // outside. Floor centre z = −1.
+  pavillon: {
+    label: "Pavillon de lumière",
+    category: "Architectural",
+    description: "A light pavilion — wood floor, glass-brick walls, two side rooms, palms and a lawn outside.",
+    width: 8,
+    depth: 14,
+    height: 4.2,
+    wallColor: "#f8f8f6",
+    sideWallColor: "#f8f8f6",
+    floorColor: "#d4b48a",
+    wallTexture: "plaster",
+    floorTexture: "wood",
+    ceilingColor: "#e4e3de",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -1,
+    thumbnail: "pavillon",
+  },
+  // Galerie classique — the classical gallery: an 8 × 40 m hall under
+  // a coffered vault, granite columns, skylights in the vault.
+  classique: {
+    label: "Galerie classique",
+    category: "Architectural",
+    description: "A classical gallery — an 8 × 40 m hall under a coffered vault, granite columns, skylights above.",
+    width: 8,
+    depth: 40,
+    height: 10.2,
+    wallColor: "#cfc8b8",
+    sideWallColor: "#cfc8b8",
+    floorColor: "#8a857c",
+    wallTexture: "plaster",
+    floorTexture: "stone",
+    ceilingColor: "#e6e1d6",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "classique",
+  },
+  // Atrium blanc — the white atrium: a 26 × 27 m lacquered marble hall,
+  // four columns, a black drum suspended from the ceiling.
+  "atrium-blanc": {
+    label: "Atrium blanc",
+    category: "Architectural",
+    description: "A white atrium — lacquered marble floor, four columns, a black drum suspended overhead.",
+    width: 26,
+    depth: 27,
+    height: 9,
+    wallColor: "#f7f7f6",
+    sideWallColor: "#f7f7f6",
+    floorColor: "#f6f6f5",
+    wallTexture: "plaster",
+    floorTexture: "marble",
+    ceilingColor: "#f7f7f6",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: -0.5,
+    thumbnail: "atrium-blanc",
+  },
+  // Patio ovale — the oval patio: a 44 × 44 m marble plaza under a roof
+  // pierced by an oval opening, trees, black gravel and a lawn.
+  patio: {
+    label: "Patio ovale",
+    category: "Architectural",
+    description: "An oval patio — a marble plaza under a roof pierced by an oval opening, trees, black gravel and a lawn.",
+    width: 44,
+    depth: 44,
+    height: 4.5,
+    wallColor: "#f0f0ee",
+    sideWallColor: "#f0f0ee",
+    floorColor: "#ffffff",
+    wallTexture: "plaster",
+    floorTexture: "marble",
+    ceilingColor: "#dedee0",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "patio",
+  },
+  // Hall à escalier — the stair hall: a 16 × 20 m hall with a 14-step
+  // staircase, a central column, a mezzanine and glass.
+  escalier: {
+    label: "Hall à escalier",
+    category: "Architectural",
+    description: "A stair hall — 16 × 20 m, a 14-step staircase, a central column, a mezzanine and glass.",
+    width: 16,
+    depth: 20,
+    height: 9,
+    wallColor: "#f6f6f4",
+    sideWallColor: "#f6f6f4",
+    floorColor: "#6d7078",
+    wallTexture: "plaster",
+    floorTexture: "concrete",
+    ceilingColor: "#f6f6f4",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "escalier",
+  },
+  // Salles vertes — the green rooms: a 14 × 32 m hall, green walls, wood
+  // floor, a vault, three panels, two benches and a skylight.
+  "salles-vertes": {
+    label: "Salles vertes",
+    category: "Architectural",
+    description: "Green rooms — a 14 × 32 m hall, green walls, wood floor, a vault, three panels and a skylight.",
+    width: 14,
+    depth: 32,
+    height: 6.5,
+    wallColor: "#3d6b5e",
+    sideWallColor: "#3d6b5e",
+    floorColor: "#d4b48a",
+    wallTexture: "plaster",
+    floorTexture: "wood",
+    ceilingColor: "#e6e1d6",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "salles-vertes",
+  },
+  // Couloir sombre — the dark corridor: a 7 × 46 m hall, herringbone
+  // parquet, a vault, six panels, arches and track lights.
+  "couloir-sombre": {
+    label: "Couloir sombre",
+    category: "Architectural",
+    description: "A dark corridor — a 7 × 46 m hall, herringbone parquet, a vault, six panels, arches and track lights.",
+    width: 7,
+    depth: 46,
+    height: 5,
+    wallColor: "#8d877d",
+    sideWallColor: "#8d877d",
+    floorColor: "#8a6a3a",
+    wallTexture: "plaster",
+    floorTexture: "parquet",
+    ceilingColor: "#e6e1d6",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "spot-warm",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "couloir-sombre",
+  },
+  // Couloir doré — the golden corridor: a 7 × 46 m hall, herringbone
+  // parquet, luminous arched windows, a red wall at the far end and
+  // sun patches on the floor.
+  "couloir-dore": {
+    label: "Couloir doré",
+    category: "Architectural",
+    description: "A golden corridor — a 7 × 46 m hall, herringbone parquet, luminous arched windows and a red end wall.",
+    width: 7,
+    depth: 46,
+    height: 5.6,
+    wallColor: "#f3efe6",
+    sideWallColor: "#f3efe6",
+    floorColor: "#c9a877",
+    wallTexture: "plaster",
+    floorTexture: "parquet",
+    ceilingColor: "#f6f2ea",
+    ceilingTexture: "plaster",
+    spotlights: true,
+    lightType: "spot-warm",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "couloir-dore",
+  },
+  // Plafond à voûtes — the vaulted ceiling: a 10 × 30 m hall, wood
+  // floor, a scale-pattern ceiling, two panels and two benches.
+  voutes: {
+    label: "Plafond à voûtes",
+    category: "Architectural",
+    description: "A vaulted ceiling — a 10 × 30 m hall, wood floor, a scale-pattern ceiling, two panels and two benches.",
+    width: 10,
+    depth: 30,
+    height: 7,
+    wallColor: "#f8f8f6",
+    sideWallColor: "#f8f8f6",
+    floorColor: "#d4b48a",
+    wallTexture: "plaster",
+    floorTexture: "wood",
+    ceilingColor: "#ffffff",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "voutes",
+  },
+  // Courbes blanches — the white curves: a circular gallery (R 12.5,
+  // H 6.5), a curved white wall, a glazed section, a roof, palms and
+  // a lawn outside.
+  courbes: {
+    label: "Courbes blanches",
+    category: "Architectural",
+    description: "White curves — a circular gallery, a curved white wall, a glazed section, palms and a lawn outside.",
+    width: 25,
+    depth: 25,
+    height: 6.5,
+    wallColor: "#f4f4f2",
+    sideWallColor: "#f4f4f2",
+    floorColor: "#24272b",
+    wallTexture: "plaster",
+    floorTexture: "stone",
+    ceilingColor: "#f4f4f2",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "courbes",
+  },
+  // Atrium à lattes — the slatted atrium: 14 × 12 × 18 m, slatted walls,
+  // wood floor, a large window onto the outside, mullions, a mezzanine
+  // and staircases.
+  "atrium-lattes": {
+    label: "Atrium à lattes",
+    category: "Architectural",
+    description: "A slatted atrium — 14 × 18 m, slatted walls, wood floor, a large window, a mezzanine and staircases.",
+    width: 14,
+    depth: 18,
+    height: 12,
+    wallColor: "#f8f8f6",
+    sideWallColor: "#f8f8f6",
+    floorColor: "#d4b48a",
+    wallTexture: "plaster",
+    floorTexture: "wood",
+    ceilingColor: "#f8f8f6",
+    ceilingTexture: "plaster",
+    spotlights: false,
+    lightType: "sunlight",
+    partitions: [],
+    floorCenterZ: 0,
+    thumbnail: "atrium-lattes",
   },
 } as const;
 
 export type RoomLayout = keyof typeof roomLayouts;
 
-// The one room model offered when an exhibition is created (feature 7).
+// The room models offered when an exhibition is created (feature 7).
 // Labels live in the i18n dictionary (`create.model*`); the layout
-// label is the room's own.
+// label is the room's own. Sunlight Gallery stays first — it is the
+// default model.
 export const ROOM_MODELS = [
   { id: "sunlight", layout: "sunlight" },
+  { id: "serpentine", layout: "serpentine" },
+  { id: "vitrine", layout: "vitrine" },
+  { id: "loft", layout: "loft" },
+  { id: "halle", layout: "halle" },
+  { id: "arche", layout: "arche" },
+  { id: "musee", layout: "musee" },
+  { id: "claire-voie", layout: "claire-voie" },
+  { id: "parquet", layout: "parquet" },
+  { id: "verriere", layout: "verriere" },
+  { id: "pavillon", layout: "pavillon" },
+  { id: "classique", layout: "classique" },
+  { id: "atrium-blanc", layout: "atrium-blanc" },
+  { id: "patio", layout: "patio" },
+  { id: "escalier", layout: "escalier" },
+  { id: "salles-vertes", layout: "salles-vertes" },
+  { id: "couloir-sombre", layout: "couloir-sombre" },
+  { id: "couloir-dore", layout: "couloir-dore" },
+  { id: "voutes", layout: "voutes" },
+  { id: "courbes", layout: "courbes" },
+  { id: "atrium-lattes", layout: "atrium-lattes" },
 ] as const;
 
 export type RoomModelId = (typeof ROOM_MODELS)[number]["id"];
@@ -65,9 +549,9 @@ export function roomModelLayout(modelId: string): RoomLayout {
   return (model?.layout ?? "sunlight") as RoomLayout;
 }
 
-// No layout is hidden: Sunlight Gallery is the only template, and it is
-// always offered. (Kept as a set so the catalogue filter and the editor's
-// layout picker keep working unchanged.)
+// No layout is hidden: all twenty-one templates are offered. (Kept as a set
+// so the catalogue filter and the editor's layout picker keep working
+// unchanged.)
 export const HIDDEN_LAYOUT_KEYS: ReadonlySet<RoomLayout> = new Set([]);
 
 // Where each room sits in the shared 3D space, as world offsets from the

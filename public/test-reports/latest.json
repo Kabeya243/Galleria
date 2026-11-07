@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-07T23:04:18.500Z",
-  "commit": "d8778b5",
+  "generatedAt": "2026-11-07T23:19:48.168Z",
+  "commit": "b06c2b7",
   "summary": {
     "total": 22,
     "passed": 15,
@@ -76,7 +76,7 @@
       "id": "atelier-files",
       "name": "Atelier editor, export function, API routes, tools entry, i18n",
       "status": "pass",
-      "detail": "editor + local Fabric.js + Python export + R2 API routes + tools entry + EN/FR keys + tool slug"
+      "detail": "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug"
     },
     {
       "feature": "Code quality",

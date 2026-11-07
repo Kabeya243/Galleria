@@ -1,8 +1,16 @@
 """Atelier export — server-side PDF / JPG / PNG rendering for SANAA.
 
-Self-contained Vercel Python function (FastAPI `app`). Adapted from the
-Atelier Kiggundu project (Python 3.12 + FastAPI + Fabric.js), whose
-services this file vendors and adapts:
+Self-contained Vercel Python function (FastAPI `app`) at api/index.py.
+Vercel only deploys a Python function in a Next.js project when the
+file is a recognised entrypoint (api/index.py) reached by an explicit
+vercel.json rewrite — a bare api/atelier/export.py is silently ignored
+(the Next.js app answers 404 for /api/atelier/export/*). The rewrite
+in vercel.json sends /api/atelier/export/* here; the FastAPI routes
+below are declared at their full public paths, which is what the ASGI
+app sees after the rewrite.
+
+Adapted from the Atelier Kiggundu project (Python 3.12 + FastAPI +
+Fabric.js), whose services this file vendors and adapts:
 
 - app/services/documents.py   -> document validation (image sources
   extended to SANAA's R2 URLs)
@@ -10,8 +18,8 @@ services this file vendors and adapts:
 - app/services/svg.py          -> dependency-free SVG rasterizer (unchanged)
 - app/services/export_pdf.py   -> vector-first PDF renderer, with the
   fidelity gaps closed where the editor can produce them:
-    * custom fonts: Manrope / DM Sans TTFs bundled in ./fonts and
-      registered with ReportLab (Manrope has no italic — upright is
+    * custom fonts: Manrope / DM Sans TTFs bundled in api/atelier/fonts
+      and registered with ReportLab (Manrope has no italic — upright is
       used, documented below)
     * letterSpacing via pdf.setCharSpace, lineHeight, underline,
       italic mapped to Oblique variants
@@ -47,7 +55,7 @@ from fastapi.responses import JSONResponse, Response
 # ---------------------------------------------------------------- config
 
 BASE_DIR = Path(__file__).resolve().parent
-FONTS_DIR = BASE_DIR / "fonts"
+FONTS_DIR = BASE_DIR / "atelier" / "fonts"
 R2_PUBLIC_URL = (os.environ.get("R2_PUBLIC_URL") or "").rstrip("/")
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or ""
 COOKIE_NAME = "sanaa_session"
@@ -457,7 +465,7 @@ def fetch_image(src):
     return open_image(BytesIO(content))
 
 # ---------------------------------------------------------------- fonts
-# Bundled TTFs (./fonts) so the export does not depend on system fonts
+# Bundled TTFs (api/atelier/fonts) so the export does not depend on system fonts
 # — Vercel's runtime has no DejaVu/Arial. Manrope has no italic face
 # (the family ships upright only), so italic Manrope falls back to the
 # upright face; DM Sans has real italics.
@@ -703,7 +711,7 @@ def export_pdf(project):
 
 # ---------------------------------------------------------------- raster export
 # Adapted from Atelier app/services/export_image.py. Changes: fonts come
-# from the bundled ./fonts directory (the original fell back to a tiny
+# from the bundled api/atelier/fonts directory (the original fell back to a tiny
 # bitmap font on servers without DejaVu), letter-spacing is drawn
 # character by character, and shadows get the same solid offset copy
 # as in the PDF renderer.

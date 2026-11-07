@@ -1,1 +1,1 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json","buildCommand":"npx prisma generate && npx prisma db push --accept-data-loss && npm run build"}
+{"$schema":"https://openapi.vercel.sh/vercel.json","buildCommand":"npx prisma generate && npx prisma db push --accept-data-loss && npm run build","rewrites":[{"destination":"/api/index.py","source":"/api/atelier/export/:path*"}]}

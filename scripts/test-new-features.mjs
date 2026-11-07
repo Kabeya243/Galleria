@@ -138,7 +138,8 @@ check("Portfolio PDF", "atelier-files", "Atelier editor, export function, API ro
     "components/atelier-editor.css",
     "public/atelier/editor.js",
     "public/vendor/fabric.min.js",
-    "api/atelier/export.py",
+    "api/index.py",
+    "api/atelier/fonts/Manrope-Regular.ttf",
     "api/requirements.txt",
     "app/api/atelier/templates/route.ts",
     "app/api/atelier/projects/route.ts",
@@ -148,15 +149,25 @@ check("Portfolio PDF", "atelier-files", "Atelier editor, export function, API ro
   ]) {
     assert(exists(f), `missing ${f}`);
   }
+  assert(!exists("api/atelier/export.py"), "old export path still present (must be api/index.py)");
   assert(!exists("components/portfolio-pdf-builder.tsx"), "old builder still present");
   assert(!exists("components/portfolio-print.tsx"), "old print renderer still present");
   assert(!read("public/atelier/editor.js").includes("window.print()"), "editor still uses window.print()");
   assert(!read("public/atelier/editor.js").includes("window.alert("), "editor uses window.alert");
-  assert(read("api/atelier/export.py").includes("def export_pdf"), "export function missing PDF renderer");
+  assert(read("api/index.py").includes("def export_pdf"), "export function missing PDF renderer");
+  // Vercel silently ignores a Python function at api/atelier/export.py in a
+  // Next.js project (the Next.js app answers 404 for /api/atelier/export/*).
+  // The entrypoint must be api/index.py, reached by an explicit rewrite.
+  const vercel = JSON.parse(read("vercel.json"));
+  const rewrites = vercel.rewrites || [];
+  assert(
+    rewrites.some((r) => r.source === "/api/atelier/export/:path*" && r.destination === "/api/index.py"),
+    "vercel.json missing /api/atelier/export/* -> /api/index.py rewrite",
+  );
   assert(read("components/tools-page.tsx").includes("/tools/portfolio-pdf"), "tools list missing portfolio-pdf entry");
   assert(read("lib/i18n.ts").includes("portfolioPdf:"), "i18n missing portfolioPdf keys");
   assert(read("lib/tool-use.ts").includes('"portfolio-pdf"'), "tool-use missing portfolio-pdf slug");
-  return "editor + local Fabric.js + Python export + R2 API routes + tools entry + EN/FR keys + tool slug";
+  return "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug";
 });
 
 // ---------- Cross-cutting ----------

@@ -1,0 +1,144 @@
+{
+  "background": "#293f39",
+  "category": "Professionnel",
+  "height": 600,
+  "id": "makers-business-card",
+  "name": "Carte de visite",
+  "objects": [
+    {
+      "fill": "#293f39",
+      "height": 600,
+      "left": 0,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 1050
+    },
+    {
+      "fill": "#c86643",
+      "height": 290,
+      "left": 855,
+      "originX": "left",
+      "originY": "top",
+      "top": 110,
+      "type": "circle",
+      "width": 290
+    },
+    {
+      "fill": "#f5eddb",
+      "fontSize": 58,
+      "fontWeight": "bold",
+      "height": 90,
+      "left": 72,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "KATO STUDIO",
+      "top": 120,
+      "type": "textbox",
+      "width": 750
+    },
+    {
+      "fill": "#f0d99e",
+      "fontSize": 24,
+      "height": 60,
+      "left": 75,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "DESIGN · ART DIRECTION",
+      "top": 250,
+      "type": "textbox",
+      "width": 750
+    },
+    {
+      "fill": "#f5eddb",
+      "fontSize": 21,
+      "height": 55,
+      "left": 75,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "hello@katostudio.example  ·  Kampala",
+      "top": 450,
+      "type": "textbox",
+      "width": 750
+    }
+  ],
+  "pages": [
+    {
+      "background": "#293f39",
+      "height": 600,
+      "objects": [
+        {
+          "fill": "#293f39",
+          "height": 600,
+          "left": 0,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 1050
+        },
+        {
+          "fill": "#c86643",
+          "height": 290,
+          "left": 855,
+          "originX": "left",
+          "originY": "top",
+          "top": 110,
+          "type": "circle",
+          "width": 290
+        },
+        {
+          "fill": "#f5eddb",
+          "fontSize": 58,
+          "fontWeight": "bold",
+          "height": 90,
+          "left": 72,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "KATO STUDIO",
+          "top": 120,
+          "type": "textbox",
+          "width": 750
+        },
+        {
+          "fill": "#f0d99e",
+          "fontSize": 24,
+          "height": 60,
+          "left": 75,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "DESIGN · ART DIRECTION",
+          "top": 250,
+          "type": "textbox",
+          "width": 750
+        },
+        {
+          "fill": "#f5eddb",
+          "fontSize": 21,
+          "height": 55,
+          "left": 75,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "hello@katostudio.example  ·  Kampala",
+          "top": 450,
+          "type": "textbox",
+          "width": 750
+        }
+      ],
+      "physicalHeightMm": 50.8,
+      "physicalWidthMm": 88.9,
+      "width": 1050
+    }
+  ],
+  "physicalHeightMm": 50.8,
+  "physicalWidthMm": 88.9,
+  "version": 1,
+  "width": 1050
+}

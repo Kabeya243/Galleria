@@ -1,0 +1,146 @@
+{
+  "background": "#f8f6f0",
+  "category": "Impression",
+  "height": 1123,
+  "id": "a4-poster",
+  "name": "Poster A4",
+  "objects": [
+    {
+      "fill": "#f8f6f0",
+      "height": 1123,
+      "left": 0,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 794
+    },
+    {
+      "fill": "#37574b",
+      "height": 660,
+      "left": 58,
+      "originX": "left",
+      "originY": "top",
+      "rx": 22,
+      "top": 58,
+      "type": "rect",
+      "width": 678
+    },
+    {
+      "fill": "#f6d69a",
+      "fontSize": 104,
+      "fontWeight": "bold",
+      "height": 280,
+      "left": 105,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "ART\nIN BLOOM",
+      "top": 175,
+      "type": "textbox",
+      "width": 590
+    },
+    {
+      "fill": "#263b35",
+      "fontSize": 34,
+      "height": 100,
+      "left": 70,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "An exhibition of new beginnings",
+      "top": 790,
+      "type": "textbox",
+      "width": 660
+    },
+    {
+      "fill": "#a24f36",
+      "fontSize": 22,
+      "height": 70,
+      "left": 70,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "SATURDAY · 10:00 — 18:00",
+      "top": 910,
+      "type": "textbox",
+      "width": 660
+    }
+  ],
+  "pages": [
+    {
+      "background": "#f8f6f0",
+      "height": 1123,
+      "objects": [
+        {
+          "fill": "#f8f6f0",
+          "height": 1123,
+          "left": 0,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 794
+        },
+        {
+          "fill": "#37574b",
+          "height": 660,
+          "left": 58,
+          "originX": "left",
+          "originY": "top",
+          "rx": 22,
+          "top": 58,
+          "type": "rect",
+          "width": 678
+        },
+        {
+          "fill": "#f6d69a",
+          "fontSize": 104,
+          "fontWeight": "bold",
+          "height": 280,
+          "left": 105,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "ART\nIN BLOOM",
+          "top": 175,
+          "type": "textbox",
+          "width": 590
+        },
+        {
+          "fill": "#263b35",
+          "fontSize": 34,
+          "height": 100,
+          "left": 70,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "An exhibition of new beginnings",
+          "top": 790,
+          "type": "textbox",
+          "width": 660
+        },
+        {
+          "fill": "#a24f36",
+          "fontSize": 22,
+          "height": 70,
+          "left": 70,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "SATURDAY · 10:00 — 18:00",
+          "top": 910,
+          "type": "textbox",
+          "width": 660
+        }
+      ],
+      "physicalHeightMm": 297,
+      "physicalWidthMm": 210,
+      "width": 794
+    }
+  ],
+  "physicalHeightMm": 297,
+  "physicalWidthMm": 210,
+  "version": 1,
+  "width": 794
+}

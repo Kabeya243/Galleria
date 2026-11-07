@@ -1,0 +1,146 @@
+{
+  "background": "#ffffff",
+  "category": "Professionnel",
+  "height": 1123,
+  "id": "creative-resume",
+  "name": "CV créatif",
+  "objects": [
+    {
+      "fill": "#293f39",
+      "height": 1123,
+      "left": 0,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 270
+    },
+    {
+      "fill": "#293f39",
+      "fontSize": 52,
+      "fontWeight": "bold",
+      "height": 100,
+      "left": 45,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "AMINA KATO",
+      "top": 85,
+      "type": "textbox",
+      "width": 650
+    },
+    {
+      "fill": "#c86643",
+      "fontSize": 22,
+      "height": 65,
+      "left": 45,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "DESIGNER & ILLUSTRATOR",
+      "top": 180,
+      "type": "textbox",
+      "width": 650
+    },
+    {
+      "fill": "#ffffff",
+      "fontSize": 20,
+      "height": 500,
+      "left": 32,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "CONTACT\n\namina@example.com\nKampala, Uganda\n\nSKILLS\n\nIllustration\nBrand identity\nArt direction",
+      "top": 340,
+      "type": "textbox",
+      "width": 210
+    },
+    {
+      "fill": "#293f39",
+      "fontSize": 21,
+      "height": 550,
+      "left": 320,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "PROFILE\n\nVisual storyteller creating thoughtful identities for people and places.\n\nEXPERIENCE\n\nIndependent designer · 2022—now\nStudio practice · 2020—2022",
+      "top": 330,
+      "type": "textbox",
+      "width": 430
+    }
+  ],
+  "pages": [
+    {
+      "background": "#ffffff",
+      "height": 1123,
+      "objects": [
+        {
+          "fill": "#293f39",
+          "height": 1123,
+          "left": 0,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 270
+        },
+        {
+          "fill": "#293f39",
+          "fontSize": 52,
+          "fontWeight": "bold",
+          "height": 100,
+          "left": 45,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "AMINA KATO",
+          "top": 85,
+          "type": "textbox",
+          "width": 650
+        },
+        {
+          "fill": "#c86643",
+          "fontSize": 22,
+          "height": 65,
+          "left": 45,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "DESIGNER & ILLUSTRATOR",
+          "top": 180,
+          "type": "textbox",
+          "width": 650
+        },
+        {
+          "fill": "#ffffff",
+          "fontSize": 20,
+          "height": 500,
+          "left": 32,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "CONTACT\n\namina@example.com\nKampala, Uganda\n\nSKILLS\n\nIllustration\nBrand identity\nArt direction",
+          "top": 340,
+          "type": "textbox",
+          "width": 210
+        },
+        {
+          "fill": "#293f39",
+          "fontSize": 21,
+          "height": 550,
+          "left": 320,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "PROFILE\n\nVisual storyteller creating thoughtful identities for people and places.\n\nEXPERIENCE\n\nIndependent designer · 2022—now\nStudio practice · 2020—2022",
+          "top": 330,
+          "type": "textbox",
+          "width": 430
+        }
+      ],
+      "width": 794
+    }
+  ],
+  "version": 1,
+  "width": 794
+}

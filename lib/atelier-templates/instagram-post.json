@@ -1,0 +1,114 @@
+{
+  "background": "#f5efe5",
+  "category": "Instagram",
+  "height": 1080,
+  "id": "instagram-post",
+  "name": "Post carré",
+  "objects": [
+    {
+      "fill": "#f0e2cd",
+      "height": 1080,
+      "left": 0,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 1080
+    },
+    {
+      "fill": "#d47754",
+      "height": 430,
+      "left": 820,
+      "originX": "left",
+      "originY": "top",
+      "top": 230,
+      "type": "circle",
+      "width": 430
+    },
+    {
+      "fill": "#263b35",
+      "fontSize": 92,
+      "fontWeight": "bold",
+      "height": 180,
+      "left": 92,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "MAKE\nROOM TO GROW",
+      "top": 250,
+      "type": "textbox",
+      "width": 770
+    },
+    {
+      "fill": "#263b35",
+      "fontSize": 34,
+      "height": 90,
+      "left": 100,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "A little space for bright ideas.",
+      "top": 670,
+      "type": "textbox",
+      "width": 750
+    }
+  ],
+  "pages": [
+    {
+      "background": "#f5efe5",
+      "height": 1080,
+      "objects": [
+        {
+          "fill": "#f0e2cd",
+          "height": 1080,
+          "left": 0,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 1080
+        },
+        {
+          "fill": "#d47754",
+          "height": 430,
+          "left": 820,
+          "originX": "left",
+          "originY": "top",
+          "top": 230,
+          "type": "circle",
+          "width": 430
+        },
+        {
+          "fill": "#263b35",
+          "fontSize": 92,
+          "fontWeight": "bold",
+          "height": 180,
+          "left": 92,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "MAKE\nROOM TO GROW",
+          "top": 250,
+          "type": "textbox",
+          "width": 770
+        },
+        {
+          "fill": "#263b35",
+          "fontSize": 34,
+          "height": 90,
+          "left": 100,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "A little space for bright ideas.",
+          "top": 670,
+          "type": "textbox",
+          "width": 750
+        }
+      ],
+      "width": 1080
+    }
+  ],
+  "version": 1,
+  "width": 1080
+}

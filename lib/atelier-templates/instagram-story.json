@@ -1,0 +1,114 @@
+{
+  "background": "#f1d0b1",
+  "category": "Instagram",
+  "height": 1920,
+  "id": "instagram-story",
+  "name": "Story",
+  "objects": [
+    {
+      "fill": "#f1d0b1",
+      "height": 1920,
+      "left": 0,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 1080
+    },
+    {
+      "fill": "#42665b",
+      "height": 700,
+      "left": 700,
+      "originX": "left",
+      "originY": "top",
+      "top": 520,
+      "type": "circle",
+      "width": 700
+    },
+    {
+      "fill": "#24352e",
+      "fontSize": 112,
+      "fontWeight": "bold",
+      "height": 300,
+      "left": 80,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "A DAY\nWELL MADE",
+      "top": 220,
+      "type": "textbox",
+      "width": 900
+    },
+    {
+      "fill": "#24352e",
+      "fontSize": 42,
+      "height": 120,
+      "left": 90,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "Create something worth remembering.",
+      "top": 1450,
+      "type": "textbox",
+      "width": 900
+    }
+  ],
+  "pages": [
+    {
+      "background": "#f1d0b1",
+      "height": 1920,
+      "objects": [
+        {
+          "fill": "#f1d0b1",
+          "height": 1920,
+          "left": 0,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 1080
+        },
+        {
+          "fill": "#42665b",
+          "height": 700,
+          "left": 700,
+          "originX": "left",
+          "originY": "top",
+          "top": 520,
+          "type": "circle",
+          "width": 700
+        },
+        {
+          "fill": "#24352e",
+          "fontSize": 112,
+          "fontWeight": "bold",
+          "height": 300,
+          "left": 80,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "A DAY\nWELL MADE",
+          "top": 220,
+          "type": "textbox",
+          "width": 900
+        },
+        {
+          "fill": "#24352e",
+          "fontSize": 42,
+          "height": 120,
+          "left": 90,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "Create something worth remembering.",
+          "top": 1450,
+          "type": "textbox",
+          "width": 900
+        }
+      ],
+      "width": 1080
+    }
+  ],
+  "version": 1,
+  "width": 1080
+}

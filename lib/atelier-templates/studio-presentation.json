@@ -1,0 +1,134 @@
+{
+  "background": "#f5efe5",
+  "category": "Présentation",
+  "height": 900,
+  "id": "studio-presentation",
+  "name": "Présentation 16:9",
+  "objects": [
+    {
+      "fill": "#f5efe5",
+      "height": 900,
+      "left": 0,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 1600
+    },
+    {
+      "fill": "#c86643",
+      "height": 900,
+      "left": 1020,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 580
+    },
+    {
+      "fill": "#293f39",
+      "fontSize": 100,
+      "fontWeight": "bold",
+      "height": 250,
+      "left": 110,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "A STUDIO\nFOR IDEAS",
+      "top": 170,
+      "type": "textbox",
+      "width": 850
+    },
+    {
+      "fill": "#293f39",
+      "fontSize": 34,
+      "height": 120,
+      "left": 120,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "A creative community, growing together.",
+      "top": 560,
+      "type": "textbox",
+      "width": 830
+    },
+    {
+      "fill": "#f0d99e",
+      "height": 400,
+      "left": 1300,
+      "originX": "left",
+      "originY": "top",
+      "top": 450,
+      "type": "circle",
+      "width": 400
+    }
+  ],
+  "pages": [
+    {
+      "background": "#f5efe5",
+      "height": 900,
+      "objects": [
+        {
+          "fill": "#f5efe5",
+          "height": 900,
+          "left": 0,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 1600
+        },
+        {
+          "fill": "#c86643",
+          "height": 900,
+          "left": 1020,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 580
+        },
+        {
+          "fill": "#293f39",
+          "fontSize": 100,
+          "fontWeight": "bold",
+          "height": 250,
+          "left": 110,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "A STUDIO\nFOR IDEAS",
+          "top": 170,
+          "type": "textbox",
+          "width": 850
+        },
+        {
+          "fill": "#293f39",
+          "fontSize": 34,
+          "height": 120,
+          "left": 120,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "A creative community, growing together.",
+          "top": 560,
+          "type": "textbox",
+          "width": 830
+        },
+        {
+          "fill": "#f0d99e",
+          "height": 400,
+          "left": 1300,
+          "originX": "left",
+          "originY": "top",
+          "top": 450,
+          "type": "circle",
+          "width": 400
+        }
+      ],
+      "width": 1600
+    }
+  ],
+  "version": 1,
+  "width": 1600
+}

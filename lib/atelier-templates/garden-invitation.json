@@ -1,0 +1,146 @@
+{
+  "background": "#f5eddb",
+  "category": "Célébration",
+  "height": 1200,
+  "id": "garden-invitation",
+  "name": "Invitation",
+  "objects": [
+    {
+      "fill": "#f5eddb",
+      "height": 1200,
+      "left": 0,
+      "originX": "left",
+      "originY": "top",
+      "top": 0,
+      "type": "rect",
+      "width": 900
+    },
+    {
+      "fill": "#c0aa71",
+      "height": 370,
+      "left": 450,
+      "originX": "left",
+      "originY": "top",
+      "top": 310,
+      "type": "circle",
+      "width": 370
+    },
+    {
+      "fill": "#2d463b",
+      "fontSize": 75,
+      "fontWeight": "bold",
+      "height": 170,
+      "left": 80,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "YOU'RE\nINVITED",
+      "textAlign": "center",
+      "top": 135,
+      "type": "textbox",
+      "width": 740
+    },
+    {
+      "fill": "#2d463b",
+      "fontSize": 38,
+      "height": 100,
+      "left": 100,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "An afternoon in the garden",
+      "textAlign": "center",
+      "top": 760,
+      "type": "textbox",
+      "width": 700
+    },
+    {
+      "fill": "#a24f36",
+      "fontSize": 23,
+      "height": 100,
+      "left": 100,
+      "originX": "left",
+      "originY": "top",
+      "styles": {},
+      "text": "SUNDAY, 22 JUNE  ·  15:00",
+      "textAlign": "center",
+      "top": 940,
+      "type": "textbox",
+      "width": 700
+    }
+  ],
+  "pages": [
+    {
+      "background": "#f5eddb",
+      "height": 1200,
+      "objects": [
+        {
+          "fill": "#f5eddb",
+          "height": 1200,
+          "left": 0,
+          "originX": "left",
+          "originY": "top",
+          "top": 0,
+          "type": "rect",
+          "width": 900
+        },
+        {
+          "fill": "#c0aa71",
+          "height": 370,
+          "left": 450,
+          "originX": "left",
+          "originY": "top",
+          "top": 310,
+          "type": "circle",
+          "width": 370
+        },
+        {
+          "fill": "#2d463b",
+          "fontSize": 75,
+          "fontWeight": "bold",
+          "height": 170,
+          "left": 80,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "YOU'RE\nINVITED",
+          "textAlign": "center",
+          "top": 135,
+          "type": "textbox",
+          "width": 740
+        },
+        {
+          "fill": "#2d463b",
+          "fontSize": 38,
+          "height": 100,
+          "left": 100,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "An afternoon in the garden",
+          "textAlign": "center",
+          "top": 760,
+          "type": "textbox",
+          "width": 700
+        },
+        {
+          "fill": "#a24f36",
+          "fontSize": 23,
+          "height": 100,
+          "left": 100,
+          "originX": "left",
+          "originY": "top",
+          "styles": {},
+          "text": "SUNDAY, 22 JUNE  ·  15:00",
+          "textAlign": "center",
+          "top": 940,
+          "type": "textbox",
+          "width": 700
+        }
+      ],
+      "width": 900
+    }
+  ],
+  "version": 1,
+  "width": 900
+}

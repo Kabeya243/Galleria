@@ -1718,40 +1718,58 @@ export default function MockupStudio({
     <div className="ms-wrap">
       <style>{`
         .ms-wrap { display: flex; flex-direction: column; gap: 20px; }
-        .ms-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+        .ms-layout { display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 20px; align-items: start; }
+        @media (min-width: 1301px) { .ms-layout { grid-template-columns: minmax(0, 1fr) 640px; } }
         @media (max-width: 900px) { .ms-layout { grid-template-columns: 1fr; } }
         .ms-preview { background: #fff; border: 1px solid #e8e2d6; border-radius: 12px; padding: 12px; }
         .ms-preview canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: #f4f2ee; }
         .ms-caption { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: #6b655c; }
-        .ms-panel { background: #fff; border: 1px solid #e8e2d6; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-        .ms-section h3 { font-family: "Fraunces", Georgia, serif; font-size: 15px; margin: 0 0 8px; color: #1a1a1a; }
-        .ms-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .ms-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #4a4440; }
-        .ms-field input[type="number"], .ms-field input[type="text"], .ms-field select { border: 1px solid #d9d4c9; border-radius: 8px; padding: 8px 10px; font-size: 14px; background: #fdfdfc; color: #1a1a1a; width: 100%; }
+        /* Side-by-side, no page scroll: the panel is bounded to the window
+           height (topbar + tool header above it) and only ever scrolls
+           INSIDE itself when the window is too short for all the controls.
+           The preview stays put next to it. On mobile the layout stacks. */
+        .ms-panel { background: #fff; border: 1px solid #e8e2d6; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; max-height: calc(100dvh - 280px); overflow-y: auto; overflow-x: hidden; }
+        .ms-panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: start; }
+        /* Wide desktop: three columns of sections, so the whole panel fits
+           the window height with no scrolling at all. */
+        @media (min-width: 1301px) { .ms-panel-grid { grid-template-columns: 1fr 1fr 1fr; } }
+        @media (max-width: 900px) { .ms-panel-grid { grid-template-columns: 1fr; } }
+        .ms-section h3 { font-family: "Fraunces", Georgia, serif; font-size: 13px; margin: 0 0 4px; color: #1a1a1a; }
+        .ms-framebar { display: flex; gap: 10px; align-items: end; }
+        .ms-framebar .ms-field { flex: 1; min-width: 0; }
+        .ms-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .ms-field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #4a4440; }
+        .ms-field input[type="number"], .ms-field input[type="text"], .ms-field select { border: 1px solid #d9d4c9; border-radius: 8px; padding: 6px 8px; font-size: 13px; background: #fdfdfc; color: #1a1a1a; width: 100%; }
         .ms-field input[type="range"] { width: 100%; accent-color: #ffffff; }
-        .ms-field input[type="color"] { width: 100%; height: 36px; border: 1px solid #d9d4c9; border-radius: 8px; background: #fdfdfc; padding: 2px; }
+        .ms-field input[type="color"] { width: 100%; height: 32px; border: 1px solid #d9d4c9; border-radius: 8px; background: #fdfdfc; padding: 2px; }
         .ms-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4a4440; }
         .ms-check input { accent-color: #ffffff; width: 16px; height: 16px; }
         .ms-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .ms-chip { border: 1px solid #d9d4c9; background: #fdfdfc; color: #1a1a1a; border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
         .ms-chip[aria-pressed="true"] { background: #1a1a1a; color: #fdfdfc; border-color: #1a1a1a; }
-        .ms-scene { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .ms-scene { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
         @media (max-width: 480px) { .ms-scene { grid-template-columns: repeat(2, 1fr); } }
         .ms-scene button { border: 1px solid #d9d4c9; border-radius: 8px; padding: 0; overflow: hidden; cursor: pointer; background: #fdfdfc; text-align: left; }
         .ms-scene button[aria-pressed="true"] { border-color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
-        .ms-scene .swatch { height: 34px; }
-        .ms-scene span { display: block; font-size: 11px; padding: 5px 6px; color: #1a1a1a; }
-        .ms-artlist { display: flex; flex-direction: column; gap: 6px; }
-        .ms-art { display: flex; gap: 10px; align-items: center; border: 1px solid #e8e2d6; border-radius: 8px; padding: 6px; cursor: pointer; background: #fdfdfc; text-align: left; width: 100%; }
+        .ms-scene .swatch { height: 20px; }
+        .ms-scene span { display: block; font-size: 10px; line-height: 1.25; padding: 3px 4px; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ms-artslots { display: flex; flex-direction: column; gap: 6px; }
+        .ms-artlist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        /* Wide desktop: three artwork buttons per row, two rows for six
+           artworks instead of three — buys the height the panel needs. */
+        @media (min-width: 1301px) { .ms-artlist { grid-template-columns: 1fr 1fr 1fr; } }
+        .ms-art { display: flex; gap: 8px; align-items: center; border: 1px solid #e8e2d6; border-radius: 8px; padding: 3px; cursor: pointer; background: #fdfdfc; text-align: left; width: 100%; min-width: 0; }
         .ms-art[aria-pressed="true"] { border-color: #ffffff; box-shadow: 0 0 0 1px #ffffff; }
-        .ms-thumb { width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
+        .ms-thumb { width: 28px; height: 28px; border-radius: 4px; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
         .ms-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .ms-art strong { display: block; font-size: 13px; color: #1a1a1a; }
-        .ms-art small { color: #6b655c; font-size: 12px; }
-        .ms-btn { border: 1px solid #1a1a1a; background: #1a1a1a; color: #fdfdfc; border-radius: 999px; padding: 10px 18px; font-size: 14px; cursor: pointer; }
+        .ms-art strong { display: block; font-size: 12px; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ms-art small { display: block; color: #6b655c; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ms-art > span:last-child { min-width: 0; flex: 1; }
+        .ms-btn { border: 1px solid #1a1a1a; background: #1a1a1a; color: #fdfdfc; border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
         .ms-btn:disabled { opacity: 0.5; cursor: wait; }
         .ms-btn-ghost { background: #fdfdfc; color: #1a1a1a; }
-        .ms-note { font-size: 13px; color: #6b655c; margin: 0; }
+        .ms-note { font-size: 12px; color: #6b655c; margin: 0; }
+        .ms-note .ms-btn { padding: 4px 10px; font-size: 12px; }
         .ms-error { font-size: 13px; color: #8a2f1d; background: #fdf0ec; border: 1px solid #e8b4a6; border-radius: 8px; padding: 10px 12px; margin: 0; }
         .ms-ok { font-size: 13px; color: #2f5d3a; background: #eef6ef; border: 1px solid #bcd8c0; border-radius: 8px; padding: 10px 12px; margin: 0; }
         .ms-saved { display: flex; flex-direction: column; gap: 8px; }
@@ -1775,6 +1793,43 @@ export default function MockupStudio({
         </div>
 
         <div className="ms-panel">
+          {/* Frame first: changing the frame is the most frequent action, so
+              its controls sit at the top of the panel — visible with the
+              preview, no scrolling to reach them. */}
+          <div className="ms-section">
+            <h3>Frame &amp; finish</h3>
+            <div className="ms-framebar">
+              <label className="ms-field">
+                Frame
+                <select value={cfg.frame} onChange={(e) => update({ frame: e.target.value as FrameVariant })}>
+                  {(Object.keys(FRAME_VARIANTS) as FrameVariant[]).map((f) => (
+                    <option key={f} value={f}>{FRAME_VARIANTS[f].label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="ms-field" style={{ flex: "0 0 150px" }}>
+                Glass
+                <select value={cfg.glass} onChange={(e) => update({ glass: e.target.value as Glass })}>
+                  <option value="none">No glass</option>
+                  <option value="clear">Clear glass</option>
+                  <option value="non-reflective">Non-reflective glass</option>
+                </select>
+              </label>
+            </div>
+            <div className="ms-framebar" style={{ marginTop: 8 }}>
+              <label className="ms-check">
+                <input type="checkbox" checked={cfg.matOn} onChange={(e) => update({ matOn: e.target.checked })} />
+                Matboard
+              </label>
+              {cfg.matOn && (
+                <label className="ms-field">
+                  Mat colour
+                  <input type="color" value={cfg.matColor} onChange={(e) => update({ matColor: e.target.value })} />
+                </label>
+              )}
+            </div>
+          </div>
+
           <div className="ms-section">
             <h3>Artworks</h3>
             <div className="ms-field" style={{ marginBottom: 8 }}>
@@ -1791,7 +1846,7 @@ export default function MockupStudio({
                 ))}
               </select>
             </div>
-            <div className="ms-artlist">
+            <div className="ms-artslots">
               {Array.from({ length: needed }, (_, slot) => (
                 <div key={slot}>
                   {needed > 1 && <p className="ms-note" style={{ marginBottom: 4 }}>Position {slot + 1}</p>}
@@ -1822,8 +1877,9 @@ export default function MockupStudio({
             </div>
           </div>
 
-          <div className="ms-section">
-            <h3>Scene</h3>
+          <div className="ms-panel-grid">
+            <div className="ms-section">
+              <h3>Scene</h3>
             <div className="ms-scene">
               {SCENES.map((s) => (
                 <button key={s.id} type="button" aria-pressed={cfg.scene === s.id} onClick={() => update({ scene: s.id })}>
@@ -1892,36 +1948,6 @@ export default function MockupStudio({
                 <input type="range" min={2} max={60} value={cfg.spacing} onChange={(e) => update({ spacing: Number(e.target.value) })} />
               </label>
             )}
-          </div>
-
-          <div className="ms-section">
-            <h3>Frame &amp; finish</h3>
-            <label className="ms-field">
-              Frame
-              <select value={cfg.frame} onChange={(e) => update({ frame: e.target.value as FrameVariant })}>
-                {(Object.keys(FRAME_VARIANTS) as FrameVariant[]).map((f) => (
-                  <option key={f} value={f}>{FRAME_VARIANTS[f].label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="ms-check" style={{ marginTop: 8 }}>
-              <input type="checkbox" checked={cfg.matOn} onChange={(e) => update({ matOn: e.target.checked })} />
-              Matboard
-            </label>
-            {cfg.matOn && (
-              <label className="ms-field">
-                Mat colour
-                <input type="color" value={cfg.matColor} onChange={(e) => update({ matColor: e.target.value })} />
-              </label>
-            )}
-            <label className="ms-field" style={{ marginTop: 8 }}>
-              Glass
-              <select value={cfg.glass} onChange={(e) => update({ glass: e.target.value as Glass })}>
-                <option value="none">No glass</option>
-                <option value="clear">Clear glass</option>
-                <option value="non-reflective">Non-reflective glass</option>
-              </select>
-            </label>
           </div>
 
           <div className="ms-section">
@@ -2074,6 +2100,7 @@ export default function MockupStudio({
                 ))}
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

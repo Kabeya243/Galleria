@@ -10,6 +10,7 @@ import SitePreview, {
   type SiteConfig,
   type SiteExhibition,
 } from "@/components/site-preview";
+import { SITE_TEMPLATE_COUNT, SITE_TEMPLATE_FAMILIES } from "@/lib/site-templates";
 import styles from "@/components/tools.module.css";
 
 // Artist Website Builder — build a portfolio site from the artist's own
@@ -52,6 +53,8 @@ export default function WebsiteBuilder({
 }) {
   const [config, setConfig] = useState<SiteConfig>(() => defaultSiteConfig(userName, userEmail, exhibitions));
   const [previewWidth, setPreviewWidth] = useState<PreviewWidth>("desktop");
+  const [templateFamily, setTemplateFamily] = useState<string>("all");
+  const [templateQuery, setTemplateQuery] = useState("");
   const [saved, setSaved] = useState<SavedSite[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);
   const [savedError, setSavedError] = useState<string | null>(null);
@@ -63,6 +66,15 @@ export default function WebsiteBuilder({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const configRef = useRef(config);
   configRef.current = config;
+
+  const shownTemplates = useMemo(() => {
+    const q = templateQuery.trim().toLowerCase();
+    return SITE_THEMES.filter(
+      (t) =>
+        (templateFamily === "all" || t.family === templateFamily) &&
+        (q === "" || `${t.label} ${t.blurb} ${t.family}`.toLowerCase().includes(q)),
+    );
+  }, [templateFamily, templateQuery]);
 
   const allArtworks = useMemo(() => exhibitions.flatMap((e) => e.artworks), [exhibitions]);
 
@@ -225,24 +237,49 @@ export default function WebsiteBuilder({
         </section>
 
         <section className="wb-card">
-          <h2>Theme</h2>
-          <div className="wb-themes">
-            {SITE_THEMES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`wb-theme ${config.theme === t.id ? "active" : ""}`}
-                onClick={() => update({ theme: t.id })}
-                aria-pressed={config.theme === t.id}
-              >
-                <span className="wb-swatch" style={{ background: t.bg, borderColor: t.line }}>
-                  <span style={{ background: t.ink, color: t.bg }}>Aa</span>
-                </span>
-                <strong>{t.label}</strong>
-                <span>{t.blurb}</span>
+          <h2>Template — {SITE_TEMPLATE_COUNT} original templates</h2>
+          <p className="wb-note">
+            Original SANAA designs, in the spirit of real artist sites — not copies of any
+            Dribbble or Pinterest design. Picking a template also sets its accent colour.
+          </p>
+          <div className="wb-template-filters" role="group" aria-label="Filter templates by style">
+            <button type="button" className={templateFamily === "all" ? "active" : ""} onClick={() => setTemplateFamily("all")}>
+              All ({SITE_TEMPLATE_COUNT})
+            </button>
+            {SITE_TEMPLATE_FAMILIES.map((f) => (
+              <button key={f.id} type="button" className={templateFamily === f.id ? "active" : ""} onClick={() => setTemplateFamily(f.id)}>
+                {f.label}
               </button>
             ))}
           </div>
+          <input
+            value={templateQuery}
+            onChange={(e) => setTemplateQuery(e.target.value)}
+            placeholder="Search templates…"
+            aria-label="Search templates"
+            style={{ height: 38, padding: "0 10px", border: "1px solid var(--line)", borderRadius: 5, background: "var(--paper)", color: "var(--ink)", font: "inherit", fontSize: 13 }}
+          />
+          {shownTemplates.length === 0 ? (
+            <p className="wb-note">No template matches this filter.</p>
+          ) : (
+            <div className="wb-themes">
+              {shownTemplates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`wb-theme ${config.theme === t.id ? "active" : ""}`}
+                  onClick={() => update({ theme: t.id, accentColor: t.accent })}
+                  aria-pressed={config.theme === t.id}
+                >
+                  <span className="wb-swatch" style={{ background: t.bg, borderColor: t.line }}>
+                    <span style={{ background: t.ink, color: t.bg }}>Aa</span>
+                  </span>
+                  <strong>{t.label}</strong>
+                  <span>{t.blurb}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <label className={styles.field}>
             Accent colour
             <span className="wb-color-row">
@@ -452,6 +489,9 @@ export default function WebsiteBuilder({
         .wb-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         @media (max-width: 560px) { .wb-row { grid-template-columns: 1fr; } }
         .wb-themes { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .wb-template-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 4px; }
+        .wb-template-filters button { padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font: 600 12px inherit; cursor: pointer; }
+        .wb-template-filters button.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
         .wb-theme { display: grid; grid-template-columns: 52px 1fr; column-gap: 12px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 10px; cursor: pointer; font: inherit; }
         .wb-theme strong { font-size: 14px; }
         .wb-theme span:last-child { font-size: 12px; color: var(--muted); line-height: 1.45; grid-column: 2; }

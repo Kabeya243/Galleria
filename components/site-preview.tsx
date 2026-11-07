@@ -4,9 +4,15 @@
 // exactly what a visitor sees. One source of truth, no drift.
 //
 // Themes are real: each one changes background, ink, accent, heading font,
-// body font and layout (hero alignment, gallery columns, rules).
+// body font and layout (hero alignment, hero style, gallery columns,
+// image radius, rules). The template registry lives in
+// lib/site-templates.ts (50+ original templates, data-driven).
 
-export type SiteThemeId = "gallery-white" | "dark-editorial" | "minimal-mono";
+import { SITE_THEMES, siteTemplateById, type SiteTheme, type SiteThemeId } from "@/lib/site-templates";
+
+export type { SiteTheme, SiteThemeId };
+export { SITE_THEMES };
+export const themeById = siteTemplateById;
 
 export type CvEntry = { role: string; organisation: string; year: string };
 export type PressItem = { title: string; source: string; year: string; url: string };
@@ -59,74 +65,6 @@ export type SiteExhibition = {
   status: string;
   artworks: SiteArtwork[];
 };
-
-export type SiteTheme = {
-  id: SiteThemeId;
-  label: string;
-  blurb: string;
-  bg: string;
-  surface: string;
-  ink: string;
-  muted: string;
-  line: string;
-  headingFont: string;
-  bodyFont: string;
-  heroAlign: "center" | "left";
-  galleryCols: number;
-  uppercaseHeadings: boolean;
-};
-
-export const SITE_THEMES: SiteTheme[] = [
-  {
-    id: "gallery-white",
-    label: "Gallery White",
-    blurb: "The SANAA white-gallery look — warm paper, near-black ink, gold accent.",
-    bg: "#fdfdfc",
-    surface: "#ffffff",
-    ink: "#141414",
-    muted: "#6f6a61",
-    line: "#e6e1d8",
-    headingFont: "Fraunces, Georgia, serif",
-    bodyFont: "'DM Sans', system-ui, sans-serif",
-    heroAlign: "center",
-    galleryCols: 3,
-    uppercaseHeadings: false,
-  },
-  {
-    id: "dark-editorial",
-    label: "Dark Editorial",
-    blurb: "Ink-black pages, warm paper text — the work glows against the dark.",
-    bg: "#141414",
-    surface: "#1d1c1a",
-    ink: "#f5f1e8",
-    muted: "#a9a294",
-    line: "#3a3835",
-    headingFont: "Fraunces, Georgia, serif",
-    bodyFont: "'DM Sans', system-ui, sans-serif",
-    heroAlign: "left",
-    galleryCols: 2,
-    uppercaseHeadings: false,
-  },
-  {
-    id: "minimal-mono",
-    label: "Minimal Mono",
-    blurb: "Stark white, one ink, uppercase labels and hairline rules. Nothing extra.",
-    bg: "#ffffff",
-    surface: "#ffffff",
-    ink: "#111111",
-    muted: "#777777",
-    line: "#dddddd",
-    headingFont: "'DM Sans', system-ui, sans-serif",
-    bodyFont: "'DM Sans', system-ui, sans-serif",
-    heroAlign: "left",
-    galleryCols: 1,
-    uppercaseHeadings: true,
-  },
-];
-
-export function themeById(id: string): SiteTheme {
-  return SITE_THEMES.find((t) => t.id === id) ?? SITE_THEMES[0];
-}
 
 export function defaultSiteConfig(artistName: string, email: string, exhibitions: SiteExhibition[]): SiteConfig {
   return {
@@ -225,34 +163,86 @@ export default function SitePreview({
         </span>
       </div>
 
-      {/* Hero */}
+      {/* Hero — layout driven by the template's heroStyle: classic
+          (heading, then image), split (text left, image right) or banner
+          (full-bleed image first, heading below). Images take the
+          template's corner radius. */}
       {config.showHero && (
-        <div style={{ padding: theme.heroAlign === "center" ? "56px 28px 48px" : "56px 28px 48px", textAlign: theme.heroAlign }}>
-          <p style={{ fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase", color: accent, margin: "0 0 14px" }}>
-            {config.tagline || "Contemporary artist"}
-          </p>
-          <h1 style={{ ...headingStyle(theme), fontSize: 44, lineHeight: 1.05, margin: "0 0 14px", fontWeight: 600 }}>
-            {config.heroHeading || config.artistName}
-          </h1>
-          {config.heroSubheading && (
-            <p style={{ fontSize: 16, color: theme.muted, maxWidth: 560, margin: theme.heroAlign === "center" ? "0 auto" : "0", lineHeight: 1.6 }}>
-              {config.heroSubheading}
-            </p>
-          )}
-          {heroArt && (
-            <div style={{ marginTop: 32 }}>
+        <div style={{ padding: "56px 28px 48px", textAlign: theme.heroAlign }}>
+          {theme.heroStyle === "banner" && heroArt && (
+            <div style={{ margin: "-56px -28px 32px" }}>
               {heroArt.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={heroArt.imageUrl} alt={heroArt.title} style={{ width: "100%", maxHeight: 480, objectFit: "cover", display: "block" }} />
+                <img src={heroArt.imageUrl} alt={heroArt.title} style={{ width: "100%", maxHeight: 420, objectFit: "cover", display: "block" }} />
               ) : (
-                <div style={{ width: "100%", height: 320, background: `linear-gradient(135deg, ${heroArt.color}, ${heroArt.accent})`, display: "grid", placeItems: "center", color: "#fff", fontSize: 18, fontFamily: theme.headingFont }}>
+                <div style={{ width: "100%", height: 300, background: `linear-gradient(135deg, ${heroArt.color}, ${heroArt.accent})`, display: "grid", placeItems: "center", color: "#fff", fontSize: 18, fontFamily: theme.headingFont }}>
                   {heroArt.title}
                 </div>
               )}
-              <p style={{ fontSize: 12, color: theme.muted, marginTop: 10 }}>
-                {heroArt.title}{heroArt.year ? `, ${heroArt.year}` : ""}{heroArt.medium ? ` — ${heroArt.medium}` : ""}
-              </p>
             </div>
+          )}
+          {theme.heroStyle === "split" ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, alignItems: "center", textAlign: "left" }}>
+              <div>
+                <p style={{ fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase", color: accent, margin: "0 0 14px" }}>
+                  {config.tagline || "Contemporary artist"}
+                </p>
+                <h1 style={{ ...headingStyle(theme), fontSize: 40, lineHeight: 1.05, margin: "0 0 14px", fontWeight: 600 }}>
+                  {config.heroHeading || config.artistName}
+                </h1>
+                {config.heroSubheading && (
+                  <p style={{ fontSize: 16, color: theme.muted, maxWidth: 560, margin: 0, lineHeight: 1.6 }}>
+                    {config.heroSubheading}
+                  </p>
+                )}
+              </div>
+              {heroArt && (
+                <div>
+                  {heroArt.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={heroArt.imageUrl} alt={heroArt.title} style={{ width: "100%", maxHeight: 380, objectFit: "cover", display: "block", borderRadius: theme.imageRadius }} />
+                  ) : (
+                    <div style={{ width: "100%", height: 300, background: `linear-gradient(135deg, ${heroArt.color}, ${heroArt.accent})`, display: "grid", placeItems: "center", color: "#fff", fontSize: 18, fontFamily: theme.headingFont, borderRadius: theme.imageRadius }}>
+                      {heroArt.title}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase", color: accent, margin: "0 0 14px" }}>
+                {config.tagline || "Contemporary artist"}
+              </p>
+              <h1 style={{ ...headingStyle(theme), fontSize: 44, lineHeight: 1.05, margin: "0 0 14px", fontWeight: 600 }}>
+                {config.heroHeading || config.artistName}
+              </h1>
+              {config.heroSubheading && (
+                <p style={{ fontSize: 16, color: theme.muted, maxWidth: 560, margin: theme.heroAlign === "center" ? "0 auto" : "0", lineHeight: 1.6 }}>
+                  {config.heroSubheading}
+                </p>
+              )}
+              {heroArt && theme.heroStyle !== "banner" && (
+                <div style={{ marginTop: 32 }}>
+                  {heroArt.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={heroArt.imageUrl} alt={heroArt.title} style={{ width: "100%", maxHeight: 480, objectFit: "cover", display: "block", borderRadius: theme.imageRadius }} />
+                  ) : (
+                    <div style={{ width: "100%", height: 320, background: `linear-gradient(135deg, ${heroArt.color}, ${heroArt.accent})`, display: "grid", placeItems: "center", color: "#fff", fontSize: 18, fontFamily: theme.headingFont, borderRadius: theme.imageRadius }}>
+                      {heroArt.title}
+                    </div>
+                  )}
+                  <p style={{ fontSize: 12, color: theme.muted, marginTop: 10 }}>
+                    {heroArt.title}{heroArt.year ? `, ${heroArt.year}` : ""}{heroArt.medium ? ` — ${heroArt.medium}` : ""}
+                  </p>
+                </div>
+              )}
+              {heroArt && theme.heroStyle === "banner" && (
+                <p style={{ fontSize: 12, color: theme.muted, marginTop: 10 }}>
+                  {heroArt.title}{heroArt.year ? `, ${heroArt.year}` : ""}{heroArt.medium ? ` — ${heroArt.medium}` : ""}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -272,9 +262,9 @@ export default function SitePreview({
                     <figure key={art.id} style={{ margin: 0 }}>
                       {art.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={art.imageUrl} alt={art.title} style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: theme.surface }} loading={exIndex === 0 && artIndex < theme.galleryCols ? "eager" : "lazy"} />
+                        <img src={art.imageUrl} alt={art.title} style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: theme.surface, borderRadius: theme.imageRadius }} loading={exIndex === 0 && artIndex < theme.galleryCols ? "eager" : "lazy"} />
                       ) : (
-                        <div style={{ width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${art.color}, ${art.accent})` }} />
+                        <div style={{ width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${art.color}, ${art.accent})`, borderRadius: theme.imageRadius }} />
                       )}
                       <figcaption style={{ paddingTop: 10 }}>
                         <div style={{ ...headingStyle(theme), fontSize: 15, fontWeight: 600 }}>{art.title}</div>

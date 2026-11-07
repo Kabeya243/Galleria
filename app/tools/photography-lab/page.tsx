@@ -38,9 +38,9 @@ export default async function PhotographyLabRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Photography Lab"
-      eyebrow="TOOLS · PHOTOGRAPHY LAB"
-      description="Straighten a crooked shot, crop to the paper's edge, fix the light — and export a clean file for your catalogue or a jury. Nothing here touches your original photo: every edit is a setting, applied only when you export."
+      title="photographyLab"
+      eyebrow="photographyLabEyebrow"
+      description="photographyLabDesc"
     >
       <PhotographyLab
         initialArtworkId={artworkId}

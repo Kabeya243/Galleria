@@ -47,9 +47,9 @@ export default async function FrameStudioRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Frame Studio"
-      eyebrow="TOOLS · FRAME STUDIO"
-      description="Frame your artworks without opening the 3D editor. Pick a work, preview it in every frame style, fine-tune the frame to the millimetre, compare up to four side by side — then save the frame straight onto the artwork."
+      title="frameStudio"
+      eyebrow="frameStudioEyebrow"
+      description="frameStudioDesc"
     >
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>

@@ -43,9 +43,9 @@ export default async function DigitalTwinRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitions.length}
-      title="Digital Twin, VR & AR"
-      eyebrow="TOOLS · DIGITAL TWIN"
-      description="Measure a real room once and keep its digital twin: exact dimensions, wall and floor finishes, doors, windows and where each work hangs. Compare the plan against the tape measure, get an installation order, walk the room in VR, and preview a work on your own wall in AR — or on a photo of it when AR is not available."
+      title="digitalTwin"
+      eyebrow="digitalTwinEyebrow"
+      description="digitalTwinDesc"
     >
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>

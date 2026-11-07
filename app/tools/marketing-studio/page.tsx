@@ -52,9 +52,9 @@ export default async function MarketingStudioRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Marketing Studio"
-      eyebrow="TOOLS · MARKETING STUDIO"
-      description="Generate exhibition marketing assets from your own artworks and exhibitions — posters, social graphics, invitation cards, press kits and announcements. Pick a template, set your brand colours, preview live, and export at real pixel sizes."
+      title="marketingStudio"
+      eyebrow="marketingStudioEyebrow"
+      description="marketingStudioDesc"
     >
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>

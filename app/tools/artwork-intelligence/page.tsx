@@ -44,9 +44,9 @@ export default async function ArtworkIntelligenceRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Artwork Intelligence"
-      eyebrow="TOOLS · ARTWORK INTELLIGENCE"
-      description="What does your work already say about itself? Metadata from your record, tags from rules, colours measured from the real pixels, and description drafts built from your own data — every generated field is a draft to check, never an invented fact."
+      title="artworkIntelligence"
+      eyebrow="artworkIntelligenceEyebrow"
+      description="artworkIntelligenceDesc"
     >
       <ArtworkIntelligence
         artworks={artworks.map((a) => ({

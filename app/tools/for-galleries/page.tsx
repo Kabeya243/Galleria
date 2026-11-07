@@ -18,25 +18,25 @@ export default async function ForGalleriesRoute() {
     <AudiencePage
       user={user}
       exhibitionCount={exhibitionCount}
-      title="For Galleries"
-      eyebrow="TOOLS · FOR GALLERIES"
-      description="The gallery's everyday work in one platform — the artworks, the collectors, the exhibitions and the sales."
+      title="forGalleries"
+      eyebrow="forGalleriesEyebrow"
+      description="forGalleriesDesc"
       points={[
         {
-          heading: "Artworks and inventory",
-          text: "Every work in the gallery, with its details and its history — what is on the wall, what is in storage, what is sold.",
+          heading: "forGalleriesP1h",
+          text: "forGalleriesP1t",
         },
         {
-          heading: "Collectors and relationships",
-          text: "Who collects what, who came to which opening, and what to follow up on — kept in one place.",
+          heading: "forGalleriesP2h",
+          text: "forGalleriesP2t",
         },
         {
-          heading: "Exhibitions as viewing rooms",
-          text: "Publish a show and share it as a room people walk through, with the works at their real size.",
+          heading: "forGalleriesP3h",
+          text: "forGalleriesP3t",
         },
         {
-          heading: "Documents for every sale",
-          text: "Certificates of authenticity and artwork sheets, printed from the work itself.",
+          heading: "forGalleriesP4h",
+          text: "forGalleriesP4t",
         },
       ]}
     />

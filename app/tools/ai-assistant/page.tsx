@@ -92,9 +92,9 @@ export default async function AiAssistantRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="AI Creative Assistant"
-      eyebrow="TOOLS · AI CREATIVE ASSISTANT"
-      description="Ask about your project and get answers from your real data — your exhibitions, artworks, rooms and frames — with the source shown under every answer. When a question cannot be answered from data and rules, the assistant says so instead of guessing."
+      title="aiAssistant"
+      eyebrow="aiAssistantEyebrow"
+      description="aiAssistantDesc"
     >
       <AiAssistant
         exhibitions={exhibitions.map((e) => ({

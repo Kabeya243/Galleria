@@ -14,22 +14,22 @@ const CARDS: HubCard[] = [
   {
     href: "/galleries",
     icon: GalleryVerticalEnd,
-    title: "Gallery templates",
-    description: "Forty rooms to start from — pick one, open it in the editor, make it yours.",
+    title: "galleryTemplates",
+    description: "galleryTemplatesDesc",
     status: "ready",
   },
   {
     href: "/exhibitions",
     icon: Boxes,
-    title: "3D editor",
-    description: "Place artworks on the walls, shape the rooms, set the light — from your exhibitions list.",
+    title: "editor3d",
+    description: "editor3dDesc",
     status: "ready",
   },
   {
     href: "/tools/digital-twin",
     icon: Scan,
-    title: "Digital Twin, VR & AR",
-    description: "A measured twin of a real room, VR walkthroughs and AR previews of your work on a real wall.",
+    title: "digitalTwin",
+    description: "digitalTwinDesc",
     status: "ready",
   },
 ];
@@ -43,10 +43,9 @@ export default async function SpatialLabHub() {
       user={user}
       exhibitionCount={exhibitionCount}
       active="spatial-lab"
-      hubName="Spatial Lab"
-      title="Spatial Lab"
-      eyebrow="SPATIAL LAB"
-      description="The 3D side of the studio: gallery room templates, the editor where exhibitions take shape, and digital twins with VR and AR."
+      hubName="spatialLab"
+
+      description="spatialLabDesc"
       cards={CARDS}
     />
   );

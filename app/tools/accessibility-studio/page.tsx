@@ -46,9 +46,9 @@ export default async function AccessibilityStudioRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Accessibility & Audio Guide Studio"
-      eyebrow="TOOLS · ACCESSIBILITY & AUDIO GUIDE STUDIO"
-      description="Make the exhibition open to every visitor. Write audio descriptions, artist and curator narration, captions and transcripts — in English and French — hear them read aloud with your browser's own voices, and measure the pack against a real accessibility checklist."
+      title="accessibility"
+      eyebrow="accessibilityEyebrow"
+      description="accessibilityDesc"
     >
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>

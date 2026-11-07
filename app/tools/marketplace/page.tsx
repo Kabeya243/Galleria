@@ -50,9 +50,9 @@ export default async function MarketplaceRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Marketplace"
-      eyebrow={`TOOLS · SELLING · ${listings.length} ${listings.length === 1 ? "LISTING" : "LISTINGS"}`}
-      description="Put a work up for sale, set its price, and talk to the buyer who asks about it. The inquiry is the sale path — a visitor writes, you reply by email, and you agree the sale directly. No payment is taken on SANAA yet."
+      title="marketplace"
+      eyebrowOverride={`TOOLS · SELLING · ${listings.length} ${listings.length === 1 ? "LISTING" : "LISTINGS"}`}
+      description="marketplaceDesc"
     >
       <MarketplaceTool
         artworks={artworks}

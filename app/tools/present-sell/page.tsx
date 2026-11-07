@@ -28,9 +28,9 @@ export default async function PresentSellRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Present & Sell"
-      eyebrow={`TOOLS · VIEWING ROOMS · ${published.length} PUBLISHED`}
-      description="A published exhibition is already a viewing room: one link, the works on the wall, the visitor walks through it. Share the link, watch the visits, follow up while the work is still fresh in their mind."
+      title="presentSell"
+      eyebrowOverride={`TOOLS · VIEWING ROOMS · ${published.length} PUBLISHED`}
+      description="presentSellDesc"
     >
       {published.length === 0 ? (
         <div className={styles.emptyBox}>

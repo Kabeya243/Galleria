@@ -26,9 +26,9 @@ export default async function DocumentsRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Documents"
-      eyebrow="TOOLS · DOCUMENTS & REPORTING"
-      description="The paper that goes with a sale. Build a certificate of authenticity in the studio — editable details, three templates, a QR code for verification — then issue it, reprint it, or revoke it. Export is through your browser's print dialog, saved as a one-page PDF."
+      title="documents"
+      eyebrow="documentsEyebrow"
+      description="documentsDesc"
     >
       <CertificateTool artistName={user.name} artworks={artworks} />
     </ToolsShell>

@@ -19,9 +19,9 @@ export default async function PriceYourWorkRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Price your work"
-      eyebrow="TOOLS · PRICE YOUR WORK"
-      description="What should this piece sell for? Start from what it cost you — your hours and your materials — and let the calculator suggest a range. All prices in US dollars, shown in euros, pounds, Swiss francs and Ugandan shillings too, at the day's exchange rates."
+      title="priceYourWork"
+      eyebrow="priceYourWorkEyebrow"
+      description="priceYourWorkDesc"
     >
       <PriceCalculator />
     </ToolsShell>

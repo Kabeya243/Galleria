@@ -14,71 +14,71 @@ const CARDS: HubCard[] = [
   {
     href: "/tools/art-in-context",
     icon: Route,
-    title: "Art in Context",
-    description: "One guided path from upload to promotion — photography, colour, frames, mockups, the 3D gallery, publication and export, all on the same artworks.",
+    title: "artInContext",
+    description: "artInContextDesc",
     status: "ready",
   },
   {
     href: "/exhibitions",
     icon: GalleryVerticalEnd,
-    title: "My exhibitions",
-    description: "All your exhibitions in one list — open one to keep building it, or start a new one.",
+    title: "myExhibitions",
+    description: "myExhibitionsDesc",
     status: "ready",
   },
   {
     href: "/exhibitions",
     icon: Boxes,
-    title: "3D editor",
-    description: "Place artworks on the walls, shape the rooms, set the light — from your exhibitions list.",
+    title: "editor3d",
+    description: "editor3dDesc",
     status: "ready",
   },
   {
     href: "/tools",
     icon: Wrench,
-    title: "Tools",
-    description: "Price a work, keep your inventory, know your contacts, present and sell.",
+    title: "toolsShort",
+    description: "toolsShortDesc",
     status: "ready",
   },
   {
     href: "/tools/price-your-work",
     icon: Calculator,
-    title: "Price your work",
-    description: "Work out a fair price for a piece, from your hours, your materials and its size.",
+    title: "priceYourWork",
+    description: "priceYourWorkDesc",
     status: "ready",
   },
   {
     href: "/tools/frame-studio",
     icon: Frame,
-    title: "Frame Studio",
-    description: "Frames for your artworks — 28 digitised styles, custom controls and presets, and side-by-side comparison.",
+    title: "frameStudio",
+    description: "frameStudioDesc",
     status: "ready",
   },
   {
     href: "/tools/mockup-studio",
     icon: Image,
-    title: "Mockup Studio",
-    description: "See your work on a real wall before you hang it — interiors, frames, lighting and print-ready exports.",
+    title: "mockupStudio",
+    description: "mockupStudioDesc",
     status: "ready",
   },
   {
     href: "/tools/photography-lab",
     icon: Aperture,
-    title: "Photography Lab",
-    description: "Clean up artwork photos — crop, straighten, correct light and colour, and export print-ready files.",
+    title: "photographyLab",
+    description: "photographyLabDesc",
     status: "ready",
   },
   {
     href: "/tools/color-intelligence",
     icon: Palette,
-    title: "Color Intelligence",
-    description: "Read the colours in a work — palettes, harmonies and contrast — and find the right wall for it.",
+    title: "colorIntelligence",
+    description: "colorIntelligenceDesc",
     status: "ready",
   },
   {
     href: "/tools/presentation-designer",
     icon: Presentation,
-    title: "Presentation Designer",
-    description: "Build a presentation for a buyer, a gallery or a jury — slides from your own artworks, ready to share.",
+    title: "presentationDesigner",
+    description: "presentationDesignerDesc",
     status: "ready",
   },
 ];
@@ -92,10 +92,9 @@ export default async function CreateHub() {
       user={user}
       exhibitionCount={exhibitionCount}
       active="create"
-      hubName="Create"
-      title="Create"
-      eyebrow="CREATE"
-      description="Everything for making an exhibition: your exhibitions, the 3D editor, and the tools that go with them."
+      hubName="create"
+
+      description="createDesc"
       cards={CARDS}
     />
   );

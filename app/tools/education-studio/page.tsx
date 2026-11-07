@@ -46,9 +46,9 @@ export default async function EducationStudioRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Art Education Studio"
-      eyebrow="TOOLS · ART EDUCATION STUDIO"
-      description="Turn an exhibition into a classroom. Write learner-friendly labels, structured learning guides, curatorial questions with model answers, quizzes visitors can take, analysis prompts and guided routes — then print the pack or download it."
+      title="educationStudio"
+      eyebrow="educationStudioEyebrow"
+      description="educationStudioDesc"
     >
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>

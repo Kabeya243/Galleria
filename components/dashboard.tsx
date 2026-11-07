@@ -103,11 +103,11 @@ export default function Dashboard({
         return;
       }
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not create an exhibition.");
+      if (!response.ok) throw new Error(result.error ?? t("dashboard", "couldNotCreate"));
       window.location.assign(`/editor/${result.exhibition.id}`);
     } catch (error) {
       console.error("Could not create exhibition.", error);
-      setCreateError(error instanceof Error ? error.message : "Could not create an exhibition.");
+      setCreateError(error instanceof Error ? error.message : t("dashboard", "couldNotCreate"));
       setCreating(false);
       throw error;
     }
@@ -121,28 +121,28 @@ export default function Dashboard({
     tone: "up" | "flat";
   }[] = [
     {
-      label: "My exhibitions",
+      label: t("dashboard", "myExhibitions"),
       icon: <GalleryVerticalEnd size={14} />,
       value: stats.exhibitions.value,
       delta: stats.exhibitions.delta,
       tone: stats.exhibitions.tone,
     },
     {
-      label: "My artworks",
+      label: t("dashboard", "myArtworks"),
       icon: <Image size={14} />,
       value: stats.artworks.value,
       delta: stats.artworks.delta,
       tone: stats.artworks.tone,
     },
     {
-      label: "Total visits",
+      label: t("dashboard", "totalVisits"),
       icon: <Eye size={14} />,
       value: stats.views.value,
       delta: stats.views.note,
       tone: "flat",
     },
     {
-      label: "Public exhibitions",
+      label: t("dashboard", "publicExhibitions"),
       icon: <Compass size={14} />,
       value: stats.publicExhibitions.value,
       delta: stats.publicExhibitions.delta,
@@ -158,9 +158,9 @@ export default function Dashboard({
         <div className="dashboard-content">
           <div className="welcome-row">
             <div>
-              <span className="eyebrow">Your creative space</span>
-              <h1>Hello, {firstName}!</h1>
-              <p className="welcome-copy">Here is an overview of your work on SANAA.</p>
+              <span className="eyebrow">{t("dashboard", "creativeSpace")}</span>
+              <h1>{t("dashboard", "hello")} {firstName}!</h1>
+              <p className="welcome-copy">{t("dashboard", "overview")}</p>
             </div>
             <div className={styles.headerActions}>
               <label className={styles.search}>
@@ -168,8 +168,8 @@ export default function Dashboard({
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search your exhibitions…"
-                  aria-label="Search your exhibitions"
+                  placeholder={t("dashboard", "searchPlaceholder")}
+                  aria-label={t("dashboard", "searchAria")}
                 />
               </label>
               <span className={styles.avatar} aria-hidden="true">
@@ -177,7 +177,7 @@ export default function Dashboard({
               </span>
               <span className={styles.userName}>{user.name}</span>
               <button className={styles.createButton} onClick={() => setShowCreateDialog(true)} disabled={creating}>
-                <Plus size={16} /> {creating ? "Creating…" : "Create an exhibition"}
+                <Plus size={16} /> {creating ? t("dashboard", "creating") : t("dashboard", "createExhibition")}
               </button>
             </div>
           </div>
@@ -192,13 +192,13 @@ export default function Dashboard({
           {createError && (
             <div className="editor-error-banner" role="alert">
               <span>{createError}</span>
-              <button type="button" aria-label="Dismiss" onClick={() => setCreateError(null)}>
+              <button type="button" aria-label={t("common", "dismiss")} onClick={() => setCreateError(null)}>
                 ×
               </button>
             </div>
           )}
 
-          <section className={styles.stats} aria-label="Your statistics">
+          <section className={styles.stats} aria-label={t("dashboard", "yourStatistics")}>
             {statCards.map((card) => (
               <article className="stat-card" key={card.label}>
                 <div className="stat-label">
@@ -217,17 +217,17 @@ export default function Dashboard({
           <section className={styles.card} aria-label="Your activity">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">Activity</span>
-                <h2>Your activity</h2>
-                <p className={styles.cardSub}>Artworks added per day · {chartRange}</p>
+                <span className="eyebrow">{t("dashboard", "activity")}</span>
+                <h2>{t("dashboard", "yourActivity")}</h2>
+                <p className={styles.cardSub}>{t("dashboard", "artworksPerDay")} {chartRange}</p>
               </div>
               <strong className={styles.cardTotal}>
-                {chartTotal} <span>new in 14 days</span>
+                {chartTotal} <span>{t("dashboard", "newIn14Days")}</span>
               </strong>
             </div>
             <div className={styles.chart}>
               {chart.map((day) => (
-                <div className={styles.barWrap} key={day.full} title={`${day.full}: ${day.count} artwork${day.count === 1 ? "" : "s"} added`}>
+                <div className={styles.barWrap} key={day.full} title={`${day.full}: ${day.count} ${day.count === 1 ? t("dashboard", "artworkAdded") : t("dashboard", "artworksAdded")}`}>
                   {day.count > 0 && <span className={styles.barValue}>{day.count}</span>}
                   <div
                     className={`${styles.bar} ${day.isRecentWeek ? styles.barRecent : styles.barOlder} ${day.count === maxCount && day.count > 0 ? styles.barMax : ""}`}
@@ -238,37 +238,37 @@ export default function Dashboard({
               ))}
             </div>
             <div className={styles.chartLegend}>
-              <span><i className={`${styles.legendDot} ${styles.barRecent}`} /> Last 7 days</span>
-              <span><i className={`${styles.legendDot} ${styles.barOlder}`} /> Previous 7 days</span>
+              <span><i className={`${styles.legendDot} ${styles.barRecent}`} /> {t("dashboard", "last7Days")}</span>
+              <span><i className={`${styles.legendDot} ${styles.barOlder}`} /> {t("dashboard", "previous7Days")}</span>
             </div>
           </section>
 
           <section className={styles.card} aria-label="Top exhibitions by visits">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">Most visited</span>
-                <h2>Top exhibitions by visits</h2>
-                <p className={styles.cardSub}>Your most visited rooms</p>
+                <span className="eyebrow">{t("dashboard", "mostVisited")}</span>
+                <h2>{t("dashboard", "topExhibitions")}</h2>
+                <p className={styles.cardSub}>{t("dashboard", "yourMostVisited")}</p>
               </div>
               <Link className="view-all" href="/exhibitions">
-                See all exhibitions
+                {t("dashboard", "seeAll")}
               </Link>
             </div>
             {filteredExhibitions.length === 0 ? (
               <p className={styles.empty}>
                 {topExhibitions.length === 0
-                  ? "No exhibitions yet — create your first one to start."
-                  : "No exhibitions match your search."}
+                  ? t("dashboard", "noExhibitionsYet")
+                  : t("dashboard", "noExhibitionsMatch")}
               </p>
             ) : (
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Exhibition</th>
-                      <th>Status</th>
-                      <th>Artworks</th>
-                      <th>Visits</th>
+                      <th>{t("dashboard", "exhibition")}</th>
+                      <th>{t("dashboard", "status")}</th>
+                      <th>{t("dashboard", "artworks")}</th>
+                      <th>{t("dashboard", "visits")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -281,7 +281,7 @@ export default function Dashboard({
                         </td>
                         <td>
                           <span className={`${styles.statusBadge} ${exhibition.status === "public" ? styles.statusPublic : styles.statusDraft}`}>
-                            {exhibition.status === "public" ? "Public" : "Draft"}
+                            {exhibition.status === "public" ? t("dashboard", "public") : t("dashboard", "draft")}
                           </span>
                         </td>
                         <td>{exhibition.artworkCount}</td>
@@ -357,8 +357,8 @@ export default function Dashboard({
           </section>
 
           <footer className={styles.footer}>
-            <span>© 2026 SANAA Studio</span>
-            <span>Made for art, made for everyone.</span>
+            <span>{t("common", "footerRights")}</span>
+            <span>{t("common", "footerTagline")}</span>
           </footer>
         </div>
       </main>

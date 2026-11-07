@@ -58,9 +58,9 @@ export default async function WebsiteBuilderRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Artist Website Builder"
-      eyebrow="TOOLS · WEBSITE BUILDER"
-      description="Build a portfolio site from your own artworks and exhibitions. Pick a theme, edit every section, preview it at desktop, tablet and mobile sizes — then publish it as a real public page anyone with the link can open."
+      title="websiteBuilder"
+      eyebrow="websiteBuilderEyebrow"
+      description="websiteBuilderDesc"
     >
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>

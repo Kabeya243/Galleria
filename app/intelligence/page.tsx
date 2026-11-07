@@ -21,56 +21,56 @@ export default async function IntelligenceHub() {
       ? {
           href: "/admin",
           icon: ShieldCheck,
-          title: "Admin analytics",
-          description: "Users, exhibitions, artworks, visits and tool use across the platform.",
+          title: "adminStats",
+    description: "adminStatsDesc",
           status: "ready",
         }
       : {
           icon: ShieldCheck,
-          title: "Admin analytics",
-          description: "Users, exhibitions, artworks, visits and tool use across the platform.",
+          title: "adminStats",
+    description: "adminStatsDesc",
           status: "owner-only",
         },
     {
       href: "/tools/visitor-analytics",
       icon: BarChart3,
-      title: "Your exhibition insights",
-      description: "Visits, popular rooms and artworks for your own exhibitions, in one place.",
+      title: "insights",
+    description: "insightsDesc",
       status: "ready",
     },
     {
       href: "/tools/ai-architect",
       icon: Sparkles,
-      title: "AI Exhibition Architect",
-      description: "Concepts, arrangements, templates, lighting and visitor journeys — suggestions from your own works, editable throughout.",
+      title: "aiArchitect",
+    description: "aiArchitectDesc",
       status: "ready",
     },
     {
       href: "/tools/artwork-intelligence",
       icon: ScanEye,
-      title: "Artwork Intelligence",
-      description: "Draft metadata, tags, colours and descriptions for your artworks — always a draft you check before use.",
+      title: "artworkIntelligence",
+    description: "artworkIntelligenceDesc",
       status: "ready",
     },
     {
       href: "/tools/ai-assistant",
       icon: Bot,
-      title: "AI Creative Assistant",
-      description: "Ask about your own projects — what fits, what is missing, what to frame next — answered from your real data.",
+      title: "aiAssistant",
+    description: "aiAssistantDesc",
       status: "ready",
     },
     {
       href: "/tools/image-to-3d",
       icon: Box,
-      title: "Image-to-3D & Asset Library",
-      description: "Import GLB models, preview them in 3D, and keep a library of licensed assets and references.",
+      title: "imageTo3d",
+    description: "imageTo3dDesc",
       status: "ready",
     },
     {
       href: "/tools/video-generator",
       icon: Clapperboard,
-      title: "Exhibition Video Generator",
-      description: "Turn an exhibition into a walkthrough video — shots, titles and formats, recorded from your real 3D room.",
+      title: "videoGenerator",
+    description: "videoGeneratorDesc",
       status: "ready",
     },
   ];
@@ -79,10 +79,9 @@ export default async function IntelligenceHub() {
       user={user}
       exhibitionCount={exhibitionCount}
       active="intelligence"
-      hubName="Intelligence"
-      title="Intelligence"
-      eyebrow="INTELLIGENCE"
-      description="What the numbers say, and help thinking: visitor analytics, AI-assisted exhibition planning, artwork analysis, 3D assets and video."
+      hubName="intelligence"
+
+      description="intelligenceDesc"
       cards={cards}
     />
   );

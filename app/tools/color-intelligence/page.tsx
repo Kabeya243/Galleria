@@ -40,9 +40,9 @@ export default async function ColorIntelligenceRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Color Intelligence"
-      eyebrow="TOOLS · COLOR INTELLIGENCE"
-      description="What colours actually live in your work? Pick one of your artworks — or upload an image — and read its real palette: dominant colours, harmonies, contrast and the wall colours that present it best."
+      title="colorIntelligence"
+      eyebrow="colorIntelligenceEyebrow"
+      description="colorIntelligenceDesc"
     >
       <ColorIntelligence
         initialArtworkId={artworkId}

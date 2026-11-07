@@ -18,25 +18,25 @@ export default async function ForCuratorsRoute() {
     <AudiencePage
       user={user}
       exhibitionCount={exhibitionCount}
-      title="For Curators"
-      eyebrow="TOOLS · FOR CURATORS"
-      description="Build the show, then keep everything around it in order — the works, the artists, the lenders and the visitors."
+      title="forCurators"
+      eyebrow="forCuratorsEyebrow"
+      description="forCuratorsDesc"
       points={[
         {
-          heading: "Build the exhibition",
-          text: "Choose a room, hang the works at their real size, and walk through the hang before anyone else does.",
+          heading: "forCuratorsP1h",
+          text: "forCuratorsP1t",
         },
         {
-          heading: "Keep the works in order",
-          text: "An inventory of everything in the show — medium, dimensions, year, and where each piece came from.",
+          heading: "forCuratorsP2h",
+          text: "forCuratorsP2t",
         },
         {
-          heading: "Know the people",
-          text: "Artists, lenders, collectors and advisors in one contact list, with a note on each of them.",
+          heading: "forCuratorsP3h",
+          text: "forCuratorsP3t",
         },
         {
-          heading: "Present it as a viewing room",
-          text: "Publish the room and share one link — the jury, the press or a collector walks through it from anywhere.",
+          heading: "forCuratorsP4h",
+          text: "forCuratorsP4t",
         },
       ]}
     />

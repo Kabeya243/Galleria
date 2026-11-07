@@ -19,9 +19,9 @@ export default async function ContactsRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Contacts"
-      eyebrow="TOOLS · CONTACTS & RELATIONSHIPS"
-      description="The people around your work — collectors, curators, galleries, advisors. Keep them in one place, with a note on how you met and what they care about."
+      title="contacts"
+      eyebrow="contactsEyebrow"
+      description="contactsDesc"
     >
       <ContactsTool />
     </ToolsShell>

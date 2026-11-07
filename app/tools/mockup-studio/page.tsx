@@ -44,9 +44,9 @@ export default async function MockupStudioRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Mockup Studio"
-      eyebrow="TOOLS · MOCKUP STUDIO"
-      description="Hang your work on a real wall before it ever leaves the studio. Pick an artwork, choose a room, set the frame and the light — then export a print-ready mockup to send to a buyer or a gallery."
+      title="mockupStudio"
+      eyebrow="mockupStudioEyebrow"
+      description="mockupStudioDesc"
     >
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>

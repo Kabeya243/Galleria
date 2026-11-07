@@ -18,25 +18,25 @@ export default async function ForArtistsRoute() {
     <AudiencePage
       user={user}
       exhibitionCount={exhibitionCount}
-      title="For Artists"
-      eyebrow="TOOLS · FOR ARTISTS"
-      description="Your studio, run from one place. Hang the work, price it, know who is looking at it, and send the documents that go with a sale."
+      title="forArtists"
+      eyebrow="forArtistsEyebrow"
+      description="forArtistsDesc"
       points={[
         {
-          heading: "Studio inventory",
-          text: "Every work you make, listed with its medium, its size and where it is — in a show, in the studio, or sold.",
+          heading: "forArtistsP1h",
+          text: "forArtistsP1t",
         },
         {
-          heading: "Price your work",
-          text: "Start from your hours and your materials, and get a range you can stand behind when a collector asks.",
+          heading: "forArtistsP2h",
+          text: "forArtistsP2t",
         },
         {
-          heading: "Exhibitions that travel",
-          text: "Build a room, hang the work at its real size, publish it — a collector anywhere in the world walks through it.",
+          heading: "forArtistsP3h",
+          text: "forArtistsP3t",
         },
         {
-          heading: "Documents that follow the work",
-          text: "A certificate of authenticity for every sale, printed from the work itself.",
+          heading: "forArtistsP4h",
+          text: "forArtistsP4t",
         },
       ]}
     />

@@ -41,9 +41,9 @@ export default async function ExhibitionPlannerRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Exhibition Planner"
-      eyebrow="TOOLS · EXHIBITION PLANNER"
-      description="Plan one exhibition from first idea to install day. Pick your artworks, assign them to rooms, set the sequence, write the wall labels, and keep the checklist and the team in one printable plan."
+      title="exhibitionPlanner"
+      eyebrow="exhibitionPlannerEyebrow"
+      description="exhibitionPlannerDesc"
     >
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>

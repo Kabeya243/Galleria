@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Clock, Images } from "lucide-react";
 import HeroGalleryPreview, { type HeroPreviewArtwork } from "@/components/hero-gallery-preview";
+import { useT } from "@/lib/i18n";
 import styles from "./public-home.module.css";
 
 // The public homepage — pure black & white editorial design. Logged-in
@@ -51,6 +54,7 @@ export default function PublicHome({
   exhibitions: PublicHomeExhibition[];
   featured: FeaturedPreview | null;
 }) {
+  const t = useT();
   const shown = exhibitions.slice(0, 3);
   const visitHref = featured ? `/exhibition/${featured.slug}` : "/galleries";
 
@@ -62,30 +66,27 @@ export default function PublicHome({
           <span className={styles.brandName}>SANAA</span>
         </Link>
         <nav className={styles.nav} aria-label="Main">
-          <Link href="/explore">Explore</Link>
-          <Link href="/galleries">Exhibitions</Link>
-          <Link href="/create">Create</Link>
-          <Link href="#about">About</Link>
+          <Link href="/explore">{t("home", "explore")}</Link>
+          <Link href="/galleries">{t("home", "exhibitions")}</Link>
+          <Link href="/create">{t("home", "create")}</Link>
+          <Link href="#about">{t("home", "about")}</Link>
           <Link href="/login" className={styles.signin}>
-            Sign in
+            {t("home", "signIn")}
           </Link>
         </nav>
       </header>
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>Virtual exhibitions · Open to everyone</p>
-          <h1 className={styles.title}>Walk through art, from anywhere.</h1>
-          <p className={styles.subtitle}>
-            Step inside exhibitions built by artists from all over the world. Wander the rooms,
-            stand in front of the work, explore at your own pace — no account needed to visit.
-          </p>
+          <p className={styles.eyebrow}>{t("home", "eyebrow")}</p>
+          <h1 className={styles.title}>{t("home", "title")}</h1>
+          <p className={styles.subtitle}>{t("home", "subtitle")}</p>
           <div className={styles.heroActions}>
             <Link href={visitHref} className={styles.primaryBtn}>
-              Visit an exhibition <ArrowRight size={16} />
+              {t("home", "visitExhibition")} <ArrowRight size={16} />
             </Link>
             <Link href="/register" className={styles.outlineBtn}>
-              Create my own
+              {t("home", "createMyOwn")}
             </Link>
           </div>
         </div>
@@ -95,30 +96,30 @@ export default function PublicHome({
             <Link
               href={`/exhibition/${featured.slug}`}
               className={styles.preview}
-              aria-label={`Visit ${featured.title}`}
+              aria-label={`${t("home", "visit")} — ${featured.title}`}
             >
               <HeroGalleryPreview artworks={featured.artworks} />
               <span className={styles.liveLabel}>
-                <span className={styles.liveDot} aria-hidden="true" /> Live preview
+                <span className={styles.liveDot} aria-hidden="true" /> {t("home", "livePreview")}
               </span>
               <span className={styles.minimap}>
                 <FloorMinimap />
-                <em>Floor 1 · Map</em>
+                <em>{t("home", "floorMap")}</em>
               </span>
               <span className={styles.caption}>
                 <strong>{featured.title}</strong>
                 <span>
                   {featured.artistName} · {featured.artworkCount}{" "}
-                  {featured.artworkCount === 1 ? "artwork" : "artworks"}
+                  {featured.artworkCount === 1 ? t("home", "artwork") : t("home", "artworks")}
                 </span>
               </span>
             </Link>
           ) : (
             <Link href="/galleries" className={styles.previewFallback}>
-              <strong>Walk through art, from anywhere.</strong>
-              <span>Browse the public exhibitions and step inside a room.</span>
+              <strong>{t("home", "title")}</strong>
+              <span>{t("home", "browseExhibitions")}</span>
               <span className={styles.previewFallbackCta}>
-                Browse exhibitions <ArrowRight size={15} />
+                {t("home", "browseExhibitions")} <ArrowRight size={15} />
               </span>
             </Link>
           )}
@@ -127,19 +128,19 @@ export default function PublicHome({
 
       <section className={styles.section} id="exhibitions">
         <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Trending exhibitions</h2>
+          <h2 className={styles.sectionTitle}>{t("home", "trending")}</h2>
           {exhibitions.length > 3 && (
             <Link href="/galleries" className={styles.sectionLink}>
-              Browse all exhibitions <ArrowUpRight size={14} />
+              {t("home", "browseAll")} <ArrowUpRight size={14} />
             </Link>
           )}
         </div>
         {shown.length === 0 ? (
           <div className={styles.emptyState}>
-            <strong>No public exhibitions yet.</strong>
-            <p>Be the first to open a room and invite the world in.</p>
+            <strong>{t("home", "noPublicYet")}</strong>
+            <p>{t("home", "beFirst")}</p>
             <Link href="/register" className={styles.primaryBtn}>
-              Create an account <ArrowRight size={16} />
+              {t("home", "createAccount")} <ArrowRight size={16} />
             </Link>
           </div>
         ) : (
@@ -149,7 +150,7 @@ export default function PublicHome({
                 key={exhibition.id}
                 href={`/exhibition/${exhibition.slug}`}
                 className={styles.card}
-                aria-label={`Visit ${exhibition.title}`}
+                aria-label={`${t("home", "visit")} — ${exhibition.title}`}
               >
                 {exhibition.coverImageUrl ? (
                   <img
@@ -167,7 +168,7 @@ export default function PublicHome({
                   <span className={styles.cardMeta}>
                     <span>
                       <Images size={13} /> {exhibition.artworkCount}{" "}
-                      {exhibition.artworkCount === 1 ? "artwork" : "artworks"}
+                      {exhibition.artworkCount === 1 ? t("home", "artwork") : t("home", "artworks")}
                     </span>
                     <span>
                       <Clock size={13} /> {visitMinutes(exhibition.artworkCount)} min
@@ -181,17 +182,13 @@ export default function PublicHome({
       </section>
 
       <section className={styles.about} id="about">
-        <h2>About SANAA</h2>
-        <p>
-          SANAA is a virtual exhibition platform where artists build rooms, hang their work,
-          and invite the world to walk through — from anywhere. No downloads, no account
-          needed to visit.
-        </p>
+        <h2>{t("home", "aboutTitle")}</h2>
+        <p>{t("home", "aboutText")}</p>
       </section>
 
       <footer className={styles.footer}>
-        <span>© 2026 SANAA Studio</span>
-        <span>Made for art, made for everyone.</span>
+        <span>{t("common", "footerRights")}</span>
+        <span>{t("common", "footerTagline")}</span>
       </footer>
     </main>
   );

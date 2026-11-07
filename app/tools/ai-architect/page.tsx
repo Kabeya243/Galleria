@@ -92,9 +92,9 @@ export default async function AiArchitectRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="AI Exhibition Architect"
-      eyebrow="TOOLS · AI EXHIBITION ARCHITECT"
-      description="Plan a show from your own works. The concept, hang, room match, lighting and wall colours are computed from your artworks, dimensions, colours and the 40 gallery templates — no model needed. Anything that would need a language model is clearly marked and stays off until you connect an AI provider."
+      title="aiArchitect"
+      eyebrow="aiArchitectEyebrow"
+      description="aiArchitectDesc"
     >
       <AiArchitect
         artworks={artworks.map((a) => ({

@@ -14,43 +14,43 @@ const CARDS: HubCard[] = [
   {
     href: "/tools/present-sell",
     icon: Presentation,
-    title: "Present & Sell",
-    description: "Your published rooms as viewing rooms — share them, track visits, follow up.",
+    title: "presentSell",
+    description: "presentSellDesc",
     status: "ready",
   },
   {
     href: "/explore",
     icon: Compass,
-    title: "Published exhibitions",
-    description: "See published exhibitions live, the way visitors see them — including your own.",
+    title: "publishedExhibitions",
+    description: "publishedExhibitionsDesc",
     status: "ready",
   },
   {
     href: "/tools/website-builder",
     icon: Globe,
-    title: "Artist Website Builder",
-    description: "A portfolio site from your own works — themes, bio, CV, exhibitions, live preview and a public page.",
+    title: "websiteBuilder",
+    description: "websiteBuilderDesc",
     status: "ready",
   },
   {
     href: "/tools/marketing-studio",
     icon: Megaphone,
-    title: "Marketing Studio",
-    description: "Posters, social graphics, invitations and press kits from your exhibitions, ready to export.",
+    title: "marketingStudio",
+    description: "marketingStudioDesc",
     status: "ready",
   },
   {
     href: "/tools/print-studio",
     icon: Printer,
-    title: "Print Production Studio",
-    description: "Production-ready print: dimensions, bleed, margins and honest resolution checks, with PDFs.",
+    title: "printStudio",
+    description: "printStudioDesc",
     status: "ready",
   },
   {
     href: "/marketplace",
     icon: Store,
-    title: "Marketplace",
-    description: "List originals, editions and prints for sale — browse listings and answer buyer inquiries.",
+    title: "marketplace",
+    description: "marketplaceDesc",
     status: "ready",
   },
 ];
@@ -64,10 +64,9 @@ export default async function PublishHub() {
       user={user}
       exhibitionCount={exhibitionCount}
       active="publish"
-      hubName="Publish"
-      title="Publish"
-      eyebrow="PUBLISH"
-      description="Put your work in front of people: viewing rooms, portfolio sites, marketing, print and the marketplace."
+      hubName="publish"
+
+      description="publishDesc"
       cards={CARDS}
     />
   );

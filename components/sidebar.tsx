@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useT, type DictionarySection } from "@/lib/i18n";
 import {
   Archive,
   BarChart3,
@@ -33,10 +34,12 @@ import {
 // The old flat list is gone, including its two dead links: "Artworks"
 // pointed at a /#artworks anchor that no longer exists on the dashboard,
 // and "Help center" pointed at a #help anchor that was never a page.
+// Labels are dictionary keys (lib/i18n.ts, section "nav") so the whole
+// navigation switches language with the rest of the site.
 type NavItem = {
   id: string;
   href: string;
-  label: string;
+  label: DictionarySection<"nav">;
   icon: LucideIcon;
   adminOnly?: boolean;
   count?: boolean;
@@ -45,7 +48,7 @@ type NavItem = {
 type NavGroup = {
   id: string;
   hub: string;
-  label: string;
+  label: DictionarySection<"nav">;
   items: NavItem[];
 };
 
@@ -53,70 +56,70 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "discover",
     hub: "/discover",
-    label: "Discover",
+    label: "discover",
     items: [
-      { id: "explore", href: "/explore", label: "Explore exhibitions", icon: Compass },
-      { id: "templates", href: "/galleries", label: "Gallery templates", icon: GalleryVerticalEnd },
-      { id: "home", href: "/", label: "Home", icon: Home },
+      { id: "explore", href: "/explore", label: "explore", icon: Compass },
+      { id: "templates", href: "/galleries", label: "templates", icon: GalleryVerticalEnd },
+      { id: "home", href: "/", label: "home", icon: Home },
     ],
   },
   {
     id: "create",
     hub: "/create",
-    label: "Create",
+    label: "create",
     items: [
-      { id: "exhibitions", href: "/exhibitions", label: "My exhibitions", icon: GalleryVerticalEnd, count: true },
-      { id: "tools-hub", href: "/tools", label: "Tools", icon: Wrench },
-      { id: "price", href: "/tools/price-your-work", label: "Price your work", icon: Calculator },
+      { id: "exhibitions", href: "/exhibitions", label: "exhibitions", icon: GalleryVerticalEnd, count: true },
+      { id: "tools-hub", href: "/tools", label: "tools", icon: Wrench },
+      { id: "price", href: "/tools/price-your-work", label: "price", icon: Calculator },
     ],
   },
   {
     id: "spatial-lab",
     hub: "/spatial-lab",
-    label: "Spatial Lab",
+    label: "spatialLab",
     items: [
-      { id: "templates-lab", href: "/galleries", label: "Gallery templates", icon: GalleryVerticalEnd },
-      { id: "editor", href: "/exhibitions", label: "3D editor", icon: Boxes },
+      { id: "templates-lab", href: "/galleries", label: "templates", icon: GalleryVerticalEnd },
+      { id: "editor", href: "/exhibitions", label: "editor", icon: Boxes },
     ],
   },
   {
     id: "manage",
     hub: "/manage",
-    label: "Manage",
+    label: "manage",
     items: [
-      { id: "inventory", href: "/tools/inventory", label: "Inventory", icon: Archive },
-      { id: "contacts", href: "/tools/contacts", label: "Contacts", icon: Users },
-      { id: "certificates", href: "/tools/documents", label: "Certificates", icon: FileText },
-      { id: "admin-stats", href: "/admin", label: "Admin stats", icon: ShieldCheck, adminOnly: true },
+      { id: "inventory", href: "/tools/inventory", label: "inventory", icon: Archive },
+      { id: "contacts", href: "/tools/contacts", label: "contacts", icon: Users },
+      { id: "certificates", href: "/tools/documents", label: "certificates", icon: FileText },
+      { id: "admin-stats", href: "/admin", label: "adminStats", icon: ShieldCheck, adminOnly: true },
     ],
   },
   {
     id: "publish",
     hub: "/publish",
-    label: "Publish",
+    label: "publish",
     items: [
-      { id: "present-sell", href: "/tools/present-sell", label: "Present & Sell", icon: Presentation },
-      { id: "published", href: "/explore", label: "Published exhibitions", icon: Compass },
+      { id: "present-sell", href: "/tools/present-sell", label: "presentSell", icon: Presentation },
+      { id: "published", href: "/explore", label: "published", icon: Compass },
     ],
   },
   {
     id: "intelligence",
     hub: "/intelligence",
-    label: "Intelligence",
+    label: "intelligence",
     items: [
       // The hub itself is the entry point for everyone; Admin analytics
       // stays owner-only, and "Your exhibition insights" lives on the hub.
-      { id: "insights", href: "/intelligence", label: "Exhibition insights", icon: BarChart3 },
-      { id: "analytics", href: "/admin", label: "Admin analytics", icon: ShieldCheck, adminOnly: true },
+      { id: "insights", href: "/intelligence", label: "insights", icon: BarChart3 },
+      { id: "analytics", href: "/admin", label: "adminAnalytics", icon: ShieldCheck, adminOnly: true },
     ],
   },
   {
     id: "studio",
     hub: "/studio",
-    label: "My Studio",
+    label: "studio",
     items: [
-      { id: "dashboard", href: "/", label: "Dashboard", icon: Grid2X2 },
-      { id: "settings", href: "/settings", label: "Settings", icon: Settings2 },
+      { id: "dashboard", href: "/", label: "dashboard", icon: Grid2X2 },
+      { id: "settings", href: "/settings", label: "settings", icon: Settings2 },
     ],
   },
 ];
@@ -161,6 +164,7 @@ export default function Sidebar({
   active: SidebarActive;
   exhibitionCount: number;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   async function signOut() {
@@ -195,7 +199,7 @@ export default function Sidebar({
       <button
         type="button"
         className="mobile-nav-toggle"
-        aria-label={open ? "Close navigation" : "Open navigation"}
+        aria-label={open ? t("nav", "closeNav") : t("nav", "openNav")}
         aria-expanded={open}
         aria-controls="sanaa-sidebar"
         onClick={() => setOpen((value) => !value)}
@@ -206,13 +210,13 @@ export default function Sidebar({
         <button
           type="button"
           className="sidebar-backdrop"
-          aria-label="Close navigation"
+          aria-label={t("nav", "closeNav")}
           onClick={() => setOpen(false)}
         />
       )}
 
       <aside id="sanaa-sidebar" className={`sidebar${open ? " open" : ""}`}>
-        <Link className="brand-lockup" href="/" aria-label="SANAA home" onClick={() => setOpen(false)}>
+        <Link className="brand-lockup" href="/" aria-label={t("nav", "sanaaHome")} onClick={() => setOpen(false)}>
           <span className="brand-mark">s.</span>
           <span className="brand-name">SANAA</span>
         </Link>
@@ -222,7 +226,7 @@ export default function Sidebar({
             no menu, no switch. The name still shows in the profile chip
             at the bottom of the sidebar. Removed 2026-11-07. */}
         <div className="side-nav-groups">
-          <nav aria-label="Main navigation">
+          <nav aria-label={t("nav", "mainNav")}>
             {NAV_GROUPS.map((group) => {
               const items = group.items.filter((item) => !item.adminOnly || user.isAdmin);
               if (items.length === 0) return null;
@@ -233,7 +237,7 @@ export default function Sidebar({
                     className={`nav-section-label nav-group-link${activeGroupId === group.id ? " active" : ""}`}
                     onClick={() => setOpen(false)}
                   >
-                    {group.label}
+                    {t("nav", group.label)}
                   </Link>
                   <div className="side-nav">
                     {items.map((item) => (
@@ -243,7 +247,7 @@ export default function Sidebar({
                         href={item.href}
                         onClick={() => setOpen(false)}
                       >
-                        <item.icon size={17} /> {item.label}
+                        <item.icon size={17} /> {t("nav", item.label)}
                         {item.count && <span className="nav-count">{exhibitionCount}</span>}
                       </Link>
                     ))}
@@ -263,7 +267,7 @@ export default function Sidebar({
               <span>{user.email}</span>
             </div>
             <button className="sign-out-button" onClick={signOut}>
-              Sign out
+              {t("nav", "signOut")}
             </button>
           </div>
         </div>

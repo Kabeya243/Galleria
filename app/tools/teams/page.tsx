@@ -36,9 +36,9 @@ export default async function TeamsRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Teams & Collaboration"
-      eyebrow={`TOOLS · WORKING TOGETHER · ${teams.length} ${teams.length === 1 ? "TEAM" : "TEAMS"}`}
-      description="Share an exhibition with a team, talk about it in comments, ask for a review and approve it together. Owners invite, editors share and edit, viewers read — and every permission is checked on the server, not just in the buttons."
+      title="teams"
+      eyebrowOverride={`TOOLS · WORKING TOGETHER · ${teams.length} ${teams.length === 1 ? "TEAM" : "TEAMS"}`}
+      description="teamsDesc"
     >
       <TeamsTool
         teams={teams.map((team) => {

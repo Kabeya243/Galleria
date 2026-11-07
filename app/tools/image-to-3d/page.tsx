@@ -21,9 +21,9 @@ export default async function ImageTo3DRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Image-to-3D & Asset Library"
-      eyebrow="TOOLS · IMAGE-TO-3D"
-      description="Keep your 3D assets in one place with their licences and attribution, preview imported .glb models in 3D, and turn images into textured panels or depth reliefs — with the limits stated plainly: a single image cannot reconstruct hidden geometry."
+      title="imageTo3d"
+      eyebrow="imageTo3dEyebrow"
+      description="imageTo3dDesc"
     >
       <ImageTo3D />
     </ToolsShell>

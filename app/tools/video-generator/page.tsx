@@ -64,9 +64,9 @@ export default async function VideoGeneratorRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitions.length}
-      title="Exhibition Video Generator"
-      eyebrow="TOOLS · VIDEO GENERATOR"
-      description="Turn an exhibition into a video for Reels, your feed or YouTube: define the shots — camera walks, artwork close-ups, title and statement cards — then record the real 3D room in your browser. No render farm: the video is captured live, in real time, and downloaded as a .webm file."
+      title="videoGenerator"
+      eyebrow="videoGeneratorEyebrow"
+      description="videoGeneratorDesc"
     >
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>

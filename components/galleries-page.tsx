@@ -6,9 +6,9 @@ import { Eye, Footprints, PenLine, Search, Star } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
-import { ceilingTextures, createGalleryRoom, floorTextures, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, type RoomCategory, type RoomLayout } from "@/lib/rooms";
+import { ceilingTextures, createGalleryRoom, floorTextures, floorTexturesFr, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, wallTexturesFr, type RoomCategory, type RoomLayout } from "@/lib/rooms";
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
-import { useLocale } from "@/lib/i18n";
+import { useLocale, useT, type Locale } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
 import type { ThumbnailKey } from "@/lib/gallery-defs";
 
@@ -17,6 +17,7 @@ export type GalleryPresetCard = {
   label: string;
   category: RoomCategory;
   description: string;
+  descriptionFr: string;
   width: number;
   depth: number;
   height: number;
@@ -33,10 +34,12 @@ export type GalleryPresetCard = {
 };
 
 // The room card's finish line: dimensions plus the wall and floor
-// finishes.
-function finishesLine(room: GalleryPresetCard): string {
-  const finishes = `${wallTextures[room.wallTexture]} walls · ${floorTextures[room.floorTexture]} floor`;
-  return `${room.width} × ${room.depth} m · ${room.height} m high · ${finishes}`;
+// finishes, in the visitor's language.
+function finishesLine(room: GalleryPresetCard, locale: Locale, t: (section: "galleries", key: "walls" | "floor" | "high") => string): string {
+  const wall = locale === "fr" ? wallTexturesFr[room.wallTexture] : wallTextures[room.wallTexture];
+  const floor = locale === "fr" ? floorTexturesFr[room.floorTexture] : floorTextures[room.floorTexture];
+  const finishes = `${wall} ${t("galleries", "walls")} · ${floor} ${t("galleries", "floor")}`;
+  return `${room.width} × ${room.depth} m · ${room.height} m ${t("galleries", "high")} · ${finishes}`;
 }
 
 function shadeHex(hex: string, factor: number): string {
@@ -798,6 +801,7 @@ export default function GalleriesPage({
   ownExhibitionCount: number;
 }) {
   const { locale } = useLocale();
+  const t = useT();
   // Gallery names in the visitor's language (admin renames included):
   // the server map seeds the first paint, the hook refreshes it.
   const nameOverrides = useGalleryNames(galleryNames);
@@ -808,6 +812,7 @@ export default function GalleriesPage({
       rooms.map((room) => ({
         ...room,
         label: galleryLabel(room.key, locale, nameOverrides),
+        description: locale === "fr" ? room.descriptionFr : room.description,
       })),
     [rooms, locale, nameOverrides],
   );
@@ -891,11 +896,11 @@ export default function GalleriesPage({
         return;
       }
       const created = await createResponse.json();
-      if (!createResponse.ok) throw new Error(created.error ?? "Could not create an exhibition.");
+      if (!createResponse.ok) throw new Error(created.error ?? t("galleries", "couldNotCreate"));
       window.location.assign(`/editor/${created.exhibition.id}`);
     } catch (error) {
       console.error("Could not open this room in the editor.", error);
-      setOpenError(error instanceof Error ? error.message : "Could not open this room in the editor.");
+      setOpenError(error instanceof Error ? error.message : t("galleries", "couldNotOpen"));
       setOpening(null);
     }
   }
@@ -906,15 +911,15 @@ export default function GalleriesPage({
   const galleriesContent = (
     <>
       <section className="galleries-intro">
-        <p className="eyebrow">{displayRooms.length} ROOMS · ONE COLLECTION</p>
-        <h1>Galleries<span className="title-period">.</span></h1>
-        <p>{displayRooms.length} gallery rooms, each with its own light, walls and floor. Pick one to walk through, or open it in the editor and hang your work.</p>
+        <p className="eyebrow">{displayRooms.length} {t("galleries", "roomsCollection")}</p>
+        <h1>{t("galleries", "title")}<span className="title-period">.</span></h1>
+        <p>{displayRooms.length} {t("galleries", "intro")}</p>
       </section>
 
       {openError && (
         <div className="editor-error-banner" role="alert">
           <span>{openError}</span>
-          <button type="button" aria-label="Dismiss" onClick={() => setOpenError(null)}>
+          <button type="button" aria-label={t("common", "dismiss")} onClick={() => setOpenError(null)}>
             ×
           </button>
         </div>
@@ -923,33 +928,33 @@ export default function GalleriesPage({
       <section className="galleries-viewer" ref={viewerRef}>
         <div className="galleries-viewer-head">
           <div>
-            <span className="panel-kicker">LIVE 3D PREVIEW</span>
+            <span className="panel-kicker">{t("galleries", "livePreview")}</span>
             <h2>{selectedRoom.label}</h2>
-            <p>{finishesLine(selectedRoom)}</p>
+            <p>{finishesLine(selectedRoom, locale, t)}</p>
           </div>
           <button className="galleries-open-button" onClick={() => void openInEditor(selected)} disabled={opening !== null}>
-            <PenLine size={15} /> {opening === selected ? "Opening…" : "Open in editor"}
+            <PenLine size={15} /> {opening === selected ? t("galleries", "opening") : t("galleries", "openInEditor")}
           </button>
           <button
             className="galleries-open-button"
             onClick={() => toggleFavourite(selected)}
-            aria-label={favourites.includes(selected) ? `Remove ${selectedRoom.label} from favourites` : `Save ${selectedRoom.label} as a favourite`}
+            aria-label={favourites.includes(selected) ? `${t("galleries", "removeFromFavourites")} — ${selectedRoom.label}` : `${t("galleries", "saveAsFavourite")} — ${selectedRoom.label}`}
             aria-pressed={favourites.includes(selected)}
             style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}
           >
-            <Star size={15} fill={favourites.includes(selected) ? "currentColor" : "none"} /> {favourites.includes(selected) ? "Saved" : "Save"}
+            <Star size={15} fill={favourites.includes(selected) ? "currentColor" : "none"} /> {favourites.includes(selected) ? t("galleries", "saved") : t("galleries", "save")}
           </button>
-          <button className="galleries-open-button" onClick={() => setWalking((value) => !value)} aria-label="Walk through this room">
-            <Footprints size={15} /> {walking ? "Exit walk" : "Walk through"}
+          <button className="galleries-open-button" onClick={() => setWalking((value) => !value)} aria-label={t("galleries", "walkThrough")}>
+            <Footprints size={15} /> {walking ? t("galleries", "exitWalk") : t("galleries", "walkThrough")}
           </button>
         </div>
         <div className="galleries-viewer-stage">
           <GalleryScene artworks={[]} room={viewerRoom} rooms={[viewerRoom]} activeRoomId={viewerRoom.id} className="galleries-viewer-canvas" interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} />
         </div>
-        <p className="galleries-viewer-hint">{walking ? "Walk mode · Click the floor to walk · WASD to move · Drag to look" : "Inside the room · Drag to look around · Scroll to zoom"}</p>
+        <p className="galleries-viewer-hint">{walking ? t("galleries", "walkHint") : t("galleries", "insideHint")}</p>
       </section>
 
-      <section aria-label="Find a gallery" style={{ maxWidth: 1350, margin: "28px auto 0", padding: "0 44px" }}>
+      <section aria-label={t("galleries", "searchAria")} style={{ maxWidth: 1350, margin: "28px auto 0", padding: "0 44px" }}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--line)", borderRadius: 8, padding: "0 12px", minHeight: 40, flex: "1 1 240px", maxWidth: 340, background: "var(--surface-3)" }}>
             <Search size={15} style={{ color: "var(--muted)", flexShrink: 0 }} />
@@ -957,12 +962,12 @@ export default function GalleriesPage({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search galleries…"
-              aria-label="Search galleries by name or description"
+              placeholder={t("galleries", "searchPlaceholder")}
+              aria-label={t("galleries", "searchAria")}
               style={{ border: 0, outline: "none", background: "transparent", font: "inherit", fontSize: 13, width: "100%", color: "inherit" }}
             />
           </label>
-          <div role="group" aria-label="Filter by category" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div role="group" aria-label={t("galleries", "filterByCategory")} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(["All", "Favourites", ...roomCategories] as const).map((chip) => {
               const active = category === chip;
               const count = chip === "All" ? displayRooms.length : chip === "Favourites" ? favourites.length : displayRooms.filter((room) => room.category === chip).length;
@@ -984,7 +989,11 @@ export default function GalleriesPage({
                     cursor: "pointer",
                   }}
                 >
-                  {chip === "Favourites" ? `★ Favourites (${count})` : `${chip} (${count})`}
+                  {chip === "Favourites"
+                    ? `★ ${t("galleries", "favourites")} (${count})`
+                    : chip === "All"
+                      ? `${t("galleries", "all")} (${count})`
+                      : `${t("galleries", "categoryArchitectural")} (${count})`}
                 </button>
               );
             })}
@@ -992,41 +1001,43 @@ export default function GalleriesPage({
         </div>
         <p style={{ margin: "10px 0 0", color: "var(--muted)", fontSize: 11 }}>
           {filteredRooms.length === displayRooms.length
-            ? `Showing all ${displayRooms.length} rooms.`
-            : `Showing ${filteredRooms.length} of ${displayRooms.length} rooms.`}{" "}
-          Favourites are saved in this browser only — they do not sync to your account yet.
+            ? t("galleries", "showingAll").replace("{count}", String(displayRooms.length))
+            : t("galleries", "showingSome")
+                .replace("{shown}", String(filteredRooms.length))
+                .replace("{total}", String(displayRooms.length))}{" "}
+          {t("galleries", "favouritesNote")}
         </p>
       </section>
 
       <section className="galleries-grid">
         {filteredRooms.map((room) => (
           <article key={room.key} className={`gallery-card${room.key === selected ? " selected" : ""}`}>
-            <button className="gallery-card-preview-button" onClick={() => viewIn3D(room.key)} aria-label={`Preview ${room.label} in 3D`}>
+            <button className="gallery-card-preview-button" onClick={() => viewIn3D(room.key)} aria-label={`${t("galleries", "previewIn3d")} — ${room.label}`}>
               <RoomPreviewCanvas room={room} />
             </button>
             <div className="gallery-card-body">
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                 <div>
-                  <p style={{ margin: "0 0 2px", color: "var(--accent)", fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>{room.category}</p>
+                  <p style={{ margin: "0 0 2px", color: "var(--accent)", fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>{t("galleries", "categoryArchitectural")}</p>
                   <h3>{room.label}</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => toggleFavourite(room.key)}
-                  aria-label={favourites.includes(room.key) ? `Remove ${room.label} from favourites` : `Save ${room.label} as a favourite`}
+                  aria-label={favourites.includes(room.key) ? `${t("galleries", "removeFromFavourites")} — ${room.label}` : `${t("galleries", "saveAsFavourite")} — ${room.label}`}
                   aria-pressed={favourites.includes(room.key)}
-                  title={favourites.includes(room.key) ? "Remove from favourites" : "Save as favourite"}
+                  title={favourites.includes(room.key) ? t("galleries", "removeFromFavourites") : t("galleries", "saveAsFavourite")}
                   style={{ background: "transparent", border: 0, padding: 2, cursor: "pointer", color: favourites.includes(room.key) ? "var(--accent)" : "var(--muted)", flexShrink: 0 }}
                 >
                   <Star size={17} fill={favourites.includes(room.key) ? "currentColor" : "none"} />
                 </button>
               </div>
               <p style={{ marginTop: 4, lineHeight: 1.5 }}>{room.description}</p>
-              <p className="gallery-card-finishes" style={{ marginTop: 6 }}>{finishesLine(room)}</p>
+              <p className="gallery-card-finishes" style={{ marginTop: 6 }}>{finishesLine(room, locale, t)}</p>
               <div className="gallery-card-actions">
-                <button onClick={() => viewIn3D(room.key)}><Eye size={14} /> View in 3D</button>
+                <button onClick={() => viewIn3D(room.key)}><Eye size={14} /> {t("galleries", "viewIn3d")}</button>
                 <button className="gallery-card-open" onClick={() => void openInEditor(room.key)} disabled={opening !== null}>
-                  <PenLine size={14} /> {opening === room.key ? "Opening…" : "Open in editor"}
+                  <PenLine size={14} /> {opening === room.key ? t("galleries", "opening") : t("galleries", "openInEditor")}
                 </button>
               </div>
             </div>
@@ -1034,16 +1045,16 @@ export default function GalleriesPage({
         ))}
         {filteredRooms.length === 0 && (
           <div style={{ gridColumn: "1 / -1", border: "1px solid var(--line)", borderRadius: 12, padding: "32px 20px", textAlign: "center" }}>
-            <p style={{ margin: 0, fontWeight: 600 }}>No galleries match that search.</p>
+            <p style={{ margin: 0, fontWeight: 600 }}>{t("galleries", "noMatch")}</p>
             <p style={{ margin: "6px 0 14px", color: "var(--muted)", fontSize: 12 }}>
-              {category === "Favourites" ? "You have not saved any favourites yet — tap the star on a room to save it here." : "Try a different word, or clear the filters."}
+              {category === "Favourites" ? t("galleries", "noFavouritesYet") : t("galleries", "tryDifferent")}
             </p>
             <button
               type="button"
               onClick={() => { setQuery(""); setCategory("All"); }}
               style={{ minHeight: 36, padding: "0 16px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--ink)", color: "var(--paper)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
             >
-              Clear filters
+              {t("galleries", "clearFilters")}
             </button>
           </div>
         )}
@@ -1060,8 +1071,8 @@ export default function GalleriesPage({
             <span className="brand-name">SANAA</span>
           </Link>
           <nav className="galleries-nav">
-            <Link href="/">Workspace</Link>
-            <Link href="/login" className="galleries-signin">Sign in</Link>
+            <Link href="/">{t("common", "workspace")}</Link>
+            <Link href="/login" className="galleries-signin">{t("galleries", "signIn")}</Link>
           </nav>
         </header>
 
@@ -1076,7 +1087,7 @@ export default function GalleriesPage({
 
       <section className="dashboard-main">
         <header className="topbar">
-          <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Galleries</strong></div>
+          <div className="breadcrumbs"><span>{t("common", "workspace")}</span><span className="crumb-slash">/</span><strong>{t("galleries", "title")}</strong></div>
           <div className="topbar-actions">
             <ThemeToggle />
             {/* Phase 8: the Search / Notifications / Help buttons were

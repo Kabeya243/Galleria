@@ -55,9 +55,9 @@ export default async function ArtInContextRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Art in Context"
-      eyebrow="TOOLS · ART IN CONTEXT"
-      description="One artwork, one journey: upload it, photograph it, read its colours, frame it, hang it in a room, arrange it with its companions, place it in the 3D gallery, publish the show — and promote it. Every step works on the same record, so nothing is uploaded twice and nothing drifts out of sync."
+      title="artInContext"
+      eyebrow="artInContextEyebrow"
+      description="artInContextDesc"
     >
       {artworks.length === 0 && exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>

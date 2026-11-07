@@ -50,9 +50,9 @@ export default async function VisitorAnalyticsRoute({
       <ToolsShell
         user={user}
         exhibitionCount={0}
-        title="Visitor Analytics"
-        eyebrow="TOOLS · VISITOR ANALYTICS"
-        description="Who visits your exhibitions: visits over time, unique visitors, most viewed artworks, devices, traffic sources and countries — anonymous counts only, no personal data."
+        title="visitorAnalytics"
+        eyebrow="visitorAnalyticsEyebrow"
+        description="visitorAnalyticsDesc"
       >
         <div className={styles.emptyBox}>
           <strong>No exhibitions yet.</strong>
@@ -170,9 +170,9 @@ export default async function VisitorAnalyticsRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitions.length}
-      title="Visitor Analytics"
-      eyebrow="TOOLS · VISITOR ANALYTICS"
-      description="Who visits your exhibitions: visits over time, unique visitors, most viewed artworks, devices, traffic sources and countries — anonymous counts only, no personal data."
+      title="visitorAnalytics"
+      eyebrow="visitorAnalyticsEyebrow"
+      description="visitorAnalyticsDesc"
     >
       <VisitorAnalytics
         exhibitions={exhibitions.map((e) => ({

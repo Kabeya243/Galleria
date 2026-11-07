@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import HubShell from "@/components/hub-shell";
 import type { SidebarActive } from "@/components/sidebar";
+import { useT, type DictionarySection } from "@/lib/i18n";
 import styles from "./tools.module.css";
 
 // One card on a hub page. `href` set means the tool exists and works —
@@ -10,42 +13,45 @@ import styles from "./tools.module.css";
 // "In development" (not built yet, arriving in a later phase) or
 // "Owner only" (built, but restricted to the platform owner). No card
 // ever pretends to work, and there are no dead links.
+// Title and description are dictionary keys (lib/i18n.ts, section
+// "hubs") so the hub pages switch language with the rest of the site.
 export type HubCard = {
   href?: string;
   icon: LucideIcon;
-  title: string;
-  description: string;
+  title: DictionarySection<"hubs">;
+  description: DictionarySection<"hubs">;
   status: "ready" | "development" | "owner-only";
 };
 
 export function HubCards({ cards }: { cards: HubCard[] }) {
+  const t = useT();
   return (
     <section className="galleries-grid">
       {cards.map((card) => (
         <article key={card.title} className={`gallery-card ${styles.toolCard}`}>
           {card.status === "ready" && card.href ? (
-            <Link href={card.href} className={styles.toolCardLink} aria-label={`Open ${card.title}`}>
+            <Link href={card.href} className={styles.toolCardLink} aria-label={`${t("hubs", "open")} — ${t("hubs", card.title)}`}>
               <span className={styles.toolIcon}>
                 <card.icon size={22} />
               </span>
-              <h3>{card.title}</h3>
-              <p>{card.description}</p>
+              <h3>{t("hubs", card.title)}</h3>
+              <p>{t("hubs", card.description)}</p>
               <span className={styles.toolOpen}>
-                Open <ArrowRight size={15} />
+                {t("hubs", "open")} <ArrowRight size={15} />
               </span>
             </Link>
           ) : (
             <div
               className={styles.toolCardLink}
-              aria-label={`${card.title} — ${card.status === "development" ? "in development" : "owner only"}`}
+              aria-label={`${t("hubs", card.title)} — ${card.status === "development" ? t("hubs", "inDevelopment") : t("hubs", "ownerOnly")}`}
             >
               <span className={styles.toolIcon}>
                 <card.icon size={22} />
               </span>
-              <h3>{card.title}</h3>
-              <p>{card.description}</p>
+              <h3>{t("hubs", card.title)}</h3>
+              <p>{t("hubs", card.description)}</p>
               <span className="hub-dev-badge">
-                {card.status === "development" ? "In development" : "Owner only"}
+                {card.status === "development" ? t("hubs", "inDevelopment") : t("hubs", "ownerOnly")}
               </span>
             </div>
           )}
@@ -60,18 +66,14 @@ export default function HubPage({
   exhibitionCount,
   active,
   hubName,
-  title,
-  eyebrow,
   description,
   cards,
 }: {
   user: { id: string; name: string; email: string; isAdmin?: boolean };
   exhibitionCount: number;
   active: SidebarActive;
-  hubName: string;
-  title: string;
-  eyebrow: string;
-  description: string;
+  hubName: DictionarySection<"nav">;
+  description: DictionarySection<"hubs">;
   cards: HubCard[];
 }) {
   return (
@@ -80,8 +82,6 @@ export default function HubPage({
       exhibitionCount={exhibitionCount}
       active={active}
       hubName={hubName}
-      title={title}
-      eyebrow={eyebrow}
       description={description}
     >
       <HubCards cards={cards} />

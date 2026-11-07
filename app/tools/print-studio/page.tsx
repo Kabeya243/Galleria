@@ -42,9 +42,9 @@ export default async function PrintStudioRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Print Production Studio"
-      eyebrow="TOOLS · PRINT STUDIO"
-      description="Production-ready materials from your own artworks — posters, wall labels, catalogue pages and certificates. Real print dimensions, bleed and safe margins, a DPI check computed from the image's actual pixels, and a production PDF with crop marks."
+      title="printStudio"
+      eyebrow="printStudioEyebrow"
+      description="printStudioDesc"
     >
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>

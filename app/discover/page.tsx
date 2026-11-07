@@ -14,28 +14,28 @@ const CARDS: HubCard[] = [
   {
     href: "/explore",
     icon: Compass,
-    title: "Explore exhibitions",
-    description: "Walk through public exhibitions by other artists, curators and galleries.",
+    title: "exploreExhibitions",
+    description: "exploreExhibitionsDesc",
     status: "ready",
   },
   {
     href: "/galleries",
     icon: GalleryVerticalEnd,
-    title: "Gallery templates",
-    description: "Forty rooms to start from — pick one, open it in the editor, make it yours.",
+    title: "galleryTemplates",
+    description: "galleryTemplatesDesc",
     status: "ready",
   },
   {
     href: "/",
     icon: Home,
-    title: "Public home",
-    description: "The front door of SANAA — the newest public exhibitions, open to everyone.",
+    title: "publicHome",
+    description: "publicHomeDesc",
     status: "ready",
   },
   {
     icon: Search,
-    title: "Search all exhibitions",
-    description: "Search every public exhibition on the platform by title, artist or work.",
+    title: "searchAll",
+    description: "searchAllDesc",
     status: "development",
   },
 ];
@@ -81,10 +81,9 @@ export default async function DiscoverHub() {
       user={user}
       exhibitionCount={exhibitionCount}
       active="discover"
-      hubName="Discover"
-      title="Discover"
-      eyebrow="DISCOVER"
-      description="Find exhibitions to walk through, gallery rooms to build in, and the public home of the platform."
+      hubName="discover"
+
+      description="discoverDesc"
       cards={CARDS}
     />
   );

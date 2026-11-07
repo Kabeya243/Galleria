@@ -18,25 +18,25 @@ export default async function ForCollectorsRoute() {
     <AudiencePage
       user={user}
       exhibitionCount={exhibitionCount}
-      title="For Collectors"
-      eyebrow="TOOLS · FOR COLLECTORS"
-      description="What you own, what it is worth, and where it came from — kept in one place, with the documents that prove it."
+      title="forCollectors"
+      eyebrow="forCollectorsEyebrow"
+      description="forCollectorsDesc"
       points={[
         {
-          heading: "Your collection, in one list",
-          text: "Every work you own, with its artist, medium, dimensions and year — and the exhibition it came from.",
+          heading: "forCollectorsP1h",
+          text: "forCollectorsP1t",
         },
         {
-          heading: "Provenance and documents",
-          text: "A certificate of authenticity for each work, so the story of the piece travels with it.",
+          heading: "forCollectorsP2h",
+          text: "forCollectorsP2t",
         },
         {
-          heading: "Walk through a show from home",
-          text: "A gallery's viewing room lets you stand in front of the work before you decide.",
+          heading: "forCollectorsP3h",
+          text: "forCollectorsP3t",
         },
         {
-          heading: "Price with a clear head",
-          text: "See what a piece cost to make and what it sells for — a fair price is one you understand.",
+          heading: "forCollectorsP4h",
+          text: "forCollectorsP4t",
         },
       ]}
     />

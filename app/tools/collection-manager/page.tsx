@@ -47,9 +47,9 @@ export default async function CollectionManagerRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Collection Manager"
-      eyebrow="TOOLS · COLLECTION MANAGER"
-      description="Every artwork you own, across all your exhibitions, in one table. Search, filter and sort, tag works, track availability and location, and keep provenance, inventory numbers, condition reports and notes on each piece."
+      title="collectionManager"
+      eyebrow="collectionManagerEyebrow"
+      description="collectionManagerDesc"
     >
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>

@@ -52,9 +52,9 @@ export default async function PresentationDesignerRoute({
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Presentation Designer"
-      eyebrow="TOOLS · PRESENTATION DESIGNER"
-      description="Turn your artworks into a presentation a gallery, a jury or a fair can open and understand in minutes — a title page, your works with captions, your biography and your project, exported as a PDF."
+      title="presentationDesigner"
+      eyebrow="presentationDesignerEyebrow"
+      description="presentationDesignerDesc"
     >
       <PresentationDesigner
         artworks={artworks.map((a) => ({ ...a, exhibitionTitle: a.exhibition.title }))}

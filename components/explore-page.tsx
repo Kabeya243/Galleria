@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import styles from "./public-home.module.css";
+import { useT } from "@/lib/i18n";
 
 // Explore: the public exhibitions of OTHER people. Signed-in users see it
 // inside their workspace (sidebar), visitors see the public header —
@@ -19,14 +22,15 @@ export type ExploreExhibition = {
 };
 
 function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
+  const t = useT();
   return (
     <section className="galleries-grid" id="exhibitions">
       {exhibitions.length === 0 ? (
         <div className={styles.emptyState}>
-          <strong>No public exhibitions from other artists yet.</strong>
-          <p>When other artists publish a room, it will appear here.</p>
+          <strong>{t("explore", "noPublic")}</strong>
+          <p>{t("explore", "noPublicDesc")}</p>
           <Link href="/register" className="galleries-open-button">
-            Create an account <ArrowRight size={15} />
+            {t("explore", "createAccount")} <ArrowRight size={15} />
           </Link>
         </div>
       ) : (
@@ -35,7 +39,7 @@ function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
             <Link
               href={`/exhibition/${exhibition.slug}`}
               className={styles.coverLink}
-              aria-label={`Visit ${exhibition.title}`}
+              aria-label={`${t("explore", "visit")} — ${exhibition.title}`}
             >
               {exhibition.coverImageUrl ? (
                 <img
@@ -54,13 +58,13 @@ function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
               </h3>
               <p>{exhibition.artistName}</p>
               <p className="gallery-card-finishes">
-                {exhibition.roomCount} {exhibition.roomCount === 1 ? "room" : "rooms"} ·{" "}
-                {exhibition.artworkCount} {exhibition.artworkCount === 1 ? "artwork" : "artworks"} ·{" "}
-                {exhibition.views} {exhibition.views === 1 ? "visit" : "visits"}
+                {exhibition.roomCount} {exhibition.roomCount === 1 ? t("exhibitions", "room") : t("exhibitions", "rooms")} ·{" "}
+                {exhibition.artworkCount} {exhibition.artworkCount === 1 ? t("exhibitions", "artwork") : t("exhibitions", "artworks")} ·{" "}
+                {exhibition.views} {exhibition.views === 1 ? t("exhibitions", "visitSingular") : t("exhibitions", "visits")}
               </p>
               <div className="gallery-card-actions">
                 <Link href={`/exhibition/${exhibition.slug}`} className="galleries-open-button">
-                  Visit exhibition <ArrowUpRight size={14} />
+                  {t("explore", "visitExhibition")} <ArrowUpRight size={14} />
                 </Link>
               </div>
             </div>
@@ -80,6 +84,7 @@ export default function ExplorePage({
   exhibitions: ExploreExhibition[];
   ownExhibitionCount: number;
 }) {
+  const t = useT();
   if (!user) {
     return (
       <main className="galleries-page">
@@ -89,28 +94,25 @@ export default function ExplorePage({
             <span className="brand-name">SANAA</span>
           </Link>
           <nav className="galleries-nav">
-            <Link href="/galleries">Galleries</Link>
-            <Link href="/register">Create an account</Link>
-            <Link href="/login" className="galleries-signin">Sign in</Link>
+            <Link href="/galleries">{t("explore", "galleries")}</Link>
+            <Link href="/register">{t("explore", "createAccount")}</Link>
+            <Link href="/login" className="galleries-signin">{t("explore", "signIn")}</Link>
           </nav>
         </header>
 
         <section className="galleries-intro">
-          <p className="eyebrow">EXPLORE · EXHIBITIONS BY OTHER ARTISTS</p>
+          <p className="eyebrow">{t("explore", "exploreOtherPublic")}</p>
           <h1>
-            Other rooms, other artists<span className="title-period">.</span>
+            {t("explore", "title")}<span className="title-period">.</span>
           </h1>
-          <p>
-            Every public exhibition on SANAA, made by someone else — wander in and walk through
-            their rooms at your own pace. No account needed to visit.
-          </p>
+          <p>{t("explore", "copyPublic")}</p>
         </section>
 
         <ExhibitionGrid exhibitions={exhibitions} />
 
         <footer className={styles.homeFooter}>
-          <span>© 2026 SANAA Studio</span>
-          <span>Made for art, made for everyone.</span>
+          <span>{t("common", "footerRights")}</span>
+          <span>{t("common", "footerTagline")}</span>
         </footer>
       </main>
     );
@@ -122,7 +124,7 @@ export default function ExplorePage({
 
       <section className="dashboard-main">
         <header className="topbar">
-          <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Explore</strong></div>
+          <div className="breadcrumbs"><span>{t("common", "workspace")}</span><span className="crumb-slash">/</span><strong>{t("explore", "explore")}</strong></div>
           <div className="topbar-actions">
             <ThemeToggle />
             {/* Phase 8: the Search / Notifications / Help buttons were
@@ -134,9 +136,9 @@ export default function ExplorePage({
         <div className="dashboard-content">
           <section className="welcome-row">
             <div>
-              <p className="eyebrow"><span className="status-dot" /> EXPLORE · OTHER ARTISTS</p>
-              <h1>Other rooms, other artists<span className="title-period">.</span></h1>
-              <p className="welcome-copy">Public exhibitions by other artists, curators and galleries — walk through them for inspiration.</p>
+              <p className="eyebrow"><span className="status-dot" /> {t("explore", "exploreOther")}</p>
+              <h1>{t("explore", "title")}<span className="title-period">.</span></h1>
+              <p className="welcome-copy">{t("explore", "copySignedIn")}</p>
             </div>
           </section>
 

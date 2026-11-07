@@ -6,6 +6,7 @@ import { ArrowRight, ArrowUpRight, PenLine, Plus, Trash2 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import ThemeToggle from "@/components/theme-toggle";
+import { useT } from "@/lib/i18n";
 import type { RoomModelId } from "@/lib/rooms";
 import styles from "./public-home.module.css";
 
@@ -31,6 +32,7 @@ export default function ExhibitionsPage({
   user: { id: string; name: string; email: string; isAdmin?: boolean };
   exhibitions: OwnExhibition[];
 }) {
+  const t = useT();
   const [exhibitions, setExhibitions] = useState(initialExhibitions);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -53,11 +55,11 @@ export default function ExhibitionsPage({
         body: JSON.stringify({ title, model }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not create an exhibition.");
+      if (!response.ok) throw new Error(result.error ?? t("exhibitions", "couldNotCreate"));
       window.location.assign(`/editor/${result.exhibition.id}`);
     } catch (error) {
       console.error("Could not create exhibition.", error);
-      setPageError(error instanceof Error ? error.message : "Could not create an exhibition.");
+      setPageError(error instanceof Error ? error.message : t("exhibitions", "couldNotCreate"));
       setCreating(false);
       throw error;
     }
@@ -74,11 +76,11 @@ export default function ExhibitionsPage({
     try {
       const response = await fetch(`/api/exhibitions/${exhibition.id}`, { method: "DELETE" });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error ?? "Could not delete this exhibition.");
+      if (!response.ok) throw new Error(result.error ?? t("exhibitions", "couldNotDelete"));
       setExhibitions((current) => current.filter((item) => item.id !== exhibition.id));
     } catch (error) {
       console.error("Could not delete exhibition.", error);
-      setPageError(error instanceof Error ? error.message : "Could not delete this exhibition.");
+      setPageError(error instanceof Error ? error.message : t("exhibitions", "couldNotDelete"));
     } finally {
       setDeletingId(null);
     }
@@ -90,7 +92,7 @@ export default function ExhibitionsPage({
 
       <section className="dashboard-main">
         <header className="topbar">
-          <div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Exhibitions</strong></div>
+          <div className="breadcrumbs"><span>{t("common", "workspace")}</span><span className="crumb-slash">/</span><strong>{t("exhibitions", "exhibitions")}</strong></div>
           <div className="topbar-actions">
             <ThemeToggle />
             {/* Phase 8: the Search / Notifications / Help buttons were
@@ -103,19 +105,19 @@ export default function ExhibitionsPage({
           {pageError && (
             <div className="editor-error-banner" role="alert">
               <span>{pageError}</span>
-              <button type="button" aria-label="Dismiss" onClick={() => setPageError(null)}>
+              <button type="button" aria-label={t("common", "dismiss")} onClick={() => setPageError(null)}>
                 ×
               </button>
             </div>
           )}
           <section className="welcome-row">
             <div>
-              <p className="eyebrow"><span className="status-dot" /> YOUR EXHIBITIONS · {exhibitions.length}</p>
-              <h1>Your exhibitions<span className="title-period">.</span></h1>
-              <p className="welcome-copy">Everything you are building — drafts and published rooms, in one place.</p>
+              <p className="eyebrow"><span className="status-dot" /> {t("exhibitions", "yourExhibitions")} {exhibitions.length}</p>
+              <h1>{t("exhibitions", "title")}<span className="title-period">.</span></h1>
+              <p className="welcome-copy">{t("exhibitions", "copy")}</p>
             </div>
             <button className="primary-button" onClick={() => setShowCreateDialog(true)} disabled={creating}>
-              <Plus size={17} /> {creating ? "Creating…" : "Create a new exhibition"}
+              <Plus size={17} /> {creating ? t("exhibitions", "creating") : t("exhibitions", "createNew")}
             </button>
           </section>
 
@@ -129,10 +131,10 @@ export default function ExhibitionsPage({
           <section className="galleries-grid" id="exhibitions">
             {exhibitions.length === 0 ? (
               <div className={styles.emptyState}>
-                <strong>No exhibitions yet.</strong>
-                <p>Your first room starts here — pick a gallery, hang your work, publish it.</p>
+                <strong>{t("exhibitions", "noExhibitions")}</strong>
+                <p>{t("exhibitions", "firstRoom")}</p>
                 <button onClick={() => setShowCreateDialog(true)} className="galleries-open-button" disabled={creating}>
-                  Create a new exhibition <ArrowRight size={15} />
+                  {t("exhibitions", "createNew")} <ArrowRight size={15} />
                 </button>
               </div>
             ) : (
@@ -141,7 +143,7 @@ export default function ExhibitionsPage({
                   <Link
                     href={`/editor/${exhibition.id}`}
                     className={styles.coverLink}
-                    aria-label={`Continue building ${exhibition.title}`}
+                    aria-label={`${t("exhibitions", "continueBuilding")} — ${exhibition.title}`}
                   >
                     {exhibition.coverImageUrl ? (
                       <img
@@ -158,27 +160,27 @@ export default function ExhibitionsPage({
                     <h3>
                       <Link href={`/editor/${exhibition.id}`}>{exhibition.title}</Link>
                     </h3>
-                    <p>{exhibition.status === "public" ? "Published" : "Draft"}</p>
+                    <p>{exhibition.status === "public" ? t("exhibitions", "published") : t("exhibitions", "draft")}</p>
                     <p className="gallery-card-finishes">
-                      {exhibition.roomCount} {exhibition.roomCount === 1 ? "room" : "rooms"} ·{" "}
-                      {exhibition.artworkCount} {exhibition.artworkCount === 1 ? "artwork" : "artworks"} ·{" "}
-                      {exhibition.views} {exhibition.views === 1 ? "visit" : "visits"}
+                      {exhibition.roomCount} {exhibition.roomCount === 1 ? t("exhibitions", "room") : t("exhibitions", "rooms")} ·{" "}
+                      {exhibition.artworkCount} {exhibition.artworkCount === 1 ? t("exhibitions", "artwork") : t("exhibitions", "artworks")} ·{" "}
+                      {exhibition.views} {exhibition.views === 1 ? t("exhibitions", "visitSingular") : t("exhibitions", "visits")}
                     </p>
                     <div className="gallery-card-actions">
                       <Link href={`/editor/${exhibition.id}`} className="galleries-open-button">
-                        <PenLine size={14} /> Continue building
+                        <PenLine size={14} /> {t("exhibitions", "continueBuilding")}
                       </Link>
                       {exhibition.status === "public" && (
                         <Link href={`/exhibition/${exhibition.slug}`} className="galleries-open-button">
-                          Visit <ArrowUpRight size={14} />
+                          {t("exhibitions", "visit")} <ArrowUpRight size={14} />
                         </Link>
                       )}
                       <button
                         onClick={() => void deleteExhibition(exhibition)}
                         disabled={deletingId === exhibition.id}
-                        aria-label={confirmingDeleteId === exhibition.id ? `Click again to delete ${exhibition.title}` : `Delete ${exhibition.title}`}
+                        aria-label={confirmingDeleteId === exhibition.id ? `${t("exhibitions", "clickAgainDelete")} — ${exhibition.title}` : `${t("exhibitions", "delete")} — ${exhibition.title}`}
                       >
-                        <Trash2 size={14} /> {deletingId === exhibition.id ? "Deleting…" : confirmingDeleteId === exhibition.id ? "Click again to delete" : "Delete"}
+                        <Trash2 size={14} /> {deletingId === exhibition.id ? t("exhibitions", "deleting") : confirmingDeleteId === exhibition.id ? t("exhibitions", "clickAgainDelete") : t("exhibitions", "delete")}
                       </button>
                     </div>
                   </div>

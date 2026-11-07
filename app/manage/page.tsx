@@ -17,57 +17,57 @@ export default async function ManageHub() {
     {
       href: "/tools/inventory",
       icon: Archive,
-      title: "Inventory & Collections",
-      description: "Your artworks in one list — what you made, where it is, and what it is worth.",
+      title: "inventory",
+    description: "inventoryDesc",
       status: "ready",
     },
     {
       href: "/tools/collection-manager",
       icon: Library,
-      title: "Collection Manager",
-      description: "Your whole collection in one place — provenance, inventory numbers, condition and availability, with search and bulk actions.",
+      title: "collectionManager",
+    description: "collectionManagerDesc",
       status: "ready",
     },
     {
       href: "/tools/exhibition-planner",
       icon: ClipboardList,
-      title: "Exhibition Planner",
-      description: "Plan an exhibition end to end — concept, works, rooms, wall labels, checklist, team and a printable plan.",
+      title: "exhibitionPlanner",
+    description: "exhibitionPlannerDesc",
       status: "ready",
     },
     {
       href: "/tools/accessibility-studio",
       icon: Accessibility,
-      title: "Accessibility & Audio Guide Studio",
-      description: "Audio descriptions, narration and transcripts in English and French, so everyone can experience your work.",
+      title: "accessibilityStudio",
+    description: "accessibilityStudioDesc",
       status: "ready",
     },
     {
       href: "/tools/education-studio",
       icon: GraduationCap,
-      title: "Art Education Studio",
-      description: "Learning guides, questions and quizzes for your exhibitions — built for schools, families and curious visitors.",
+      title: "educationStudio",
+    description: "educationStudioDesc",
       status: "ready",
     },
     {
       href: "/tools/teams",
       icon: Users,
-      title: "Teams & Collaboration",
-      description: "Work on exhibitions together — shared projects, comments, reviews and an activity log.",
+      title: "teams",
+    description: "teamsDesc",
       status: "ready",
     },
     {
       href: "/tools/contacts",
       icon: Users,
-      title: "Contacts",
-      description: "Collectors, curators, galleries and advisors — who they are and how to reach them.",
+      title: "contacts",
+    description: "contactsDesc",
       status: "ready",
     },
     {
       href: "/tools/documents",
       icon: FileText,
-      title: "Certificates",
-      description: "Certificates of authenticity, labels and artwork sheets, ready to print.",
+      title: "certificates",
+    description: "certificatesDesc",
       status: "ready",
     },
     // Admin stats exists and works, but only for the platform owner —
@@ -76,14 +76,14 @@ export default async function ManageHub() {
       ? {
           href: "/admin",
           icon: ShieldCheck,
-          title: "Admin stats",
-          description: "Users, exhibitions, artworks, visits and tool use across the platform.",
+          title: "adminStats",
+    description: "adminStatsDesc",
           status: "ready",
         }
       : {
           icon: ShieldCheck,
-          title: "Admin stats",
-          description: "Users, exhibitions, artworks, visits and tool use across the platform.",
+          title: "adminStats",
+    description: "adminStatsDesc",
           status: "owner-only",
         },
   ];
@@ -92,10 +92,9 @@ export default async function ManageHub() {
       user={user}
       exhibitionCount={exhibitionCount}
       active="manage"
-      hubName="Manage"
-      title="Manage"
-      eyebrow="MANAGE"
-      description="The running of your practice: inventory, collections, exhibition planning, accessibility, education, contacts, certificates, and — for the owner — platform stats."
+      hubName="manage"
+
+      description="manageDesc"
       cards={cards}
     />
   );

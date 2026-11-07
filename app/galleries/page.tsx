@@ -31,6 +31,7 @@ export default async function GalleriesRoute() {
       label: preset.label,
       category: preset.category,
       description: preset.description,
+      descriptionFr: preset.descriptionFr,
       width: preset.width,
       depth: preset.depth,
       height: preset.height,

@@ -37,9 +37,9 @@ export default async function InventoryRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
-      title="Inventory & Collections"
-      eyebrow={`TOOLS · INVENTORY · ${artworks.length} ARTWORK${artworks.length === 1 ? "" : "S"}`}
-      description="Every artwork you have hung in an exhibition, in one list. Add a work in the editor and it appears here."
+      title="inventory"
+      eyebrowOverride={`TOOLS · INVENTORY · ${artworks.length} ARTWORK${artworks.length === 1 ? "" : "S"}`}
+      description="inventoryDesc"
     >
       <div className={styles.summaryRow}>
         <div>

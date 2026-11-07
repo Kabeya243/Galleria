@@ -1,25 +1,35 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
+import { useT, type DictionarySection } from "@/lib/i18n";
 
 // Shared shell for every Tools page: the workspace sidebar (Tools active)
 // and the topbar, then a page header and the tool itself. Keeps the nine
-// tool pages from each repeating the same layout.
+// tool pages from each repeating the same layout. Title, eyebrow and
+// description are dictionary keys (lib/i18n.ts, section "toolpages") so
+// every tool page switches language; the four pages with a live count in
+// the eyebrow (inventory, marketplace, present-sell, teams) pass their
+// eyebrow as a plain string instead (eyebrowOverride).
 export default function ToolsShell({
   user,
   exhibitionCount,
   title,
   eyebrow,
   description,
+  eyebrowOverride,
   children,
 }: {
   user: { id: string; name: string; email: string; isAdmin?: boolean };
   exhibitionCount: number;
-  title: string;
-  eyebrow: string;
-  description: string;
+  title: DictionarySection<"toolpages">;
+  eyebrow?: DictionarySection<"toolpages">;
+  description: DictionarySection<"toolpages">;
+  eyebrowOverride?: string;
   children: ReactNode;
 }) {
+  const t = useT();
   return (
     <main className="app-shell">
       <Sidebar user={user} active="tools" exhibitionCount={exhibitionCount} />
@@ -27,9 +37,9 @@ export default function ToolsShell({
       <section className="dashboard-main">
         <header className="topbar">
           <div className="breadcrumbs">
-            <span>Workspace</span>
+            <span>{t("common", "workspace")}</span>
             <span className="crumb-slash">/</span>
-            <strong>Tools</strong>
+            <strong>{t("tools", "title")}</strong>
           </div>
           <div className="topbar-actions">
             <ThemeToggle />
@@ -43,13 +53,13 @@ export default function ToolsShell({
           <section className="welcome-row">
             <div>
               <p className="eyebrow">
-                <span className="status-dot" /> {eyebrow}
+                <span className="status-dot" /> {eyebrowOverride ?? (eyebrow ? t("toolpages", eyebrow) : "")}
               </p>
               <h1>
-                {title}
+                {t("toolpages", title)}
                 <span className="title-period">.</span>
               </h1>
-              <p className="welcome-copy">{description}</p>
+              <p className="welcome-copy">{t("toolpages", description)}</p>
             </div>
           </section>
           {children}

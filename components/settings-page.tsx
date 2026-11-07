@@ -6,7 +6,7 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import LanguageSwitcher from "@/components/language-switcher";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
 import { applyTheme, getStoredTheme, type ThemeChoice } from "@/lib/theme";
 
 export default function SettingsPage({
@@ -16,6 +16,7 @@ export default function SettingsPage({
 }) {
   const router = useRouter();
   const t = useT();
+  const { locale } = useLocale();
   const [theme, setTheme] = useState<ThemeChoice>("system");
   const [name, setName] = useState(user.name);
   const [profileNote, setProfileNote] = useState<{ ok: boolean; text: string } | null>(null);
@@ -37,7 +38,7 @@ export default function SettingsPage({
   }, []);
 
   const memberSince = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-GB", {
+    ? new Date(user.createdAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB", {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -55,13 +56,13 @@ export default function SettingsPage({
         body: JSON.stringify({ name }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not update your profile right now.");
-      setProfileNote({ ok: true, text: "Saved." });
+      if (!response.ok) throw new Error(result.error ?? t("settings", "couldNotUpdateProfile"));
+      setProfileNote({ ok: true, text: t("settings", "saved") });
       router.refresh();
     } catch (error) {
       setProfileNote({
         ok: false,
-        text: error instanceof Error ? error.message : "Could not update your profile right now.",
+        text: error instanceof Error ? error.message : t("settings", "couldNotUpdateProfile"),
       });
     } finally {
       setSavingProfile(false);
@@ -71,7 +72,7 @@ export default function SettingsPage({
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (newPassword !== confirmPassword) {
-      setPasswordNote({ ok: false, text: "The new passwords don't match." });
+      setPasswordNote({ ok: false, text: t("settings", "passwordsDontMatch") });
       return;
     }
     setPasswordNote(null);
@@ -83,15 +84,15 @@ export default function SettingsPage({
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not change your password right now.");
-      setPasswordNote({ ok: true, text: "Password changed." });
+      if (!response.ok) throw new Error(result.error ?? t("settings", "couldNotChangePassword"));
+      setPasswordNote({ ok: true, text: t("settings", "passwordChanged") });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
       setPasswordNote({
         ok: false,
-        text: error instanceof Error ? error.message : "Could not change your password right now.",
+        text: error instanceof Error ? error.message : t("settings", "couldNotChangePassword"),
       });
     } finally {
       setSavingPassword(false);
@@ -113,11 +114,11 @@ export default function SettingsPage({
     try {
       const response = await fetch("/api/settings/account", { method: "DELETE" });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error ?? "Could not delete your account right now.");
+      if (!response.ok) throw new Error(result.error ?? t("settings", "couldNotDeleteAccount"));
       window.location.assign("/register");
     } catch (error) {
       setDeleteNote(
-        error instanceof Error ? error.message : "Could not delete your account right now.",
+        error instanceof Error ? error.message : t("settings", "couldNotDeleteAccount"),
       );
       setDeleting(false);
       setConfirmDelete(false);
@@ -131,9 +132,9 @@ export default function SettingsPage({
       <section className="settings-main">
         <header className="topbar">
           <div className="breadcrumbs">
-            <span>Workspace</span>
+            <span>{t("common", "workspace")}</span>
             <span className="crumb-slash">/</span>
-            <strong>Settings</strong>
+            <strong>{t("settings", "title")}</strong>
           </div>
           <div className="topbar-actions">
             <ThemeToggle />
@@ -143,17 +144,17 @@ export default function SettingsPage({
         <div className="settings-content">
           <section className="welcome-row">
             <div>
-              <p className="eyebrow">YOUR ACCOUNT</p>
+              <p className="eyebrow">{t("settings", "yourAccount")}</p>
               <h1>
-                Settings<span className="title-period">.</span>
+                {t("settings", "title")}<span className="title-period">.</span>
               </h1>
-              <p className="welcome-copy">Your profile, your password, and how SANAA looks.</p>
+              <p className="welcome-copy">{t("settings", "settingsDesc")}</p>
             </div>
           </section>
 
           <section className="settings-section">
-            <h2>Appearance</h2>
-            <p>Choose how SANAA looks on this device. System follows your device setting.</p>
+            <h2>{t("settings", "appearance")}</h2>
+            <p>{t("settings", "appearanceDesc")}</p>
             <div className="settings-theme-options">
               {(["light", "dark", "system"] as ThemeChoice[]).map((choice) => (
                 <button
@@ -169,7 +170,7 @@ export default function SettingsPage({
                   ) : (
                     <Monitor size={15} />
                   )}
-                  {choice === "light" ? "Light" : choice === "dark" ? "Dark" : "System"}
+                  {choice === "light" ? t("settings", "light") : choice === "dark" ? t("settings", "dark") : t("settings", "system")}
                 </button>
               ))}
             </div>
@@ -182,21 +183,21 @@ export default function SettingsPage({
           </section>
 
           <section className="settings-section">
-            <h2>Profile</h2>
-            <p>This is how your name appears across your workspace.</p>
+            <h2>{t("settings", "profile")}</h2>
+            <p>{t("settings", "profileDesc")}</p>
             <div className="settings-profile-head">
               <div className="settings-avatar">{user.name.slice(0, 2).toUpperCase()}</div>
               <div>
                 <strong>{user.name}</strong>
                 <span>
-                  Member since {memberSince} · {user.exhibitionCount} exhibition
-                  {user.exhibitionCount === 1 ? "" : "s"}
+                  {t("settings", "memberSince")} {memberSince} · {user.exhibitionCount}{" "}
+                  {user.exhibitionCount === 1 ? t("settings", "exhibition") : t("settings", "exhibitions")}
                 </span>
               </div>
             </div>
             <form onSubmit={saveProfile}>
               <div className="settings-field">
-                <label htmlFor="settings-name">Your name</label>
+                <label htmlFor="settings-name">{t("settings", "yourName")}</label>
                 <input
                   id="settings-name"
                   required
@@ -207,13 +208,13 @@ export default function SettingsPage({
                 />
               </div>
               <div className="settings-field">
-                <label htmlFor="settings-email">Email</label>
+                <label htmlFor="settings-email">{t("settings", "email")}</label>
                 <input id="settings-email" value={user.email} disabled />
-                <small>Your email address can&apos;t be changed. It identifies your account.</small>
+                <small>{t("settings", "emailNote")}</small>
               </div>
               <div className="settings-row">
                 <button type="submit" className="settings-save" disabled={savingProfile}>
-                  {savingProfile ? "Saving…" : "Save changes"}
+                  {savingProfile ? t("settings", "saving") : t("settings", "saveChanges")}
                 </button>
                 {profileNote && (
                   <span className={`settings-note ${profileNote.ok ? "ok" : "err"}`}>
@@ -225,11 +226,11 @@ export default function SettingsPage({
           </section>
 
           <section className="settings-section">
-            <h2>Password</h2>
-            <p>Change your password. You&apos;ll stay signed in on this device.</p>
+            <h2>{t("settings", "password")}</h2>
+            <p>{t("settings", "passwordDesc")}</p>
             <form onSubmit={changePassword}>
               <div className="settings-field">
-                <label htmlFor="settings-current-password">Current password</label>
+                <label htmlFor="settings-current-password">{t("settings", "currentPassword")}</label>
                 <input
                   id="settings-current-password"
                   type="password"
@@ -242,7 +243,7 @@ export default function SettingsPage({
                 />
               </div>
               <div className="settings-field">
-                <label htmlFor="settings-new-password">New password</label>
+                <label htmlFor="settings-new-password">{t("settings", "newPassword")}</label>
                 <input
                   id="settings-new-password"
                   type="password"
@@ -252,15 +253,12 @@ export default function SettingsPage({
                   maxLength={72}
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="At least 10 characters"
+                  placeholder={t("settings", "passwordPlaceholder")}
                 />
-                <small>
-                  At least 10 characters, including an uppercase letter, a lowercase letter and
-                  a number.
-                </small>
+                <small>{t("settings", "passwordHint")}</small>
               </div>
               <div className="settings-field">
-                <label htmlFor="settings-confirm-password">Confirm new password</label>
+                <label htmlFor="settings-confirm-password">{t("settings", "confirmNewPassword")}</label>
                 <input
                   id="settings-confirm-password"
                   type="password"
@@ -274,7 +272,7 @@ export default function SettingsPage({
               </div>
               <div className="settings-row">
                 <button type="submit" className="settings-save" disabled={savingPassword}>
-                  {savingPassword ? "Saving…" : "Change password"}
+                  {savingPassword ? t("settings", "saving") : t("settings", "changePassword")}
                 </button>
                 {passwordNote && (
                   <span className={`settings-note ${passwordNote.ok ? "ok" : "err"}`}>
@@ -286,19 +284,16 @@ export default function SettingsPage({
           </section>
 
           <section className="settings-section">
-            <h2>Session</h2>
-            <p>Sign out of SANAA on this device.</p>
+            <h2>{t("settings", "session")}</h2>
+            <p>{t("settings", "sessionDesc")}</p>
             <button type="button" className="settings-save" onClick={signOut}>
-              Sign out
+              {t("common", "signOut")}
             </button>
           </section>
 
           <section className="settings-section settings-danger">
-            <h2>Delete account</h2>
-            <p>
-              Permanently delete your account and all your exhibitions and artworks. This
-              can&apos;t be undone.
-            </p>
+            <h2>{t("settings", "deleteAccount")}</h2>
+            <p>{t("settings", "deleteAccountDesc")}</p>
             <div className="settings-row">
               <button
                 type="button"
@@ -307,19 +302,19 @@ export default function SettingsPage({
                 disabled={deleting}
               >
                 {deleting
-                  ? "Deleting…"
+                  ? t("settings", "deleting")
                   : confirmDelete
-                    ? "Click again to confirm"
-                    : "Delete my account"}
+                    ? t("settings", "clickAgainToConfirm")
+                    : t("settings", "deleteMyAccount")}
               </button>
               {deleteNote && <span className="settings-note err">{deleteNote}</span>}
             </div>
           </section>
 
           <footer className="dashboard-footer">
-            <span>© 2026 SANAA Studio</span>
-            <span>Made for art, made for everyone.</span>
-            <span className="demo-label">YOUR WORKSPACE</span>
+            <span>{t("common", "footerRights")}</span>
+            <span>{t("common", "footerTagline")}</span>
+            <span className="demo-label">{t("common", "yourWorkspace")}</span>
           </footer>
         </div>
       </section>

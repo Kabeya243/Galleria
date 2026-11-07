@@ -188,7 +188,20 @@ if (WITH_BUILD) {
 // and those pages were verified live. When the local URL is not postgres,
 // the DB-backed smoke checks are skipped with that reason; the auth-gated
 // checks (which fail before any DB access) still run.
-const PORT = 3100;
+import net from "node:net";
+async function pickFreePort(from, to) {
+  for (let p = from; p <= to; p++) {
+    const free = await new Promise((resolve) => {
+      const s = net.createServer();
+      s.once("error", () => resolve(false));
+      s.once("listening", () => s.close(() => resolve(true)));
+      s.listen(p, "127.0.0.1");
+    });
+    if (free) return p;
+  }
+  throw new Error(`no free port in ${from}..${to}`);
+}
+const PORT = await pickFreePort(3100, 3110);
 function localDbIsPostgres() {
   for (const f of [".env.local", ".env"]) {
     try {
@@ -205,7 +218,9 @@ async function smoke() {
     return;
   }
   const dbOk = localDbIsPostgres();
-  const server = spawn("npm", ["run", "start", "--", "-p", String(PORT)], { cwd: ROOT, stdio: "pipe" });
+  // Detached process group so the finally-block kill takes the next-server
+  // child with it — a stray server holding the port made earlier runs flaky.
+  const server = spawn("npm", ["run", "start", "--", "-p", String(PORT)], { cwd: ROOT, stdio: "pipe", detached: true });
   const base = `http://127.0.0.1:${PORT}`;
   try {
     // Wait for readiness (up to ~40 s): poll a fast, auth-gated API route
@@ -266,7 +281,7 @@ async function smoke() {
       return `GET /api/saved-work?kind=portfolio-pdf → ${saved.status}`;
     });
   } finally {
-    server.kill("SIGTERM");
+    try { process.kill(-server.pid, "SIGTERM"); } catch { server.kill("SIGTERM"); }
   }
 }
 

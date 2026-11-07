@@ -591,6 +591,583 @@ function framePx(spec: (typeof FRAME_VARIANTS)[FrameVariant], artWcm: number, px
   return Math.max(2, spec.width * 100 * pxPerCm * 0.9);
 }
 
+// ---------------------------------------------------------------------------
+// Realistic frame rendering (Frame Studio, Nov 2026)
+// ---------------------------------------------------------------------------
+// The old render filled the frame bar with a flat solid colour. A real
+// frame is not flat: it wears a moulding — wood grain, brushed metal,
+// carved gold — and its profile (stepped, rounded, bevelled, scooped)
+// catches light on its edges. The digitised frames already carry a real
+// photo strip of the moulding (`spec.photo`, "/frames/<id>.png": the
+// strip's outer edge is at the top of the image, its inner edge at the
+// bottom — the same mapping as the 3D FramePhotoSkin), so the photo is
+// the skin; frames without a photo get a procedural finish from
+// `spec.texture`. Like the 3D gallery, beads and ornaments are NOT drawn
+// on top of a photo frame — the photo already carries them.
+
+/** Deterministic PRNG (mulberry32) so procedural grain never shimmers between redraws. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seedFromString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+type FrameSpecLike = (typeof FRAME_VARIANTS)[FrameVariant];
+
+/**
+ * Clip one bar of a ring to its 45° mitred shape (local coords: outer edge
+ * y = 0, inner edge y = w). Real frames are mitred, not butt-jointed: the
+ * moulding, grain and photo are cut on the diagonal at each corner, so the
+ * four bars meet on a clean diagonal seam instead of a hard step.
+ */
+function clipMitredBar(ctx: CanvasRenderingContext2D, len: number, w: number) {
+  ctx.beginPath();
+  if (len > 2 * w) {
+    ctx.moveTo(0, 0);
+    ctx.lineTo(len, 0);
+    ctx.lineTo(len - w, w);
+    ctx.lineTo(w, w);
+    ctx.closePath();
+  } else {
+    ctx.rect(0, 0, len, w);
+  }
+  ctx.clip();
+}
+
+/**
+ * Paint the four bars of a rectangular ring, one side at a time, in local
+ * coordinates: x runs along the bar (0..len), y runs across it (0..w),
+ * with the OUTER edge at y = 0 and the inner edge at y = w. The strip
+ * photo's outer edge is at the top of the image, so it lands on y = 0 on
+ * every side — exactly like the 3D FramePhotoSkin mapping (the mesh is
+ * turned, the UVs travel with it).
+ */
+function paintRingSides(
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  w: number,
+  fn: (ctx: CanvasRenderingContext2D, len: number, w: number, side: number) => void,
+) {
+  if (w <= 0) return;
+  const horiz = x1 - x0;
+  const vert = y1 - y0;
+  // Top — outer edge up.
+  ctx.save();
+  ctx.translate(x0, y0);
+  clipMitredBar(ctx, horiz, w);
+  fn(ctx, horiz, w, 0);
+  ctx.restore();
+  // Bottom — turned 180°, outer edge down.
+  ctx.save();
+  ctx.translate(x1, y1);
+  ctx.rotate(Math.PI);
+  clipMitredBar(ctx, horiz, w);
+  fn(ctx, horiz, w, 1);
+  ctx.restore();
+  // Left — turned -90°, outer edge left.
+  ctx.save();
+  ctx.translate(x0, y1);
+  ctx.rotate(-Math.PI / 2);
+  clipMitredBar(ctx, vert, w);
+  fn(ctx, vert, w, 2);
+  ctx.restore();
+  // Right — turned +90°, outer edge right.
+  ctx.save();
+  ctx.translate(x1, y0);
+  ctx.rotate(Math.PI / 2);
+  clipMitredBar(ctx, vert, w);
+  fn(ctx, vert, w, 3);
+  ctx.restore();
+}
+
+/** Tile the real moulding photo along one bar (local coords). One tile covers `w` across the bar and `w * stripW/stripH` along it, so the carving is never stretched — the same rule as the 3D skin. */
+function paintPhotoBar(ctx: CanvasRenderingContext2D, photo: HTMLImageElement, len: number, w: number) {
+  const tileW = Math.max(4, w * (photo.naturalWidth / Math.max(1, photo.naturalHeight)));
+  for (let x = 0; x < len; x += tileW) {
+    const dw = Math.min(tileW, len - x);
+    const sw = (dw / tileW) * photo.naturalWidth;
+    ctx.drawImage(photo, 0, 0, sw, photo.naturalHeight, x, 0, dw, w);
+  }
+}
+
+/** Wood grain: long wavy streaks along the bar, darker and lighter than the base. */
+function paintWoodGrain(
+  ctx: CanvasRenderingContext2D,
+  base: string,
+  len: number,
+  w: number,
+  rng: () => number,
+  strength: number,
+) {
+  const streaks = Math.max(6, Math.round(w * (0.45 + strength) * 1.1));
+  for (let i = 0; i < streaks; i++) {
+    const y0 = rng() * w;
+    const dark = rng() > 0.45;
+    const amt = 45 + rng() * 45;
+    ctx.strokeStyle = dark
+      ? hexToRgba(shade(base, -amt), 0.1 + rng() * 0.16 * strength)
+      : hexToRgba(shade(base, amt), 0.08 + rng() * 0.12 * strength);
+    ctx.lineWidth = 0.6 + rng() * 1.4;
+    const phase = rng() * Math.PI * 2;
+    const amp = 0.4 + rng() * 1.6;
+    const freq = 1 + rng() * 2;
+    ctx.beginPath();
+    ctx.moveTo(0, y0);
+    const steps = 10;
+    for (let s = 1; s <= steps; s++) {
+      ctx.lineTo((s / steps) * len, y0 + Math.sin((s / steps) * Math.PI * freq + phase) * amp);
+    }
+    ctx.stroke();
+  }
+  // Knots on strong grain (walnut, mahogany).
+  if (strength > 0.6) {
+    const knots = 1 + Math.floor(rng() * 2);
+    for (let k = 0; k < knots; k++) {
+      const kx = rng() * len;
+      const ky = w * (0.25 + rng() * 0.5);
+      for (let r = 5; r > 0; r--) {
+        ctx.strokeStyle = hexToRgba(shade(base, -70), 0.09);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(kx, ky, r * 2.2, r * 0.9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+/** Brushed metal: fine horizontal lines plus a soft anisotropic sheen band. */
+function paintBrushedMetal(ctx: CanvasRenderingContext2D, len: number, w: number, rng: () => number) {
+  const lines = Math.max(8, Math.round(w * 2.2));
+  for (let i = 0; i < lines; i++) {
+    const y = rng() * w;
+    ctx.strokeStyle =
+      rng() > 0.5 ? `rgba(255,255,255,${0.04 + rng() * 0.08})` : `rgba(0,0,0,${0.03 + rng() * 0.07})`;
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(len, y + (rng() - 0.5) * 1.5);
+    ctx.stroke();
+  }
+  const g = ctx.createLinearGradient(0, 0, 0, w);
+  g.addColorStop(0, "rgba(255,255,255,0.10)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.02)");
+  g.addColorStop(0.62, "rgba(255,255,255,0.13)");
+  g.addColorStop(1, "rgba(0,0,0,0.10)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, len, w);
+}
+
+/** Carved gold: a brushed gold base with repeated raised scroll bumps (dark recess + bright crescent). */
+function paintGoldCarved(ctx: CanvasRenderingContext2D, len: number, w: number, rng: () => number) {
+  paintBrushedMetal(ctx, len, w, rng);
+  const step = Math.max(10, w * 1.5);
+  for (let x = step / 2; x < len; x += step) {
+    const cx = x;
+    const cy = w / 2;
+    const r = w * 0.3;
+    const rg = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
+    rg.addColorStop(0, "rgba(0,0,0,0.42)");
+    rg.addColorStop(0.7, "rgba(0,0,0,0.18)");
+    rg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,240,200,0.55)";
+    ctx.lineWidth = Math.max(1, w * 0.06);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.62, Math.PI * 0.9, Math.PI * 1.9);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(60,40,0,0.5)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.62, Math.PI * -0.1, Math.PI * 0.9);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,235,180,0.7)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** High-gloss lacquer: a bright band near the outer edge, dark at the inner edge. */
+function paintGloss(ctx: CanvasRenderingContext2D, len: number, w: number) {
+  const g = ctx.createLinearGradient(0, 0, 0, w);
+  g.addColorStop(0, "rgba(255,255,255,0.34)");
+  g.addColorStop(0.18, "rgba(255,255,255,0.10)");
+  g.addColorStop(0.5, "rgba(0,0,0,0.06)");
+  g.addColorStop(1, "rgba(0,0,0,0.28)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, len, w);
+}
+
+/** Relative luminance of a hex colour (0 = black, 1 = white). */
+function luminance(hex: string): number {
+  const n = hex.replace("#", "");
+  const full = n.length === 3 ? n.split("").map((c) => c + c).join("") : n;
+  const num = parseInt(full, 16);
+  return (0.299 * ((num >> 16) & 0xff) + 0.587 * ((num >> 8) & 0xff) + 0.114 * (num & 0xff)) / 255;
+}
+
+/**
+ * Matte finish: barely-there centre light, darker edges. The shading
+ * scales with how dark the base is — a flat white frame is nearly
+ * uniform (a strong gradient would turn it into a glossy tube), while a
+ * black frame keeps its definition.
+ */
+function paintMatte(ctx: CanvasRenderingContext2D, base: string, len: number, w: number) {
+  const k = 0.35 + 0.65 * (1 - luminance(base));
+  const g = ctx.createLinearGradient(0, 0, 0, w);
+  g.addColorStop(0, `rgba(0,0,0,${0.16 * k})`);
+  g.addColorStop(0.5, `rgba(255,255,255,${0.05 * k})`);
+  g.addColorStop(1, `rgba(0,0,0,${0.2 * k})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, len, w);
+}
+
+/** Procedural bar finish for frames without a photo, from `spec.texture`. */
+function paintProceduralBar(
+  ctx: CanvasRenderingContext2D,
+  spec: FrameSpecLike,
+  len: number,
+  w: number,
+  side: number,
+) {
+  const rng = mulberry32(seedFromString(`${spec.label}|${side}`));
+  ctx.fillStyle = spec.color;
+  ctx.fillRect(0, 0, len, w);
+  switch (spec.texture) {
+    case "wood":
+    case "oak":
+    case "walnut":
+    case "mahogany":
+      paintWoodGrain(ctx, spec.color, len, w, rng, spec.grain ?? 0.5);
+      break;
+    case "gold-brushed":
+    case "silver-brushed":
+    case "aluminium-brushed":
+      paintBrushedMetal(ctx, len, w, rng);
+      break;
+    case "gold-carved":
+      paintGoldCarved(ctx, len, w, rng);
+      break;
+    case "black-gloss":
+    case "yellow-gloss":
+      paintGloss(ctx, len, w);
+      break;
+    case "black-matte":
+      paintMatte(ctx, spec.color, len, w);
+      break;
+    default:
+      paintMatte(ctx, spec.color, len, w);
+      break;
+  }
+}
+
+/**
+ * Relief of the moulding profile, as light and shadow across the bar
+ * (local coords, outer edge y = 0). Works over a photo skin and over a
+ * procedural finish alike.
+ */
+function paintProfile(ctx: CanvasRenderingContext2D, profile: FrameSpecLike["profile"], len: number, w: number) {
+  const g = ctx.createLinearGradient(0, 0, 0, w);
+  switch (profile ?? "flat") {
+    case "stepped": {
+      // Three steps down toward the artwork: a shadowed riser and a lit
+      // tread at each boundary.
+      const n = 3;
+      for (let i = 1; i < n; i++) {
+        const y = (i / n) * w;
+        const t = Math.max(1, w * 0.045);
+        ctx.fillStyle = "rgba(0,0,0,0.30)";
+        ctx.fillRect(0, y, len, t);
+        ctx.fillStyle = "rgba(255,255,255,0.30)";
+        ctx.fillRect(0, y - t, len, t);
+      }
+      g.addColorStop(0, "rgba(255,255,255,0.06)");
+      g.addColorStop(1, "rgba(0,0,0,0.10)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, len, w);
+      break;
+    }
+    case "rounded": {
+      // Convex: light crown in the middle, dark at both edges.
+      g.addColorStop(0, "rgba(0,0,0,0.26)");
+      g.addColorStop(0.45, "rgba(255,255,255,0.16)");
+      g.addColorStop(0.75, "rgba(255,255,255,0.05)");
+      g.addColorStop(1, "rgba(0,0,0,0.30)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, len, w);
+      break;
+    }
+    case "bevelled": {
+      // 45° chamfer, lit from the outside.
+      g.addColorStop(0, "rgba(255,255,255,0.30)");
+      g.addColorStop(0.55, "rgba(255,255,255,0.02)");
+      g.addColorStop(1, "rgba(0,0,0,0.30)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, len, w);
+      break;
+    }
+    case "scooped": {
+      // Concave: a dark channel in the middle, lit edges.
+      g.addColorStop(0, "rgba(255,255,255,0.22)");
+      g.addColorStop(0.3, "rgba(0,0,0,0.04)");
+      g.addColorStop(0.5, "rgba(0,0,0,0.38)");
+      g.addColorStop(0.7, "rgba(0,0,0,0.04)");
+      g.addColorStop(1, "rgba(255,255,255,0.22)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, len, w);
+      break;
+    }
+    default: {
+      // Flat: just edge definition.
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillRect(0, 0, len, Math.max(1, w * 0.05));
+      ctx.fillStyle = "rgba(0,0,0,0.28)";
+      ctx.fillRect(0, w - Math.max(1, w * 0.05), len, Math.max(1, w * 0.05));
+      break;
+    }
+  }
+}
+
+/** Beaded inner edge: a row of small shaded beads (not for photo frames — the photo carries them). */
+function paintBeads(ctx: CanvasRenderingContext2D, spec: FrameSpecLike, len: number, w: number) {
+  const r = Math.max(1, w * 0.14);
+  const spacing = Math.max(4, w * 0.46);
+  const cy = w - w * 0.16;
+  for (let x = spacing / 2; x < len; x += spacing) {
+    const g = ctx.createRadialGradient(x - r * 0.35, cy - r * 0.35, r * 0.1, x, cy, r);
+    g.addColorStop(0, "rgba(255,246,220,0.95)");
+    g.addColorStop(0.55, spec.color);
+    g.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** One carved rosette: recess shadow, six petals, bright centre, highlight crescent. */
+function paintRosette(ctx: CanvasRenderingContext2D, x: number, y: number, R: number, base: string) {
+  ctx.fillStyle = "rgba(0,0,0,0.30)";
+  ctx.beginPath();
+  ctx.arc(x + 1, y + 1, R, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = shade(base, 45);
+  for (let p = 0; p < 6; p++) {
+    const a = (p / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * R * 0.55, y + Math.sin(a) * R * 0.55, R * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = shade(base, 80);
+  ctx.beginPath();
+  ctx.arc(x, y, R * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.beginPath();
+  ctx.arc(x, y, R * 0.14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,240,200,0.5)";
+  ctx.lineWidth = Math.max(1, R * 0.1);
+  ctx.beginPath();
+  ctx.arc(x, y, R * 0.85, Math.PI * 0.9, Math.PI * 1.8);
+  ctx.stroke();
+}
+
+/** One carved scroll: a dark curl with a bright inner line. */
+function paintScroll(ctx: CanvasRenderingContext2D, x: number, y: number, R: number, base: string) {
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
+  ctx.lineWidth = Math.max(1, R * 0.16);
+  ctx.beginPath();
+  ctx.arc(x, y, R * 0.7, Math.PI * 0.2, Math.PI * 1.9);
+  ctx.stroke();
+  ctx.strokeStyle = shade(base, 60);
+  ctx.lineWidth = Math.max(1, R * 0.12);
+  ctx.beginPath();
+  ctx.arc(x, y, R * 0.7, Math.PI * 0.25, Math.PI * 1.85);
+  ctx.stroke();
+  ctx.fillStyle = shade(base, 80);
+  ctx.beginPath();
+  ctx.arc(x + R * 0.45, y - R * 0.35, R * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** Repeated ornaments along the bar centre (not for photo frames — the photo carries them). */
+function paintOrnaments(
+  ctx: CanvasRenderingContext2D,
+  spec: FrameSpecLike,
+  len: number,
+  w: number,
+  pxPerCm: number,
+) {
+  const spacingPx = Math.max(12, (spec.ornamentSpacing ?? 0.16) * 100 * pxPerCm);
+  const cy = w / 2;
+  const R = Math.max(3, w * 0.3);
+  let i = 0;
+  for (let x = spacingPx / 2; x < len; x += spacingPx, i++) {
+    if (spec.ornament === "carved" && i % 2 === 1) paintScroll(ctx, x, cy, R, spec.color);
+    else paintRosette(ctx, x, cy, R, spec.color);
+  }
+}
+
+/** One side of a passe-partout: base colour, material feel, and the frame's shadow at its outer edge. */
+function paintMatSide(
+  ctx: CanvasRenderingContext2D,
+  matColor: string,
+  matTexture: "velvet" | "paper" | "yellow" | undefined,
+  len: number,
+  w: number,
+  side: number,
+) {
+  ctx.fillStyle = matColor;
+  ctx.fillRect(0, 0, len, w);
+  const rng = mulberry32(seedFromString(`mat|${matColor}|${side}`));
+  if (matTexture === "velvet") {
+    // Velvet: soft diagonal sheen and fine nap.
+    const g = ctx.createLinearGradient(0, 0, len, w);
+    g.addColorStop(0, "rgba(255,255,255,0.05)");
+    g.addColorStop(0.5, "rgba(0,0,0,0.02)");
+    g.addColorStop(1, "rgba(0,0,0,0.08)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, len, w);
+    const n = Math.round((len * w) / 500);
+    for (let i = 0; i < n; i++) {
+      ctx.strokeStyle = rng() > 0.5 ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.05)";
+      ctx.lineWidth = 0.7;
+      const x = rng() * len;
+      const y = rng() * w;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (rng() - 0.5) * 4, y + (rng() - 0.5) * 4);
+      ctx.stroke();
+    }
+  } else if (matTexture === "yellow") {
+    paintGloss(ctx, len, w);
+  } else {
+    // Paper: faint fibres and a slight vertical tone.
+    const n = Math.round((len * w) / 260);
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = rng() > 0.5 ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)";
+      ctx.fillRect(rng() * len, rng() * w, 1.5, 1);
+    }
+    const g = ctx.createLinearGradient(0, 0, 0, w);
+    g.addColorStop(0, "rgba(255,255,255,0.05)");
+    g.addColorStop(1, "rgba(0,0,0,0.05)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, len, w);
+  }
+  // The frame's soft shadow on the mat, at the outer edge (y = 0).
+  const sh = ctx.createLinearGradient(0, 0, 0, Math.max(2, w * 0.45));
+  sh.addColorStop(0, "rgba(0,0,0,0.18)");
+  sh.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = sh;
+  ctx.fillRect(0, 0, len, Math.max(2, w * 0.45));
+}
+
+/** One side of a thin gold trim ring: metal base with a bright centre line and dark edges. */
+function paintTrimSide(ctx: CanvasRenderingContext2D, trimColor: string, len: number, w: number) {
+  ctx.fillStyle = trimColor;
+  ctx.fillRect(0, 0, len, w);
+  const g = ctx.createLinearGradient(0, 0, 0, w);
+  g.addColorStop(0, "rgba(0,0,0,0.45)");
+  g.addColorStop(0.5, "rgba(255,255,255,0.55)");
+  g.addColorStop(1, "rgba(0,0,0,0.45)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, len, w);
+}
+
+/**
+ * Outer shadow: darkest at the given rect's edges, fading outward over
+ * `depthPx` — the shadow a floated work casts on its tray.
+ */
+function drawOuterShadow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  depthPx: number,
+  strength: number,
+) {
+  const d = Math.max(3, depthPx);
+  let g = ctx.createLinearGradient(0, y - d, 0, y);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${strength})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(x - d, y - d, w + 2 * d, d);
+  g = ctx.createLinearGradient(0, y + h, 0, y + h + d);
+  g.addColorStop(0, `rgba(0,0,0,${strength})`);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(x - d, y + h, w + 2 * d, d);
+  g = ctx.createLinearGradient(x - d, 0, x, 0);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${strength})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(x - d, y, d, h);
+  g = ctx.createLinearGradient(x + w, 0, x + w + d, 0);
+  g.addColorStop(0, `rgba(0,0,0,${strength})`);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(x + w, y, d, h);
+}
+
+/**
+ * Inner shadow: darkest at the given rect's edges, fading inward over
+ * `depthPx` — the tray walls shading the tray floor, or a mat opening
+ * shading the artwork just inside it.
+ */
+function drawInnerShadow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  depthPx: number,
+  strength: number,
+) {
+  const d = Math.max(2, depthPx);
+  let g = ctx.createLinearGradient(0, y, 0, y + d);
+  g.addColorStop(0, `rgba(0,0,0,${strength})`);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, d);
+  g = ctx.createLinearGradient(0, y + h - d, 0, y + h);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${strength})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y + h - d, w, d);
+  g = ctx.createLinearGradient(x, 0, x + d, 0);
+  g.addColorStop(0, `rgba(0,0,0,${strength})`);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, d, h);
+  g = ctx.createLinearGradient(x + w - d, 0, x + w, 0);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${strength})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(x + w - d, y, d, h);
+}
+
 function drawFramedArtwork(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement | null,
@@ -600,12 +1177,20 @@ function drawFramedArtwork(
   wPx: number,
   hPx: number,
   cfg: MockupConfig,
+  framePhoto: HTMLImageElement | null,
 ) {
   const spec = FRAME_VARIANTS[cfg.frame];
   const pxPerCm = wPx / Math.max(1, cfg.widthCm);
   const fw = framePx(spec, cfg.widthCm, pxPerCm);
   const matW = cfg.matOn ? Math.max(3, Math.min(wPx, hPx) * 0.07) : spec.mat ? Math.max(3, spec.mat.width * 100 * pxPerCm * 0.9) : 0;
   const matColor = cfg.matOn ? cfg.matColor : spec.mat?.color ?? "#f2ead8";
+  // Shadow boxes float the work inside the tray: the tray gap sits between
+  // the artwork and the mat, so the artwork keeps its size and the frame
+  // grows by the gap — like the 3D gallery (floatGap around the work).
+  const floatGapPx = spec.floatGap > 0 ? spec.floatGap * 100 * pxPerCm : 0;
+  const innerW = wPx + (floatGapPx + matW) * 2;
+  const innerH = hPx + (floatGapPx + matW) * 2;
+  const trim = spec.trim;
 
   ctx.save();
   ctx.translate(cx, cy);
@@ -614,8 +1199,8 @@ function drawFramedArtwork(
     ctx.transform(1, 0, shear, 1, 0, 0);
   }
 
-  const totalW = wPx + (fw + matW) * 2;
-  const totalH = hPx + (fw + matW) * 2;
+  const totalW = innerW + fw * 2;
+  const totalH = innerH + fw * 2;
 
   // Contact shadow (soft, below and behind the frame).
   if (cfg.shadow) {
@@ -632,30 +1217,52 @@ function drawFramedArtwork(
     ctx.fillStyle = spec.trayColor;
     ctx.fillRect(-totalW / 2, -totalH / 2, totalW, totalH);
   }
-  // Frame border.
+  // Frame border: real moulding, not a flat colour. The photo strip is
+  // the skin when the frame carries one; otherwise a procedural finish
+  // from `spec.texture`. The profile relief, beads and ornaments are
+  // painted on top — except on photo frames, where the photo already
+  // carries the beads and carving (same rule as the 3D gallery).
   if (fw > 0) {
-    ctx.fillStyle = spec.color;
-    ctx.fillRect(-totalW / 2, -totalH / 2, totalW, totalH);
-    // Inner highlight / bead.
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
-    ctx.lineWidth = Math.max(1, fw * 0.12);
-    ctx.strokeRect(-totalW / 2 + fw * 0.08, -totalH / 2 + fw * 0.08, totalW - fw * 0.16, totalH - fw * 0.16);
-    if (spec.bead) {
-      ctx.strokeStyle = "rgba(0,0,0,0.35)";
-      ctx.lineWidth = Math.max(1, fw * 0.1);
-      ctx.strokeRect(-totalW / 2 + fw * 0.82, -totalH / 2 + fw * 0.82, totalW - fw * 1.64, totalH - fw * 1.64);
-    }
+    const hasPhoto = !!framePhoto && !!spec.photo;
+    ctx.save();
+    if (spec.texture === "acrylic") ctx.globalAlpha = spec.opacity ?? 0.4;
+    paintRingSides(ctx, -totalW / 2, -totalH / 2, totalW / 2, totalH / 2, fw, (c, len, w, side) => {
+      if (hasPhoto && framePhoto) paintPhotoBar(c, framePhoto, len, w);
+      else paintProceduralBar(c, spec, len, w, side);
+      paintProfile(c, spec.profile, len, w);
+      if (spec.bead && !spec.photo) paintBeads(c, spec, len, w);
+      if (spec.ornament && spec.ornament !== "none" && !spec.photo) {
+        paintOrnaments(c, spec, len, w, pxPerCm);
+      }
+    });
+    ctx.restore();
   }
-  // Mat.
+  // Passe-partout, as a ring (the tray gap stays tray-coloured, not mat).
   if (matW > 0) {
-    ctx.fillStyle = matColor;
-    ctx.fillRect(-totalW / 2 + fw, -totalH / 2 + fw, totalW - fw * 2, totalH - fw * 2);
+    const matTexture = cfg.matOn ? undefined : spec.mat?.texture;
+    paintRingSides(ctx, -innerW / 2, -innerH / 2, innerW / 2, innerH / 2, matW, (c, len, w, side) => {
+      paintMatSide(c, matColor, matTexture, len, w, side);
+    });
   }
-  // Gold trim ring around the artwork.
-  if (spec.trim && (spec.trim.at === "artwork" || spec.trim.at === "both")) {
-    ctx.strokeStyle = spec.trim.color;
-    ctx.lineWidth = Math.max(1, spec.trim.width * 100 * pxPerCm);
-    ctx.strokeRect(-wPx / 2 - 1, -hPx / 2 - 1, wPx + 2, hPx + 2);
+  // Thin gold trim ring between frame and mat.
+  if (trim && (trim.at === "mat" || trim.at === "both")) {
+    const tw = Math.max(1, trim.width * 100 * pxPerCm);
+    paintRingSides(ctx, -innerW / 2, -innerH / 2, innerW / 2, innerH / 2, tw, (c, len, w) => {
+      paintTrimSide(c, trim.color, len, w);
+    });
+  }
+  // Thin gold trim ring around the artwork.
+  if (trim && (trim.at === "artwork" || trim.at === "both")) {
+    const tw = Math.max(1, trim.width * 100 * pxPerCm);
+    paintRingSides(ctx, -wPx / 2 - tw, -hPx / 2 - tw, wPx / 2 + tw, hPx / 2 + tw, tw, (c, len, w) => {
+      paintTrimSide(c, trim.color, len, w);
+    });
+  }
+  // A recessed work sits deep in its tray: the tray walls shade the tray
+  // floor near the frame (darkest at the frame's inner edge).
+  if (spec.recess > 0 && (spec.trayColor || floatGapPx > 0)) {
+    const d = Math.max(4, spec.recess * 100 * pxPerCm * 0.5);
+    drawInnerShadow(ctx, -innerW / 2, -innerH / 2, innerW, innerH, d, 0.22);
   }
 
   // The artwork image itself (cover-fit, centred).
@@ -671,6 +1278,11 @@ function drawFramedArtwork(
   } else {
     drawPlaceholderArt(ctx, -wPx / 2, -hPx / 2, wPx, hPx, art);
   }
+  // The mat opening sits in front of the artwork: its cut edge shades the
+  // artwork just inside the opening.
+  if (matW > 0) {
+    drawInnerShadow(ctx, -wPx / 2, -hPx / 2, wPx, hPx, Math.max(3, matW * 0.18), 0.16);
+  }
   // Glass reflection.
   if (cfg.glass === "clear") {
     const g = ctx.createLinearGradient(-wPx / 2, -hPx / 2, wPx / 2, hPx / 2);
@@ -685,6 +1297,18 @@ function drawFramedArtwork(
     ctx.fillRect(-wPx / 2, -hPx / 2, wPx, hPx);
   }
   ctx.restore();
+  // A floated work hovers above its tray: soft shadow hugging the work.
+  if (floatGapPx > 0) {
+    const d = Math.max(5, spec.recess * 100 * pxPerCm * 0.6 + 4);
+    drawOuterShadow(ctx, -wPx / 2, -hPx / 2, wPx, hPx, d, 0.32);
+  }
+  // The mat's cut bevel: a dark line at the opening, on the mat side.
+  if (matW > 0) {
+    const bw = Math.max(1, matW * 0.07);
+    ctx.strokeStyle = "rgba(0,0,0,0.28)";
+    ctx.lineWidth = bw;
+    ctx.strokeRect(-wPx / 2 - floatGapPx - bw / 2, -hPx / 2 - floatGapPx - bw / 2, wPx + floatGapPx * 2 + bw, hPx + floatGapPx * 2 + bw);
+  }
   ctx.restore();
 }
 
@@ -737,6 +1361,7 @@ function drawMockup(
   cfg: MockupConfig,
   loaded: LoadedArt[],
   scene: SceneDef,
+  framePhoto: HTMLImageElement | null,
 ) {
   const floorY = H * 0.62;
   const wallColor = cfg.wallColor || scene.wall;
@@ -758,7 +1383,7 @@ function drawMockup(
     drawFramedArtwork(ctx, entry.img, entry.art, centreX + slot.dx * pxPerCmX, centreY + slot.dy * pxPerCmY, wPx, hPx, {
       ...cfg,
       widthCm: slot.w,
-    });
+    }, framePhoto);
   });
 
   // Lighting tint + brightness.
@@ -822,6 +1447,11 @@ export default function MockupStudio({
   }));
   const [loaded, setLoaded] = useState<LoadedArt[]>([]);
   const [imgError, setImgError] = useState<string | null>(null);
+  // The real moulding photo for the selected frame (`spec.photo`), loaded
+  // through the same cache as the artwork images. Null while loading, on
+  // failure, or for frames without a photo — the render then falls back
+  // to the procedural finish, so the preview never breaks.
+  const [framePhoto, setFramePhoto] = useState<HTMLImageElement | null>(null);
   const [rendering, setRendering] = useState(false);
   const [renderMsg, setRenderMsg] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -903,14 +1533,40 @@ export default function MockupStudio({
     };
   }, [selectedArts]);
 
+  // Load the real moulding photo for the selected frame (cached, CORS-safe).
+  useEffect(() => {
+    let cancelled = false;
+    const photo = FRAME_VARIANTS[cfg.frame].photo;
+    if (!photo) {
+      setFramePhoto(null);
+      return;
+    }
+    const cached = imgCache.current.get(photo);
+    if (cached) {
+      setFramePhoto(cached);
+      return;
+    }
+    loadImage(photo)
+      .then((img) => {
+        imgCache.current.set(photo, img);
+        if (!cancelled) setFramePhoto(img);
+      })
+      .catch(() => {
+        if (!cancelled) setFramePhoto(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cfg.frame]);
+
   // Preview redraw.
   useEffect(() => {
     const canvas = previewRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    drawMockup(ctx, canvas.width, canvas.height, cfg, loaded, scene);
-  }, [cfg, loaded, scene]);
+    drawMockup(ctx, canvas.width, canvas.height, cfg, loaded, scene, framePhoto);
+  }, [cfg, loaded, scene, framePhoto]);
 
   // Saved mockups list.
   useEffect(() => {
@@ -958,7 +1614,7 @@ export default function MockupStudio({
       for (const entry of loaded) {
         exportLoaded.push(entry);
       }
-      drawMockup(ctx, res.w, res.h, cfg, exportLoaded, scene);
+      drawMockup(ctx, res.w, res.h, cfg, exportLoaded, scene, framePhoto);
       const mime = cfg.format === "png" ? "image/png" : cfg.format === "jpeg" ? "image/jpeg" : "image/webp";
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.92));
       if (!blob) throw new Error("The export came back empty — try PNG instead.");
@@ -978,7 +1634,7 @@ export default function MockupStudio({
     } finally {
       setRendering(false);
     }
-  }, [cfg, loaded, scene, selectedArts]);
+  }, [cfg, loaded, scene, selectedArts, framePhoto]);
 
   // --- Save / load ----------------------------------------------------------
   const doSave = useCallback(async () => {

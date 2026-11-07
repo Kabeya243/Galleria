@@ -13,6 +13,13 @@ export type Artwork = {
   scale: number;
   imageUrl?: string | null;
   roomId: string;
+  // Curatorial wall text (the reference room's "Texte curatorial"):
+  // when set, the artwork renders as a canvas text panel instead of an
+  // image, in the chosen typeface ("d" Display gras, "s" Sans propre,
+  // "g" Serif, "m" Machine à écrire — see lib/sunlight-elements.ts).
+  // Null/absent for ordinary artworks.
+  text?: string | null;
+  textFont?: string | null;
   // Frame around the artwork in the 3D room ("wood" when absent). Either
   // a built-in variant key from FRAME_VARIANTS, or a custom Frame Studio
   // configuration encoded as "custom:<base64url JSON>" (see

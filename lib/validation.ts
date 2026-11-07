@@ -125,6 +125,12 @@ const artworkSchema = z.object({
     )
     .nullable()
     .optional(),
+  // Curatorial wall text (the reference room's "Texte curatorial"):
+  // when set, the artwork is a canvas text panel, not an image, in one
+  // of the four typefaces (d Display gras, s Sans propre, g Serif,
+  // m Machine à écrire). Saved with the exhibition, like any artwork.
+  text: z.string().trim().max(2000).nullable().optional(),
+  textFont: z.enum(["d", "s", "g", "m"]).nullable().optional(),
   roomId: z.string().min(1).max(64),
 });
 

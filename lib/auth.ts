@@ -92,6 +92,8 @@ export function toClientArtwork(artwork: {
   scale: number;
   frame?: string;
   imageUrl: string | null;
+  text?: string | null;
+  textFont?: string | null;
   roomId: string;
 }) {
   return {
@@ -113,6 +115,8 @@ export function toClientArtwork(artwork: {
     scale: artwork.scale,
     frame: (artwork.frame as "none" | "wood" | "metal" | "gold" | "black" | "white" | undefined) ?? "wood",
     imageUrl: artwork.imageUrl,
+    text: artwork.text ?? null,
+    textFont: artwork.textFont ?? null,
     roomId: artwork.roomId,
   };
 }

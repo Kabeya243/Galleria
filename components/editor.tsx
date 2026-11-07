@@ -48,7 +48,23 @@ import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
-import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
+import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
+import {
+  createSunlightElement,
+  SUNLIGHT_ELEMENT_BOUNDS,
+  SUNLIGHT_ELEMENT_DEFAULTS,
+  SUNLIGHT_ELEMENT_TYPES,
+  SUNLIGHT_MAX_SPOTS,
+  SUNLIGHT_TEXT_FONTS,
+  sunlightHangWalls,
+  sunlightPlaceOnWall,
+  sunlightTextArtworkSize,
+  sunlightWallHit,
+  sunlightWallsForPosition,
+  type SunlightElement,
+  type SunlightElementType,
+  type SunlightTextFont,
+} from "@/lib/sunlight-elements";
 
 // The Elements palette: every placeable object. Each row shows a
 // faithful thumbnail (components/element-thumbnail.tsx) and can be
@@ -168,6 +184,16 @@ export default function Editor({
   const [panelTab, setPanelTab] = useState<"artworks" | "elements" | "layers">("artworks");
   const [selectedElementId, setSelectedElementId] = useState<string>();
   const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
+  // Sunlight 3D elements (the reference room's own pieces — cloison,
+  // suspendu, colonne, socles, vitrine, banc, fauteuils, spotlights):
+  // a single selection, separate from the Asset Library's. The type
+  // select, the curatorial-text composer and the inline message live
+  // with it (the message is shown in the panel, never a native alert).
+  const [selectedSunlightElementId, setSelectedSunlightElementId] = useState<string>();
+  const [sunlightElementType, setSunlightElementType] = useState<SunlightElementType>("cloison");
+  const [curatorialText, setCuratorialText] = useState("");
+  const [curatorialTextFont, setCuratorialTextFont] = useState<SunlightTextFont>("d");
+  const [sunlightMessage, setSunlightMessage] = useState<string | null>(null);
   // 3D builder: 0.5 m floor grid (drags snap to 0.25 m while it is on),
   // measurement guides, and the stage-settings toggle (shows the room
   // settings panel — the same UI the inspector falls back to).
@@ -370,31 +396,18 @@ export default function Editor({
   // step, blur ends it. Sliders also get onPointerDown/Up.
   const editSessionProps = { onFocus: beginEdit, onBlur: endEdit } as const;
 
-  // Which walls an artwork hangs on, from its position (within 0.4 m of
-  // the wall plane and inside its span). Near a corner several walls can
+  // Which walls an artwork hangs on, from its position. Every hangable
+  // wall counts: the room's four walls, the three freestanding panels,
+  // and any cloison/suspendu the user added — so a dragged artwork (or
+  // a curatorial text, which is an artwork) turns to face the wall it
+  // lands on, whatever that wall is. Near a corner several walls can
   // match at once; the caller prefers the wall the artwork was already
   // on, so sliding along one wall never flips it to the next.
   function wallsForArtwork(artwork: Artwork, room: GalleryRoom): { key: string; rotation: number }[] {
-    const { width, depth } = roomLayouts[room.layout];
-    const [x, , z] = artwork.position;
-    const inset = 0.28;
-    const found: { key: string; rotation: number }[] = [];
-    // Partition walls first: they stand inside the room, so an artwork
-    // can be near both a partition and a room wall at once.
-    for (const wall of room.partitionWalls) {
-      if (wall.orientation === "horizontal") {
-        if (Math.abs(z - wall.z) > 0.45 || Math.abs(x - wall.x) > wall.length / 2 + 0.3) continue;
-        found.push({ key: `partition:${wall.id}`, rotation: z >= wall.z ? 0 : Math.PI });
-      } else {
-        if (Math.abs(x - wall.x) > 0.45 || Math.abs(z - wall.z) > wall.length / 2 + 0.3) continue;
-        found.push({ key: `partition:${wall.id}`, rotation: x >= wall.x ? Math.PI / 2 : -Math.PI / 2 });
-      }
-    }
-    if (Math.abs(z - (-depth / 2 + inset)) < 0.4 && Math.abs(x) <= width / 2) found.push({ key: "back", rotation: 0 });
-    if (Math.abs(z - (depth / 2 - inset)) < 0.4 && Math.abs(x) <= width / 2) found.push({ key: "front", rotation: Math.PI });
-    if (Math.abs(x - (-width / 2 + inset)) < 0.4 && Math.abs(z) <= depth / 2) found.push({ key: "left", rotation: Math.PI / 2 });
-    if (Math.abs(x - (width / 2 - inset)) < 0.4 && Math.abs(z) <= depth / 2) found.push({ key: "right", rotation: -Math.PI / 2 });
-    return found;
+    return sunlightWallsForPosition(
+      { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] },
+      room.sunlightElements ?? [],
+    );
   }
 
   function updateArtwork(id: string, update: (artwork: Artwork) => Artwork) {
@@ -501,9 +514,16 @@ export default function Editor({
     }
     setSelectedId(id);
     setSelectedElementId(undefined);
+    setSelectedSunlightElementId(undefined);
     setSelectedWallId(null);
     setShowStageSettings(false);
     setMultiSelected(artwork?.groupId ? groupMembers(artwork.groupId, { kind: "artwork", id }) : []);
+    // A text artwork fills the curatorial-text composer (the file's
+    // fill()), so "Modify the selected text" edits it.
+    if (artwork?.text) {
+      setCuratorialText(artwork.text);
+      setCuratorialTextFont(artwork.textFont === "s" || artwork.textFont === "g" || artwork.textFont === "m" ? artwork.textFont : "d");
+    }
   }
 
   function selectElement(id: string | undefined, additive = false) {
@@ -521,15 +541,35 @@ export default function Editor({
     }
     setSelectedElementId(id);
     setSelectedId(undefined);
+    setSelectedSunlightElementId(undefined);
     setSelectedWallId(null);
     setShowStageSettings(false);
     setMultiSelected(element?.groupId ? groupMembers(element.groupId, { kind: "element", id }) : []);
+  }
+
+  // Sunlight 3D elements are a single selection (no multi-select, no
+  // groups): picking one clears any artwork, element or wall, like the
+  // selections above, and vice versa.
+  function selectSunlightElement(id: string | undefined) {
+    if (id === undefined) {
+      setSelectedSunlightElementId(undefined);
+      return;
+    }
+    const owner = rooms.find((room) => (room.sunlightElements ?? []).some((item) => item.id === id));
+    if (owner && owner.id !== activeRoomId) setActiveRoomId(owner.id);
+    setSelectedSunlightElementId(id);
+    setSelectedId(undefined);
+    setSelectedElementId(undefined);
+    setSelectedWallId(null);
+    setShowStageSettings(false);
+    setMultiSelected([]);
   }
 
   function selectWall(id: string | null) {
     setSelectedWallId(id);
     setSelectedId(undefined);
     setSelectedElementId(undefined);
+    setSelectedSunlightElementId(undefined);
     setMultiSelected([]);
     setShowStageSettings(false);
   }
@@ -537,6 +577,7 @@ export default function Editor({
   function clearSelection() {
     setSelectedId(undefined);
     setSelectedElementId(undefined);
+    setSelectedSunlightElementId(undefined);
     setSelectedWallId(null);
     setMultiSelected([]);
   }
@@ -868,6 +909,13 @@ export default function Editor({
   );
   const currentElements = activeRoom?.elements ?? [];
 
+  // Sunlight 3D elements, same pattern as the Asset Library above.
+  const selectedSunlightElement = useMemo(
+    () => rooms.flatMap((room) => room.sunlightElements ?? []).find((element) => element.id === selectedSunlightElementId),
+    [rooms, selectedSunlightElementId],
+  );
+  const currentSunlightElements = activeRoom?.sunlightElements ?? [];
+
   function updateElement(id: string, patch: Partial<RoomElement>) {
     // The element may live in any room, not just the active one — update
     // the room that actually holds it.
@@ -950,6 +998,126 @@ export default function Editor({
     selectElement(copy.id);
   }
 
+  // --- Sunlight 3D elements -------------------------------------------
+  // The reference room's own pieces (cloison, suspendu, colonne, socles,
+  // vitrine, banc, fauteuils, spotlights). Same add/update/remove
+  // pattern as the Asset Library, but saved on the room's
+  // `sunlightElements` (no groups, locks or hidden flags).
+
+  function updateSunlightElement(id: string, patch: Partial<SunlightElement>) {
+    const owner = rooms.find((room) => (room.sunlightElements ?? []).some((element) => element.id === id)) ?? activeRoom;
+    if (!owner) return;
+    updateRoom(owner.id, (room) => ({
+      ...room,
+      sunlightElements: (room.sunlightElements ?? []).map((element) => (element.id === id ? { ...element, ...patch } : element)),
+    }));
+  }
+
+  // Add a Sunlight element 3 m in front of the camera (the file's
+  // "placed 3 m ahead"), on the floor, clamped inside the room. The
+  // spotlight count is capped at 8 (the file's maximum): the cap is
+  // reported inline, never as a native alert.
+  function addSunlightElement(type: SunlightElementType) {
+    if (!activeRoom) return;
+    if (type === "spot" && currentSunlightElements.filter((element) => element.type === "spot").length >= SUNLIGHT_MAX_SPOTS) {
+      setSunlightMessage(`Maximum ${SUNLIGHT_MAX_SPOTS} spotlights — remove one to add another.`);
+      return;
+    }
+    setSunlightMessage(null);
+    const number = currentSunlightElements.filter((element) => element.type === type).length;
+    const camera = cameraStateRef.current;
+    // The camera state is in world coordinates; the active room sits at
+    // offset 0 in the edit view (in walk mode, subtract its plan
+    // offset). A single Sunlight room has offset 0 either way.
+    const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
+    const offsetX = walking ? (roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0) : 0;
+    let x = 0;
+    let z = 0;
+    if (camera) {
+      // Horizontal forward from the camera yaw (the element stands on
+      // the floor, so pitch is ignored).
+      x = camera.x - offsetX + -Math.sin(camera.yaw) * 3;
+      z = camera.z + -Math.cos(camera.yaw) * 3;
+    }
+    x = Math.max(SUNLIGHT_ELEMENT_BOUNDS.minX, Math.min(SUNLIGHT_ELEMENT_BOUNDS.maxX, x));
+    z = Math.max(SUNLIGHT_ELEMENT_BOUNDS.minZ, Math.min(SUNLIGHT_ELEMENT_BOUNDS.maxZ, z));
+    const element = createSunlightElement(type, x, z, number);
+    snapshot();
+    updateRoom(activeRoom.id, (room) => ({ ...room, sunlightElements: [...(room.sunlightElements ?? []), element] }));
+    selectSunlightElement(element.id);
+  }
+
+  // Delete works from the inspector, from the Elements list row, and
+  // from the keyboard — always in the room that actually holds the
+  // element, and it persists with the next save like every other edit.
+  function removeSunlightElementById(id: string) {
+    const owner = rooms.find((room) => (room.sunlightElements ?? []).some((element) => element.id === id));
+    if (!owner) return;
+    snapshot();
+    updateRoom(owner.id, (room) => ({
+      ...room,
+      sunlightElements: (room.sunlightElements ?? []).filter((element) => element.id !== id),
+    }));
+    setSelectedSunlightElementId((current) => (current === id ? undefined : current));
+  }
+
+  function removeSunlightElement() {
+    if (!selectedSunlightElement) return;
+    removeSunlightElementById(selectedSunlightElement.id);
+  }
+
+  // The 3D scene's update path for Sunlight element drags: the dragged
+  // element slides on the floor (x/z only, y is always 0) and snaps to
+  // the grid when it is on. The collision block follows because the
+  // walk controls rebuild it from the room's elements every frame.
+  // On drop, hang the artwork on the wall under the drop point (the
+  // file's putOnWall). Its rotation already adapted during the drag,
+  // but its position is still on the old wall's plane — up to 0.45 m
+  // off the new wall. Snapping it onto the wall (0.1 m off, facing
+  // outward, at its current height) makes it sit as if just hung
+  // there, never sideways or backwards. A curatorial text is an
+  // artwork, so it lands the same way. No wall nearby: it stays where
+  // it was dropped. Runs inside the drag's undo session (beginEdit at
+  // drag start, endEdit after this), so the drag + snap undo together.
+  function handleArtworkDragEnd(id: string) {
+    if (!activeRoom) return;
+    const artwork = artworks.find((item) => item.id === id);
+    if (!artwork || artwork.roomId !== activeRoom.id) return;
+    const wall = wallsForArtwork(artwork, activeRoom)[0];
+    if (!wall) return;
+    const face = sunlightHangWalls(activeRoom.sunlightElements ?? []).find((item) => item.id === wall.key);
+    if (!face) return;
+    const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
+    const width = ((parsed?.widthCm ?? 80) / 100) * artwork.scale;
+    const height = ((parsed?.heightCm ?? 100) / 100) * artwork.scale;
+    const { position, rotation } = sunlightPlaceOnWall(
+      { point: { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] }, normal: { x: face.nx, z: face.nz }, face },
+      height,
+      width,
+    );
+    const moved = Math.abs(position[0] - artwork.position[0]) > 0.01 || Math.abs(position[1] - artwork.position[1]) > 0.01 || Math.abs(position[2] - artwork.position[2]) > 0.01;
+    const turned = Math.abs(rotation - artwork.rotation) > 0.01;
+    if (!moved && !turned) return;
+    updateArtwork(id, (item) => ({ ...item, position, rotation }));
+  }
+
+  function handleSceneSunlightElementUpdate(id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) {
+    if (patch.x === undefined && patch.z === undefined) return;
+    setRooms((currentRooms) => {
+      const owner = currentRooms.find((room) => (room.sunlightElements ?? []).some((element) => element.id === id));
+      if (!owner) return currentRooms;
+      return currentRooms.map((room) => (room.id === owner.id
+        ? {
+            ...room,
+            sunlightElements: (room.sunlightElements ?? []).map((element) => (element.id === id
+              ? { ...element, x: snapIfGrid(patch.x ?? element.x), z: snapIfGrid(patch.z ?? element.z) }
+              : element)),
+          }
+        : room));
+    });
+    setSaved(false);
+  }
+
   // Delete key removes the whole selection (artworks and elements) —
   // the same delete the inspector button does, without reaching for the
   // mouse. Never fires while typing in a field, and never while walking.
@@ -962,11 +1130,16 @@ export default function Editor({
       if (selectionRefs.length > 0) {
         event.preventDefault();
         deleteSelection();
+      } else if (selectedSunlightElementId) {
+        // A Sunlight element is a single selection outside the
+        // artwork/element multi-selection: Delete removes it too.
+        event.preventDefault();
+        removeSunlightElementById(selectedSunlightElementId);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectionRefs, walking]);
+  }, [selectionRefs, selectedSunlightElementId, walking]);
 
   // Ctrl+Z / Cmd+Z undoes one real action (artworks, elements, room
   // settings); Ctrl+Shift+Z / Ctrl+Y redoes it. Never fires while typing
@@ -1329,12 +1502,107 @@ export default function Editor({
     }
   }
 
+  // Place a new artwork (or a text panel) on the wall the camera is
+  // looking at (the file's wallHit/putOnWall): every wall can carry one
+  // — the room's four walls, the three freestanding panels, and any
+  // cloison/suspendu the user added. Falls back to the back wall when
+  // the camera faces no wall (ceiling, floor, or out of the room).
+  // `alongOffset` spreads consecutive adds along the wall so they do
+  // not stack on the same spot.
+  function placeOnCameraWall(width: number, height: number, alongOffset = 0): { position: [number, number, number]; rotation: number } {
+    const camera = cameraStateRef.current;
+    if (camera && activeRoom) {
+      // Camera look direction from yaw and pitch (YXZ): forward =
+      // (-cos(pitch)·sin(yaw), sin(pitch), -cos(pitch)·cos(yaw)).
+      const direction = {
+        x: -Math.cos(camera.pitch) * Math.sin(camera.yaw),
+        y: Math.sin(camera.pitch),
+        z: -Math.cos(camera.pitch) * Math.cos(camera.yaw),
+      };
+      // The camera state is in world coordinates; convert to the active
+      // room's local frame (offset 0 in the edit view, the plan offset
+      // in walk mode).
+      const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
+      const offsetX = walking ? (roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0) : 0;
+      const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
+      const hit = sunlightWallHit(origin, direction, activeRoom.sunlightElements ?? []);
+      if (hit) return sunlightPlaceOnWall(hit, height, width, alongOffset);
+    }
+    const { depth } = roomLayouts[activeRoom?.layout ?? "sunlight"];
+    return { position: [0, 1.55, -depth / 2 + 0.28], rotation: 0 };
+  }
+
+  // Curatorial text (the reference room's "Texte curatorial"): a text
+  // panel as an artwork, on the wall the camera is looking at. The
+  // panel is 1.4 m wide; its height follows the wrapped text, and the
+  // artwork's dimensions field carries that size so it renders at true
+  // scale. Saved like any artwork, so it persists and reloads.
+  function addCuratorialText() {
+    if (!activeRoom) return;
+    const text = curatorialText.trim();
+    if (!text) {
+      setSunlightMessage("Write the text first, then add it to the wall.");
+      return;
+    }
+    setSunlightMessage(null);
+    const size = sunlightTextArtworkSize(text, curatorialTextFont);
+    const { position, rotation } = placeOnCameraWall(size.width, size.height);
+    const artwork: Artwork = {
+      id: crypto.randomUUID(),
+      title: "Texte curatorial",
+      year: "",
+      medium: "Curatorial text",
+      dimensions: `140 × ${Math.round(size.height * 100)} cm`,
+      description: "",
+      color: "#f6f6f4",
+      accent: "#2a2623",
+      position,
+      rotation,
+      scale: 1,
+      frame: "none",
+      imageUrl: null,
+      text,
+      textFont: curatorialTextFont,
+      roomId: activeRoom.id,
+    };
+    snapshot();
+    setArtworks((current) => [...current, artwork]);
+    selectArtwork(artwork.id);
+    setSaved(false);
+  }
+
+  // Replace the selected text artwork's text and typeface, keeping its
+  // position, rotation and scale (the file's "Modifier le texte
+  // sélectionné"). The panel height follows the new text.
+  function modifyCuratorialText() {
+    const artwork = artworks.find((item) => item.id === selectedId);
+    if (!artwork || !artwork.text) {
+      setSunlightMessage("Select a curatorial text artwork first, then modify it.");
+      return;
+    }
+    const text = curatorialText.trim();
+    if (!text) {
+      setSunlightMessage("Write the new text first, then modify the selected text.");
+      return;
+    }
+    setSunlightMessage(null);
+    const size = sunlightTextArtworkSize(text, curatorialTextFont);
+    snapshot();
+    setArtworks((current) => current.map((item) => (item.id === artwork.id
+      ? { ...item, text, textFont: curatorialTextFont, dimensions: `140 × ${Math.round(size.height * 100)} cm` }
+      : item)));
+    setSaved(false);
+  }
+
   function addArtwork(imageUrl: string | null = null) {
     if (!activeRoom) return;
     const index = currentArtworks.length;
-    const { width, depth } = roomLayouts[activeRoom.layout];
-    const artworkCount = index + 1;
-    const spacing = artworkCount > 1 ? Math.min(3.3, (width - 3) / (artworkCount - 1)) : 0;
+    // New artworks go on the wall the camera is looking at (every wall
+    // can carry one, including an added cloison/suspendu), spread along
+    // the wall so consecutive adds do not stack. Falls back to the back
+    // wall when the camera faces no wall.
+    const alongOffset = (index % 5 - 2) * 1.0;
+    const { position, rotation } = placeOnCameraWall(0.8, 1.0, alongOffset);
     const artwork: Artwork = {
       id: crypto.randomUUID(),
       title: `New artwork ${index + 1}`,
@@ -1344,8 +1612,8 @@ export default function Editor({
       description: "Add a description to tell visitors about this work.",
       color: ["#8a9b88", "#bb8365", "#8796a9"][index % 3],
       accent: "#e5c7a0",
-      position: [(index - (artworkCount - 1) / 2) * spacing, 1.55, -depth / 2 + 0.28],
-      rotation: 0,
+      position,
+      rotation,
       scale: 1,
       frame: "wood",
       imageUrl,
@@ -1785,6 +2053,26 @@ async function compressImage(file: File): Promise<File> {
               {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
               <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
               <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>
+              {/* Curatorial text (the reference room's "Texte curatorial"):
+                  a text panel as an artwork, on the wall the camera is
+                  looking at — any wall, including a partition just
+                  added. Selecting a text artwork fills the composer so
+                  it can be edited and modified in place. */}
+              <div className="property-section">
+                <label>CURATORIAL TEXT</label>
+                <textarea className="full-input property-textarea" rows={3} value={curatorialText} onChange={(event) => setCuratorialText(event.target.value)} placeholder="Write a wall text for this room…" maxLength={2000} />
+                <select className="full-input" style={{ marginTop: 8 }} value={curatorialTextFont} onChange={(event) => setCuratorialTextFont(event.target.value as SunlightTextFont)} aria-label="Curatorial text typeface">
+                  {(Object.keys(SUNLIGHT_TEXT_FONTS) as SunlightTextFont[]).map((key) => (
+                    <option key={key} value={key}>{SUNLIGHT_TEXT_FONTS[key].label}</option>
+                  ))}
+                </select>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button className="add-to-room" style={{ flex: 1, marginTop: 0 }} onClick={addCuratorialText}>Add to wall</button>
+                  <button className="add-to-room" style={{ flex: 1, marginTop: 0 }} onClick={modifyCuratorialText}>Modify selected text</button>
+                </div>
+                <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 8, lineHeight: 1.6 }}>The text goes on the wall the camera is looking at — any wall, including a partition you added. Select a text artwork to edit its wording and typeface.</p>
+                {sunlightMessage && <div className="asset-upload-error" role="alert">{sunlightMessage}</div>}
+              </div>
             </>
           ) : panelTab === "elements" ? (
             <>
@@ -1814,6 +2102,39 @@ async function compressImage(file: File): Promise<File> {
                   <p className="element-empty-note">No elements yet. Add a partition wall, a bench, a plinth or a track light above — then drag it around the room.</p>
                 )}
               </div>
+              {/* Sunlight 3D elements — the reference room's own pieces
+                  (cloison, suspendu, colonne, socles, vitrine, banc,
+                  fauteuils, spotlights). Separate from the Asset Library
+                  above; both systems coexist. Added 3 m in front of the
+                  camera, then dragged on the floor; spotlights are
+                  capped at 8. */}
+              <div className="property-section">
+                <label>3D ELEMENTS <span>REFERENCE ROOM</span></label>
+                <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: 8, lineHeight: 1.6 }}>Partitions, columns, plinths, vitrines, benches, armchairs and spotlights from the reference room — placed 3 m in front of the camera.</p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <select className="full-input" style={{ flex: 1 }} value={sunlightElementType} onChange={(event) => setSunlightElementType(event.target.value as SunlightElementType)} aria-label="3D element type">
+                    {SUNLIGHT_ELEMENT_TYPES.map((type) => (
+                      <option key={type} value={type}>{SUNLIGHT_ELEMENT_DEFAULTS[type].label}</option>
+                    ))}
+                  </select>
+                  <button className="add-to-room" style={{ flex: "0 0 auto", marginTop: 0, padding: "9px 12px" }} onClick={() => addSunlightElement(sunlightElementType)}>Add element</button>
+                </div>
+                {sunlightMessage && <div className="asset-upload-error" role="alert">{sunlightMessage}</div>}
+                <div className="asset-list" style={{ marginTop: 8 }}>
+                  {currentSunlightElements.map((element) => (
+                    <div className="asset-row-wrap" key={element.id}>
+                      <button className={`asset-row ${selectedSunlightElementId === element.id ? "selected" : ""}`} onClick={() => selectSunlightElement(element.id)}>
+                        <span className="asset-copy"><strong>{element.name}</strong><small>{SUNLIGHT_ELEMENT_DEFAULTS[element.type].label}</small></span>
+                        {selectedSunlightElementId === element.id && <span className="selected-mark"><Check size={12} /></span>}
+                      </button>
+                      <button type="button" className="asset-row-delete" aria-label={`Delete ${element.name}`} title={`Delete ${element.name}`} onClick={() => removeSunlightElementById(element.id)}><Trash2 size={13} /></button>
+                    </div>
+                  ))}
+                  {currentSunlightElements.length === 0 && (
+                    <p className="element-empty-note">No 3D elements yet. Pick a type above and add it — it lands 3 m in front of the camera, then drag it around the floor.</p>
+                  )}
+                </div>
+              </div>
             </>
           ) : (
             <LayersPanel
@@ -1841,6 +2162,7 @@ async function compressImage(file: File): Promise<File> {
                 snapshot();
                 if (selected) updateArtwork(selected.id, (artwork) => ({ ...artwork, rotation: artwork.rotation + Math.PI / 12 }));
                 else if (selectedElement) updateElement(selectedElement.id, { rotation: selectedElement.rotation + Math.PI / 12 });
+                else if (selectedSunlightElement) updateSunlightElement(selectedSunlightElement.id, { rotation: selectedSunlightElement.rotation + Math.PI / 12 });
               }}><RotateCw size={16} /></button>
               <span className="tool-divider" />
               <button className="tool-button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={historyRef.current.past.length === 0}><Undo2 size={16} /></button>
@@ -1872,7 +2194,7 @@ async function compressImage(file: File): Promise<File> {
             </div>
           )}
           <div className="scene-wrap">
-            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} editable onArtworkUpdate={handleSceneArtworkUpdate} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
+            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
             {/* Floor plan + teleport (the same minimap as the public
                 viewer): the Sunlight room with its panels, one dot per
                 artwork and the live camera position. Clicking the plan
@@ -1899,7 +2221,7 @@ async function compressImage(file: File): Promise<File> {
         </section>
 
         <aside className="editor-properties-panel">
-          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="Version history" aria-expanded={showHistory} aria-pressed={showHistory} title="Version history — the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><Info size={15} /></button></div>
+          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedSunlightElement ? "3D element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="Version history" aria-expanded={showHistory} aria-pressed={showHistory} title="Version history — the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><Info size={15} /></button></div>
           {showHistory && (
             <div className="property-section">
               <label>VERSION HISTORY <span>LAST 10 SAVES</span></label>
@@ -1932,8 +2254,12 @@ async function compressImage(file: File): Promise<File> {
           {selected ? (
             <>
               <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
-              <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
-              <input ref={replaceImageRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void replaceArtworkImage(event.target.files?.[0])} />
+              {!selected.text && (
+                <>
+                  <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
+                  <input ref={replaceImageRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void replaceArtworkImage(event.target.files?.[0])} />
+                </>
+              )}
               <div className="property-section"><label>POSITION <span>METERS</span></label><div className="coordinate-row">{(["X", "Y", "Z"] as const).map((axis, index) => <div key={axis}><span>{axis}</span><NumberField ariaLabel={`Position ${axis}`} step="0.1" value={selected.position[index]} {...editSessionProps} onCommit={(next) => updateArtwork(selected.id, (artwork) => { const position: [number, number, number] = [...artwork.position]; position[index] = next; return { ...artwork, position }; })} /></div>)}</div></div>
               {showMeasure && (
                 <div className="property-section"><label>MEASUREMENTS <span>FROM REAL POSITIONS</span></label>
@@ -1970,6 +2296,13 @@ async function compressImage(file: File): Promise<File> {
                   <div className="property-section"><label>MEDIUM</label><input className="full-input" {...editSessionProps} value={selected.medium} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, medium: event.target.value }))} /></div>
                   <div className="property-section"><label>DIMENSIONS</label><input className="full-input" {...editSessionProps} value={selected.dimensions} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, dimensions: event.target.value }))} /></div>
                   <div className="property-section"><label>DESCRIPTION</label><textarea className="full-input property-textarea" {...editSessionProps} value={selected.description} onChange={(event) => updateArtwork(selected.id, (artwork) => ({ ...artwork, description: event.target.value }))} /></div>
+                  {selected.text && (
+                    <>
+                      <div className="property-section"><label>CURATORIAL TEXT</label><textarea className="full-input property-textarea" rows={3} value={curatorialText} onChange={(event) => setCuratorialText(event.target.value)} maxLength={2000} /></div>
+                      <div className="property-section"><label>TYPEFACE</label><select className="full-input" value={curatorialTextFont} onChange={(event) => setCuratorialTextFont(event.target.value as SunlightTextFont)}>{(Object.keys(SUNLIGHT_TEXT_FONTS) as SunlightTextFont[]).map((key) => (<option key={key} value={key}>{SUNLIGHT_TEXT_FONTS[key].label}</option>))}</select></div>
+                      <div className="property-actions"><button onClick={modifyCuratorialText}>Modify text</button></div>
+                    </>
+                  )}
                   <div className="property-section"><label>FRAME</label><div className="frame-options">{(Object.keys(FRAME_VARIANTS) as FrameVariant[]).map((variant) => {
                     const isCurrent = !comparingFrames && (selected.frame ?? "wood") === variant;
                     const inCompare = compareFrames.includes(variant);
@@ -2130,6 +2463,21 @@ async function compressImage(file: File): Promise<File> {
                     <div className="property-section"><label>{selectedElement.type === "track-light" ? "LIGHT COLOUR" : "COLOUR"}</label><div className="room-color-control"><input type="color" aria-label="Element colour" {...editSessionProps} value={selectedElement.color} onChange={(event) => updateElement(selectedElement.id, { color: event.target.value })} /><span>{selectedElement.color}</span></div></div>
                   )}
                   <div className="property-actions"><button aria-label={selectedElement.hidden ? "Show element in 3D" : "Hide element in 3D"} title={selectedElement.hidden ? "Show in 3D" : "Hide in 3D"} onClick={() => toggleHidden({ kind: "element", id: selectedElement.id })}>{selectedElement.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button><button aria-label={selectedElement.locked ? "Unlock element" : "Lock element"} title={selectedElement.locked ? "Unlock (allow dragging)" : "Lock (cannot be dragged)"} onClick={() => toggleLocked({ kind: "element", id: selectedElement.id })}>{selectedElement.locked ? <Lock size={14} /> : <Unlock size={14} />}</button><button aria-label="Duplicate element" onClick={duplicateElement}><Copy size={14} /></button><button className="delete-action" aria-label="Delete element" onClick={removeElement}><Trash2 size={14} /></button></div>
+                </>
+              ) : selectedSunlightElement ? (
+                <>
+                  <div className="selected-art-preview"><div><strong>{selectedSunlightElement.name}</strong><small>{SUNLIGHT_ELEMENT_DEFAULTS[selectedSunlightElement.type].label}</small></div></div>
+                  <div className="property-section"><label>NAME</label><input className="full-input" {...editSessionProps} value={selectedSunlightElement.name} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { name: event.target.value.slice(0, 60) })} /></div>
+                  <div className="property-section"><label>POSITION <span>METERS · FLOOR</span></label><div className="coordinate-row" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>{(["X", "Z"] as const).map((axis) => {
+                    const key = axis.toLowerCase() as "x" | "z";
+                    return (
+                      <div key={axis}><span>{axis}</span><NumberField ariaLabel={`3D element position ${axis}`} step="0.1" value={selectedSunlightElement[key]} {...editSessionProps} onCommit={(next) => updateSunlightElement(selectedSunlightElement.id, { [key]: next } as Partial<SunlightElement>)} /></div>
+                    );
+                  })}</div></div>
+                  <div className="property-section"><label>ROTATION <span>{((Math.round((selectedSunlightElement.rotation * 180) / Math.PI) % 360) + 360) % 360}°</span></label><div className="range-control"><input aria-label="3D element rotation in degrees" type="range" {...editSessionProps} onPointerDown={beginEdit} onPointerUp={endEdit} min="0" max="360" step="1" value={((Math.round((selectedSunlightElement.rotation * 180) / Math.PI) % 360) + 360) % 360} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { rotation: (Number(event.target.value) * Math.PI) / 180 })} /><span>{((Math.round((selectedSunlightElement.rotation * 180) / Math.PI) % 360) + 360) % 360}°</span></div></div>
+                  <div className="property-section"><label>COLOUR</label><div className="room-color-control"><input type="color" aria-label="3D element colour" {...editSessionProps} value={selectedSunlightElement.color} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { color: event.target.value })} /><span>{selectedSunlightElement.color}</span></div></div>
+                  <div className="property-actions"><button className="delete-action" aria-label="Delete 3D element" onClick={removeSunlightElement}><Trash2 size={14} /></button></div>
+                  <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>Drag it on the floor to move it. A cloison or suspendu is a wall — artworks and curatorial text can hang on it.</p>
                 </>
               ) : selectedWallId ? (
                 <>

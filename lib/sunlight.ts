@@ -70,9 +70,15 @@ export const SUNLIGHT_WALK_SPEED = 3; // m/s
 export const SUNLIGHT_CAMERA_START = { x: 3.5, y: 1.65, z: 10.5, yaw: 0.3, pitch: -0.04 };
 
 // The rotated-rectangle hit test from the source: true when the point
-// is inside a block (with the 0.4 m body margin).
-export function sunlightHit(x: number, z: number): boolean {
-  for (const b of SUNLIGHT_BLOCKS) {
+// is inside a block (with the 0.4 m body margin). sunlightHitWith
+// tests a caller-supplied block list, so the walk controls can combine
+// the room's fixed blocks with the blocks of the Sunlight elements the
+// user added (cloison, colonne, socle, vitrine, banc, fauteuils…):
+// the visitor cannot walk through an added wall or plinth, and a
+// moved element's block follows it because the list is rebuilt from
+// the room's current elements. The spotlight contributes no block.
+export function sunlightHitWith(blocks: SunlightBlock[], x: number, z: number): boolean {
+  for (const b of blocks) {
     const dx = x - b.x;
     const dz = z - b.z;
     const c = Math.cos(b.ry);
@@ -82,6 +88,10 @@ export function sunlightHit(x: number, z: number): boolean {
     if (Math.abs(lx) < b.hl + 0.4 && Math.abs(lz) < b.hw + 0.4) return true;
   }
   return false;
+}
+
+export function sunlightHit(x: number, z: number): boolean {
+  return sunlightHitWith(SUNLIGHT_BLOCKS, x, z);
 }
 
 // Mini-plan mapping (from the source): room-local coordinates to a

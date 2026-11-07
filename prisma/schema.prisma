@@ -86,6 +86,11 @@ model Artwork {
   scale        Float      @default(1)
   frame        String     @default("wood")
   imageUrl     String?
+  // Curatorial wall text (the reference room's "Texte curatorial"):
+  // when set, the artwork renders as a canvas text panel instead of an
+  // image, in the chosen typeface. Null for ordinary artworks.
+  text         String?
+  textFont     String?
   roomId       String     @default("room-main")
   createdAt    DateTime   @default(now())
   exhibitionId String

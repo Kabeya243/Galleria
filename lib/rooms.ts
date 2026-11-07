@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ELEMENT_DEFAULTS, roomElementSchema, type ElementType, type RoomElement } from "@/lib/elements";
 import { SUNLIGHT_CEILING_COLOR, SUNLIGHT_FLOOR_COLOR, SUNLIGHT_HEIGHT, SUNLIGHT_WALL_COLOR } from "@/lib/sunlight";
+import { sunlightElementSchema } from "@/lib/sunlight-elements";
 
 // Template categories for the galleries catalogue. Every preset belongs
 // to exactly one category, shown as a filter chip on the galleries page.
@@ -234,6 +235,11 @@ export const galleryRoomSchema = z.object({
   wallPaint: wallPaintSchema.default({}),
   // Placeable 3D elements (furniture, partition walls, vitrines, ...).
   elements: z.array(roomElementSchema).max(24).default([]),
+  // Sunlight 3D elements — the reference room's own addable pieces
+  // (cloison, suspendu, colonne, socles, vitrine, banc, fauteuils,
+  // spotlights). Separate from the Asset Library `elements` above:
+  // both systems coexist. Saved with the room, restored on load.
+  sunlightElements: z.array(sunlightElementSchema).max(24).default([]),
 });
 
 export type GalleryRoom = z.infer<typeof galleryRoomSchema>;
@@ -304,6 +310,7 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "sunlight"): G
       lightType: roomLayouts[layout].lightType,
       wallPaint: {},
       elements: [],
+      sunlightElements: [],
     },
     layout,
   );
@@ -446,6 +453,7 @@ export function parseGalleryRooms(value: string): GalleryRoom[] {
         if (typeof next.lightType !== "string") next.lightType = "sunlight";
         if (!next.wallPaint || typeof next.wallPaint !== "object") next.wallPaint = {};
         if (!Array.isArray(next.elements)) next.elements = [];
+        if (!Array.isArray(next.sunlightElements)) next.sunlightElements = [];
         return next;
       })
     : raw;

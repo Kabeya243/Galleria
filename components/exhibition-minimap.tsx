@@ -13,6 +13,7 @@ import {
   sunlightMapZ,
 } from "@/lib/sunlight";
 import type { CameraState } from "@/components/gallery-scene";
+import type { SunlightElement } from "@/lib/sunlight-elements";
 import { useT } from "@/lib/i18n";
 
 // Floor plan + teleport (public exhibition and editor): the Sunlight
@@ -70,12 +71,12 @@ export default function ExhibitionMinimap({
     if (!ctx) return;
     let raf = 0;
     const draw = () => {
-      drawSunlightMinimap(ctx, activeArtworks, selectedArtworkId, cameraStateRef?.current ?? null, activeOffsetX);
+      drawSunlightMinimap(ctx, activeArtworks, selectedArtworkId, cameraStateRef?.current ?? null, activeOffsetX, activeRoom.sunlightElements ?? []);
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [open, activeArtworks, selectedArtworkId, cameraStateRef, activeOffsetX]);
+  }, [open, activeArtworks, selectedArtworkId, cameraStateRef, activeOffsetX, activeRoom]);
 
   if (rooms.length === 0 || !activeRoom) return null;
 
@@ -171,6 +172,7 @@ function drawSunlightMinimap(
   selectedArtworkId: string | undefined,
   cameraState: CameraState | null,
   offsetX: number,
+  sunlightElements: SunlightElement[],
 ) {
   const W = SUNLIGHT_MAP_WIDTH;
   const H = SUNLIGHT_MAP_HEIGHT;
@@ -204,6 +206,14 @@ function drawSunlightMinimap(
   ctx.stroke();
   ctx.strokeStyle = "#111111";
   ctx.lineWidth = 2;
+  // Sunlight 3D elements (the reference room's own pieces): grey
+  // squares, 8 × 8, the source's #8a8178.
+  ctx.fillStyle = "#8a8178";
+  for (const element of sunlightElements) {
+    const cx = sunlightMapX(element.x);
+    const cy = sunlightMapZ(element.z);
+    ctx.fillRect(cx - 4, cy - 4, 8, 8);
+  }
   // Artworks: orange dots (bigger when selected) — the source's
   // #BA7517.
   for (const artwork of artworks) {

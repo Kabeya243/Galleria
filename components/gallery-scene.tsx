@@ -15,6 +15,7 @@ import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, ros
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
 import { roomLayouts, roomPlanOffsets, type GalleryRoom, type PartitionWall, type RoomLayout, type WallId } from "@/lib/rooms";
 import {
+  SUNLIGHT_BLOCKS,
   SUNLIGHT_BOUNDS,
   SUNLIGHT_CAMERA_START,
   SUNLIGHT_CEILING_COLOR,
@@ -28,8 +29,17 @@ import {
   SUNLIGHT_WALL_COLOR,
   SUNLIGHT_WALK_SPEED,
   SUNLIGHT_WIDTH,
-  sunlightHit,
+  sunlightHitWith,
 } from "@/lib/sunlight";
+import {
+  createSunlightTextCanvas,
+  SUNLIGHT_ELEMENT_BOUNDS,
+  SUNLIGHT_SPOT,
+  sunlightElementCollisionBlocks,
+  type SunlightElement,
+  type SunlightElementType,
+  type SunlightTextFont,
+} from "@/lib/sunlight-elements";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
 // The renderer is Three.js in the browser: ACES tone mapping, a locally
@@ -513,6 +523,46 @@ function useArtworkTexture(imageUrl: string): Texture | null {
   return texture;
 }
 
+// Curatorial wall text (the reference room's "Texte curatorial"): a
+// canvas texture drawn from the text and its typeface, like the room's
+// own wall text below — a 2D canvas into a texture, never troika (see
+// the note above CuratorialTextPlane). Rebuilt when the text or the
+// typeface changes; the previous texture is disposed when replaced and
+// on unmount; never throws.
+function useSunlightTextTexture(text: string, font: SunlightTextFont): Texture | null {
+  const [texture, setTexture] = useState<Texture | null>(null);
+  const currentRef = useRef<Texture | null>(null);
+  useEffect(() => {
+    let next: CanvasTexture | null = null;
+    try {
+      const { canvas } = createSunlightTextCanvas(text, font);
+      next = new CanvasTexture(canvas);
+      next.colorSpace = SRGBColorSpace;
+      next.anisotropy = 8;
+    } catch {
+      next = null;
+    }
+    const previous = currentRef.current;
+    currentRef.current = next;
+    setTexture(next);
+    previous?.dispose();
+    return () => {
+      if (currentRef.current === next) {
+        currentRef.current = null;
+        next?.dispose();
+      }
+    };
+  }, [text, font]);
+  useEffect(
+    () => () => {
+      currentRef.current?.dispose();
+      currentRef.current = null;
+    },
+    [],
+  );
+  return texture;
+}
+
 // The placeholder print shown when an artwork has no image yet, or its
 // image is still loading / failed to load: a coloured plane with the
 // artwork's accent disc and a beige strip, at the same depths as the
@@ -542,6 +592,30 @@ function LoadedArtwork({ imageUrl, width, height, z = 0.083, color, accent, fram
     // Still loading, or the image failed to load: show the placeholder
     // print, never a blank frame — and never throw.
     return <PlaceholderPrint width={width} height={height} z={z} frameless={frameless} color={color} accent={accent} />;
+  }
+  return (
+    <mesh position={[0, 0, z]}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial map={texture} />
+    </mesh>
+  );
+}
+
+// A curatorial-text artwork: the text drawn on a 640 px canvas (the
+// reference room's mkText) as a texture on a plane, 1.4 m wide, its
+// height following the wrapped text (the artwork's stored dimensions
+// carry that height, so `width`/`height` here already match the
+// canvas). Before the texture exists (first frame) the panel shows
+// its #f6f6f4 ground, never a blank frame.
+function SunlightTextPrint({ text, font, width, height, z = 0.083 }: { text: string; font: SunlightTextFont; width: number; height: number; z?: number }) {
+  const texture = useSunlightTextTexture(text, font);
+  if (!texture) {
+    return (
+      <mesh position={[0, 0, z]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial color="#f6f6f4" />
+      </mesh>
+    );
   }
   return (
     <mesh position={[0, 0, z]}>
@@ -1025,6 +1099,12 @@ function ArtworkFrame({
   const [x, y, z] = artwork.position;
   const { width, height } = artworkSize(artwork);
   const interactive = editable && !walkable;
+  // Curatorial text (the reference room's "Texte curatorial"): the
+  // artwork renders as a canvas text panel instead of an image. The
+  // typeface is one of the four keys (d/s/g/m); anything else falls
+  // back to Display gras.
+  const textFont: SunlightTextFont =
+    artwork.textFont === "s" || artwork.textFont === "g" || artwork.textFont === "m" ? artwork.textFont : "d";
   // The frame finish chosen in the inspector (wood, metal, gold, black,
   // white, or none) or a custom Frame Studio configuration encoded in
   // the frame value. "None" hangs the print frameless on the wall.
@@ -1079,8 +1159,12 @@ function ArtworkFrame({
     >
       {frameValue !== "none" && <FrameAssembly width={width} height={height} spec={frame} selected={selected} />}
       {/* Frameless prints sit almost flat on the wall; framed works sit at
-          the frame's front face, recessed inside a shadow box. */}
-      {artwork.imageUrl ? (
+          the frame's front face, recessed inside a shadow box. A text
+          artwork renders its canvas text panel; an image artwork its
+          image; anything else the placeholder print. */}
+      {artwork.text ? (
+        <SunlightTextPrint text={artwork.text} font={textFont} width={width} height={height} z={printZ} />
+      ) : artwork.imageUrl ? (
         <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={printZ} color={artwork.color} accent={artwork.accent} frameless={frameValue === "none"} />
       ) : (
         <PlaceholderPrint width={width} height={height} z={printZ} frameless={frameValue === "none"} color={artwork.color} accent={artwork.accent} />
@@ -2134,6 +2218,282 @@ function ElementMesh({
   );
 }
 
+// --- Sunlight 3D elements ---------------------------------------------
+// The reference room's own addable pieces (cloison, suspendu, colonne,
+// socles, vitrine, banc, fauteuils, spotlights), ported exactly from
+// the file's OB table and mkObj: dimensions, colours and geometries
+// are the file's. Separate from the Asset Library (ElementMesh above):
+// the two systems coexist. The element's `color` is the main material
+// (m, DoubleSide, roughness 0.7); the dark legs, wood legs and vitrine
+// glass keep the file's fixed colours. The spotlight is a real
+// SpotLight whose target is an Object3D inside the group, so the beam
+// follows the group when it is dragged, rotated or reloaded.
+const SUNLIGHT_ELEMENT_OUTLINE: Record<SunlightElementType, { size: [number, number, number]; y: number }> = {
+  cloison: { size: [3.3, 3.3, 0.45], y: 1.5 },
+  suspendu: { size: [3.3, 4.2, 0.4], y: 3.05 },
+  colonne: { size: [0.8, 5.3, 0.8], y: 2.5 },
+  socle60: { size: [0.8, 0.9, 0.8], y: 0.3 },
+  socle90: { size: [0.8, 1.2, 0.8], y: 0.45 },
+  socle120: { size: [0.8, 1.5, 0.8], y: 0.6 },
+  vitrine: { size: [0.9, 1.9, 0.9], y: 0.8 },
+  banc: { size: [2.5, 0.8, 0.8], y: 0.25 },
+  club: { size: [1.2, 1.3, 1.15], y: 0.5 },
+  bergere: { size: [1.1, 1.75, 1.1], y: 0.7 },
+  scandi: { size: [1.0, 1.35, 1.0], y: 0.5 },
+  coque: { size: [1.3, 0.95, 1.3], y: 0.33 },
+  tub: { size: [1.15, 1.3, 1.15], y: 0.5 },
+  spot: { size: [0.5, 0.7, 0.5], y: 4.8 },
+};
+
+function SunlightElementMesh({
+  element,
+  selected,
+  onSelect,
+  walkable,
+  dragged,
+  editable,
+  onDragStart,
+  onHoverChange,
+}: {
+  element: SunlightElement;
+  selected: boolean;
+  onSelect?: (id: string, additive?: boolean) => void;
+  walkable?: boolean;
+  dragged?: React.RefObject<boolean>;
+  editable?: boolean;
+  onDragStart?: (id: string, mode: "move", event: ThreeEvent<PointerEvent>) => void;
+  onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
+}) {
+  const interactive = editable && !walkable;
+  const outline = SUNLIGHT_ELEMENT_OUTLINE[element.type];
+  // The spotlight's target, inside the group so the beam follows it.
+  const spotTarget = useMemo(() => new Object3D(), []);
+  useEffect(() => () => {
+    spotTarget.removeFromParent();
+  }, [spotTarget]);
+  const isSpot = element.type === "spot";
+  return (
+    <group
+      position={[element.x, 0, element.z]}
+      rotation={[0, element.rotation, 0]}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (dragged?.current) return;
+        // Outside the editor a single click still selects (public view).
+        // In the editor only a double-click selects.
+        if (!editable) onSelect?.(element.id);
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        if (dragged?.current) return;
+        if (!editable) return;
+        onSelect?.(element.id, event.shiftKey || event.ctrlKey || event.metaKey);
+      }}
+      onPointerOver={(event) => {
+        if (!interactive) return;
+        event.stopPropagation();
+        onHoverChange?.({ id: element.id, cursor: selected ? "grab" : "default" });
+      }}
+      onPointerOut={() => {
+        if (!interactive) return;
+        onHoverChange?.(null);
+      }}
+      onPointerDown={(event) => {
+        // Only a selected element drags: double-click it first, then drag.
+        if (!interactive || !selected) return;
+        event.stopPropagation();
+        onDragStart?.(element.id, "move", event);
+      }}
+    >
+      {element.type === "cloison" && (
+        <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
+          <boxGeometry args={[3, 3, 0.15]} />
+          <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+        </mesh>
+      )}
+      {element.type === "suspendu" && (
+        <>
+          <mesh position={[0, 2.3, 0]} castShadow receiveShadow>
+            <boxGeometry args={[3, 2.4, 0.1]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          {[-1.2, 1.2].map((rodX) => (
+            <mesh key={rodX} position={[rodX, 4.25, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.02, 1.5, 0.02]} />
+              <meshStandardMaterial color="#1a1a1a" roughness={0.5} />
+            </mesh>
+          ))}
+        </>
+      )}
+      {element.type === "colonne" && (
+        <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.25, 0.25, 5, 24]} />
+          <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+        </mesh>
+      )}
+      {element.type === "socle60" && (
+        <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.5, 0.6, 0.5]} />
+          <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+        </mesh>
+      )}
+      {element.type === "socle90" && (
+        <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.5, 0.9, 0.5]} />
+          <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+        </mesh>
+      )}
+      {element.type === "socle120" && (
+        <mesh position={[0, 0.6, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.5, 1.2, 0.5]} />
+          <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+        </mesh>
+      )}
+      {element.type === "vitrine" && (
+        <>
+          <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.6, 0.9, 0.6]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 1.25, 0]} receiveShadow>
+            <boxGeometry args={[0.6, 0.7, 0.6]} />
+            <meshStandardMaterial color="#cfe6ea" transparent opacity={0.25} roughness={0.05} />
+          </mesh>
+        </>
+      )}
+      {element.type === "banc" && (
+        <>
+          <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+            <boxGeometry args={[2.2, 0.12, 0.5]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          {[-0.9, 0.9].map((legX) => (
+            <mesh key={legX} position={[legX, 0.22, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.1, 0.45, 0.4]} />
+              <meshStandardMaterial color="#1a1a1a" roughness={0.5} />
+            </mesh>
+          ))}
+        </>
+      )}
+      {element.type === "club" && (
+        <>
+          <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.9, 0.35, 0.85]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.7, -0.33]} castShadow receiveShadow>
+            <boxGeometry args={[0.9, 0.55, 0.2]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          {[-0.43, 0.43].map((armX) => (
+            <mesh key={armX} position={[armX, 0.5, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.18, 0.45, 0.85]} />
+              <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+            </mesh>
+          ))}
+        </>
+      )}
+      {element.type === "bergere" && (
+        <>
+          <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.8, 0.3, 0.8]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.9, -0.33]} castShadow receiveShadow>
+            <boxGeometry args={[0.8, 1.1, 0.15]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          {[-0.4, 0.4].map((armX) => (
+            <mesh key={armX} position={[armX, 0.8, -0.12]} castShadow receiveShadow>
+              <boxGeometry args={[0.15, 0.6, 0.5]} />
+              <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+            </mesh>
+          ))}
+        </>
+      )}
+      {element.type === "scandi" && (
+        <>
+          <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.7, 0.12, 0.7]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.8, -0.3]} castShadow receiveShadow>
+            <boxGeometry args={[0.7, 0.5, 0.1]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          {[-0.3, 0.3].map((legX) =>
+            [-0.3, 0.3].map((legZ) => (
+              <mesh key={`${legX},${legZ}`} position={[legX, 0.2, legZ]} castShadow receiveShadow>
+                <boxGeometry args={[0.06, 0.4, 0.06]} />
+                <meshStandardMaterial color="#c9a06a" roughness={0.6} />
+              </mesh>
+            )),
+          )}
+        </>
+      )}
+      {element.type === "coque" && (
+        <>
+          <mesh position={[0, 0.65, 0]} castShadow receiveShadow>
+            <sphereGeometry args={[0.5, 24, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.15, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.04, 0.04, 0.3, 12]} />
+            <meshStandardMaterial color="#1a1a1a" roughness={0.5} />
+          </mesh>
+        </>
+      )}
+      {element.type === "tub" && (
+        <>
+          <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.4, 0.4, 0.35, 24]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.72, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.42, 0.42, 0.55, 24, 1, true, Math.PI / 2, Math.PI]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+        </>
+      )}
+      {isSpot && (
+        <>
+          <mesh position={[0, 4.9, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.05, 0.06, 0.18, 12]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          <mesh position={[0, 4.72, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.09, 0.06, 0.22, 12]} />
+            <meshStandardMaterial color={element.color} roughness={0.7} side={DoubleSide} />
+          </mesh>
+          {/* Real SpotLight, warm like the sun, its target inside the
+              group so the beam moves with the fixture when it is
+              dragged, rotated or reloaded. No shadow: the source's
+              spotlight casts none. */}
+          <primitive object={spotTarget} position={[SUNLIGHT_SPOT.target.x, SUNLIGHT_SPOT.target.y, SUNLIGHT_SPOT.target.z]} />
+          <spotLight
+            position={[0, SUNLIGHT_SPOT.lightY, 0]}
+            target={spotTarget}
+            color={SUNLIGHT_SPOT.color}
+            intensity={SUNLIGHT_SPOT.intensity}
+            distance={SUNLIGHT_SPOT.distance}
+            angle={SUNLIGHT_SPOT.angle}
+            penumbra={SUNLIGHT_SPOT.penumbra}
+            decay={SUNLIGHT_SPOT.decay}
+          />
+        </>
+      )}
+      {/* Selection outline: the file's golden BoxHelper colour (#BA7517),
+          as a wireframe box like the Asset Library's selection. */}
+      {selected && (
+        <mesh position={[0, outline.y, 0]}>
+          <boxGeometry args={outline.size} />
+          <meshBasicMaterial color="#BA7517" wireframe />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
 type ElementDragState = {
   id: string;
   mode: "move" | "resize";
@@ -2266,6 +2626,10 @@ function SunlightRoom({
   onSelectElement,
   onElementDragStart,
   onElementHover,
+  selectedSunlightElementId,
+  onSelectSunlightElement,
+  onSunlightElementDragStart,
+  onSunlightElementHover,
   showGrid,
   showMeasure,
   quality,
@@ -2289,6 +2653,12 @@ function SunlightRoom({
   onSelectElement?: (id: string, additive?: boolean) => void;
   onElementDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
   onElementHover?: (hover: { id: string; cursor: string } | null) => void;
+  // Sunlight 3D elements (the reference room's own pieces): same
+  // selection/drag/hover wiring as the Asset Library above.
+  selectedSunlightElementId?: string | null;
+  onSelectSunlightElement?: (id: string, additive?: boolean) => void;
+  onSunlightElementDragStart?: (id: string, mode: "move", event: ThreeEvent<PointerEvent>) => void;
+  onSunlightElementHover?: (hover: { id: string; cursor: string } | null) => void;
   showGrid?: boolean;
   showMeasure?: boolean;
   quality: RenderQuality;
@@ -2508,13 +2878,47 @@ function SunlightRoom({
         <meshStandardMaterial color="#2a2622" roughness={0.5} />
       </mesh>
       {/* Double door on the left wall (the exit into the mini-plan's
-          room switch). */}
+          room switch). The two leaves sit exactly where the source
+          puts them (x -10.95, z -11 ± 0.55, y 1.2, 1 × 2.4 × 0.08,
+          #a5a8ac), but the source's metalness 0.4 washed the grey
+          toward white under this port's IBL and sun, and the door —
+          tucked at the back-left behind panels P1/P2 — was missed in
+          the live check. So the leaves are matte painted metal
+          (metalness 0.05) so the grey reads, and the door gets the
+          legibility a real double door has: a slim dark architrave
+          around the opening and a round knob on each leaf, both in
+          the room's existing dark tone (#2a2622, the bust's colour).
+          The door itself stays at the source's place, size and
+          colour; only its readability is fixed. */}
       {[-0.55, 0.55].map((dx) => (
         <mesh key={dx} position={[-10.95, 1.2, -11 + dx]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
           <boxGeometry args={[1, 2.4, 0.08]} />
-          <meshStandardMaterial color="#a5a8ac" roughness={0.45} metalness={0.4} />
+          <meshStandardMaterial color="#a5a8ac" roughness={0.55} metalness={0.05} />
         </mesh>
       ))}
+      {/* Architrave around the door opening (two side trims + top trim),
+          set just proud of the leaves' front face. */}
+      <mesh position={[-10.9, 1.23, -12.08]} receiveShadow>
+        <boxGeometry args={[0.04, 2.46, 0.07]} />
+        <meshStandardMaterial color="#2a2622" roughness={0.6} />
+      </mesh>
+      <mesh position={[-10.9, 1.23, -9.92]} receiveShadow>
+        <boxGeometry args={[0.04, 2.46, 0.07]} />
+        <meshStandardMaterial color="#2a2622" roughness={0.6} />
+      </mesh>
+      <mesh position={[-10.9, 2.43, -11]} receiveShadow>
+        <boxGeometry args={[0.04, 0.07, 2.23]} />
+        <meshStandardMaterial color="#2a2622" roughness={0.6} />
+      </mesh>
+      {/* A round knob on each leaf, by the centre gap, at handle height. */}
+      <mesh position={[-10.88, 1.05, -11.15]}>
+        <sphereGeometry args={[0.03, 16, 12]} />
+        <meshStandardMaterial color="#2a2622" roughness={0.4} metalness={0.3} />
+      </mesh>
+      <mesh position={[-10.88, 1.05, -10.85]}>
+        <sphereGeometry args={[0.03, 16, 12]} />
+        <meshStandardMaterial color="#2a2622" roughness={0.4} metalness={0.3} />
+      </mesh>
       {/* Dark band on the right wall: a narrow decorative element. */}
       <group position={[10.84, 1.8, -3]} rotation={[0, -Math.PI / 2, 0]}>
         <mesh castShadow>
@@ -2563,6 +2967,22 @@ function SunlightRoom({
           onDragStart={onElementDragStart}
           onHoverChange={onElementHover}
           quality={quality}
+        />
+      ))}
+      {/* Sunlight 3D elements — the reference room's own pieces
+          (cloison, suspendu, colonne, socles, vitrine, banc, fauteuils,
+          spotlights). Saved with the room, restored on load; the
+          spotlight's SpotLight is rebuilt here, so it lights again. */}
+      {room.sunlightElements?.map((element) => (
+        <SunlightElementMesh
+          key={element.id}
+          element={element}
+          walkable={walkable}
+          onSelect={onSelectSunlightElement}
+          selected={selectedSunlightElementId === element.id}
+          editable={editable}
+          onDragStart={onSunlightElementDragStart}
+          onHoverChange={onSunlightElementHover}
         />
       ))}
       {/* Measurement guides and the editor grid, as before. The grid
@@ -2766,6 +3186,11 @@ function SunlightWalkControls({
     const oz = zOffsetOf(roomIndex);
     const localX = camera.position.x - ox;
     const localZ = camera.position.z - oz;
+    // Collision: the room's fixed blocks (panels + pedestals) plus the
+    // blocks of the Sunlight elements in this room (cloison, colonne,
+    // socle, vitrine, banc, fauteuils…), rebuilt every frame so a moved
+    // element's block follows it. The spotlight contributes no block.
+    const blocks = [...SUNLIGHT_BLOCKS, ...sunlightElementCollisionBlocks(rooms[roomIndex]?.sunlightElements ?? [])];
     const v = SUNLIGHT_WALK_SPEED * delta;
     if (fw || st) {
       destination.current = null;
@@ -2774,8 +3199,8 @@ function SunlightWalkControls({
       const cy = Math.cos(yawRef.current);
       const nx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + (-sy * fw + cy * st) * v));
       const nz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + (-cy * fw - sy * st) * v));
-      if (!sunlightHit(nx, localZ)) camera.position.x = ox + nx;
-      if (!sunlightHit(camera.position.x - ox, nz)) camera.position.z = oz + nz;
+      if (!sunlightHitWith(blocks, nx, localZ)) camera.position.x = ox + nx;
+      if (!sunlightHitWith(blocks, camera.position.x - ox, nz)) camera.position.z = oz + nz;
     } else if (destination.current) {
       const dest = destination.current;
       const dx = dest.x - camera.position.x;
@@ -2789,11 +3214,11 @@ function SunlightWalkControls({
         const mx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + (dx / L) * q));
         const mz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + (dz / L) * q));
         let ok = 0;
-        if (!sunlightHit(mx, localZ)) {
+        if (!sunlightHitWith(blocks, mx, localZ)) {
           camera.position.x = ox + mx;
           ok = 1;
         }
-        if (!sunlightHit(camera.position.x - ox, mz)) {
+        if (!sunlightHitWith(blocks, camera.position.x - ox, mz)) {
           camera.position.z = oz + mz;
           ok = 1;
         }
@@ -2899,7 +3324,7 @@ function DragHandler({
 }: {
   dragRef: React.RefObject<ArtworkDragState | null>;
   onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
-  onDragEnd: () => void;
+  onDragEnd: (id: string) => void;
 }) {
   const { camera, gl } = useThree();
   const updateRef = useRef(onArtworkUpdate);
@@ -2935,9 +3360,10 @@ function DragHandler({
       }
     };
     const onUp = () => {
-      if (!dragRef.current) return;
+      const drag = dragRef.current;
+      if (!drag) return;
       dragRef.current = null;
-      endRef.current();
+      endRef.current(drag.id);
     };
     gl.domElement.addEventListener("pointermove", onMove);
     gl.domElement.addEventListener("pointerup", onUp);
@@ -3019,13 +3445,16 @@ function ElementDropHandler({
 // camera's world position and yaw, updated every frame by a small
 // reporter inside the Canvas. The minimap reads it through this ref
 // and draws the camera dot and its direction line. `null` means the
-// camera has not reported yet (SSR / before the first frame).
-export type CameraState = { x: number; z: number; yaw: number };
+// camera has not reported yet (SSR / before the first frame). The
+// height (y) and pitch are also reported: the editor places a new
+// artwork or curatorial text on the wall the camera is looking at,
+// which needs the camera's look direction, not just its position.
+export type CameraState = { x: number; y: number; z: number; yaw: number; pitch: number };
 function CameraStateReporter({ cameraStateRef }: { cameraStateRef: { current: CameraState | null } }) {
   const { camera } = useThree();
   useFrame(() => {
     const euler = new Euler().setFromQuaternion(camera.quaternion, "YXZ");
-    cameraStateRef.current = { x: camera.position.x, z: camera.position.z, yaw: euler.y };
+    cameraStateRef.current = { x: camera.position.x, y: camera.position.y, z: camera.position.z, yaw: euler.y, pitch: euler.x };
   });
   return null;
 }
@@ -3074,9 +3503,13 @@ export default function GalleryScene({
   resetSignal,
   editable,
   onArtworkUpdate,
+  onArtworkDragEnd,
   selectedElementId,
   onSelectElement,
   onElementUpdate,
+  selectedSunlightElementId,
+  onSelectSunlightElement,
+  onSunlightElementUpdate,
   selectedWallId,
   onWallSelect,
   onEditStart,
@@ -3122,10 +3555,20 @@ export default function GalleryScene({
   // resize them from the lime handle. Disabled while walking.
   editable?: boolean;
   onArtworkUpdate?: (id: string, patch: { position?: [number, number, number]; scale?: number }) => void;
+  // Editor only: an artwork drag just ended — the editor hangs the
+  // artwork on the wall under the drop point (rotation + position),
+  // so a dragged artwork lands as if just hung on its new wall.
+  onArtworkDragEnd?: (id: string) => void;
   // Editor only: elements (furniture, partition walls, vitrines, ...).
   selectedElementId?: string;
   onSelectElement?: (id: string, additive?: boolean) => void;
   onElementUpdate?: (id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) => void;
+  // Editor only: Sunlight 3D elements (the reference room's own
+  // pieces). Same wiring as the Asset Library above; the drag updates
+  // only x/z (a Sunlight element always stands on the floor, y = 0).
+  selectedSunlightElementId?: string;
+  onSelectSunlightElement?: (id: string, additive?: boolean) => void;
+  onSunlightElementUpdate?: (id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) => void;
   // Editor only: wall painting — the wall clicked in the 3D view.
   selectedWallId?: string | null;
   onWallSelect?: (wallId: WallId | string) => void;
@@ -3242,8 +3685,8 @@ export default function GalleryScene({
   // Every selected id (primary + multi-selection): any of them may start
   // a drag, and the editor moves the rest of the selection with it.
   const selectedIdSet = useMemo(
-    () => new Set([selectedId, selectedElementId, ...(multiSelectedIds ?? [])].filter((id): id is string => Boolean(id))),
-    [selectedId, selectedElementId, multiSelectedIds],
+    () => new Set([selectedId, selectedElementId, selectedSunlightElementId, ...(multiSelectedIds ?? [])].filter((id): id is string => Boolean(id))),
+    [selectedId, selectedElementId, selectedSunlightElementId, multiSelectedIds],
   );
 
   const handleDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
@@ -3351,6 +3794,49 @@ export default function GalleryScene({
     setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
   };
 
+  // Editor drag for Sunlight 3D elements: every one slides on the
+  // floor plane (the file's moveO), y = 0, inside the file's bounds
+  // (x ±10.3, z -13.3..11.3). The spotlight drags the same way — its
+  // SpotLight and target are children of the group, so the beam moves
+  // with it — and it has no collision block to update. Dragging only
+  // happens in the editor's orbit view, where the active room sits at
+  // offset 0, so element positions are room coordinates directly.
+  const sunlightDragRef = useRef<ElementDragState | null>(null);
+  const [hoveredSunlightElement, setHoveredSunlightElement] = useState<{ id: string; cursor: string } | null>(null);
+
+  const handleSunlightElementDragStart = (id: string, mode: "move", event: ThreeEvent<PointerEvent>) => {
+    if (!editable || walking) return;
+    const ownerRoom = sceneRooms.find((sceneRoom) => (sceneRoom.sunlightElements ?? []).some((item) => item.id === id)) ?? room;
+    const element = (ownerRoom.sunlightElements ?? []).find((item) => item.id === id);
+    if (!element || !selectedIdSet.has(element.id)) return;
+    onEditStart?.();
+    const position = new Vector3(element.x, 0, element.z);
+    const plane = new Plane(new Vector3(0, 1, 0), 0);
+    const grabOffset = event.point.clone().sub(position);
+    grabOffset.addScaledVector(plane.normal, -grabOffset.dot(plane.normal));
+    const hitOnPlane = event.point.clone().addScaledVector(plane.normal, -event.point.clone().sub(position).dot(plane.normal));
+    const startDist = Math.max(0.1, hitOnPlane.distanceTo(position));
+    sunlightDragRef.current = {
+      id,
+      mode,
+      plane,
+      grabOffset,
+      center: position,
+      startScale: 1,
+      startDist,
+      clamp: {
+        minX: SUNLIGHT_ELEMENT_BOUNDS.minX,
+        maxX: SUNLIGHT_ELEMENT_BOUNDS.maxX,
+        minY: 0,
+        maxY: 0,
+        minZ: SUNLIGHT_ELEMENT_BOUNDS.minZ,
+        maxZ: SUNLIGHT_ELEMENT_BOUNDS.maxZ,
+      },
+    };
+    setIsDragging(true);
+    setDragCursor("grabbing");
+  };
+
   // The Sunlight Gallery is the only room: one solid room per
   // exhibition, no side doorways, no arch, no shared walls. In walk
   // mode every room's floor and artworks are walk targets, not just
@@ -3373,6 +3859,10 @@ export default function GalleryScene({
       onSelectElement={onSelectElement}
       onElementDragStart={handleElementDragStart}
       onElementHover={setHoveredElement}
+      selectedSunlightElementId={selectedSunlightElementId}
+      onSelectSunlightElement={onSelectSunlightElement}
+      onSunlightElementDragStart={handleSunlightElementDragStart}
+      onSunlightElementHover={setHoveredSunlightElement}
       showGrid={showGrid}
       showMeasure={showMeasure}
       onFloorClick={walkMode ? (point) => {
@@ -3417,7 +3907,7 @@ export default function GalleryScene({
   return (
     <div
       className={`${className ?? "gallery-canvas"}${walkMode && walking ? " is-walking" : ""}`}
-      style={{ cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? hoveredElement?.cursor ?? undefined }}
+      style={{ cursor: isDragging ? dragCursor ?? "grabbing" : hoveredArtwork?.cursor ?? hoveredElement?.cursor ?? hoveredSunlightElement?.cursor ?? undefined }}
       onPointerDown={(event) => {
         dragStartPoint.current = { x: event.clientX, y: event.clientY };
         dragged.current = false;
@@ -3446,15 +3936,28 @@ export default function GalleryScene({
         <DragHandler
           dragRef={dragRef}
           onArtworkUpdate={onArtworkUpdate}
-          onDragEnd={() => {
+          onDragEnd={(id) => {
             setIsDragging(false);
             setDragCursor(null);
+            onArtworkDragEnd?.(id);
             onEditEnd?.();
           }}
         />
         <ElementDragHandler
           dragRef={elementDragRef}
           onElementUpdate={onElementUpdate}
+          onDragEnd={() => {
+            setIsDragging(false);
+            setDragCursor(null);
+            onEditEnd?.();
+          }}
+        />
+        {/* Sunlight 3D elements drag on their own ref: the two handlers
+            each act only while their own drag is active, so they never
+            fight over the same pointer move. */}
+        <ElementDragHandler
+          dragRef={sunlightDragRef}
+          onElementUpdate={onSunlightElementUpdate}
           onDragEnd={() => {
             setIsDragging(false);
             setDragCursor(null);
@@ -3470,7 +3973,7 @@ export default function GalleryScene({
         ) : (
           <OrbitControls
             makeDefault
-            enabled={!isDragging && !(hoveredArtwork && hoveredArtwork.id === selectedId) && !(hoveredElement && hoveredElement.id === selectedElementId)}
+            enabled={!isDragging && !(hoveredArtwork && hoveredArtwork.id === selectedId) && !(hoveredElement && hoveredElement.id === selectedElementId) && !(hoveredSunlightElement && hoveredSunlightElement.id === selectedSunlightElementId)}
             minDistance={interiorView ? 1.2 : 4}
             maxDistance={interiorView ? interiorLimits.maxDistance : Math.max(roomLayouts[room.layout].width, roomLayouts[room.layout].depth) + 6}
             minPolarAngle={interiorView ? interiorLimits.minPolarAngle : 0}

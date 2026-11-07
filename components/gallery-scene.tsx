@@ -4,372 +4,359 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, AdditiveBlending, BufferAttribute, CanvasTexture, DoubleSide, InstancedMesh, MathUtils, Object3D, Path, PCFSoftShadowMap, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Shape, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3 } from "three";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VSMShadowMap, type DirectionalLight } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, surfacePBR, type RenderQuality } from "@/lib/render-quality";
+import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
 import { resolveFrameSpec } from "@/lib/demo-data";
 import type { FrameSpec } from "@/lib/demo-data";
 import { frameTileTexture, matTexture } from "@/lib/frame-textures";
 import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, rosetteGeometry, scrollGeometry, setInstancedMatrices, type FrameLevel } from "@/lib/frame-geometry";
 import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
-import { isStoneLayout, roomLayouts, roomPlanOffsets, type GalleryRoom, type PartitionWall, type RoomLayout, type WallId } from "@/lib/rooms";
+import { roomLayouts, roomPlanOffsets, type GalleryRoom, type PartitionWall, type RoomLayout, type WallId } from "@/lib/rooms";
+import {
+  SUNLIGHT_BOUNDS,
+  SUNLIGHT_CAMERA_START,
+  SUNLIGHT_CEILING_COLOR,
+  SUNLIGHT_DEPTH,
+  SUNLIGHT_FLOOR_CENTER_Z,
+  SUNLIGHT_FLOOR_COLOR,
+  SUNLIGHT_HEIGHT,
+  SUNLIGHT_HOLES,
+  SUNLIGHT_PANELS,
+  SUNLIGHT_PEDESTALS,
+  SUNLIGHT_WALL_COLOR,
+  SUNLIGHT_WALK_SPEED,
+  SUNLIGHT_WIDTH,
+  sunlightHit,
+} from "@/lib/sunlight";
 
-// Light moods per room: the spot colour and intensity, and the room's
-// ambient and directional light, all follow the room's light type.
-const LIGHT_PRESETS = {
-  "spot-warm": { ambient: 1.4, directional: 1.8, directionalColor: "#fff2df", spotColor: "#fff0d6", spotIntensity: 22, pointColor: "#f4d8b8", pointIntensity: 0.55 },
-  "spot-cool": { ambient: 1.5, directional: 1.9, directionalColor: "#e8f0ff", spotColor: "#dfe8ff", spotIntensity: 22, pointColor: "#d8e2f4", pointIntensity: 0.55 },
-  ambient: { ambient: 2.6, directional: 1.0, directionalColor: "#ffffff", spotColor: "#ffffff", spotIntensity: 0, pointColor: "#ffffff", pointIntensity: 0.3 },
-  // Stone Gallery: the reference room's warm glow — a soft hemisphere
-  // plus warm point lights carry the ambient, a gentle warm
-  // directional grounds the shadows, and the per-artwork spots stay
-  // low (no bright pools). The hemisphere and the five point lights
-  // are added in GalleryScene when this preset is active.
-  "stone-warm": { ambient: 0.6, directional: 0.8, directionalColor: "#ffe2b8", spotColor: "#ffe2b8", spotIntensity: 10, pointColor: "#ffe2b8", pointIntensity: 0.55 },
-} as const;
-
-function createSurfaceTexture(style: string): CanvasTexture | undefined {
-  if (typeof document === "undefined") return undefined;
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  const context = canvas.getContext("2d");
-  if (!context) return undefined;
-
-  // The map is multiplied by the material colour, so patterns are drawn in
-  // near-white with dark lines: the colour tints the surface and the dark
-  // joints, seams and veins stay dark, so each finish reads at a glance —
-  // including from outside the room, where the same materials face out.
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.wrapS = RepeatWrapping;
-  texture.wrapT = RepeatWrapping;
-
-  if (style === "brick") {
-    context.fillStyle = "#f7f2e8";
-    context.fillRect(0, 0, 256, 256);
-    for (let row = 0; row < 8; row += 1) {
-      const y = row * 32;
-      const offset = row % 2 ? -32 : 0;
-      for (let x = offset; x < 256; x += 64) {
-        const shade = 236 + ((row * 7 + x) % 3) * 5;
-        context.fillStyle = `rgb(${shade}, ${shade - 4}, ${shade - 12})`;
-        context.fillRect(x + 2, y + 2, 60, 28);
-      }
-    }
-    context.fillStyle = "#453831";
-    for (let row = 0; row <= 8; row += 1) context.fillRect(0, row * 32 - 1, 256, 3);
-    for (let row = 0; row < 8; row += 1) {
-      const offset = row % 2 ? -32 : 0;
-      for (let x = offset; x <= 256; x += 64) context.fillRect(x - 1, row * 32, 3, 32);
-    }
-    texture.repeat.set(6, 3);
-  } else if (style === "wood" || style === "parquet") {
-    // "parquet" shares the procedural wood tile as its fallback: the
-    // real photo (useParquetTexture) replaces it once loaded, so the
-    // floor never sits flat while the photo is in flight.
-    context.fillStyle = "#f8f2e2";
-    context.fillRect(0, 0, 256, 256);
-    for (let plank = 0; plank < 8; plank += 1) {
-      const y = plank * 32;
-      const tone = 232 + (plank % 3) * 8;
-      context.fillStyle = `rgb(${tone}, ${tone - 8}, ${tone - 26})`;
-      context.fillRect(0, y + 2, 256, 28);
-      context.strokeStyle = "rgba(122, 102, 70, 0.5)";
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(0, y + 12 + (plank % 3) * 4);
-      context.bezierCurveTo(80, y + 8, 170, y + 18, 256, y + 12);
-      context.stroke();
-    }
-    context.fillStyle = "#6f5b3f";
-    for (let plank = 0; plank <= 8; plank += 1) context.fillRect(0, plank * 32 - 1, 256, 2);
-    for (let plank = 0; plank < 8; plank += 1) {
-      context.fillRect(plank % 2 ? 170 : 85, plank * 32, 2, 32);
-    }
-    texture.repeat.set(6, 4);
-  } else if (style === "concrete") {
-    context.fillStyle = "#f4f1ea";
-    context.fillRect(0, 0, 256, 256);
-    // Board-formed concrete: a 2 x 2 grid of formwork panels with joints.
-    // No tie holes: the black dots read as dirt on the wall, so the panels
-    // stay clean and the artworks hang on plain concrete.
-    context.fillStyle = "#6b655a";
-    context.fillRect(0, 127, 256, 3);
-    context.fillRect(127, 0, 3, 256);
-    let seed = 41;
-    for (let i = 0; i < 950; i += 1) {
-      seed = (seed * 16807) % 2147483647;
-      const x = seed % 256;
-      seed = (seed * 16807) % 2147483647;
-      const y = seed % 256;
-      const shade = 150 + (seed % 70);
-      context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, 0.22)`;
-      context.fillRect(x, y, 2, 2);
-    }
-    texture.repeat.set(4, 2);
-  } else if (style === "stone-concrete") {
-    // Stone concrete (Stone Gallery floor): the reference room's
-    // mottled concrete — large soft dark and light blotches over a
-    // warm grey base, no formwork joints, no panel lines. Drawn in
-    // the REFERENCE's own colours (base #b5b0a5, dark blotches
-    // 70,65,58, light blotches 235,230,220), not near-white: the
-    // material colour #b5b0a5 multiplies this map, so a near-white
-    // base renders the floor as pale cream under SANAA's lights
-    // (hemisphere + ambient + directional + five point lights is
-    // about twice the reference's light), while the reference's own
-    // colours multiplied by the floor colour land as the warm dark
-    // brown-grey concrete of the original. Seeded. Values are the
-    // reference's, halved for this 256 px tile (the reference uses a
-    // 512 px tile): 700 blotches of radius 6–70.
-    context.fillStyle = "#b5b0a5";
-    context.fillRect(0, 0, 256, 256);
-    let seed = 31;
-    const rand = () => {
-      seed = (seed * 16807) % 2147483647;
-      return seed / 2147483647;
-    };
-    for (let i = 0; i < 700; i += 1) {
-      const dark = rand() < 0.5;
-      const alpha = 0.03 + rand() * 0.07;
-      context.fillStyle = dark
-        ? `rgba(70, 65, 58, ${alpha.toFixed(3)})`
-        : `rgba(235, 230, 220, ${alpha.toFixed(3)})`;
-      const r = 3 + rand() * 32;
-      context.beginPath();
-      context.arc(rand() * 256, rand() * 256, r, 0, Math.PI * 2);
-      context.fill();
-    }
-    // One tile covers ~4 m, like the reference (5 across, 5 deep).
-    texture.repeat.set(5, 5);
-  } else if (style === "marble") {
-    context.fillStyle = "#fbfaf6";
-    context.fillRect(0, 0, 256, 256);
-    let seed = 97;
-    for (let i = 0; i < 9; i += 1) {
-      seed = (seed * 16807) % 2147483647;
-      const startX = seed % 256;
-      seed = (seed * 16807) % 2147483647;
-      const startY = seed % 256;
-      seed = (seed * 16807) % 2147483647;
-      const drift = (seed % 120) - 60;
-      context.strokeStyle = i % 3 === 0 ? "rgba(125, 119, 107, 0.75)" : "rgba(164, 158, 146, 0.55)";
-      context.lineWidth = i % 3 === 0 ? 1.6 : 1;
-      context.beginPath();
-      context.moveTo(startX, startY);
-      context.bezierCurveTo(startX + drift, startY + 80, startX - drift, startY + 160, startX + drift / 2, 256);
-      context.stroke();
-    }
-    texture.repeat.set(2, 2);
-  } else if (style === "stone") {
-    context.fillStyle = "#f3f0e8";
-    context.fillRect(0, 0, 256, 256);
-    for (let ty = 0; ty < 2; ty += 1) {
-      for (let tx = 0; tx < 2; tx += 1) {
-        const shade = 238 + ((tx + ty) % 2) * 6;
-        context.fillStyle = `rgb(${shade}, ${shade - 3}, ${shade - 10})`;
-        context.fillRect(tx * 128 + 2, ty * 128 + 2, 124, 124);
-      }
-    }
-    context.fillStyle = "#b3ac9c";
-    context.fillRect(0, 127, 256, 3);
-    context.fillRect(127, 0, 3, 256);
-    texture.repeat.set(4, 3);
-  } else if (style === "stone-plaster") {
-    // Stone plaster (Stone Gallery): the Three.js reference room's
-    // wall, drawn the way the reference draws it — large soft
-    // blotches (not fine dots), age stains and hairline cracks over a
-    // warm plaster base. Drawn in near-white so the wall colour tints
-    // it; the dark speckle, stains and cracks stay dark. Seeded, so
-    // the wall looks the same on every render. Values are the
-    // reference's, halved for this 256 px tile (the reference uses a
-    // 512 px tile): 900 speckles of radius 4–55, 14 stains, 10 cracks.
-    context.fillStyle = "#f2eee3";
-    context.fillRect(0, 0, 256, 256);
-    let seed = 7;
-    const rand = () => {
-      seed = (seed * 16807) % 2147483647;
-      return seed / 2147483647;
-    };
-    // Speckles: large soft dark and light blotches, like the reference.
-    for (let i = 0; i < 900; i += 1) {
-      const dark = rand() < 0.5;
-      const alpha = dark ? 0.03 + rand() * 0.09 : 0.04 + rand() * 0.11;
-      context.fillStyle = dark
-        ? `rgba(110, 100, 85, ${alpha.toFixed(3)})`
-        : `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
-      const r = 2 + rand() * 26;
-      context.beginPath();
-      context.arc(rand() * 256, rand() * 256, r, 0, Math.PI * 2);
-      context.fill();
-    }
-    // Age stains: soft rectangular patches.
-    for (let i = 0; i < 14; i += 1) {
-      const alpha = 0.25 + rand() * 0.2;
-      context.fillStyle = `rgba(120, 108, 92, ${alpha.toFixed(3)})`;
-      const w = 20 + rand() * 35;
-      const h = 12 + rand() * 18;
-      context.fillRect(rand() * (256 - w), rand() * (256 - h), w, h);
-    }
-    // Hairline cracks: jagged polylines wandering downwards.
-    context.strokeStyle = "rgba(60, 50, 40, 0.45)";
-    context.lineWidth = 1.2;
-    for (let i = 0; i < 10; i += 1) {
-      let x = rand() * 256;
-      let y = rand() * 256;
-      context.beginPath();
-      context.moveTo(x, y);
-      for (let k = 0; k < 10; k += 1) {
-        x += (rand() - 0.5) * 14;
-        y += 3 + rand() * 11;
-        context.lineTo(x, y);
-      }
-      context.stroke();
-    }
-    // One tile covers ~4 m, like the reference (5 across a 20 m wall).
-    texture.repeat.set(5, 1.6);
-  } else {
-    context.fillStyle = "#f6f3ec";
-    context.fillRect(0, 0, 256, 256);
-    let seed = 13;
-    for (let i = 0; i < 420; i += 1) {
-      seed = (seed * 16807) % 2147483647;
-      const x = seed % 256;
-      seed = (seed * 16807) % 2147483647;
-      const y = seed % 256;
-      const shade = 190 + (seed % 50);
-      context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, 0.14)`;
-      context.fillRect(x, y, 1, 1);
-    }
-    texture.repeat.set(2, 2);
-  }
-
-  return texture;
-}
-
-// Real light parquet (Poly Haven "Wood Floor", CC0) for the "parquet"
-// floor finish: loaded imperatively (TextureLoader + state), never via
-// useTexture — GalleryRoom sits outside every <Suspense> boundary, so a
-// suspending load would blank the scene (the wall-text troika failure).
-// Until the photo loads, the caller falls back to the procedural wood
-// tile, so the floor never sits flat. One photo tile covers ~2 m of
-// floor (eight wide planks per tile), so the planks read at a real
-// scale in any room size.
-function useParquetTexture(width: number, depth: number): Texture | null {
-  const [texture, setTexture] = useState<Texture | null>(null);
-  useEffect(() => {
-    let alive = true;
-    const loader = new TextureLoader();
-    const tex = loader.load(
-      "/textures/wood-floor.jpg",
-      (loaded) => {
-        if (!alive) return;
-        loaded.colorSpace = SRGBColorSpace;
-        loaded.wrapS = RepeatWrapping;
-        loaded.wrapT = RepeatWrapping;
-        loaded.anisotropy = 8;
-        loaded.repeat.set(Math.max(1, width / 2), Math.max(1, depth / 2));
-        loaded.needsUpdate = true;
-        setTexture(loaded);
-      },
-      undefined,
-      () => {
-        // Load failed: keep the procedural wood tile.
-      },
-    );
-    return () => {
-      alive = false;
-      tex.dispose();
-    };
-  }, [width, depth]);
-  return texture;
-}
-
-function GallerySpotlight({ x, y, z, targetZ, targetPoint, color = "#fff0d6", intensity = 22, lightOn = true, castShadow = false, shadowMapSize = 1024 }: { x: number; y: number; z: number; targetZ: number; targetPoint?: [number, number, number]; color?: string; intensity?: number; lightOn?: boolean; castShadow?: boolean; shadowMapSize?: number }) {
-  const target = useMemo(() => new Object3D(), []);
-  useEffect(() => {
-    if (targetPoint) target.position.set(targetPoint[0], targetPoint[1], targetPoint[2]);
-    else target.position.set(x, 2.2, targetZ);
-    return () => { target.removeFromParent(); };
-  }, [target, targetPoint, targetZ, x]);
-
-  return (
-    <>
-      <primitive object={target} />
-      {lightOn && (
-        <spotLight
-          position={[x, y, z]}
-          target={target}
-          angle={0.45}
-          penumbra={0.75}
-          intensity={intensity}
-          distance={14}
-          color={color}
-          castShadow={castShadow}
-          shadow-mapSize-width={shadowMapSize}
-          shadow-mapSize-height={shadowMapSize}
-          shadow-bias={-0.0002}
-          shadow-normalBias={0.02}
-          shadow-camera-near={0.5}
-          shadow-camera-far={14}
-        />
-      )}
-      <mesh position={[x, y + 0.02, z]}>
-        <cylinderGeometry args={[0.2, 0.24, 0.09, 16]} />
-        <meshStandardMaterial color="#f4ead5" emissive="#f4ead5" emissiveIntensity={lightOn ? 0.65 : 0.25} />
-      </mesh>
-    </>
-  );
-}
-
-// --- Photorealism pass (Nov 2026) -----------------------------------------
+// --- Sunlight Gallery (Nov 2026) -----------------------------------------
 // The renderer is Three.js in the browser: ACES tone mapping, a locally
-// generated environment map (RoomEnvironment + PMREM — no external HDR
-// fetch), real-time PCFSoft shadows from the artwork spotlights, PBR
-// surfaces and cheap contact decals. The white-gallery UI is untouched;
-// only the 3D render quality changes.
+// generated environment map (a procedural gradient scene + PMREM — no
+// external HDR fetch), real VSM shadows from the Sunlight sun, and the
+// procedural Sunlight textures. The white-gallery UI is untouched; only
+// the 3D render quality changes.
 
-// ACESFilmic tone mapping + PCFSoft shadow maps, applied to the
-// renderer's GL context. Lives inside the Canvas so it can react when
-// the quality setting (and therefore the exposure) changes mid-session.
+// ACESFilmic tone mapping + VSM shadow maps, applied to the renderer's
+// GL context. Lives inside the Canvas so it can react when the quality
+// setting (and therefore the exposure) changes mid-session.
 function ToneMappingRig({ exposure }: { exposure: number }) {
   const { gl } = useThree();
   useEffect(() => {
     gl.toneMapping = ACESFilmicToneMapping;
     gl.toneMappingExposure = exposure;
-    gl.shadowMap.type = PCFSoftShadowMap;
+    gl.shadowMap.type = VSMShadowMap;
   }, [gl, exposure]);
   return null;
 }
 
-// Environment lighting without any network fetch: three's RoomEnvironment
-// rendered once through a PMREM generator. Gives polished floors and
-// metal frames their reflections and lifts the ambient light, so the
-// flat ambientLight can be turned down while the env is on.
-function LocalEnvironment({ enabled, intensity }: { enabled: boolean; intensity: number }) {
+// ---- Sunlight Gallery assets (ported from "Galerie lumière") --------
+// Procedural canvas textures, created once per page load and cached.
+// The source generates them with Math.random on every load; so do we.
+const sunlightRandom = (a: number, b: number) => a + Math.random() * (b - a);
+
+type SunlightTextures = {
+  floor: CanvasTexture | null;
+  sky: CanvasTexture | null;
+  cloud: CanvasTexture | null;
+  aoLin: CanvasTexture | null;
+  aoRad: CanvasTexture | null;
+  dark: CanvasTexture | null;
+  env: CanvasTexture | null;
+};
+
+let sunlightTexturesCache: SunlightTextures | null = null;
+
+function sunlightTex(
+  w: number,
+  h: number,
+  fn: (g: CanvasRenderingContext2D, w: number, h: number) => void,
+  rep?: [number, number],
+): CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const g = c.getContext("2d")!;
+  fn(g, w, h);
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  t.anisotropy = 8;
+  t.wrapS = RepeatWrapping;
+  t.wrapT = RepeatWrapping;
+  if (rep) t.repeat.set(rep[0], rep[1]);
+  return t;
+}
+
+function getSunlightTextures(): SunlightTextures {
+  if (sunlightTexturesCache) return sunlightTexturesCache;
+  if (typeof document === "undefined") {
+    return { floor: null, sky: null, cloud: null, aoLin: null, aoRad: null, dark: null, env: null };
+  }
+  const R = sunlightRandom;
+  // Concrete floor: warm grey with soft speckles, repeated 5 × 6.
+  const floor = sunlightTex(
+    512,
+    512,
+    (g, w, h) => {
+      g.fillStyle = "#a9aaad";
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 900; i++) {
+        g.fillStyle = `rgba(${Math.random() < 0.5 ? "255,255,255" : "60,60,64"},${R(0.015, 0.05)})`;
+        g.beginPath();
+        g.arc(R(0, w), R(0, h), R(4, 60), 0, 7);
+        g.fill();
+      }
+    },
+    [5, 6],
+  );
+  // Sky gradient for the open skylight panels.
+  const sky = sunlightTex(256, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, h);
+    gr.addColorStop(0, "#a9cbee");
+    gr.addColorStop(1, "#e4eef8");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w, h);
+  });
+  // Animated clouds for the sky plane above the room.
+  const cloud = sunlightTex(
+    512,
+    512,
+    (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, "#5f9ede");
+      gr.addColorStop(1, "#bcd8f3");
+      g.fillStyle = gr;
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 110; i++) {
+        const cx = R(0, w);
+        const cy = R(0, h);
+        const r = R(25, 95);
+        const a = R(0.25, 0.6);
+        for (const dx of [-w, 0, w])
+          for (const dy of [-h, 0, h]) {
+            const x = cx + dx;
+            const y = cy + dy;
+            const rg = g.createRadialGradient(x, y, 0, x, y, r);
+            rg.addColorStop(0, `rgba(255,255,255,${a})`);
+            rg.addColorStop(1, "rgba(255,255,255,0)");
+            g.fillStyle = rg;
+            g.beginPath();
+            g.ellipse(x, y, r * 1.5, r * 0.8, 0, 0, 7);
+            g.fill();
+          }
+      }
+    },
+    [3, 3],
+  );
+  // Contact-shadow gradient (linear, along a wall or panel base).
+  const aoLin = sunlightTex(8, 64, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, "rgba(0,0,0,.34)");
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w, h);
+  });
+  // Contact-shadow gradient (radial, under a pedestal).
+  const aoRad = sunlightTex(128, 128, (g, w, h) => {
+    const gr = g.createRadialGradient(64, 64, 10, 64, 64, 64);
+    gr.addColorStop(0, "rgba(0,0,0,.5)");
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w, h);
+  });
+  // Dark band on the right wall: a horizontal grey gradient.
+  const dark = sunlightTex(64, 300, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, 0);
+    gr.addColorStop(0, "#262626");
+    gr.addColorStop(1, "#5a5a5a");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w, h);
+  });
+  // Environment for the IBL: a sphere with a vertical gradient and
+  // three white rectangles (the source's environment scene).
+  const env = sunlightTex(512, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, "#ffffff");
+    gr.addColorStop(0.5, "#d6d9de");
+    gr.addColorStop(1, "#6d6f74");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = "#fff";
+    for (const [x, y, a, b] of [
+      [60, 20, 90, 22],
+      [250, 28, 80, 20],
+      [400, 18, 70, 24],
+    ] as const) {
+      g.fillRect(x, y, a, b);
+    }
+  });
+  sunlightTexturesCache = { floor, sky, cloud, aoLin, aoRad, dark, env };
+  return sunlightTexturesCache;
+}
+
+// Soft environment lighting (IBL) — the source's procedural environment
+// scene, rendered once through a PMREM generator. No external HDR fetch.
+function SunlightEnvironment() {
   const { gl, scene } = useThree();
   useEffect(() => {
-    if (!enabled) {
-      scene.environment = null;
-      scene.environmentIntensity = 1;
-      return;
-    }
+    const textures = getSunlightTextures();
+    if (!textures.env) return;
+    const envScene = new Scene();
+    const envMesh = new Mesh(
+      new SphereGeometry(20, 32, 16),
+      new MeshBasicMaterial({ side: BackSide, map: textures.env }),
+    );
+    envScene.add(envMesh);
     const pmrem = new PMREMGenerator(gl);
-    const envScene = new RoomEnvironment();
     const renderTarget = pmrem.fromScene(envScene, 0.04);
     scene.environment = renderTarget.texture;
-    scene.environmentIntensity = intensity;
     return () => {
       scene.environment = null;
-      scene.environmentIntensity = 1;
       renderTarget.dispose();
       pmrem.dispose();
+      envMesh.geometry.dispose();
+      (envMesh.material as MeshBasicMaterial).dispose();
     };
-  }, [gl, scene, enabled, intensity]);
+  }, [gl, scene]);
   return null;
 }
+
+// The Sunlight sun: a warm directional light with real VSM shadows, plus
+// the hemisphere fill. The slider (0-100, default 35) moves the sun along
+// its arc; a slow cloud animation breathes its intensity. Exact values
+// from the source (setSun + the loop).
+function sunlightSunPosition(t: number): [number, number, number] {
+  const a = -0.9 + 1.8 * t;
+  return [Math.sin(a) * 16, 24 - Math.abs(a) * 5, Math.cos(a) * 10 - 6];
+}
+function sunlightSunBase(t: number): number {
+  const a = -0.9 + 1.8 * t;
+  return 2.8 - Math.abs(a) * 1.2;
+}
+// The source's quality selector: pixel ratio and sun shadow size.
+const SUN_SHADOW_MAP_SIZE: Record<RenderQuality, number> = { high: 2048, medium: 1024, low: 512 };
+
+function SunlightRig({ sunValue, quality }: { sunValue: number; quality: RenderQuality }) {
+  const sunRef = useRef<DirectionalLight>(null!);
+  const sunBase = useRef(2.6);
+  const clockRef = useRef(0);
+  const sunTarget = useMemo(() => {
+    const target = new Object3D();
+    target.position.set(0, 0, -1);
+    return target;
+  }, []);
+  useEffect(() => {
+    sunBase.current = sunlightSunBase(sunValue / 100);
+  }, [sunValue]);
+  // The shadow map is allocated at its size: changing the size needs the
+  // old map disposed first, or the new size never takes effect.
+  useEffect(() => {
+    const sun = sunRef.current;
+    if (!sun) return;
+    sun.shadow.mapSize.set(SUN_SHADOW_MAP_SIZE[quality], SUN_SHADOW_MAP_SIZE[quality]);
+    if (sun.shadow.map) {
+      sun.shadow.map.dispose();
+      sun.shadow.map = null;
+    }
+  }, [quality]);
+  useFrame((_, delta) => {
+    const sun = sunRef.current;
+    if (!sun) return;
+    clockRef.current += delta;
+    const clk = clockRef.current;
+    const textures = getSunlightTextures();
+    if (textures.cloud) {
+      textures.cloud.offset.x += delta * 0.004;
+      textures.cloud.offset.y += delta * 0.0012;
+    }
+    const cc = 0.5 + 0.5 * Math.sin(clk * 0.4) * Math.sin(clk * 0.17 + 1);
+    sun.intensity = sunBase.current * (0.45 + 0.55 * cc);
+  });
+  return (
+    <>
+      <hemisphereLight args={["#ffffff", "#aaa8a4", 0.25]} />
+      <directionalLight
+        ref={sunRef}
+        position={sunlightSunPosition(sunValue / 100)}
+        target={sunTarget}
+        intensity={2.6}
+        color="#fff0d8"
+        castShadow
+        shadow-mapSize-width={SUN_SHADOW_MAP_SIZE[quality]}
+        shadow-mapSize-height={SUN_SHADOW_MAP_SIZE[quality]}
+        shadow-radius={6}
+        shadow-blurSamples={16}
+        shadow-bias={-0.0002}
+        shadow-camera-left={-22}
+        shadow-camera-right={22}
+        shadow-camera-top={22}
+        shadow-camera-bottom={-22}
+        shadow-camera-near={1}
+        shadow-camera-far={70}
+      />
+      <primitive object={sunTarget} />
+    </>
+  );
+}
+
+// Sun slider (HUD): the source's sun control — 0-100, default 35 —
+// overlaid on the viewer like the render-quality toggle. Inline styles
+// only; the global stylesheet is untouched. Top-left, below the public
+// topbar / the editor's Add button, flush at the top elsewhere.
+function SunSlider({
+  value,
+  onChange,
+  canvasClassName,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  canvasClassName?: string;
+}) {
+  const top = canvasClassName?.includes("public-gallery-canvas")
+    ? 79
+    : canvasClassName?.includes("editor-canvas")
+      ? 56
+      : 12;
+  return (
+    <div
+      className="sunlight-sun-slider"
+      role="group"
+      aria-label="Sunlight"
+      title="Sun — move the sun along its arc"
+      style={{
+        position: "absolute",
+        top,
+        left: 12,
+        zIndex: 1,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 10px",
+        borderRadius: 999,
+        background: "rgba(255, 255, 255, 0.92)",
+        boxShadow: "0 1px 6px rgba(0, 0, 0, 0.14)",
+        fontSize: 11,
+        lineHeight: 1,
+        color: "#555550",
+        userSelect: "none",
+      }}
+    >
+      <span aria-hidden="true">☀</span>
+      <span style={{ letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 10 }}>Sun</span>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={value}
+        aria-label="Sun position"
+        onChange={(event) => onChange(Number(event.target.value))}
+        style={{ width: 120, accentColor: "#BA7517" }}
+      />
+    </div>
+  );
+}
+
 
 // Cheap contact shadow: a soft radial-gradient decal on the floor under
 // a freestanding element (plinth, bench, partition, vitrine, ...). Real
@@ -1127,152 +1114,6 @@ function ArtworkFrame({
   );
 }
 
-function WallWithOpening({
-  x,
-  depth,
-  height,
-  color,
-  texture,
-  opening,
-  wallId,
-  highlight,
-  onWallClick,
-  dragged,
-  pbr,
-}: {
-  x: number;
-  depth: number;
-  height: number;
-  color: string;
-  texture?: Texture;
-  opening: "door" | "window" | "none" | "solid";
-  // Editor only: clicking the wall selects it for painting. The wall
-  // glows faintly gold while selected.
-  wallId?: WallId;
-  highlight?: boolean;
-  onWallClick?: (wallId: WallId) => void;
-  dragged?: React.RefObject<boolean>;
-  // PBR finish for the wall surface (from the room's wall texture).
-  pbr?: { roughness: number; envMapIntensity: number };
-}) {
-  const wallThickness = 0.22;
-  const materialProps = {
-    color,
-    map: texture,
-    roughness: pbr?.roughness ?? 0.88,
-    envMapIntensity: pbr?.envMapIntensity ?? 0.12,
-    emissive: highlight ? "#ffffff" : "#000000",
-    emissiveIntensity: highlight ? 0.16 : 0,
-  } as const;
-  // A drag (orbit) must not count as a click on the wall, and a single
-  // click does not select a wall at all — only a double-click does.
-  const handleDoubleClick = (event: ThreeEvent<MouseEvent>) => {
-    if (!onWallClick || !wallId || dragged?.current) return;
-    event.stopPropagation();
-    onWallClick(wallId);
-  };
-  if (opening === "solid") {
-    return (
-      <mesh position={[x, height / 2, 0]} receiveShadow onDoubleClick={handleDoubleClick}>
-        <boxGeometry args={[wallThickness, height, depth]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-    );
-  }
-  if (opening === "none") return null;
-  const doorWidth = 1.65;
-  const doorHeight = 2.5;
-  const windowWidth = 3.2;
-  const windowBottom = 1.65;
-  const windowTop = Math.min(3.55, height - 0.7);
-  const openingWidth = opening === "door" ? doorWidth : windowWidth;
-  const openingBottom = opening === "door" ? 0 : windowBottom;
-  const openingTop = opening === "door" ? doorHeight : windowTop;
-  const sideDepth = (depth - openingWidth) / 2;
-
-  return (
-    <group>
-      <mesh position={[x, height / 2, -(openingWidth + sideDepth) / 2]} receiveShadow onDoubleClick={handleDoubleClick}>
-        <boxGeometry args={[wallThickness, height, sideDepth]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-      <mesh position={[x, height / 2, (openingWidth + sideDepth) / 2]} receiveShadow onDoubleClick={handleDoubleClick}>
-        <boxGeometry args={[wallThickness, height, sideDepth]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-      {openingTop < height && (
-        <mesh position={[x, (openingTop + height) / 2, 0]} receiveShadow onDoubleClick={handleDoubleClick}>
-          <boxGeometry args={[wallThickness, height - openingTop, openingWidth]} />
-          <meshStandardMaterial {...materialProps} />
-        </mesh>
-      )}
-      {openingBottom > 0 && (
-        <mesh position={[x, openingBottom / 2, 0]} receiveShadow onDoubleClick={handleDoubleClick}>
-          <boxGeometry args={[wallThickness, openingBottom, openingWidth]} />
-          <meshStandardMaterial {...materialProps} />
-        </mesh>
-      )}
-      {opening === "door" ? (
-        <group>
-          {[-doorWidth / 2, doorWidth / 2].map((z) => (
-            <mesh key={z} position={[x, doorHeight / 2, z]}>
-              <boxGeometry args={[wallThickness * 1.8, doorHeight, 0.1]} />
-              <meshStandardMaterial color="#73543d" />
-            </mesh>
-          ))}
-          <mesh position={[x, doorHeight, 0]}>
-            <boxGeometry args={[wallThickness * 1.8, 0.12, doorWidth + 0.1]} />
-            <meshStandardMaterial color="#73543d" />
-          </mesh>
-        </group>
-      ) : (
-        // A real gallery window: white frame and muntins around the
-        // opening, a bright sky-bright glass, and a sill into the room.
-        // The glass itself is emissive (the sky) — no separate sky plane,
-        // so a shared wall between two rooms never shows one room's sky
-        // floating inside the other.
-        <group>
-          {/* Glass: bright and sky-lit, the daylight cue. */}
-          <mesh
-            position={[x - Math.sign(x) * 0.02, (windowBottom + windowTop) / 2, 0]}
-            rotation={[0, Math.PI / 2, 0]}
-          >
-            <planeGeometry args={[windowWidth, windowTop - windowBottom]} />
-            <meshPhysicalMaterial color="#dceeff" transparent opacity={0.4} roughness={0.08} emissive="#bcd8ff" emissiveIntensity={0.7} side={DoubleSide} />
-          </mesh>
-          {/* White frame around the opening, proud of the wall face. */}
-          {[-1, 1].map((side) => (
-            <mesh key={`jamb-${side}`} position={[x - Math.sign(x) * 0.13, (windowBottom + windowTop) / 2, side * (windowWidth / 2 + 0.05)]}>
-              <boxGeometry args={[0.08, windowTop - windowBottom + 0.1, 0.1]} />
-              <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
-            </mesh>
-          ))}
-          {[-1, 1].map((side) => (
-            <mesh key={`rail-${side}`} position={[x - Math.sign(x) * 0.13, (side > 0 ? windowTop : windowBottom) + side * 0.05, 0]}>
-              <boxGeometry args={[0.08, 0.1, windowWidth + 0.2]} />
-              <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
-            </mesh>
-          ))}
-          {/* Muntins: one vertical, one horizontal divider across the glass. */}
-          <mesh position={[x - Math.sign(x) * 0.02, (windowBottom + windowTop) / 2, 0]}>
-            <boxGeometry args={[0.04, windowTop - windowBottom, 0.05]} />
-            <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
-          </mesh>
-          <mesh position={[x - Math.sign(x) * 0.02, (windowBottom + windowTop) / 2, 0]}>
-            <boxGeometry args={[0.04, 0.05, windowWidth]} />
-            <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
-          </mesh>
-          {/* Sill: a white ledge below the window, into the room. */}
-          <mesh position={[x - Math.sign(x) * 0.22, windowBottom - 0.03, 0]}>
-            <boxGeometry args={[0.3, 0.06, windowWidth + 0.3]} />
-            <meshStandardMaterial color="#f5f2eb" roughness={0.7} />
-          </mesh>
-        </group>
-      )}
-    </group>
-  );
-}
-
 // Sheer curtain panel: a translucent plane with gentle folds, made by
 // displacing a segmented plane along a sine wave.
 function SheerPanel({ width, color }: { width: number; color: string }) {
@@ -1587,12 +1428,12 @@ type MeasureWall = "back" | "front" | "left" | "right";
 
 // Which wall an artwork hangs on, from its position (same 0.28 m inset
 // and 0.45 m tolerance as the editor's wallsForArtwork).
-function measureWallKey(artwork: Artwork, width: number, depth: number): MeasureWall | null {
+function measureWallKey(artwork: Artwork, width: number, depth: number, zCenter = 0): MeasureWall | null {
   const [x, , z] = artwork.position;
   const inset = 0.28;
   const distances: [MeasureWall, number][] = [
-    ["back", Math.abs(z - (-depth / 2 + inset))],
-    ["front", Math.abs(z - (depth / 2 - inset))],
+    ["back", Math.abs(z - (zCenter - depth / 2 + inset))],
+    ["front", Math.abs(z - (zCenter + depth / 2 - inset))],
     ["left", Math.abs(x - (-width / 2 + inset))],
     ["right", Math.abs(x - (width / 2 - inset))],
   ];
@@ -1609,16 +1450,21 @@ function MeasurementGuides({
   selectedId,
   width,
   depth,
+  // Centre of the room along Z (0 for the old centred rooms, -1 for
+  // Sunlight, whose floor is centred at z = -1): the walls sit at
+  // zCenter ± depth / 2.
+  zCenter = 0,
 }: {
   artworks: Artwork[];
   selectedId?: string;
   width: number;
   depth: number;
+  zCenter?: number;
 }) {
   const guides = useMemo(() => {
     const byWall = new Map<MeasureWall, Artwork[]>();
     for (const artwork of artworks) {
-      const wall = measureWallKey(artwork, width, depth);
+      const wall = measureWallKey(artwork, width, depth, zCenter);
       if (!wall) continue;
       const list = byWall.get(wall) ?? [];
       list.push(artwork);
@@ -1643,8 +1489,8 @@ function MeasurementGuides({
         // The dimension line runs between the two centres, 0.45 m out
         // from the wall; short ticks mark each end.
         const at = (v: number): [number, number, number] => {
-          if (wall === "back") return [v, y, -depth / 2 + 0.28 + wallOffset];
-          if (wall === "front") return [v, y, depth / 2 - 0.28 - wallOffset];
+          if (wall === "back") return [v, y, zCenter - depth / 2 + 0.28 + wallOffset];
+          if (wall === "front") return [v, y, zCenter + depth / 2 - 0.28 - wallOffset];
           if (wall === "left") return [-width / 2 + 0.28 + wallOffset, y, v];
           return [width / 2 - 0.28 - wallOffset, y, v];
         };
@@ -1667,13 +1513,13 @@ function MeasurementGuides({
     // floor to its centre, 0.45 m out from its wall, labelled in cm.
     const selectedArtwork = artworks.find((artwork) => artwork.id === selectedId);
     if (selectedArtwork) {
-      const wall = measureWallKey(selectedArtwork, width, depth);
+      const wall = measureWallKey(selectedArtwork, width, depth, zCenter);
       if (wall) {
         const [x, y, z] = selectedArtwork.position;
         const rotation: [number, number, number] = wall === "front" ? [0, Math.PI, 0] : wall === "left" ? [0, Math.PI / 2, 0] : wall === "right" ? [0, -Math.PI / 2, 0] : [0, 0, 0];
         const base: [number, number, number] =
-          wall === "back" ? [x, 0, -depth / 2 + 0.28 + wallOffset]
-          : wall === "front" ? [x, 0, depth / 2 - 0.28 - wallOffset]
+          wall === "back" ? [x, 0, zCenter - depth / 2 + 0.28 + wallOffset]
+          : wall === "front" ? [x, 0, zCenter + depth / 2 - 0.28 - wallOffset]
           : wall === "left" ? [-width / 2 + 0.28 + wallOffset, 0, z]
           : [width / 2 - 0.28 - wallOffset, 0, z];
         lines.push(base[0], 0, base[2], base[0], y, base[2]);
@@ -1681,7 +1527,7 @@ function MeasurementGuides({
       }
     }
     return { lines: new Float32Array(lines), labels };
-  }, [artworks, selectedId, width, depth]);
+  }, [artworks, selectedId, width, depth, zCenter]);
   if (guides.lines.length === 0 && guides.labels.length === 0) return null;
   return (
     <group>
@@ -2358,658 +2204,54 @@ function ElementDragHandler({
   }, [camera, gl, dragRef]);
   return null;
 }
-
-// Built-in furniture of each reference room, derived from the layout only
-// (nothing stored per exhibition). Suspended panels, plinths and rails live
-// inside the room; the curved wall itself is built in GalleryRoom because
-// it replaces the front wall.
-function RoomFeatures({
-  layout,
-  width,
-  depth,
-  height,
-  panelTexture,
-  panelColor,
-  panelPBR,
-  contactDecals,
-  shadows,
+// Contact shadow + LED strip along a wall or panel base (the source's
+// aoWall). A soft gradient plane on the floor plus a thin white LED
+// strip at the base, in the local frame of the wall or panel group.
+function SunlightAoWall({
+  len,
+  z,
+  dir,
+  aoLin,
 }: {
-  layout: RoomLayout;
-  width: number;
-  depth: number;
-  height: number;
-  // Freestanding panels reuse the wall's surface map (at panel scale),
-  // colour and PBR finish, so they read as the room's own architecture.
-  panelTexture?: Texture | null;
-  panelColor?: string;
-  panelPBR?: { roughness: number; envMapIntensity: number };
-  contactDecals?: boolean;
-  // Render quality: whether the skylight's daylight casts real shadows.
-  shadows?: boolean;
+  len: number;
+  z: number;
+  dir: 1 | -1;
+  aoLin: CanvasTexture | null;
 }) {
-  // Target of the skylight's daylight spot: the floor centre, so the
-  // light falls straight down through the verrière. Created here (top
-  // of the component, before the layout branches) so the hooks run on
-  // every render whatever the layout.
-  const skyTarget = useMemo(() => new Object3D(), []);
-  useEffect(() => {
-    skyTarget.position.set(0, 0, 0);
-    return () => {
-      skyTarget.removeFromParent();
-    };
-  }, [skyTarget]);
-  // Skylight glazing (gallery-skylight only): a soft sky gradient for
-  // the verrière panel, so it reads as sky through glass — deeper blue
-  // at one end, pale near the horizon — not a flat white panel.
-  const skyTexture = useMemo(() => {
-    if (typeof document === "undefined") return null;
-    const canvas = document.createElement("canvas");
-    canvas.width = 128;
-    canvas.height = 64;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    const gradient = ctx.createLinearGradient(0, 0, 0, 64);
-    gradient.addColorStop(0, "#7fb2e5");
-    gradient.addColorStop(0.55, "#a9c8e8");
-    gradient.addColorStop(1, "#dcebf7");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 128, 64);
-    const texture = new CanvasTexture(canvas);
-    texture.colorSpace = SRGBColorSpace;
-    return texture;
-  }, []);
-  // Daylight pool (gallery-skylight only): a soft-edged bright
-  // rectangle that lands on the parquet under the verrière, the size
-  // of the skylight opening grown by the light's spread. A point
-  // spotlight alone projects a circular cone, so this decal gives the
-  // pool its rectangular read; the real spotlight underneath makes it
-  // bright. Additive, so it reads as light on the wood, not paint.
-  // The falloff is rectangular (distance to the inner rectangle's
-  // edge), not radial, so the pool keeps the skylight's shape.
-  const poolTexture = useMemo(() => {
-    if (typeof document === "undefined") return null;
-    const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 192;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    const image = ctx.createImageData(256, 192);
-    const innerX0 = 34;
-    const innerX1 = 222;
-    const innerY0 = 26;
-    const innerY1 = 166;
-    const feather = 26;
-    for (let y = 0; y < 192; y += 1) {
-      for (let x = 0; x < 256; x += 1) {
-        const dx = x < innerX0 ? innerX0 - x : x > innerX1 ? x - innerX1 : 0;
-        const dy = y < innerY0 ? innerY0 - y : y > innerY1 ? y - innerY1 : 0;
-        const dist = Math.max(dx, dy);
-        const t = Math.max(0, Math.min(1, 1 - dist / feather));
-        const alpha = Math.round(0.85 * t * t * (3 - 2 * t) * 255);
-        const i = (y * 256 + x) * 4;
-        image.data[i] = 255;
-        image.data[i + 1] = 244;
-        image.data[i + 2] = 214;
-        image.data[i + 3] = alpha;
-      }
-    }
-    ctx.putImageData(image, 0, 0);
-    const texture = new CanvasTexture(canvas);
-    texture.colorSpace = SRGBColorSpace;
-    return texture;
-  }, []);
-  // Recessed spots (gallery-skylight only): their positions, in coffer
-  // centres, and one target each — straight down at the floor below the
-  // fixture, so each warm pool lands under its own spot.
-  const recessedSpots = useMemo(
-    () => [
-      { x: -5.4, z: -2.4 },
-      { x: 4.2, z: -2.4 },
-      { x: -5.4, z: 2.4 },
-      { x: 4.2, z: 2.4 },
-    ],
-    [],
-  );
-  const recessedTargets = useMemo(() => {
-    return recessedSpots.map(({ x, z }) => {
-      const target = new Object3D();
-      target.position.set(x, 0, z);
-      return target;
-    });
-  }, [recessedSpots]);
-  useEffect(() => {
-    return () => {
-      recessedTargets.forEach((target) => target.removeFromParent());
-    };
-  }, [recessedTargets]);
-  // Arched niche (Stone Gallery only): a flat arched panel, darker
-  // stone, on the back wall. Fixed shape — the same 3.2 m wide, 4.6 m
-  // tall arch as the Three.js reference room.
-  const stoneNicheShape = useMemo(() => {
-    const niche = new Shape();
-    niche.moveTo(-1.6, 0);
-    niche.lineTo(-1.6, 3);
-    niche.absarc(0, 3, 1.6, Math.PI, 0, true);
-    niche.lineTo(1.6, 0);
-    niche.lineTo(-1.6, 0);
-    return niche;
-  }, []);
-  // Rubble (Stone Gallery only): fourteen small blocks at the foot of
-  // the left wall. Seeded, so the pile looks the same on every render.
-  const stoneRubble = useMemo(() => {
-    let seed = 23;
-    const rand = () => {
-      seed = (seed * 16807) % 2147483647;
-      return seed / 2147483647;
-    };
-    return Array.from({ length: 14 }, () => {
-      const sx = 0.4 + rand() * 0.5;
-      const sy = 0.3 + rand() * 0.3;
-      const sz = 0.4 + rand() * 0.5;
-      return {
-        size: [sx, sy, sz] as [number, number, number],
-        position: [
-          -width / 2 + 0.4 + rand() * 0.7,
-          sy / 2,
-          -2 + rand() * 4,
-        ] as [number, number, number],
-        rotation: [rand() * 0.4, rand() * 3, rand() * 0.4] as [number, number, number],
-      };
-    });
-  }, [width]);
-  if (layout === "cube") {
-    // Ceiling track rails running the depth of the room, with spot heads.
-    return (
-      <group>
-        {[-4.5, 0, 4.5].map((x) => (
-          <group key={x}>
-            <mesh position={[x, height - 0.35, 0]}>
-              <boxGeometry args={[0.07, 0.07, depth - 1]} />
-              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
-            </mesh>
-            {[-depth / 4, 0, depth / 4].map((z) => (
-              <mesh key={z} position={[x, height - 0.45, z]}>
-                <cylinderGeometry args={[0.09, 0.12, 0.18, 12]} />
-                <meshStandardMaterial color="#3a3a36" roughness={0.5} metalness={0.4} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "grand-hall") {
-    // Three white panels suspended from the ceiling by thin rods, plus two
-    // plinths carrying dark abstract figures.
-    return (
-      <group>
-        {[-7, 0, 7].map((x) => (
-          <group key={x}>
-            <mesh position={[x, 2.6, -1]}>
-              <boxGeometry args={[3.2, 3.0, 0.12]} />
-              <meshStandardMaterial color="#f8f6f0" roughness={0.85} />
-            </mesh>
-            {[-1.3, 1.3].map((dx) => (
-              <mesh key={dx} position={[x + dx, (height + 4.1) / 2, -1]}>
-                <cylinderGeometry args={[0.02, 0.02, height - 4.1, 6]} />
-                <meshStandardMaterial color="#555550" roughness={0.5} metalness={0.5} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-        {[-4, 4].map((x) => (
-          <group key={x} position={[x, 0, 2.5]}>
-            <mesh position={[0, 0.55, 0]}>
-              <boxGeometry args={[0.9, 1.1, 0.9]} />
-              <meshStandardMaterial color="#f2efe8" roughness={0.85} />
-            </mesh>
-            <mesh position={[0, 1.55, 0]}>
-              <capsuleGeometry args={[0.16, 0.7, 6, 12]} />
-              <meshStandardMaterial color="#33332f" roughness={0.4} metalness={0.2} />
-            </mesh>
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "totem-studio") {
-    // Works suspended from the ceiling by thin cables, plus two plinths.
-    return (
-      <group>
-        {[
-          { x: -5, z: -2 },
-          { x: 0, z: 0.5 },
-          { x: 5, z: -2 },
-          { x: -2.5, z: 2.5 },
-        ].map(({ x, z }, index) => (
-          <group key={index} position={[x, 0, z]}>
-            <mesh position={[0, 2.2, 0]}>
-              <boxGeometry args={[1.3, 1.6, 0.08]} />
-              <meshStandardMaterial color={["#8a9b88", "#bb8365", "#8796a9", "#a89a7a"][index]} roughness={0.9} />
-            </mesh>
-            <mesh position={[0, (height + 3.0) / 2, 0]}>
-              <cylinderGeometry args={[0.015, 0.015, height - 3.0, 6]} />
-              <meshStandardMaterial color="#555550" roughness={0.5} metalness={0.5} />
-            </mesh>
-          </group>
-        ))}
-        {[-6, 6].map((x) => (
-          <mesh key={x} position={[x, 0.5, 3]}>
-            <boxGeometry args={[0.9, 1.0, 0.9]} />
-            <meshStandardMaterial color="#f2efe8" roughness={0.85} />
-          </mesh>
-        ))}
-      </group>
-    );
-  }
-  // --- Ceiling architectures from the reference photos (November 2026) ---
-  if (isStoneLayout(layout)) {
-    // The Stone Gallery (Three.js reference room "Galerie en pierre"):
-    // dark timber beams across the ceiling, an arched niche on the back
-    // wall, rubble at the foot of the left wall, a concrete plinth with
-    // four small white frames, and eight track-light fixtures. Fixed
-    // architecture — the room's colours, dimensions and light stay
-    // editable in the inspector. The round-arched dividing wall itself
-    // is a partition (shape "arch"), rendered by ArchPartitionWall.
-    //
-    // The single pre-split room ("stone-gallery") renders the whole
-    // set, as before. When the gallery is split in two, each half
-    // renders only the pieces that stood in it in the reference room:
-    // the niche is on the back wall (back half), the rubble and the
-    // plinth are in the front part (front half), the track lights are
-    // split by their z, and the beams run the depth of whichever half
-    // they are in. Positions are LOCAL to the half (front half centre
-    // global z = +5.5, back half −6.5).
-    const isFront = layout === "stone-gallery-front";
-    const isBack = layout === "stone-gallery-back";
-    const beamXs: number[] = [];
-    for (let x = -width / 2 + 1; x <= width / 2 - 1 + 0.01; x += 3) {
-      beamXs.push(Math.round(x * 100) / 100);
-    }
-    const nicheX = Math.min(5, width / 2 - 2);
-    const plinthX = Math.min(6.2, width / 2 - 1.5);
-    // The plinth stood at global z = 4: local z = −1.5 in the front
-    // half (centre +5.5); in the single room it is local z = 4.
-    const plinthZ = isFront ? -1.5 : Math.min(4, depth / 2 - 1);
-    // Track lights by their global z: the fixtures at global z = 6 and
-    // 2 belong to the front half (local +0.5 and −3.5), the ones at
-    // global z = −5 to the back half (local +1.5); the single room
-    // keeps all eight at their original local z.
-    const trackLights: [number, number][] = (isFront
-      ? [[-4, 0.5], [0, 0.5], [4, 0.5], [-4, -3.5], [4, -3.5]]
-      : isBack
-        ? [[-5, 1.5], [0, 1.5], [5, 1.5]]
-        : [[-4, 6], [0, 6], [4, 6], [-5, -5], [0, -5], [5, -5], [-4, 2], [4, 2]]
-    ).map(([x, z]) => [
-      Math.max(-width / 2 + 1, Math.min(width / 2 - 1, x)),
-      Math.max(-depth / 2 + 1, Math.min(depth / 2 - 1, z)),
-    ]);
-    // Rubble at the foot of the left wall. In the single room it sits
-    // at global z −2…+2; in the front half the same global span is
-    // local z −7.5…−3.5, clamped to the half (−6.5…−3.5, by the arch).
-    // The back half has none.
-    const rubble = isBack
-      ? []
-      : isFront
-        ? stoneRubble.map((block) => ({
-            ...block,
-            position: [
-              block.position[0],
-              block.position[1],
-              Math.max(-depth / 2, Math.min(-depth / 2 + 3, block.position[2] - 5.5)),
-            ] as [number, number, number],
-          }))
-        : stoneRubble;
-    return (
-      <group>
-        {/* Dark timber beams across the ceiling, every 3 m. */}
-        {beamXs.map((x) => (
-          <mesh key={`beam-${x}`} position={[x, height - 0.2, 0]} castShadow>
-            <boxGeometry args={[0.35, 0.4, depth]} />
-            <meshStandardMaterial color="#4a3528" roughness={0.8} />
-          </mesh>
-        ))}
-        {/* Arched niche on the back wall (darker stone), behind the
-            artwork that hangs over it. It sits 0.05 m off the wall's
-            front face (the wall is a 0.25 m box, so its face is at
-            -depth/2 + 0.125) — at -depth/2 + 0.05 it was buried inside
-            the wall and invisible. It receives the artwork's shadow.
-            The niche is on the back wall, so only the single room and
-            the back half have one. */}
-        {!isFront && (
-        <mesh position={[nicheX, 0, -depth / 2 + 0.175]} receiveShadow>
-          <shapeGeometry args={[stoneNicheShape]} />
-          <meshStandardMaterial color="#7d7164" roughness={1} />
-        </mesh>
-        )}
-        {/* Rubble at the foot of the left wall. */}
-        {rubble.map((block, i) => (
-          <mesh key={`rubble-${i}`} position={block.position} rotation={block.rotation} castShadow>
-            <boxGeometry args={block.size} />
-            <meshStandardMaterial color="#9a8f7c" roughness={1} />
-          </mesh>
-        ))}
-        {/* Concrete plinth with four small white frames. The plinth
-            stood in the front part, so only the single room and the
-            front half have one. */}
-        {!isBack && (
-        <group position={[plinthX, 0, plinthZ]}>
-          <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
-            <boxGeometry args={[2.6, 0.5, 1.5]} />
-            <meshStandardMaterial color="#8d8a82" roughness={1} />
-          </mesh>
-          {[5.4, 5.9, 6.4, 6.9].map((fx) => (
-            <mesh key={fx} position={[fx - 6.2, 0.78, -0.1]} rotation={[-0.25, 0, 0]} castShadow>
-              <boxGeometry args={[0.4, 0.5, 0.03]} />
-              <meshStandardMaterial color="#e8e8e8" metalness={0.4} roughness={0.4} />
-            </mesh>
-          ))}
-        </group>
-        )}
-        {/* Track-light fixtures: a thin drop wire and a glowing bar. */}
-        {trackLights.map(([x, z], i) => (
-          <group key={`track-${i}`}>
-            <mesh position={[x, height - 0.6, z]}>
-              <cylinderGeometry args={[0.01, 0.01, 1.2, 4]} />
-              <meshBasicMaterial color="#222222" />
-            </mesh>
-            <mesh position={[x, height - 1.2, z]}>
-              <boxGeometry args={[1.3, 0.07, 0.14]} />
-              <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={1} />
-            </mesh>
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (layout === "gallery-skylight") {
-    // The reference room: a white coffered ceiling with one central
-    // skylight (verrière). White beams on a 2.4 m grid form the
-    // coffers; the beams stop at the skylight opening, which is framed
-    // by a white curb and filled with a bright sky panel. A real
-    // spotlight shines down through it, so daylight pools on the
-    // parquet. The beams are real 3D relief, not a flat photo.
-    const beamY = height - 0.38;
-    const beamW = 0.18;
-    const beamD = 0.28;
-    const spacing = 2.4;
-    const skyX0 = -1.8;
-    const skyX1 = 1.8;
-    const skyZ0 = -1.2;
-    const skyZ1 = 1.2;
-    const xs: number[] = [];
-    for (let x = -width / 2 + spacing; x < width / 2; x += spacing) xs.push(x);
-    const zs: number[] = [];
-    for (let z = -depth / 2 + spacing; z < depth / 2; z += spacing) zs.push(z);
-    // Split a beam run into the segments that stop at the skylight
-    // opening, so no beam crosses the verrière.
-    const splitRun = (from: number, to: number, lo: number, hi: number): [number, number][] => {
-      if (hi <= from || lo >= to) return [[from, to]];
-      const segs: [number, number][] = [];
-      if (lo > from) segs.push([from, lo]);
-      if (hi < to) segs.push([hi, to]);
-      return segs.filter(([a, b]) => b - a > 0.05);
-    };
-    // X-beams (along X) at each grid z, split where they cross the skylight.
-    const xBeams: { z: number; from: number; to: number }[] = [];
-    zs.forEach((z) => {
-      if (z > skyZ0 && z < skyZ1) {
-        splitRun(-width / 2, width / 2, skyX0, skyX1).forEach(([from, to]) => xBeams.push({ z, from, to }));
-      } else {
-        xBeams.push({ z, from: -width / 2, to: width / 2 });
-      }
-    });
-    // Z-beams (along Z) at each grid x, split where they cross the skylight.
-    const zBeams: { x: number; from: number; to: number }[] = [];
-    xs.forEach((x) => {
-      if (x > skyX0 && x < skyX1) {
-        splitRun(-depth / 2, depth / 2, skyZ0, skyZ1).forEach(([from, to]) => zBeams.push({ x, from, to }));
-      } else {
-        zBeams.push({ x, from: -depth / 2, to: depth / 2 });
-      }
-    });
-    return (
-      <group>
-        {xBeams.map(({ z, from, to }, i) => (
-          <mesh key={`xb-${i}`} position={[(from + to) / 2, beamY, z]}>
-            <boxGeometry args={[to - from, beamD, beamW]} />
-            <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-          </mesh>
-        ))}
-        {zBeams.map(({ x, from, to }, i) => (
-          <mesh key={`zb-${i}`} position={[x, beamY, (from + to) / 2]}>
-            <boxGeometry args={[beamW, beamD, to - from]} />
-            <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-          </mesh>
-        ))}
-        {/* Curb: a white frame around the skylight opening, finishing
-            the cut edge of the coffers (same white as the beams, so it
-            reads as one frame; slightly deeper, so it lips below them). */}
-        <mesh position={[0, beamY, skyZ0]}>
-          <boxGeometry args={[skyX1 - skyX0 + 0.28, beamD + 0.04, 0.14]} />
-          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-        </mesh>
-        <mesh position={[0, beamY, skyZ1]}>
-          <boxGeometry args={[skyX1 - skyX0 + 0.28, beamD + 0.04, 0.14]} />
-          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-        </mesh>
-        <mesh position={[skyX0, beamY, 0]}>
-          <boxGeometry args={[0.14, beamD + 0.04, skyZ1 - skyZ0]} />
-          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-        </mesh>
-        <mesh position={[skyX1, beamY, 0]}>
-          <boxGeometry args={[0.14, beamD + 0.04, skyZ1 - skyZ0]} />
-          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-        </mesh>
-        {/* Sky: a glazed verrière, not a flat white panel — a soft sky
-            gradient (deeper blue to pale) behind white muntins, so it
-            reads as a window with glass panes. The muntins sit just
-            below the panel, dividing it into six panes. */}
-        <mesh position={[0, height - 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[skyX1 - skyX0, skyZ1 - skyZ0]} />
-          <meshStandardMaterial
-            map={skyTexture ?? undefined}
-            color="#ffffff"
-            emissive="#ffffff"
-            emissiveMap={skyTexture ?? undefined}
-            emissiveIntensity={1.1}
-            side={DoubleSide}
-          />
-        </mesh>
-        {[-0.6, 0.6].map((x) => (
-          <mesh key={`mull-v-${x}`} position={[x, height - 0.27, 0]}>
-            <boxGeometry args={[0.05, 0.03, skyZ1 - skyZ0]} />
-            <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-          </mesh>
-        ))}
-        <mesh position={[0, height - 0.27, 0]}>
-          <boxGeometry args={[skyX1 - skyX0, 0.03, 0.05]} />
-          <meshStandardMaterial color="#f5f2eb" roughness={0.85} />
-        </mesh>
-        {/* Daylight: a real spotlight falling straight down through the
-            verrière, so a pool of daylight lands on the parquet. Narrower
-            and much stronger than before (the old wide, soft cone washed
-            out against the ambient and left no distinct pool), with a
-            harder edge so the pool reads. */}
-        <primitive object={skyTarget} />
-        <spotLight
-          position={[0, height - 0.3, 0]}
-          target={skyTarget}
-          angle={0.4}
-          penumbra={0.45}
-          intensity={180}
-          distance={16}
-          color="#e8f0ff"
-          castShadow={shadows ?? true}
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-          shadow-bias={-0.0002}
-          shadow-normalBias={0.02}
-          shadow-camera-near={0.5}
-          shadow-camera-far={16}
-        />
-        {/* Rectangular daylight pool on the parquet, under the verrière:
-            the size of the skylight opening grown by the light's spread.
-            A point spotlight projects a circular cone, so this soft
-            decal gives the pool the skylight's rectangular shape; the
-            brightened spotlight above makes it real light. */}
-        {poolTexture && (
-          <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
-            <planeGeometry args={[4.4, 3.0]} />
-            <meshBasicMaterial
-              map={poolTexture}
-              transparent
-              opacity={0.55}
-              blending={AdditiveBlending}
-              depthWrite={false}
-            />
-          </mesh>
-        )}
-        {/* Recessed ceiling spots in the coffers: the room's "Ceiling
-            spotlights · Spot Warm" setting now has visible luminaires —
-            a dark housing ring and a warm glowing lens set into the
-            coffer ceiling, each with its own warm spotlight, so the
-            ceiling is never bare and warm pools land on the parquet.
-            They sit in coffer centres (never on a beam, never crossing
-            one), around the skylight. */}
-        {recessedSpots.map(({ x, z }, i) => (
-          <group key={`recessed-${x}-${z}`}>
-            <primitive object={recessedTargets[i]} />
-            <mesh position={[x, height - 0.26, z]}>
-              <cylinderGeometry args={[0.1, 0.1, 0.04, 20]} />
-              <meshStandardMaterial color="#2b2b28" roughness={0.6} metalness={0.3} />
-            </mesh>
-            <mesh position={[x, height - 0.29, z]}>
-              <cylinderGeometry args={[0.065, 0.065, 0.02, 20]} />
-              <meshStandardMaterial color="#ffd9a0" emissive="#ffcf8a" emissiveIntensity={1.6} />
-            </mesh>
-            <spotLight
-              position={[x, height - 0.3, z]}
-              target={recessedTargets[i]}
-              angle={0.5}
-              penumbra={0.6}
-              intensity={28}
-              distance={9}
-              color="#ffd9a0"
-            />
-          </group>
-        ))}
-      </group>
-    );
-  }
-  return null;
-}
-
-// The Stone Gallery arch opening: 4 m wide (radius 2 m) with its
-// springing at 3.4 m. Scaled down if the room is too low to hold it —
-// the same scale the arch wall renderer and the walk collision use, so
-// the opening the visitor walks through matches the one they see.
-function archScale(height: number): number {
-  const fullApex = 3.4 + 2;
-  return height - 0.3 < fullApex ? Math.max(0.3, (height - 0.3) / fullApex) : 1;
-}
-
-// A partition wall pierced by a round arch (the Stone Gallery dividing
-// wall): a full-height stone wall with a real arched opening, not a
-// solid panel. The opening is 4 m wide with its springing at 3.4 m
-// (radius 2 m, apex 5.4 m), from the Three.js reference room; it scales
-// down if the room is too low to hold it. The wall is 0.7 m thick, like
-// the reference, and centred on the partition's (x, z) like the
-// rectangular partitions, so the editor's position / length /
-// orientation controls keep working on it.
-function ArchPartitionWall({
-  wall,
-  height,
-  wallTexture,
-  wallColor,
-  wallPBR,
-  highlight,
-  editable,
-  onWallSelect,
-  dragged,
-}: {
-  wall: PartitionWall;
-  height: number;
-  wallTexture?: Texture | null;
-  wallColor: string;
-  wallPBR: { roughness: number; envMapIntensity: number };
-  highlight: boolean;
-  editable?: boolean;
-  onWallSelect?: (id: string) => void;
-  dragged?: React.RefObject<boolean>;
-}) {
-  const shape = useMemo(() => {
-    const half = wall.length / 2;
-    const scale = archScale(height);
-    const springing = 3.4 * scale;
-    const radius = 2 * scale;
-    const outline = new Shape();
-    outline.moveTo(-half, 0);
-    outline.lineTo(half, 0);
-    outline.lineTo(half, height);
-    outline.lineTo(-half, height);
-    outline.lineTo(-half, 0);
-    const hole = new Path();
-    hole.moveTo(-radius, 0);
-    hole.lineTo(-radius, springing);
-    hole.absarc(0, springing, radius, Math.PI, 0, true);
-    hole.lineTo(radius, 0);
-    hole.lineTo(-radius, 0);
-    outline.holes.push(hole);
-    return outline;
-  }, [wall.length, height]);
-  // The extrude UVs are in metres (shape coordinates), not 0–1, so the
-  // shared wall texture — repeated 5×1.6 for the box walls — would tile
-  // far too densely here. Clone it with a 0.25 repeat, like the
-  // reference (wallMat(0.25, 0.25)): one tile covers ~4 m.
-  const archTexture = useMemo(() => {
-    if (!wallTexture) return undefined;
-    const tex = wallTexture.clone();
-    tex.repeat.set(0.25, 0.25);
-    tex.needsUpdate = true;
-    return tex;
-  }, [wallTexture]);
-  useEffect(() => () => {
-    archTexture?.dispose();
-  }, [archTexture]);
-  // The extrusion runs 0 → 0.7 m along local +z; offset the mesh so the
-  // wall is centred on (x, z). For a vertical wall the mesh is rotated
-  // 90°, which maps local +z onto world +x.
-  const position: [number, number, number] =
-    wall.orientation === "horizontal" ? [wall.x, 0, wall.z - 0.35] : [wall.x - 0.35, 0, wall.z];
-  const rotation: [number, number, number] =
-    wall.orientation === "horizontal" ? [0, 0, 0] : [0, Math.PI / 2, 0];
   return (
-    <mesh
-      position={position}
-      rotation={rotation}
-      receiveShadow
-      castShadow
-      onDoubleClick={(event) => {
-        if (!editable || !onWallSelect || dragged?.current) return;
-        event.stopPropagation();
-        onWallSelect(wall.id);
-      }}
-    >
-      <extrudeGeometry args={[shape, { depth: 0.7, bevelEnabled: false }]} />
-      <meshStandardMaterial
-        color={wallColor}
-        map={archTexture}
-        roughness={wallPBR.roughness}
-        envMapIntensity={wallPBR.envMapIntensity}
-        emissive={highlight ? "#ffffff" : "#000000"}
-        emissiveIntensity={highlight ? 0.16 : 0}
-      />
-    </mesh>
+    <group>
+      <mesh position={[0, 0.004, z + dir * 0.55]} rotation={[-Math.PI / 2, 0, dir < 0 ? Math.PI : 0]}>
+        <planeGeometry args={[len, 1.1]} />
+        <meshBasicMaterial
+          map={aoLin ?? undefined}
+          transparent
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-2}
+        />
+      </mesh>
+      <mesh position={[0, 0.04, z + dir * 0.02]}>
+        <boxGeometry args={[len - 0.2, 0.02, 0.03]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+    </group>
   );
 }
 
-function GalleryRoom({
+// The Sunlight Gallery room — the whole "Galerie lumière" scene, exact:
+// 22 × 26 m, 5 m high, procedural concrete floor, off-white walls, the
+// ceiling slab with its seven skylight openings (4 diffusers with a warm
+// point light each, 3 open sky panels hidden by default), the cloud sky
+// above, contact shadows and LED strips, three freestanding panels, two
+// pedestals with sculptures, the double door on the left wall and the
+// dark band on the right wall. Materials and finishes are fixed by the
+// design; the editor's finish fields do not alter them. The artworks
+// hang on the panels (and keep the SANAA frame system); the placeable
+// 3D elements stay functional.
+function SunlightRoom({
   room,
   offsetX,
   offsetZ,
-  hideBackWall,
-  hideFrontWall,
   artworks,
   selectedId,
   onSelect,
@@ -3017,9 +2259,6 @@ function GalleryRoom({
   onFloorClick,
   onWalkTo,
   dragged,
-  leftOpening,
-  rightOpening,
-  entrance,
   editable,
   onDragStart,
   onHoverChange,
@@ -3027,108 +2266,279 @@ function GalleryRoom({
   onSelectElement,
   onElementDragStart,
   onElementHover,
-  selectedWallId,
-  onWallSelect,
   showGrid,
   showMeasure,
-  multiSelectedIds,
   quality,
 }: {
   room: GalleryRoom;
   offsetX: number;
-  // World offset along Z (0 for every room except the Stone Gallery
-  // halves, which stack along Z — see roomPlanOffsets). Defaults to 0.
-  offsetZ?: number;
-  // The Stone Gallery halves share the arched dividing wall as their
-  // common boundary: the front room hides its back wall (the arch is
-  // the back boundary) and the back room hides its front wall (the
-  // same arch, rendered once by the front room, is the front boundary).
-  hideBackWall?: boolean;
-  hideFrontWall?: boolean;
+  offsetZ: number;
   artworks: Artwork[];
-  selectedId?: string;
+  selectedId?: string | null;
   onSelect?: (id: string, additive?: boolean) => void;
   walkable: boolean;
   onFloorClick?: (point: Vector3) => void;
+  // Walk to an artwork: stand 2.2 m in front of it, facing it
+  // (ArtworkFrame computes the stand point from the artwork).
   onWalkTo?: (point: Vector3, yaw: number) => void;
   dragged?: React.RefObject<boolean>;
-  leftOpening: "door" | "window" | "none" | "solid";
-  rightOpening: "door" | "window" | "solid";
-  entrance: boolean;
   editable?: boolean;
   onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
   onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
-  // Elements (editor): selection, drag and wall painting.
-  selectedElementId?: string;
+  selectedElementId?: string | null;
   onSelectElement?: (id: string, additive?: boolean) => void;
   onElementDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
   onElementHover?: (hover: { id: string; cursor: string } | null) => void;
-  selectedWallId?: string | null;
-  onWallSelect?: (wallId: WallId | string) => void;
-  // 3D builder (editor): 0.5 m floor grid and measurement guides.
   showGrid?: boolean;
   showMeasure?: boolean;
-  // 3D builder (editor): extra ids of a multi-selection, so every
-  // selected item shows its outline and resize handle.
-  multiSelectedIds?: string[];
-  // Photorealism: render-quality tier driving shadows, env and decals.
-  quality?: RenderQuality;
+  quality: RenderQuality;
 }) {
-  const { width, depth, height } = roomLayouts[room.layout];
-  const wallZ = -depth / 2;
-  // Per-wall paint: a painted wall keeps its own colour, the rest use the
-  // room's back / side wall colours.
-  const paint = room.wallPaint ?? {};
-  const backColor = paint.back ?? room.wallColor;
-  const leftColor = paint.left ?? room.sideWallColor;
-  const rightColor = paint.right ?? room.sideWallColor;
-  const frontColor = paint.front ?? room.sideWallColor;
-  const lights = LIGHT_PRESETS[room.lightType ?? "spot-warm"];
-  // Photorealism: PBR finishes per surface (the procedural canvas
-  // textures stay the colour maps) and the quality tier's shadow sizes.
-  const qualityCfg = RENDER_QUALITY_CONFIG[quality ?? "high"];
-  const floorPBR = surfacePBR(room.floorTexture, "floor");
-  const wallPBR = surfacePBR(room.wallTexture, "wall");
-  const ceilingPBR = surfacePBR(room.ceilingTexture, "ceiling");
-  const wallHighlight = (wallId: string) => selectedWallId === wallId;
-  const handleWallClick = (wallId: WallId | string) => {
-    if (!editable || !onWallSelect || dragged?.current) return;
-    onWallSelect(wallId);
+  const textures = useMemo(() => getSunlightTextures(), []);
+  // Ceiling slab: an extruded 28 × 30 rectangle with the seven skylight
+  // openings cut out (the source's shape + ExtrudeGeometry).
+  const slabGeometry = useMemo(() => {
+    const shape = new Shape();
+    shape.moveTo(-14, -16);
+    shape.lineTo(14, -16);
+    shape.lineTo(14, 14);
+    shape.lineTo(-14, 14);
+    shape.lineTo(-14, -16);
+    for (const [cx, cz, w, d] of SUNLIGHT_HOLES) {
+      const p = new Path();
+      const y0 = -cz - d / 2;
+      const y1 = -cz + d / 2;
+      p.moveTo(cx - w / 2, y0);
+      p.lineTo(cx + w / 2, y0);
+      p.lineTo(cx + w / 2, y1);
+      p.lineTo(cx - w / 2, y1);
+      p.lineTo(cx - w / 2, y0);
+      shape.holes.push(p);
+    }
+    return new ExtrudeGeometry(shape, { depth: 0.6, bevelEnabled: false });
+  }, []);
+  useEffect(() => () => slabGeometry.dispose(), [slabGeometry]);
+  // Sculpture geometries, jittered like the source's handmade clay.
+  const jit = (geo: BufferGeometry, amount: number) => {
+    const p = geo.attributes.position as BufferAttribute;
+    for (let i = 0; i < p.count; i++) {
+      p.setXYZ(
+        i,
+        p.getX(i) + sunlightRandom(-amount, amount),
+        p.getY(i) + sunlightRandom(-amount, amount),
+        p.getZ(i) + sunlightRandom(-amount, amount),
+      );
+    }
+    geo.computeVertexNormals();
+    return geo;
   };
-  const wallTexture = useMemo(() => createSurfaceTexture(room.wallTexture), [room.wallTexture]);
-  const floorTexture = useMemo(() => createSurfaceTexture(room.floorTexture), [room.floorTexture]);
-  const ceilingTexture = useMemo(() => createSurfaceTexture(room.ceilingTexture), [room.ceilingTexture]);
-  // Real parquet photo for the "parquet" floor finish (the procedural
-  // wood tile above is the fallback until the photo loads).
-  const parquetTexture = useParquetTexture(width, depth);
-  // The photo carries its own light-wood colours, so it renders
-  // un-tinted (white); the procedural tile is multiplied by the floor
-  // colour as before.
-  const floorTopMap = room.floorTexture === "parquet" ? (parquetTexture ?? floorTexture) : floorTexture;
-  const floorTopColor = room.floorTexture === "parquet" && parquetTexture ? "#ffffff" : room.floorColor;
-  // Freestanding panels reuse the wall's surface map at panel scale: the
-  // wall texture repeats 4x2 across a 22 m wall, so a shared instance
-  // would pack the formwork joints far too densely on a 1.7 m panel.
-  const panelTexture = useMemo(() => {
-    if (!wallTexture) return undefined;
-    const tex = wallTexture.clone();
-    tex.repeat.set(1, 1);
-    tex.needsUpdate = true;
-    return tex;
-  }, [wallTexture]);
-  useEffect(() => () => {
-    wallTexture?.dispose();
-    floorTexture?.dispose();
-    ceilingTexture?.dispose();
-    panelTexture?.dispose();
-  }, [ceilingTexture, floorTexture, panelTexture, wallTexture]);
-  const artworkNodes = useMemo(
-    () =>
-      artworks.map((artwork) => (
+  const bodyGeometry = useMemo(() => jit(new CylinderGeometry(0.2, 0.28, 0.9, 12, 8), 0.015), []);
+  const headGeometry = useMemo(() => jit(new SphereGeometry(0.2, 14, 10), 0.012), []);
+  const bustGeometry = useMemo(() => new SphereGeometry(0.14, 14, 10), []);
+  useEffect(
+    () => () => {
+      bodyGeometry.dispose();
+      headGeometry.dispose();
+      bustGeometry.dispose();
+    },
+    [bodyGeometry, headGeometry, bustGeometry],
+  );
+
+  // Clicking the floor or a wall starts the walk to that point (in walk
+  // mode). Wall clicks are pushed 1.6 m out from the wall so the camera
+  // does not stop against it.
+  const handleWalkClick = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      if (!walkable || dragged?.current) return;
+      event.stopPropagation();
+      const face = event.face;
+      const point = event.point.clone();
+      if (face) {
+        const n = face.normal.clone().transformDirection(event.object.matrixWorld);
+        if (Math.abs(n.y) < 0.5) point.addScaledVector(n, 1.6);
+      }
+      point.x = Math.max(
+        offsetX + SUNLIGHT_BOUNDS.minX,
+        Math.min(offsetX + SUNLIGHT_BOUNDS.maxX, point.x),
+      );
+      point.z = Math.max(
+        offsetZ + SUNLIGHT_BOUNDS.minZ,
+        Math.min(offsetZ + SUNLIGHT_BOUNDS.maxZ, point.z),
+      );
+      onFloorClick?.(point);
+    },
+    [walkable, dragged, offsetX, offsetZ, onFloorClick],
+  );
+
+  return (
+    <group position={[offsetX, 0, offsetZ]}>
+      {/* Concrete floor */}
+      <mesh position={[0, 0, SUNLIGHT_FLOOR_CENTER_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow onClick={handleWalkClick}>
+        <planeGeometry args={[SUNLIGHT_WIDTH, SUNLIGHT_DEPTH]} />
+        <meshStandardMaterial
+          map={textures.floor ?? undefined}
+          color={textures.floor ? "#ffffff" : SUNLIGHT_FLOOR_COLOR}
+          roughness={0.3}
+          metalness={0.05}
+          envMapIntensity={0.9}
+        />
+      </mesh>
+      {/* Walls: back, front, left, right (inner faces at z -14/12, x -11/11) */}
+      <mesh position={[0, 2.5, -14.15]} receiveShadow onClick={handleWalkClick}>
+        <boxGeometry args={[22, 5, 0.3]} />
+        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+      </mesh>
+      <mesh position={[0, 2.5, 12.15]} receiveShadow onClick={handleWalkClick}>
+        <boxGeometry args={[22, 5, 0.3]} />
+        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+      </mesh>
+      <mesh position={[-11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick}>
+        <boxGeometry args={[0.3, 5, 26]} />
+        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+      </mesh>
+      <mesh position={[11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick}>
+        <boxGeometry args={[0.3, 5, 26]} />
+        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+      </mesh>
+      {/* Ceiling slab with the seven skylight openings */}
+      <mesh geometry={slabGeometry} position={[0, SUNLIGHT_HEIGHT, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={SUNLIGHT_CEILING_COLOR} roughness={0.95} />
+      </mesh>
+      {/* Cloud sky, 30 m above the ceiling */}
+      <mesh position={[0, SUNLIGHT_HEIGHT + 30, -2]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[240, 240]} />
+        <meshBasicMaterial
+          map={textures.cloud ?? undefined}
+          color={textures.cloud ? "#ffffff" : "#bcd8f3"}
+          side={DoubleSide}
+        />
+      </mesh>
+      {/* Skylight panels: diffusers (white + warm point light) and open
+          sky panels (hidden by default); black trims around each opening. */}
+      {SUNLIGHT_HOLES.map(([cx, cz, w, d, kind]) => (
+        <group key={`${cx},${cz}`}>
+          <mesh
+            position={[cx, SUNLIGHT_HEIGHT + (kind === "s" ? 0.3 : 0.05), cz]}
+            rotation={[Math.PI / 2, 0, 0]}
+            castShadow={kind === "d"}
+            visible={kind !== "s"}
+          >
+            <planeGeometry args={[w, d]} />
+            {kind === "s" ? (
+              <meshBasicMaterial
+                map={textures.sky ?? undefined}
+                color={textures.sky ? "#ffffff" : "#a9cbee"}
+                side={DoubleSide}
+              />
+            ) : (
+              <meshBasicMaterial color="#ffffff" side={DoubleSide} />
+            )}
+          </mesh>
+          {kind === "d" && (
+            <pointLight position={[cx, SUNLIGHT_HEIGHT - 0.4, cz]} intensity={0.9} distance={14} decay={1.6} color="#fff6ea" />
+          )}
+          <mesh position={[cx, SUNLIGHT_HEIGHT - 0.01, cz + d / 2]}>
+            <boxGeometry args={[w + 0.1, 0.03, 0.05]} />
+            <meshStandardMaterial color="#111111" roughness={0.5} />
+          </mesh>
+          <mesh position={[cx, SUNLIGHT_HEIGHT - 0.01, cz - d / 2]}>
+            <boxGeometry args={[w + 0.1, 0.03, 0.05]} />
+            <meshStandardMaterial color="#111111" roughness={0.5} />
+          </mesh>
+          <mesh position={[cx + w / 2, SUNLIGHT_HEIGHT - 0.01, cz]}>
+            <boxGeometry args={[0.05, 0.03, d + 0.1]} />
+            <meshStandardMaterial color="#111111" roughness={0.5} />
+          </mesh>
+          <mesh position={[cx - w / 2, SUNLIGHT_HEIGHT - 0.01, cz]}>
+            <boxGeometry args={[0.05, 0.03, d + 0.1]} />
+            <meshStandardMaterial color="#111111" roughness={0.5} />
+          </mesh>
+        </group>
+      ))}
+      {/* Contact shadows + LED strips along the right, back and left
+          walls (not the front wall). */}
+      <group position={[11, 0, -1]} rotation={[0, -Math.PI / 2, 0]}>
+        <SunlightAoWall len={26} z={0} dir={1} aoLin={textures.aoLin} />
+      </group>
+      <group position={[0, 0, -14]} rotation={[0, 0, 0]}>
+        <SunlightAoWall len={22} z={0} dir={1} aoLin={textures.aoLin} />
+      </group>
+      <group position={[-11, 0, -1]} rotation={[0, Math.PI / 2, 0]}>
+        <SunlightAoWall len={26} z={0} dir={1} aoLin={textures.aoLin} />
+      </group>
+      {/* Three freestanding panels, with contact shadows and LEDs on
+          both sides. Artworks hang on them. */}
+      {SUNLIGHT_PANELS.map((panel) => (
+        <group key={`${panel.x},${panel.z}`} position={[panel.x, 0, panel.z]} rotation={[0, panel.ry, 0]}>
+          <mesh position={[0, 2.2, 0]} castShadow receiveShadow onClick={handleWalkClick}>
+            <boxGeometry args={[panel.len, 4.4, 0.3]} />
+            <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+          </mesh>
+          <SunlightAoWall len={panel.len} z={0.15} dir={1} aoLin={textures.aoLin} />
+          <SunlightAoWall len={panel.len} z={-0.15} dir={-1} aoLin={textures.aoLin} />
+        </group>
+      ))}
+      {/* Two pedestals with their radial contact shadows */}
+      {SUNLIGHT_PEDESTALS.map((pedestal) => (
+        <group key={`${pedestal.x},${pedestal.z}`}>
+          <mesh position={[pedestal.x, pedestal.h / 2, pedestal.z]} castShadow receiveShadow>
+            <boxGeometry args={[pedestal.w, pedestal.h, pedestal.w]} />
+            <meshStandardMaterial color="#f8f8f6" roughness={0.85} />
+          </mesh>
+          <mesh position={[pedestal.x, 0.005, pedestal.z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[pedestal.w * 2.6, pedestal.w * 2.6]} />
+            <meshBasicMaterial
+              map={textures.aoRad ?? undefined}
+              transparent
+              depthWrite={false}
+              polygonOffset
+              polygonOffsetFactor={-2}
+            />
+          </mesh>
+        </group>
+      ))}
+      {/* Sculptures: a terracotta figure (cylinder + sphere head) on the
+          first pedestal, a dark bust on the second. */}
+      <mesh position={[-3, 1.6, 3]} geometry={bodyGeometry} castShadow>
+        <meshStandardMaterial color="#b4673c" roughness={0.75} />
+      </mesh>
+      <mesh position={[-3, 2.2, 3]} geometry={headGeometry} castShadow>
+        <meshStandardMaterial color="#b4673c" roughness={0.75} />
+      </mesh>
+      <mesh position={[-8, 1.05, 0.5]} geometry={bustGeometry} castShadow>
+        <meshStandardMaterial color="#2a2622" roughness={0.5} />
+      </mesh>
+      {/* Double door on the left wall (the exit into the mini-plan's
+          room switch). */}
+      {[-0.55, 0.55].map((dx) => (
+        <mesh key={dx} position={[-10.95, 1.2, -11 + dx]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
+          <boxGeometry args={[1, 2.4, 0.08]} />
+          <meshStandardMaterial color="#a5a8ac" roughness={0.45} metalness={0.4} />
+        </mesh>
+      ))}
+      {/* Dark band on the right wall: a narrow decorative element. */}
+      <group position={[10.84, 1.8, -3]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.35, 2.4, 0.05]} />
+          <meshStandardMaterial color="#eeeeee" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 0, 0.026]}>
+          <planeGeometry args={[0.35, 2.4]} />
+          <meshStandardMaterial
+            map={textures.dark ?? undefined}
+            color={textures.dark ? "#ffffff" : "#3a3a3a"}
+            roughness={0.7}
+          />
+        </mesh>
+      </group>
+      {/* Artworks — the SANAA frame system, unchanged. ArtworkFrame
+          reads the position, rotation and scale from the artwork
+          itself, and in walk mode it walks up to the artwork (2.2 m
+          in front, facing it) before selecting it. */}
+      {artworks.map((artwork) => (
         <ArtworkFrame
           key={artwork.id}
           artwork={artwork}
-          selected={artwork.id === selectedId || (multiSelectedIds ?? []).includes(artwork.id)}
+          selected={selectedId === artwork.id}
           onSelect={onSelect}
           walkable={walkable}
           onWalkTo={onWalkTo}
@@ -3139,223 +2549,61 @@ function GalleryRoom({
           onDragStart={onDragStart}
           onHoverChange={onHoverChange}
         />
-      )),
-    [artworks, dragged, editable, multiSelectedIds, offsetX, offsetZ, onDragStart, onHoverChange, onSelect, onWalkTo, selectedId, walkable],
-  );
-
-  return (
-    <group position={[offsetX, 0, offsetZ ?? 0]}>
-      <mesh position={[0, height - 0.12, 0]} receiveShadow>
-        <boxGeometry args={[width, 0.24, depth]} />
-        <meshStandardMaterial color={room.ceilingColor} map={ceilingTexture} roughness={ceilingPBR.roughness} envMapIntensity={ceilingPBR.envMapIntensity} />
-      </mesh>
-      <mesh
-        position={[0, -0.09, 0]}
-        receiveShadow
-        onClick={(event) => {
-          if (!walkable || dragged?.current) return;
-          event.stopPropagation();
-          onFloorClick?.(event.point);
-        }}
-      >
-        <boxGeometry args={[width, 0.18, depth]} />
-        <meshStandardMaterial attach="material-0" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
-        <meshStandardMaterial attach="material-1" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
-        <meshStandardMaterial attach="material-2" color={floorTopColor} map={floorTopMap} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
-        <meshStandardMaterial attach="material-3" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
-        <meshStandardMaterial attach="material-4" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
-        <meshStandardMaterial attach="material-5" color={room.floorColor} roughness={floorPBR.roughness} envMapIntensity={floorPBR.envMapIntensity} />
-      </mesh>
-      {/* The back wall — hidden for the Stone Gallery front half, whose
-          back boundary is the arched dividing wall (a partition), not a
-          solid wall. */}
-      {!hideBackWall && (
-      <mesh
-        position={[0, height / 2, wallZ]}
-        receiveShadow
-        onDoubleClick={(event) => {
-          if (!editable || !onWallSelect || dragged?.current) return;
-          event.stopPropagation();
-          onWallSelect("back");
-        }}
-      >
-        <boxGeometry args={[width, height, 0.25]} />
-        <meshStandardMaterial color={backColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("back") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("back") ? 0.16 : 0} />
-      </mesh>
-      )}
-      <WallWithOpening
-        x={-width / 2}
-        depth={depth}
-        height={height}
-        color={leftColor}
-        texture={wallTexture}
-        opening={leftOpening}
-        wallId="left"
-        highlight={wallHighlight("left")}
-        onWallClick={editable ? handleWallClick : undefined}
-        dragged={dragged}
-        pbr={wallPBR}
-      />
-      <WallWithOpening
-        x={width / 2}
-        depth={depth}
-        height={height}
-        color={rightColor}
-        texture={wallTexture}
-        opening={rightOpening}
-        wallId="right"
-        highlight={wallHighlight("right")}
-        onWallClick={editable ? handleWallClick : undefined}
-        dragged={dragged}
-        pbr={wallPBR}
-      />
-      {/* The front wall — hidden for the Stone Gallery back half, whose
-          front boundary is the arched dividing wall (rendered once by
-          the front room), not a solid wall. */}
-      {!hideFrontWall && (entrance ? (
-        <group position={[0, 0, depth / 2]}>
-          <mesh
-            position={[-(width + 1.65) / 4, height / 2, 0]}
-            receiveShadow
-            onDoubleClick={(event) => {
-              if (!editable || !onWallSelect || dragged?.current) return;
-              event.stopPropagation();
-              onWallSelect("front");
-            }}
-          >
-            <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
-          </mesh>
-          <mesh
-            position={[(width + 1.65) / 4, height / 2, 0]}
-            receiveShadow
-            onDoubleClick={(event) => {
-              if (!editable || !onWallSelect || dragged?.current) return;
-              event.stopPropagation();
-              onWallSelect("front");
-            }}
-          >
-            <boxGeometry args={[(width - 1.65) / 2, height, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
-          </mesh>
-          <mesh position={[0, (height + 2.5) / 2, 0]} receiveShadow>
-            <boxGeometry args={[1.65, height - 2.5, 0.22]} />
-            <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} />
-          </mesh>
-        </group>
-      ) : (
-        <mesh
-          position={[0, height / 2, depth / 2]}
-          receiveShadow
-          onDoubleClick={(event) => {
-            if (!editable || !onWallSelect || dragged?.current) return;
-            event.stopPropagation();
-            onWallSelect("front");
-          }}
-        >
-          <boxGeometry args={[width, height, 0.22]} />
-          <meshStandardMaterial color={frontColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight("front") ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight("front") ? 0.16 : 0} />
-        </mesh>
       ))}
-      {room.partitionWalls.map((wall) =>
-        wall.shape === "arch" ? (
-          <ArchPartitionWall
-            key={wall.id}
-            wall={wall}
-            height={height}
-            wallTexture={wallTexture}
-            wallColor={wall.color ?? room.sideWallColor}
-            wallPBR={wallPBR}
-            highlight={wallHighlight(wall.id)}
-            editable={editable}
-            onWallSelect={onWallSelect}
-            dragged={dragged}
-          />
-        ) : (
-          <mesh
-            key={wall.id}
-            position={[wall.x, (height - 0.25) / 2, wall.z]}
-            receiveShadow
-            castShadow
-            onDoubleClick={(event) => {
-              if (!editable || !onWallSelect || dragged?.current) return;
-              event.stopPropagation();
-              onWallSelect(wall.id);
-            }}
-          >
-            <boxGeometry
-              args={wall.orientation === "horizontal"
-                ? [wall.length, height - 0.25, 0.18]
-                : [0.18, height - 0.25, wall.length]}
-            />
-            <meshStandardMaterial color={wall.color ?? room.sideWallColor} map={wallTexture} roughness={wallPBR.roughness} envMapIntensity={wallPBR.envMapIntensity} emissive={wallHighlight(wall.id) ? "#ffffff" : "#000000"} emissiveIntensity={wallHighlight(wall.id) ? 0.16 : 0} />
-          </mesh>
-        ),
-      )}
-      {room.spotlights && (artworks.length > 0 ? (
-        // One ceiling spotlight per artwork, aimed at the work itself —
-        // from the ceiling, 1.5 m out from the wall, so every piece gets
-        // its own pool of light (back wall and side walls alike). The
-        // colour and strength follow the room's light type; soft ambient
-        // keeps only the fixture, no beam.
-        artworks.map((artwork) => {
-          const [ax, ay, az] = artwork.position;
-          const nx = Math.sin(artwork.rotation);
-          const nz = Math.cos(artwork.rotation);
-          return (
-            <GallerySpotlight
-              key={artwork.id}
-              x={ax + nx * 1.5}
-              y={height - 0.25}
-              z={az + nz * 1.5}
-              targetZ={az}
-              targetPoint={[ax, ay, az]}
-              color={lights.spotColor}
-              intensity={lights.spotIntensity}
-              lightOn={room.lightType !== "ambient"}
-              castShadow={qualityCfg.shadows}
-              shadowMapSize={qualityCfg.spotShadowMapSize}
-            />
-          );
-        })
-      ) : (
-        Array.from({ length: Math.max(2, Math.floor(width / 5)) }, (_, index) => {
-          const spots = Math.max(2, Math.floor(width / 5));
-          const x = -width / 2 + ((index + 1) * width) / (spots + 1);
-          return <GallerySpotlight key={index} x={x} y={height - 0.2} z={0} targetZ={wallZ + 1} color={lights.spotColor} intensity={lights.spotIntensity} lightOn={room.lightType !== "ambient"} castShadow={qualityCfg.shadows} shadowMapSize={qualityCfg.spotShadowMapSize} />;
-        })
-      ))}
-      {room.curatorialText && (
-        <group position={[0, height - 0.65, wallZ + 0.14]}>
-          {/* Canvas texture, like wall text: the old troika <Text> here
-              carried the same suspend-the-scene failure. */}
-          <CuratorialTextPlane text={room.curatorialText} maxWidthM={Math.min(width - 2, 9)} wallColor={room.wallColor} />
-        </group>
-      )}
-      <RoomFeatures layout={room.layout} width={width} depth={depth} height={height} panelTexture={panelTexture} panelColor={backColor} panelPBR={wallPBR} contactDecals={qualityCfg.contactDecals} shadows={qualityCfg.shadows} />
-      {showGrid && <FloorGrid width={width} depth={depth} />}
-      {showMeasure && <MeasurementGuides artworks={artworks} selectedId={selectedId} width={width} depth={depth} />}
-      {artworkNodes}
-      {(room.elements ?? []).map((element) => (
+      {/* Placeable 3D elements — the Asset Library, unchanged. */}
+      {room.elements?.map((element) => (
         <ElementMesh
           key={element.id}
           element={element}
           room={room}
-          selected={element.id === selectedElementId || (multiSelectedIds ?? []).includes(element.id)}
-          onSelect={onSelectElement}
           walkable={walkable}
-          dragged={dragged}
+          onSelect={onSelectElement}
+          selected={selectedElementId === element.id}
           editable={editable}
           onDragStart={onElementDragStart}
           onHoverChange={onElementHover}
           quality={quality}
         />
       ))}
+      {/* Measurement guides and the editor grid, as before. The grid
+          is centred on the room (floor centre z = -1); the guides get
+          the room's z centre so wall distances stay exact. */}
+      {showMeasure && (
+        <MeasurementGuides artworks={artworks} selectedId={selectedId ?? undefined} width={SUNLIGHT_WIDTH} depth={SUNLIGHT_DEPTH} zCenter={SUNLIGHT_FLOOR_CENTER_Z} />
+      )}
+      {showGrid && (
+        <group position={[0, 0, SUNLIGHT_FLOOR_CENTER_Z]}>
+          <FloorGrid width={SUNLIGHT_WIDTH} depth={SUNLIGHT_DEPTH} />
+        </group>
+      )}
+      {/* Curatorial text on the back wall, when set (0.14 m in front
+          of the wall face, like the old rooms). */}
+      {room.curatorialText && (
+        <group position={[0, SUNLIGHT_HEIGHT - 0.65, -13.86]}>
+          <CuratorialTextPlane text={room.curatorialText} maxWidthM={9} wallColor={SUNLIGHT_WALL_COLOR} />
+        </group>
+      )}
     </group>
   );
 }
+// Start position of a Sunlight room (world coordinates): the source's
+// camera start, offset by the room's world offset.
+function sunlightEntrance(offsets: number[], zOffsets: number[] | undefined, index: number): { x: number; z: number } {
+  return {
+    x: offsets[index] + SUNLIGHT_CAMERA_START.x,
+    z: (zOffsets?.[index] ?? 0) + SUNLIGHT_CAMERA_START.z,
+  };
+}
 
-function WalkControls({
+// First-person walk — the source's navigation, exact: drag to look
+// (yaw/pitch), WASD/arrows or on-screen buttons to move (3 m/s), click
+// the floor or a wall to walk to the target (marker ring), click an
+// artwork to open its sheet. Camera start (3.5, 1.65, 10.5), yaw .3,
+// pitch -.04. Collisions via the Sunlight blocks (panels + pedestals)
+// with the rotated-rectangle hit test; the camera is bounded inside
+// the room. Rooms are switched by teleport (mini-plan / room list),
+// never by walking through a wall — the Sunlight walls are solid.
+function SunlightWalkControls({
   rooms,
   activeRoomId,
   offsets,
@@ -3371,51 +2619,39 @@ function WalkControls({
   rooms: GalleryRoom[];
   activeRoomId: string;
   offsets: number[];
-  // World offset along Z per room (0 for every room except the Stone
-  // Gallery halves, which stack along Z — see roomPlanOffsets).
-  // Defaults to all 0, so rooms centred on z = 0 behave as before.
   zOffsets?: number[];
-  input: React.RefObject<Set<string>>;
-  destination: React.RefObject<Vector3 | null>;
-  // Yaw to face once the destination is reached (e.g. an artwork just
-  // clicked): the camera turns toward it while walking.
-  lookYaw: React.RefObject<number | null>;
-  // Set while the pointer drags (look around): a drag must not also count
-  // as a click-to-walk on the floor or an artwork.
-  dragged: React.RefObject<boolean>;
+  input: { current: Set<string> };
+  destination: { current: Vector3 | null };
+  lookYaw: { current: number | null };
+  dragged: { current: boolean };
   enabled: boolean;
-  onRoomChange?: (id: string) => void;
-  // Increment to send the visitor back to the entrance (room 1, start
-  // position, facing the back wall).
-  resetSignal?: React.RefObject<number>;
+  onRoomChange?: (roomId: string) => void;
+  resetSignal?: { current: number };
 }) {
   const { camera, gl } = useThree();
+  const yawRef = useRef(SUNLIGHT_CAMERA_START.yaw);
+  const pitchRef = useRef(SUNLIGHT_CAMERA_START.pitch);
   const currentRoomIndex = useRef(Math.max(0, rooms.findIndex((room) => room.id === activeRoomId)));
   const handledRoomId = useRef(activeRoomId);
-  // The frame loop runs outside React renders, so it must never call a
-  // possibly stale onRoomChange closure: the arch switch can fire
-  // inside the scene while the header, panel and artworks stay on the
-  // old room. This ref is refreshed on every render, and the frame
-  // loop only ever calls through it.
   const onRoomChangeRef = useRef(onRoomChange);
   onRoomChangeRef.current = onRoomChange;
   const initialized = useRef(false);
-  const velocity = useRef(new Vector3());
-  const direction = useRef(new Vector3());
-  const right = useRef(new Vector3());
-  const stuckTime = useRef(0);
-  const lastKey = useRef<string | null>(null);
   const lastReset = useRef(resetSignal?.current ?? 0);
-
-  // World Z offset of a room (0 unless it is a Stone Gallery half).
+  const markerRef = useRef<Mesh>(null);
   const zOffsetOf = (index: number) => zOffsets?.[index] ?? 0;
 
+  // First mount: place the camera at the start. A room change (teleport
+  // from the mini-plan or the room list) re-places it at the new room's
+  // start. Rooms are never entered by walking through a wall.
   useEffect(() => {
     if (!initialized.current) {
       const startIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoomId));
-      const startRoom = rooms[startIndex];
-      camera.position.set(offsets[startIndex], 1.65, zOffsetOf(startIndex) + roomLayouts[startRoom.layout].depth / 2 - 1.5);
-      camera.rotation.set(0, 0, 0);
+      const start = sunlightEntrance(offsets, zOffsets, startIndex);
+      camera.position.set(start.x, SUNLIGHT_CAMERA_START.y, start.z);
+      camera.rotation.order = "YXZ";
+      yawRef.current = SUNLIGHT_CAMERA_START.yaw;
+      pitchRef.current = SUNLIGHT_CAMERA_START.pitch;
+      camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
       currentRoomIndex.current = startIndex;
       handledRoomId.current = activeRoomId;
       initialized.current = true;
@@ -3423,31 +2659,22 @@ function WalkControls({
     }
     const requestedIndex = rooms.findIndex((room) => room.id === activeRoomId);
     if (requestedIndex < 0) return;
-    // A room change the frame loop already made — walking through the
-    // arch or a doorway — must never move the camera: the visitor is
-    // already standing in the new room. The loop sets both the internal
-    // index and the handled id before calling onRoomChange, so when the
-    // parent's active room catches up the index already matches. Only
-    // sync the handled id and leave the camera exactly where it is.
-    // The camera is repositioned to the room entrance solely for a
-    // parent-initiated switch (floor-plan / room-list click, reset),
-    // where the frame loop has not moved the internal index.
     if (handledRoomId.current === activeRoomId || currentRoomIndex.current === requestedIndex) {
       handledRoomId.current = activeRoomId;
       return;
     }
-    const room = rooms[requestedIndex];
-    const { depth } = roomLayouts[room.layout];
-    camera.position.set(
-      offsets[requestedIndex],
-      1.65,
-      zOffsetOf(requestedIndex) + depth / 2 - 1.5,
-    );
-    camera.rotation.set(0, 0, 0);
+    const start = sunlightEntrance(offsets, zOffsets, requestedIndex);
+    camera.position.set(start.x, SUNLIGHT_CAMERA_START.y, start.z);
+    yawRef.current = SUNLIGHT_CAMERA_START.yaw;
+    pitchRef.current = SUNLIGHT_CAMERA_START.pitch;
+    camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
+    destination.current = null;
+    lookYaw.current = null;
     currentRoomIndex.current = requestedIndex;
     handledRoomId.current = activeRoomId;
-  }, [activeRoomId, camera, offsets, rooms, zOffsets]);
+  }, [activeRoomId, camera, destination, lookYaw, offsets, rooms, zOffsets]);
 
+  // Keyboard (WASD / arrows) and drag-to-look on the canvas.
   useEffect(() => {
     if (!enabled) {
       input.current.clear();
@@ -3459,7 +2686,6 @@ function WalkControls({
       if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
         event.preventDefault();
         input.current.add(event.code);
-        lastKey.current = event.code;
       }
     };
     const keyUp = (event: KeyboardEvent) => input.current.delete(event.code);
@@ -3467,7 +2693,6 @@ function WalkControls({
     window.addEventListener("keydown", keyDown);
     window.addEventListener("keyup", keyUp);
     window.addEventListener("blur", clearKeys);
-
     let pointerId: number | undefined;
     let lastX = 0;
     let lastY = 0;
@@ -3485,16 +2710,15 @@ function WalkControls({
     };
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
-      if (Math.abs(event.clientX - downX) > 6 || Math.abs(event.clientY - downY) > 6) {
-        dragged.current = true;
-      }
-      camera.rotation.order = "YXZ";
-      camera.rotation.y -= (event.clientX - lastX) * 0.004;
-      camera.rotation.x = MathUtils.clamp(camera.rotation.x - (event.clientY - lastY) * 0.004, -1.35, 1.35);
+      if (Math.abs(event.clientX - downX) > 6 || Math.abs(event.clientY - downY) > 6) dragged.current = true;
+      yawRef.current -= (event.clientX - lastX) * 0.004;
+      pitchRef.current = MathUtils.clamp(pitchRef.current - (event.clientY - lastY) * 0.004, -1.2, 1.2);
       lastX = event.clientX;
       lastY = event.clientY;
     };
-    const onPointerUp = () => { pointerId = undefined; };
+    const onPointerUp = () => {
+      pointerId = undefined;
+    };
     gl.domElement.addEventListener("pointerdown", onPointerDown);
     gl.domElement.addEventListener("pointermove", onPointerMove);
     gl.domElement.addEventListener("pointerup", onPointerUp);
@@ -3510,276 +2734,101 @@ function WalkControls({
     };
   }, [camera, dragged, enabled, gl, input]);
 
-  useFrame((_, delta) => {
-    if (!enabled) return;
-    // "Back to the entrance": put the visitor at the first room's start
-    // position, facing the back wall, and clear any walk target.
+  useFrame((state, delta) => {
+    const marker = markerRef.current;
+    if (!enabled) {
+      if (marker) marker.visible = false;
+      return;
+    }
+    // Reset to the entrance (first room, start yaw).
     if (resetSignal && resetSignal.current !== lastReset.current) {
       lastReset.current = resetSignal.current;
-      const targetRoom = rooms[0];
-      const { depth } = roomLayouts[targetRoom.layout];
-      camera.position.set(offsets[0], 1.65, zOffsetOf(0) + depth / 2 - 1.5);
-      camera.rotation.set(0, 0, 0);
+      const start = sunlightEntrance(offsets, zOffsets, 0);
+      camera.position.set(start.x, SUNLIGHT_CAMERA_START.y, start.z);
+      yawRef.current = SUNLIGHT_CAMERA_START.yaw;
+      pitchRef.current = SUNLIGHT_CAMERA_START.pitch;
       destination.current = null;
       lookYaw.current = null;
-      velocity.current.set(0, 0, 0);
       if (currentRoomIndex.current !== 0) {
         currentRoomIndex.current = 0;
-        handledRoomId.current = targetRoom.id;
-        onRoomChangeRef.current?.(targetRoom.id);
+        handledRoomId.current = rooms[0].id;
+        onRoomChangeRef.current?.(rooms[0].id);
       }
-      return;
     }
-    // No continuous reconciliation here: the active room changes only
-    // on the actual arch / doorway crossing (the threshold switch
-    // below), which keeps the camera exactly where the visitor is
-    // standing. Re-asserting the room from the camera's world Z every
-    // frame re-fired onRoomChange and, through the parent, could reset
-    // the camera to the room entrance instead of only switching the
-    // active room — the snap-back at the arch. The threshold switch
-    // already calls onRoomChange through the ref, so a missed switch
-    // cannot strand the header on the old room.
     const keys = input.current;
-    const forwardInput = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
-    const sideInput = Number(keys.has("KeyD") || keys.has("ArrowRight")) - Number(keys.has("KeyA") || keys.has("ArrowLeft"));
-    const destinationPoint = destination.current;
-    if (!forwardInput && !sideInput && !destinationPoint) return;
-
-    if (forwardInput || sideInput) {
-      destination.current = null;
-      lookYaw.current = null;
-      direction.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
-      direction.current.y = 0;
-      direction.current.normalize();
-      right.current.crossVectors(direction.current, camera.up).normalize();
-      velocity.current.set(0, 0, 0)
-        .addScaledVector(direction.current, forwardInput)
-        .addScaledVector(right.current, sideInput)
-        .normalize();
-    } else if (destinationPoint) {
-      // A destination in the other Stone Gallery half is reached through
-      // the arched opening, not in a straight line: walking straight at
-      // an off-centre destination drives the visitor into the solid wall
-      // beside the arch and they stop at the threshold. Route via the
-      // centre of the arch (world x = the pair's X, world z = −1) first;
-      // once the camera is close to the arch centre (or already through
-      // it, in the destination's room) the real destination takes over.
-      let targetPoint = destinationPoint;
-      let routingViaArch = false;
-      const destRoomIndex = (() => {
-        for (let i = 0; i < rooms.length; i++) {
-          const { width: w, depth: d } = roomLayouts[rooms[i].layout];
-          if (Math.abs(destinationPoint.x - offsets[i]) <= w / 2 && Math.abs(destinationPoint.z - zOffsetOf(i)) <= d / 2) return i;
-        }
-        return -1;
-      })();
-      const hereIndex = currentRoomIndex.current;
-      const isStonePairCrossing =
-        destRoomIndex >= 0 && destRoomIndex !== hereIndex &&
-        ((rooms[hereIndex].layout === "stone-gallery-front" && rooms[destRoomIndex].layout === "stone-gallery-back") ||
-          (rooms[hereIndex].layout === "stone-gallery-back" && rooms[destRoomIndex].layout === "stone-gallery-front"));
-      if (isStonePairCrossing) {
-        const frontIndex = rooms[hereIndex].layout === "stone-gallery-front" ? hereIndex : destRoomIndex;
-        const archX = offsets[frontIndex];
-        const archZ = -1;
-        const distToArch = Math.hypot(camera.position.x - archX, camera.position.z - archZ);
-        if (distToArch > 0.6) {
-          targetPoint = new Vector3(archX, 0, archZ);
-          routingViaArch = true;
-        }
-      }
-      direction.current.set(targetPoint.x - camera.position.x, 0, targetPoint.z - camera.position.z);
-      if (direction.current.length() < 0.2) {
-        // Arrived at the real destination — clear it. Arriving at the
-        // arch waypoint never clears it: the waypoint is only a via
-        // point, and the camera is already within 0.6 m of it when the
-        // real destination takes over, so this branch is only reached
-        // for the real destination.
-        if (!routingViaArch) {
-          destination.current = null;
-          lookYaw.current = null;
-        }
-        return;
-      }
-      direction.current.normalize();
-      velocity.current.copy(direction.current);
-      // Turn to face the destination (e.g. the artwork just clicked) while
-      // walking toward it — only once heading for the real destination,
-      // not while routing through the arch.
-      if (!routingViaArch && lookYaw.current !== null) {
-        const step = Math.min(delta, 0.05) * 2.5;
-        let diff = lookYaw.current - camera.rotation.y;
-        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        camera.rotation.y += MathUtils.clamp(diff, -step, step);
-      }
-    }
-    velocity.current.multiplyScalar(Math.min(delta, 0.05) * 4);
-    const startX = camera.position.x;
-    const startZ = camera.position.z;
-
+    const fw = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
+    const st = Number(keys.has("KeyD")) - Number(keys.has("KeyA"));
+    // Arrow keys turn the view (the source's navigation).
+    if (keys.has("ArrowLeft")) yawRef.current += delta * 1.5;
+    if (keys.has("ArrowRight")) yawRef.current -= delta * 1.5;
     const roomIndex = currentRoomIndex.current;
-    const room = rooms[roomIndex];
-    const { width, depth } = roomLayouts[room.layout];
-    let nextX = camera.position.x + velocity.current.x;
-    let nextZ = camera.position.z + velocity.current.z;
-    // Walls, partitions and room bounds are LOCAL to the room; the
-    // camera moves in WORLD coordinates. Convert z (and x) to the
-    // room's local frame before comparing — a Stone Gallery half sits
-    // at a Z offset, so world z is not local z.
-    const roomZ = zOffsetOf(roomIndex);
-    const localX = camera.position.x - offsets[roomIndex];
-    const targetX = nextX - offsets[roomIndex];
-    const localZ = camera.position.z - roomZ;
-    let targetZ = nextZ - roomZ;
-    for (const wall of room.partitionWalls) {
-      if (wall.orientation === "horizontal") {
-        const crossesWall = Math.min(localZ, targetZ) <= wall.z + 0.2
-          && Math.max(localZ, targetZ) >= wall.z - 0.2;
-        let overlapsWall = Math.min(localX, targetX) <= wall.x + wall.length / 2 + 0.35
-          && Math.max(localX, targetX) >= wall.x - wall.length / 2 - 0.35;
-        if (wall.shape === "arch") {
-          // The arch opening is a real passage: only the solid parts of
-          // the wall (outside the opening) block the visitor. The solid
-          // parts end exactly at the opening edges — the 0.35 body
-          // margin must not shrink the opening itself, or the visitor
-          // sees a 4 m opening they cannot walk through at its edges
-          // (the camera stopped at the threshold). The margin stays on
-          // the outer ends only, so the camera never clips the side walls.
-          const openingHalf = 2 * archScale(roomLayouts[room.layout].height);
-          const segMin = Math.min(localX, targetX);
-          const segMax = Math.max(localX, targetX);
-          const overlapsLeftSolid = segMin <= wall.x - openingHalf && segMax >= wall.x - wall.length / 2 - 0.35;
-          const overlapsRightSolid = segMin <= wall.x + wall.length / 2 + 0.35 && segMax >= wall.x + openingHalf;
-          overlapsWall = overlapsLeftSolid || overlapsRightSolid;
-        }
-        if (crossesWall && overlapsWall) {
-          nextZ = camera.position.z;
-          targetZ = localZ;
-        }
-      } else {
-        const crossesWall = Math.min(localX, targetX) <= wall.x + 0.2
-          && Math.max(localX, targetX) >= wall.x - 0.2;
-        let overlapsWall = Math.min(localZ, targetZ) <= wall.z + wall.length / 2 + 0.35
-          && Math.max(localZ, targetZ) >= wall.z - wall.length / 2 - 0.35;
-        if (wall.shape === "arch") {
-          // Same arch passage, turned 90°: the opening runs along z.
-          // The solid parts end exactly at the opening edges (see above).
-          const openingHalf = 2 * archScale(roomLayouts[room.layout].height);
-          const segMin = Math.min(localZ, targetZ);
-          const segMax = Math.max(localZ, targetZ);
-          const overlapsLeftSolid = segMin <= wall.z - openingHalf && segMax >= wall.z - wall.length / 2 - 0.35;
-          const overlapsRightSolid = segMin <= wall.z + wall.length / 2 + 0.35 && segMax >= wall.z + openingHalf;
-          overlapsWall = overlapsLeftSolid || overlapsRightSolid;
-        }
-        if (crossesWall && overlapsWall) {
-          nextX = camera.position.x;
-        }
-      }
-    }
-    // Movable partition walls (Elements) block the visitor the same way:
-    // a wall running along X is horizontal, along Z is vertical, judged
-    // from its rotation.
-    for (const element of room.elements ?? []) {
-      if (element.type !== "partition") continue;
-      const effectiveLength = element.length * element.scale;
-      const horizontal = Math.abs(Math.sin(element.rotation)) < 0.5;
-      if (horizontal) {
-        const crossesWall = Math.min(localZ, targetZ) <= element.z + 0.2
-          && Math.max(localZ, targetZ) >= element.z - 0.2;
-        const overlapsWall = Math.min(localX, targetX) <= element.x + effectiveLength / 2 + 0.35
-          && Math.max(localX, targetX) >= element.x - effectiveLength / 2 - 0.35;
-        if (crossesWall && overlapsWall) {
-          nextZ = camera.position.z;
-          targetZ = localZ;
-        }
-      } else {
-        const crossesWall = Math.min(localX, targetX) <= element.x + 0.2
-          && Math.max(localX, targetX) >= element.x - 0.2;
-        const overlapsWall = Math.min(localZ, targetZ) <= element.z + effectiveLength / 2 + 0.35
-          && Math.max(localZ, targetZ) >= element.z - effectiveLength / 2 - 0.35;
-        if (crossesWall && overlapsWall) {
-          nextX = camera.position.x;
-        }
-      }
-    }
-    // The Stone Gallery halves: the arch is the passage between them,
-    // along Z. While the visitor is inside the arch opening, the bound
-    // on the arch side relaxes to the wall itself (the arched tunnel),
-    // so they can walk up to and through it; outside the opening the
-    // normal margin applies and the solid wall blocks them.
-    const isStoneFront = room.layout === "stone-gallery-front";
-    const isStoneBack = room.layout === "stone-gallery-back";
-    const archOpeningHalf = (isStoneFront || isStoneBack) ? 2 * archScale(roomLayouts[room.layout].height) : 0;
-    const inArchOpening = (isStoneFront || isStoneBack) && Math.abs(localX) < archOpeningHalf && Math.abs(targetX) < archOpeningHalf;
-    const leftEdge = offsets[roomIndex] - width / 2 + 0.45;
-    const rightEdge = offsets[roomIndex] + width / 2 - 0.45;
-    const frontEdge = isStoneBack && inArchOpening ? depth / 2 : depth / 2 - 0.45;
-    const backEdge = isStoneFront && inArchOpening ? -depth / 2 : -depth / 2 + 0.55;
-
-    // Crossing the arch (along Z) into the other half: the camera keeps
-    // moving in world coordinates — only the active room changes, so
-    // the new room's bounds take over on the next frame.
-    if (inArchOpening) {
-      if (isStoneFront && targetZ < -depth / 2 && rooms[roomIndex + 1]?.layout === "stone-gallery-back") {
-        camera.position.z = nextZ;
-        camera.position.x = nextX;
-        currentRoomIndex.current = roomIndex + 1;
-        handledRoomId.current = rooms[roomIndex + 1].id;
-        onRoomChangeRef.current?.(rooms[roomIndex + 1].id);
-        return;
-      }
-      if (isStoneBack && targetZ > depth / 2 && rooms[roomIndex - 1]?.layout === "stone-gallery-front") {
-        camera.position.z = nextZ;
-        camera.position.x = nextX;
-        currentRoomIndex.current = roomIndex - 1;
-        handledRoomId.current = rooms[roomIndex - 1].id;
-        onRoomChangeRef.current?.(rooms[roomIndex - 1].id);
-        return;
-      }
-    }
-
-    if (targetZ <= frontEdge && targetZ >= backEdge) camera.position.z = nextZ;
-    if (nextX >= leftEdge && nextX <= rightEdge) {
-      camera.position.x = nextX;
-      return;
-    }
-
-    const nextIndex = nextX < leftEdge ? roomIndex - 1 : roomIndex + 1;
-    // A side doorway only joins rooms that sit side by side along X
-    // (same Z offset). The Stone Gallery halves stack along Z, so there
-    // is no side doorway between them — the arch is the passage, along Z.
-    const xAdjacent = nextIndex >= 0 && nextIndex < rooms.length && zOffsetOf(nextIndex) === roomZ;
-    if (Math.abs(localZ) < 0.9 && xAdjacent) {
-      const { width: nextWidth } = roomLayouts[rooms[nextIndex].layout];
-      camera.position.x = offsets[nextIndex] + (nextX < leftEdge ? 1 : -1) * (nextWidth / 2 - 3);
-      camera.rotation.set(0, 0, 0);
+    const ox = offsets[roomIndex];
+    const oz = zOffsetOf(roomIndex);
+    const localX = camera.position.x - ox;
+    const localZ = camera.position.z - oz;
+    const v = SUNLIGHT_WALK_SPEED * delta;
+    if (fw || st) {
       destination.current = null;
       lookYaw.current = null;
-      currentRoomIndex.current = nextIndex;
-      handledRoomId.current = rooms[nextIndex].id;
-      onRoomChangeRef.current?.(rooms[nextIndex].id);
-      return;
-    }
-    camera.position.x = MathUtils.clamp(nextX, leftEdge, rightEdge);
-
-    // Give up on a destination the visitor cannot reach (blocked by a wall):
-    // otherwise the camera would keep pushing against it forever.
-    if (destination.current) {
-      if (Math.abs(camera.position.x - startX) < 0.001 && Math.abs(camera.position.z - startZ) < 0.001) {
-        stuckTime.current += delta;
-        if (stuckTime.current > 1.5) {
+      const sy = Math.sin(yawRef.current);
+      const cy = Math.cos(yawRef.current);
+      const nx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + (-sy * fw + cy * st) * v));
+      const nz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + (-cy * fw - sy * st) * v));
+      if (!sunlightHit(nx, localZ)) camera.position.x = ox + nx;
+      if (!sunlightHit(camera.position.x - ox, nz)) camera.position.z = oz + nz;
+    } else if (destination.current) {
+      const dest = destination.current;
+      const dx = dest.x - camera.position.x;
+      const dz = dest.z - camera.position.z;
+      const L = Math.hypot(dx, dz);
+      if (L < 0.1) {
+        destination.current = null;
+        lookYaw.current = null;
+      } else {
+        const q = Math.min(v * 1.5, L);
+        const mx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + (dx / L) * q));
+        const mz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + (dz / L) * q));
+        let ok = 0;
+        if (!sunlightHit(mx, localZ)) {
+          camera.position.x = ox + mx;
+          ok = 1;
+        }
+        if (!sunlightHit(camera.position.x - ox, mz)) {
+          camera.position.z = oz + mz;
+          ok = 1;
+        }
+        if (!ok) {
           destination.current = null;
           lookYaw.current = null;
-          stuckTime.current = 0;
         }
-      } else {
-        stuckTime.current = 0;
+        if (lookYaw.current !== null) {
+          const step = Math.min(delta, 0.05) * 2.5;
+          let diff = lookYaw.current - yawRef.current;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          yawRef.current += MathUtils.clamp(diff, -step, step);
+        }
+      }
+    }
+    camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
+    // Marker ring on the walk target, pulsing like the source.
+    if (marker) {
+      const dest = destination.current;
+      marker.visible = dest !== null;
+      if (dest) {
+        marker.position.set(dest.x, 0.02, dest.z);
+        (marker.material as MeshBasicMaterial).opacity = 0.55 + 0.3 * Math.sin(state.clock.elapsedTime * 9);
       }
     }
   });
 
-  return null;
+  return (
+    <mesh ref={markerRef} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+      <ringGeometry args={[0.12, 0.18, 32]} />
+      <meshBasicMaterial color="#ffffff" transparent depthWrite={false} />
+    </mesh>
+  );
 }
+
 
 // Interior orbit limits: the camera stays inside the room. The orbit radius
 // never reaches a wall, and the polar band keeps the camera between floor
@@ -3966,16 +3015,33 @@ function ElementDropHandler({
   return null;
 }
 
+// Live camera state for the minimap (public viewer + editor): the
+// camera's world position and yaw, updated every frame by a small
+// reporter inside the Canvas. The minimap reads it through this ref
+// and draws the camera dot and its direction line. `null` means the
+// camera has not reported yet (SSR / before the first frame).
+export type CameraState = { x: number; z: number; yaw: number };
+function CameraStateReporter({ cameraStateRef }: { cameraStateRef: { current: CameraState | null } }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    const euler = new Euler().setFromQuaternion(camera.quaternion, "YXZ");
+    cameraStateRef.current = { x: camera.position.x, z: camera.position.z, yaw: euler.y };
+  });
+  return null;
+}
+
 // Teleport target for the exhibition minimap (public viewer): a point
 // to walk to, in the target room's local coordinates, with the yaw to
-// face once there. `nonce` changes on every teleport request so the
-// same artwork can be re-targeted. The scene switches rooms first when
-// needed, then walks — never a blind jump through a wall.
+// face once there — `null` means "walk there, keep the current
+// direction" (a teleport to a point on the plan). `nonce` changes on
+// every teleport request so the same artwork can be re-targeted. The
+// scene switches rooms first when needed, then walks — never a blind
+// jump through a wall.
 export type TeleportTarget = {
   roomId: string;
   x: number;
   z: number;
-  yaw: number;
+  yaw: number | null;
   nonce: number;
 };
 
@@ -4020,6 +3086,7 @@ export default function GalleryScene({
   showMeasure,
   multiSelectedIds,
   teleportTarget,
+  cameraStateRef,
   quality: controlledQuality,
   onQualityChange,
 }: {
@@ -4038,6 +3105,9 @@ export default function GalleryScene({
   resetSignal?: React.RefObject<number>;
   // Minimap teleport (public viewer, walk mode): walk to this point.
   teleportTarget?: TeleportTarget | null;
+  // Live camera state for the minimap: the reporter inside the Canvas
+  // writes the camera's world position and yaw here every frame.
+  cameraStateRef?: { current: CameraState | null };
   // Controlled render quality (public viewer entry screen): when the
   // parent passes a quality, it owns the choice; otherwise the scene
   // keeps its own state (editor, tools).
@@ -4073,10 +3143,9 @@ export default function GalleryScene({
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   // Where each room sits in the shared 3D space (see roomPlanOffsets):
-  // rooms line up along X, except a Stone Gallery front/back pair,
-  // which shares one X and stacks along Z. `offsets` is the X offset
-  // (kept, so every existing use keeps working); `zOffsets` is the Z
-  // offset (0 for every room except the Stone halves).
+  // rooms line up along X. `offsets` is the X offset (kept, so every
+  // existing use keeps working); `zOffsets` is the Z offset (0 for
+  // every room — one Sunlight room per exhibition).
   const planOffsets = useMemo(() => roomPlanOffsets(sceneRooms), [sceneRooms]);
   const offsets = planOffsets.x;
   const zOffsets = planOffsets.z;
@@ -4164,6 +3233,12 @@ export default function GalleryScene({
   }, [onQualityChange]);
   const qualityCfg = RENDER_QUALITY_CONFIG[quality];
 
+  // Sunlight: the sun slider (0-100, default 35) — the source's sun
+  // control, moving the sun along its arc. Local state, like the
+  // render-quality tier; the editor and the public viewer each keep
+  // their own.
+  const [sunValue, setSunValue] = useState(35);
+
   // Every selected id (primary + multi-selection): any of them may start
   // a drag, and the editor moves the rest of the selection with it.
   const selectedIdSet = useMemo(
@@ -4192,6 +3267,9 @@ export default function GalleryScene({
     grabOffset.addScaledVector(normal, -grabOffset.dot(normal));
     const hitOnPlane = event.point.clone().addScaledVector(normal, -event.point.clone().sub(position).dot(normal));
     const startDist = Math.max(0.1, hitOnPlane.distanceTo(position));
+    // The Sunlight room is not centred on z = 0: its floor is centred
+    // at z = -1, so the room spans z -14..12, not -13..13.
+    const zCenter = room.layout === "sunlight" ? SUNLIGHT_FLOOR_CENTER_Z : 0;
     dragRef.current = {
       id,
       mode,
@@ -4205,8 +3283,8 @@ export default function GalleryScene({
         maxX: layout.width / 2 - halfW,
         minY: halfH + 0.05,
         maxY: layout.height - halfH - 0.05,
-        minZ: -layout.depth / 2 + halfW,
-        maxZ: layout.depth / 2 - halfW,
+        minZ: zCenter - layout.depth / 2 + halfW,
+        maxZ: zCenter + layout.depth / 2 - halfW,
       },
     };
     setIsDragging(true);
@@ -4250,6 +3328,8 @@ export default function GalleryScene({
     // shelves slide up and down their wall.
     const minY = planeKind === "wall" && (element.type === "window" || element.type === "wall-text" || element.type === "shelf") ? 1.0 : element.y;
     const maxY = planeKind === "wall" && (element.type === "window" || element.type === "wall-text" || element.type === "shelf") ? 3.2 : element.y;
+    // The Sunlight room is not centred on z = 0 (floor centre z = -1).
+    const zCenter = ownerRoom.layout === "sunlight" ? SUNLIGHT_FLOOR_CENTER_Z : 0;
     elementDragRef.current = {
       id,
       mode,
@@ -4263,45 +3343,28 @@ export default function GalleryScene({
         maxX: layout.width / 2 - 0.5,
         minY,
         maxY,
-        minZ: -layout.depth / 2 + 0.5,
-        maxZ: layout.depth / 2 - 0.5,
+        minZ: zCenter - layout.depth / 2 + 0.5,
+        maxZ: zCenter + layout.depth / 2 - 0.5,
       },
     };
     setIsDragging(true);
     setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
   };
 
-  const artworkNodes = artworkRooms.map((sceneRoom, index) => {
-    // The Stone Gallery halves share the arched dividing wall: the
-    // front half hides its back wall and the back half hides its front
-    // wall, so the arch (a partition in the front room) is the one
-    // shared boundary, seen from both sides. A half only hides its
-    // wall when its partner is in the exhibition (a lone half keeps
-    // all its walls).
-    const sceneIndex = sceneRooms.findIndex((candidate) => candidate.id === sceneRoom.id);
-    const isStoneFront = sceneRoom.layout === "stone-gallery-front" && sceneRooms[sceneIndex + 1]?.layout === "stone-gallery-back";
-    const isStoneBack = sceneRoom.layout === "stone-gallery-back" && sceneRooms[sceneIndex - 1]?.layout === "stone-gallery-front";
-    // Side doorways only join rooms that sit side by side along X
-    // (same Z offset). The Stone Gallery halves stack along Z, so
-    // there is no side doorway between them — the arch is the passage.
-    const leftAdjacent = walkMode && index > 0 && artworkZOffsets[index] === artworkZOffsets[index - 1];
-    const rightAdjacent = walkMode && index < artworkRooms.length - 1 && artworkZOffsets[index] === artworkZOffsets[index + 1];
-    return (
-    <GalleryRoom
+  // The Sunlight Gallery is the only room: one solid room per
+  // exhibition, no side doorways, no arch, no shared walls. In walk
+  // mode every room's floor and artworks are walk targets, not just
+  // the active room's; rooms are switched by teleport (mini-plan /
+  // room list), never by walking through a wall.
+  const artworkNodes = artworkRooms.map((sceneRoom, index) => (
+    <SunlightRoom
       key={sceneRoom.id}
       room={sceneRoom}
       offsetX={artworkOffsets[index]}
       offsetZ={artworkZOffsets[index]}
-      hideBackWall={isStoneFront}
-      hideFrontWall={isStoneBack}
       artworks={artworks.filter((artwork) => artwork.roomId === sceneRoom.id)}
       selectedId={selectedId}
       onSelect={onSelect}
-      // In walk mode every room's floor and artworks are walk targets, not
-      // just the active room's: a click on the far room's floor (through
-      // the arch) must set a destination there instead of doing nothing,
-      // and the camera walks to it through the arch (see the arch
-      // waypoint in WalkControls).
       walkable={walkMode && walking === true}
       editable={editable}
       onDragStart={handleDragStart}
@@ -4310,11 +3373,8 @@ export default function GalleryScene({
       onSelectElement={onSelectElement}
       onElementDragStart={handleElementDragStart}
       onElementHover={setHoveredElement}
-      selectedWallId={selectedWallId}
-      onWallSelect={onWallSelect}
       showGrid={showGrid}
       showMeasure={showMeasure}
-      multiSelectedIds={multiSelectedIds}
       onFloorClick={walkMode ? (point) => {
         destination.current = new Vector3(point.x, 0, point.z);
         lookYaw.current = null;
@@ -4326,16 +3386,8 @@ export default function GalleryScene({
       } : undefined}
       dragged={dragged}
       quality={quality}
-      // In walk mode the visitor stays inside: shared walls keep the single
-      // door wall (no doubled wall, so no z-fighting), the outer ends are
-      // solid and the front stays closed, so no void or box exterior is
-      // ever visible through a window or an entrance hole.
-      leftOpening={walkMode ? (leftAdjacent ? "none" : "solid") : "window"}
-      rightOpening={walkMode ? (rightAdjacent ? "door" : "solid") : "window"}
-      entrance={false}
     />
-    );
-  });
+  ));
   const startRoom = sceneRooms[Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)))];
   const startIndex = Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === (activeRoomId ?? room.id)));
   const startOffset = offsets[startIndex];
@@ -4346,23 +3398,9 @@ export default function GalleryScene({
     const layout = roomLayouts[room.layout];
     return interiorOrbitLimits(layout.width, layout.depth, layout.height);
   }, [room.layout]);
-  // The active room's light mood drives the scene's ambient and
-  // directional light (the per-artwork spots follow it inside GalleryRoom).
-  const sceneLights = LIGHT_PRESETS[room.lightType ?? "spot-warm"];
-  // Directional shadow frustum: covers the whole multi-room span in
-  // walk mode, centred on the rooms. High quality only — one more
-  // 2048 px map is cheap, but the frustum is wide, so the shadows it
-  // throws are soft by design.
-  const dirTarget = useMemo(() => new Object3D(), []);
-  const roomSpan = useMemo(() => {
-    const minX = Math.min(...sceneRooms.map((sceneRoom, index) => offsets[index] - roomLayouts[sceneRoom.layout].width / 2));
-    const maxX = Math.max(...sceneRooms.map((sceneRoom, index) => offsets[index] + roomLayouts[sceneRoom.layout].width / 2));
-    return { centerX: (minX + maxX) / 2, halfSpan: (maxX - minX) / 2 };
-  }, [sceneRooms, offsets]);
-  useEffect(() => {
-    dirTarget.position.set(roomSpan.centerX, 0, 0);
-    return () => { dirTarget.removeFromParent(); };
-  }, [dirTarget, roomSpan]);
+  // The Sunlight lighting (sun + hemisphere + IBL) lives in
+  // SunlightRig / SunlightEnvironment: there is no generic ambient or
+  // directional light and no per-room light mood anymore.
   // Drag vs click: a pointer that moved more than a few pixels is an
   // orbit drag, not a click — walls and artworks must not select then.
   const dragStartPoint = useRef<{ x: number; y: number } | null>(null);
@@ -4392,68 +3430,16 @@ export default function GalleryScene({
       }}
       onPointerUp={() => { dragStartPoint.current = null; }}
     >
-      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset, 1.65, startZOffset + startDepth / 2 - 1.5] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 75 : 43 }} dpr={qualityCfg.dpr} shadows>
-        {/* Stone Gallery: the reference room's dark warm backdrop and
-            fog (0x3a342d, 14–34 m) — the moody depth the generic bright
-            gallery loses. Other rooms keep the wall colour. */}
-        <color attach="background" args={[isStoneLayout(room.layout) ? "#3a342d" : room.wallColor]} />
-        {isStoneLayout(room.layout) && <fog attach="fog" args={["#3a342d", 14, 34]} />}
-        {/* The environment map carries part of the ambient light while
-            it is on, so the flat ambient is turned down to match — the
-            room's light mood (warm/cool/ambient) still drives the result. */}
-        <ambientLight intensity={qualityCfg.env ? sceneLights.ambient * 0.6 : sceneLights.ambient} />
-        {/* Stone Gallery: the reference room's warm hemisphere
-            (sky #fff0dc, ground #6a5d4c) — the main ambient, like the
-            original's HemisphereLight. */}
-        {room.lightType === "stone-warm" && <hemisphereLight args={["#fff0dc", "#6a5d4c", 0.75]} />}
-        <directionalLight
-          position={[roomSpan.centerX - 3, 8, 4]}
-          target={dirTarget}
-          intensity={sceneLights.directional}
-          color={sceneLights.directionalColor}
-          castShadow={qualityCfg.directionalShadows}
-          shadow-mapSize-width={qualityCfg.directionalShadowMapSize}
-          shadow-mapSize-height={qualityCfg.directionalShadowMapSize}
-          shadow-bias={-0.0002}
-          shadow-normalBias={0.03}
-          shadow-camera-near={0.5}
-          shadow-camera-far={60}
-          shadow-camera-left={-roomSpan.halfSpan - 4}
-          shadow-camera-right={roomSpan.halfSpan + 4}
-          shadow-camera-top={12}
-          shadow-camera-bottom={-12}
-        />
-        <primitive object={dirTarget} />
+      <Canvas camera={{ position: interiorView ? [0, 2.0, startDepth / 2 - 1.8] : walkMode ? [startOffset + SUNLIGHT_CAMERA_START.x, SUNLIGHT_CAMERA_START.y, startZOffset + SUNLIGHT_CAMERA_START.z] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 66 : 43 }} dpr={qualityCfg.dpr} shadows="variance">
+        {/* Sunlight Gallery: the source's pale sky backdrop (#dfe6ee),
+            no fog. The sun, hemisphere and IBL live in SunlightRig /
+            SunlightEnvironment; the skylight diffusers carry their own
+            warm point lights inside SunlightRoom. */}
+        <color attach="background" args={["#dfe6ee"]} />
         <ToneMappingRig exposure={qualityCfg.exposure} />
-        {/* The environment map is neutral white-room light: halve it
-            for the Stone Gallery so it does not wash out the warm
-            stone glow. */}
-        <LocalEnvironment enabled={qualityCfg.env} intensity={isStoneLayout(room.layout) ? qualityCfg.envIntensity * 0.5 : qualityCfg.envIntensity} />
-        {sceneRooms.map((sceneRoom, index) =>
-          isStoneLayout(sceneRoom.layout) ? (
-            // Stone Gallery: the reference room's five warm ceiling
-            // point lights (positions from the source, z shifted +3 to
-            // centre the room), split across the two halves by their
-            // global z — the front half gets the two at global z = 5
-            // (local −0.5), the back half the three at global z = −6
-            // and −1.5 (local +0.5 and +5.0). They are the room's
-            // ceiling lights; they do not cast shadows (five cube maps
-            // would be far too expensive) — the directional and the
-            // artwork spots carry the shadows.
-            <group key={`stone-lights-${sceneRoom.id}`}>
-              {(sceneRoom.layout === "stone-gallery-front"
-                ? [[-4, -0.5], [4, -0.5]]
-                : sceneRoom.layout === "stone-gallery-back"
-                  ? [[-3, 0.5], [4, 0.5], [0, 5.0]]
-                  : [[-4, 5], [4, 5], [-3, -6], [4, -6], [0, -1.5]]
-              ).map(([x, z], i) => (
-                <pointLight key={i} position={[offsets[index] + x, 5, zOffsets[index] + z]} intensity={10} distance={12} color="#ffe2b8" />
-              ))}
-            </group>
-          ) : (
-            <pointLight key={`light-${sceneRoom.id}`} position={[offsets[index], 4, zOffsets[index] - 2]} intensity={sceneLights.pointIntensity} color={sceneLights.pointColor} />
-          ),
-        )}
+        <SunlightEnvironment />
+        <SunlightRig sunValue={sunValue} quality={quality} />
+        {cameraStateRef && <CameraStateReporter cameraStateRef={cameraStateRef} />}
         {/* Artwork textures load through Suspense so a slow image suspends
             only the artworks — never the whole room or page. */}
         <Suspense fallback={null}>{artworkNodes}</Suspense>
@@ -4480,7 +3466,7 @@ export default function GalleryScene({
           <InteriorCameraRig roomKey={`${room.id}:${room.layout}`} depth={startDepth} enabled />
         )}
         {walkMode && input ? (
-          <WalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
+          <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} />
         ) : (
           <OrbitControls
             makeDefault
@@ -4495,6 +3481,7 @@ export default function GalleryScene({
         )}
       </Canvas>
       <RenderQualityToggle quality={quality} onChange={handleQualityChange} canvasClassName={className} />
+      <SunSlider value={sunValue} onChange={setSunValue} canvasClassName={className} />
     </div>
   );
 }

@@ -1,257 +1,80 @@
 import { z } from "zod";
 import { ELEMENT_DEFAULTS, roomElementSchema, type ElementType, type RoomElement } from "@/lib/elements";
+import { SUNLIGHT_CEILING_COLOR, SUNLIGHT_FLOOR_COLOR, SUNLIGHT_HEIGHT, SUNLIGHT_WALL_COLOR } from "@/lib/sunlight";
 
 // Template categories for the galleries catalogue. Every preset belongs
 // to exactly one category, shown as a filter chip on the galleries page.
-// Only the categories the five kept templates use are listed — the
-// retired templates took Luxury, Immersive and Residential & Commercial
-// with them in November 2026.
+// Sunlight Gallery is the only template, and it is architectural.
 export const roomCategories = [
-  "Contemporary",
   "Architectural",
-  "Cultural",
 ] as const;
 
 export type RoomCategory = (typeof roomCategories)[number];
 
-// The gallery collection: five templates — the four room models offered
-// when an exhibition is created (White Cube, Grand Light Hall, Totem
-// Studio, Glass Pavilion) plus the Skylight Gallery reference room.
-// Each preset carries its own dimensions, finishes, light mood and
-// seeded furniture, so picking a gallery in the editor already looks
-// like the reference space. The other templates were retired in
-// November 2026; exhibitions saved with one fall back to the White
-// Cube when they open (see parseGalleryRooms).
+// The gallery collection: ONE template — the Sunlight Gallery, ported
+// exactly from Kabeya's Three.js reference room ("Galerie lumière").
+// It is the only model offered when an exhibition is created and the
+// only one in the /galleries catalogue. The old templates (White Cube,
+// Grand Light Hall, Totem Studio, Glass Pavilion, Skylight Gallery,
+// Stone Gallery and its halves) were removed in November 2026; their
+// layout keys are migrated to Sunlight on load (see parseGalleryRooms),
+// so exhibitions saved with one still open — with their artworks —
+// instead of failing validation.
 export const roomLayouts = {
-  cube: {
-    label: "White Cube",
-    category: "Contemporary",
-    description: "The classic white cube: a bright, neutral room that lets the work speak first.",
-    width: 18,
-    depth: 12,
-    height: 5.3,
-    wallColor: "#f5f2eb",
-    sideWallColor: "#e8e4da",
-    floorColor: "#4a4743",
-    wallTexture: "plaster",
-    floorTexture: "stone",
-    ceilingColor: "#f5f2eb",
-    ceilingTexture: "plaster",
-    spotlights: true,
-    lightType: "spot-warm",
-    partitions: [{ x: 0, z: 0, length: 6, orientation: "horizontal" }],
-  },
-  "grand-hall": {
-    label: "Grand Light Hall",
-    category: "Contemporary",
-    description: "A grand, light-filled hall for large works and generous hangs.",
-    width: 26,
-    depth: 16,
-    height: 6,
-    wallColor: "#faf8f2",
-    sideWallColor: "#f0ece1",
-    floorColor: "#e9e6dd",
-    wallTexture: "plaster",
-    floorTexture: "stone",
-    ceilingColor: "#faf8f2",
-    ceilingTexture: "plaster",
-    spotlights: true,
-    lightType: "spot-warm",
-    partitions: [],
-  },
-  "totem-studio": {
-    label: "Totem Studio",
-    category: "Cultural",
-    description: "A studio-like space of concrete and stone, made for totemic, standing work.",
+  // Sunlight Gallery — a bright 22 × 26 m hall, 5 m high, under seven
+  // skylights (four white diffusers, three open sky panels), a
+  // procedural concrete floor, three freestanding panels, two pedestals
+  // with sculptures and a double door. The room itself is built by the
+  // Sunlight shell in components/gallery-scene.tsx, exactly as in the
+  // reference file; this preset only carries its dimensions and the
+  // colours the catalogue preview and the editor read.
+  sunlight: {
+    label: "Sunlight Gallery",
+    category: "Architectural",
+    description: "A bright 22 × 26 m hall under seven skylights — daylight, a concrete floor and freestanding panels, from a Three.js reference room.",
     width: 22,
-    depth: 16,
-    height: 5.5,
-    wallColor: "#b0aa9e",
-    sideWallColor: "#a29c90",
-    floorColor: "#4a4743",
-    wallTexture: "concrete",
-    floorTexture: "stone",
-    ceilingColor: "#b0aa9e",
-    ceilingTexture: "concrete",
-    spotlights: true,
-    lightType: "spot-warm",
-    partitions: [],
-  },
-  // Ceiling architectures from Kabeya's reference photos of real galleries
-  // (November 2026): the ceiling itself is the architecture here.
-  // The reference room (November 2026): a bright white gallery under a
-  // white coffered ceiling with one central skylight, light parquet
-  // underfoot — the room from the preview renders Kabeya validated.
-  // The ceiling (white coffers + verrière + daylight) is built by
-  // RoomFeatures in components/gallery-scene.tsx; the floor is the real
-  // Poly Haven "Wood Floor" photo (CC0) via the "parquet" finish.
-  "gallery-skylight": {
-    label: "Skylight Gallery",
-    category: "Architectural",
-    description: "A bright white gallery under a white coffered ceiling and a central skylight, light parquet underfoot — the reference room.",
-    width: 18,
-    depth: 12,
-    height: 5.2,
-    wallColor: "#faf8f2",
-    sideWallColor: "#f0ece1",
-    floorColor: "#c9a877",
+    depth: 26,
+    height: SUNLIGHT_HEIGHT,
+    wallColor: SUNLIGHT_WALL_COLOR,
+    sideWallColor: SUNLIGHT_WALL_COLOR,
+    floorColor: SUNLIGHT_FLOOR_COLOR,
     wallTexture: "plaster",
-    floorTexture: "parquet",
-    ceilingColor: "#faf8f2",
-    ceilingTexture: "plaster",
-    spotlights: true,
-    lightType: "spot-warm",
-    partitions: [],
-  },
-  // Stone Gallery — adapted from a Three.js reference room ("Galerie en
-  // pierre"): a 20 × 24 m stone hall, 6.5 m high, with a round-arched
-  // dividing wall, dark timber beams, a wall niche, rubble and a
-  // concrete plinth. The arch wall is a real partition (shape "arch")
-  // so the editor can move, resize or remove it like any other wall;
-  // the beams, niche, rubble and plinth are built by RoomFeatures in
-  // components/gallery-scene.tsx. The seven placeholder artworks on
-  // the walls are seeded by seedStoneGalleryArtworks below when an
-  // exhibition is created from this model.
-  "stone-gallery": {
-    label: "Stone Gallery",
-    category: "Architectural",
-    description: "A stone hall with a round-arched dividing wall, dark timber beams and warm track light — from a Three.js reference room.",
-    width: 20,
-    depth: 24,
-    height: 6.5,
-    wallColor: "#b8ab94",
-    sideWallColor: "#ab9d84",
-    floorColor: "#b5b0a5",
-    wallTexture: "stone-plaster",
-    floorTexture: "stone-concrete",
-    ceilingColor: "#d8d2c4",
-    ceilingTexture: "plaster",
-    spotlights: true,
-    lightType: "stone-warm",
-    partitions: [{ x: 0, z: -1, length: 20, orientation: "horizontal", shape: "arch" }],
-  },
-  // The two halves of a Stone Gallery exhibition, created TOGETHER from
-  // the "stone" model (see app/api/exhibitions/route.ts). They are NOT
-  // standalone templates — they never appear in the /galleries catalogue
-  // nor in the editor's layout picker (see HIDDEN_LAYOUT_KEYS below).
-  // The plan itself is unchanged from the reference room: the front half
-  // is the entrance part (20 × 13 m, centre at global z = +5.5) and the
-  // back half is the part behind the arch (20 × 11 m, centre at global
-  // z = −6.5), with the arched dividing wall as their shared boundary
-  // at global z = −1. The arch is a partition at the back edge of the
-  // front room (local z = −6.5), so it is rendered once, by the front
-  // room, and seen from both sides. The single "stone-gallery" layout
-  // above stays for exhibitions saved before the split (backward
-  // compatibility).
-  "stone-gallery-front": {
-    label: "Stone Gallery — Front",
-    category: "Architectural",
-    description: "The front (entrance) half of the Stone Gallery, from the entrance to the arched dividing wall.",
-    width: 20,
-    depth: 13,
-    height: 6.5,
-    wallColor: "#b8ab94",
-    sideWallColor: "#ab9d84",
-    floorColor: "#b5b0a5",
-    wallTexture: "stone-plaster",
-    floorTexture: "stone-concrete",
-    ceilingColor: "#d8d2c4",
-    ceilingTexture: "plaster",
-    spotlights: true,
-    lightType: "stone-warm",
-    partitions: [{ x: 0, z: -6.5, length: 20, orientation: "horizontal", shape: "arch" }],
-  },
-  "stone-gallery-back": {
-    label: "Stone Gallery — Back",
-    category: "Architectural",
-    description: "The back half of the Stone Gallery, behind the arched dividing wall.",
-    width: 20,
-    depth: 11,
-    height: 6.5,
-    wallColor: "#b8ab94",
-    sideWallColor: "#ab9d84",
-    floorColor: "#b5b0a5",
-    wallTexture: "stone-plaster",
-    floorTexture: "stone-concrete",
-    ceilingColor: "#d8d2c4",
-    ceilingTexture: "plaster",
-    spotlights: true,
-    lightType: "stone-warm",
-    partitions: [],
-  },
-  // Glass Pavilion — the outdoor room model, kept from the November
-  // 2026 catalogue expansion; the other expansion templates were retired.
-  "glass-pavilion": {
-    label: "Glass Pavilion",
-    category: "Architectural",
-    description: "A square glass pavilion flooded with daylight, open and almost without shadow.",
-    width: 16,
-    depth: 16,
-    height: 5,
-    wallColor: "#fbfaf6",
-    sideWallColor: "#f2f0e8",
-    floorColor: "#e8e6df",
-    wallTexture: "plaster",
-    floorTexture: "marble",
-    ceilingColor: "#fbfaf6",
+    floorTexture: "concrete",
+    ceilingColor: SUNLIGHT_CEILING_COLOR,
     ceilingTexture: "plaster",
     spotlights: false,
-    lightType: "ambient",
+    lightType: "sunlight",
     partitions: [],
   },
-  // Cultural
-  // Immersive
-  // Residential & Commercial
 } as const;
 
 export type RoomLayout = keyof typeof roomLayouts;
 
-// The four named room models offered when an exhibition is created
-// (feature 7). Each model is one of the 41 layouts, chosen for the
-// mood it gives the first room — the visitor can still switch layouts
-// and add rooms in the editor afterwards. Labels live in the i18n
-// dictionary (`create.model*`); the layout label is the room's own.
+// The one room model offered when an exhibition is created (feature 7).
+// Labels live in the i18n dictionary (`create.model*`); the layout
+// label is the room's own.
 export const ROOM_MODELS = [
-  { id: "minimalist", layout: "cube" },
-  { id: "classic", layout: "grand-hall" },
-  { id: "studio", layout: "totem-studio" },
-  { id: "outdoor", layout: "glass-pavilion" },
-  { id: "stone", layout: "stone-gallery" },
+  { id: "sunlight", layout: "sunlight" },
 ] as const;
 
 export type RoomModelId = (typeof ROOM_MODELS)[number]["id"];
 
 export function roomModelLayout(modelId: string): RoomLayout {
   const model = ROOM_MODELS.find((candidate) => candidate.id === modelId);
-  return (model?.layout ?? "cube") as RoomLayout;
+  return (model?.layout ?? "sunlight") as RoomLayout;
 }
 
-// Layouts that are halves of a multi-room template, not standalone
-// templates: the Stone Gallery front/back halves never appear in the
-// /galleries catalogue nor in the editor's layout picker. A Stone
-// Gallery is always created as the pair (see the exhibitions route).
-export const HIDDEN_LAYOUT_KEYS: ReadonlySet<RoomLayout> = new Set([
-  "stone-gallery-front",
-  "stone-gallery-back",
-]);
-
-// Any Stone Gallery layout — the single pre-split room and the two
-// halves — shares the restored stone look (stone-plaster walls,
-// stone-concrete floor, warm dark backdrop #3a342d + fog, stone-warm
-// light, soft shadows).
-export function isStoneLayout(layout: RoomLayout): boolean {
-  return layout === "stone-gallery" || layout === "stone-gallery-front" || layout === "stone-gallery-back";
-}
+// No layout is hidden: Sunlight Gallery is the only template, and it is
+// always offered. (Kept as a set so the catalogue filter and the editor's
+// layout picker keep working unchanged.)
+export const HIDDEN_LAYOUT_KEYS: ReadonlySet<RoomLayout> = new Set([]);
 
 // Where each room sits in the shared 3D space, as world offsets from the
-// origin. Rooms normally line up side by side along X (each touching the
-// next). A Stone Gallery front/back pair is different: the two halves
-// share the same X and stack along Z — the front half centred at
-// z = +5.5, the back half at z = −6.5 — so the arched dividing wall at
-// global z = −1 stays the passage between them, exactly as in the
-// reference room. The plan itself is never redrawn: the pair keeps the
-// reference room's dimensions and positions, only made functional.
-// The X of a pair follows the rooms before it, like any other room.
+// origin. Rooms line up side by side along X (each touching the next);
+// every room is centred on z = 0 in plan terms — the Sunlight room's
+// own −1 m floor shift lives inside its local geometry (see
+// lib/sunlight.ts), not in the plan offset. The X of a room follows the
+// rooms before it, like any other room.
 export function roomPlanOffsets(rooms: { layout: RoomLayout }[]): { x: number[]; z: number[] } {
   const xs: number[] = [];
   const zs: number[] = [];
@@ -262,16 +85,10 @@ export function roomPlanOffsets(rooms: { layout: RoomLayout }[]): { x: number[];
     if (i > 0) {
       const previousLayout = rooms[i - 1].layout;
       const previousWidth = roomLayouts[previousLayout].width;
-      // The back half of a Stone Gallery sits behind the front half,
-      // not beside it: same X as the front half.
-      if (!(previousLayout === "stone-gallery-front" && layout === "stone-gallery-back")) {
-        currentX += (previousWidth + width) / 2;
-      }
+      currentX += (previousWidth + width) / 2;
     }
     xs.push(currentX);
-    // The Stone Gallery halves stack along Z; every other room is
-    // centred on z = 0.
-    zs.push(layout === "stone-gallery-front" ? 5.5 : layout === "stone-gallery-back" ? -6.5 : 0);
+    zs.push(0);
   }
   return { x: xs, z: zs };
 }
@@ -283,9 +100,8 @@ export const wallTextures = {
   concrete: "Concrete",
   brick: "Brick",
   marble: "Marble",
-  // Stone plaster: the beige stone wall of the Stone Gallery — speckles,
-  // stains and hairline cracks over a warm plaster base (see
-  // createSurfaceTexture in components/gallery-scene.tsx).
+  // Stone plaster: the beige stone wall of the retired Stone Gallery —
+  // kept so rooms saved with it still validate.
   "stone-plaster": "Stone plaster",
 } as const;
 
@@ -294,9 +110,8 @@ export const floorTextures = {
   concrete: "Concrete",
   wood: "Wood",
   marble: "Marble",
-  // Stone concrete: the mottled concrete floor of the Stone Gallery —
-  // large soft blotches, no formwork joints, matte (see
-  // createSurfaceTexture in components/gallery-scene.tsx).
+  // Stone concrete: the mottled concrete floor of the retired Stone
+  // Gallery — kept so rooms saved with it still validate.
   "stone-concrete": "Stone concrete",
   // Real light parquet: the Poly Haven "Wood Floor" photo (CC0) in
   // public/textures/wood-floor.jpg, loaded by the 3D scene. The
@@ -320,7 +135,7 @@ export const floorTypes = {
   "light-parquet": { label: "Light parquet · real wood", texture: "parquet", color: "#c9a877" },
   "dark-wood": { label: "Dark wood", texture: "wood", color: "#5a4632" },
   "polished-concrete": { label: "Polished concrete", texture: "concrete", color: "#cfc9bd" },
-  // Stone concrete: the Stone Gallery's mottled concrete floor.
+  // Stone concrete: the retired Stone Gallery's mottled concrete floor.
   "stone-concrete": { label: "Stone concrete", texture: "stone-concrete", color: "#b5b0a5" },
   white: { label: "White", texture: "stone", color: "#f2efe8" },
   marble: { label: "Marble", texture: "marble", color: "#d8d5cf" },
@@ -331,15 +146,16 @@ export type FloorType = keyof typeof floorTypes;
 
 const floorTypeKeys = Object.keys(floorTypes) as [FloorType, ...FloorType[]];
 
-// Light moods per room: warm or cool spots, or a soft even ambient light
-// with no spotlights.
+// Light moods per room. Sunlight is the only one a room can take now —
+// the Sunlight Gallery's sun, skylights and IBL are fixed by the
+// reference room and do not follow a mood. The retired moods stay in
+// the enum so rooms saved with one still validate; parseGalleryRooms
+// coerces them to "sunlight" on load.
 export const lightTypes = {
+  sunlight: { label: "Sunlight" },
   "spot-warm": { label: "Spot · Warm" },
   "spot-cool": { label: "Spot · Cool" },
   ambient: { label: "Soft ambient" },
-  // Stone Gallery: the warm hemisphere + point-light glow of the
-  // Three.js reference room ("Galerie en pierre") — no bright
-  // per-artwork pools, no hard sun.
   "stone-warm": { label: "Stone · Warm" },
 } as const;
 
@@ -374,17 +190,10 @@ export const partitionWallSchema = z.object({
   id: z.string().min(1).max(64),
   x: z.number().min(-20).max(20),
   z: z.number().min(-20).max(20),
-  // Up to 24 m so a partition can span the full width (20 m) or depth
-  // (24 m) of the largest room — the Stone Gallery's arched dividing
-  // wall is 20 m long. (Was 16, which rejected that wall on load.)
   length: z.number().min(1).max(24),
   orientation: z.enum(["horizontal", "vertical"]),
   // Painted colour for this one wall; falls back to the room's side walls.
   color: z.string().regex(/^#[\da-f]{6}$/i).optional(),
-  // Wall shape: a plain rectangle ("rect") or a full wall pierced by a
-  // round arch ("arch", the Stone Gallery dividing wall). Absent means
-  // "rect". The arch opening is 4 m wide with its springing at 3.4 m
-  // (see the arch partition renderer in components/gallery-scene.tsx).
   shape: z.enum(["rect", "arch"]).optional(),
 });
 
@@ -418,8 +227,9 @@ export const galleryRoomSchema = z.object({
   curatorialText: z.string().max(300).default(""),
   // One choice re-floors the room (colour + texture together).
   floorType: z.enum(floorTypeKeys).default("charcoal"),
-  // Light mood for the room (warm spots, cool spots, soft ambient).
-  lightType: z.enum(lightTypeKeys).default("spot-warm"),
+  // Light mood for the room. Sunlight is the only live value; the
+  // retired moods stay in the enum so old rooms still validate.
+  lightType: z.enum(lightTypeKeys).default("sunlight"),
   // Per-wall paint overrides (absent = the room's wall colours).
   wallPaint: wallPaintSchema.default({}),
   // Placeable 3D elements (furniture, partition walls, vitrines, ...).
@@ -434,9 +244,13 @@ export type GalleryRoom = z.infer<typeof galleryRoomSchema>;
 // also swaps the seeded furniture: the previous template's pieces leave
 // and the new template's pieces arrive as real elements the user can
 // move, rotate or delete, while pieces the user added by hand stay put.
+// With a single template this is a no-op for Sunlight rooms, and a
+// migration to Sunlight for a room saved with a retired layout.
 export function applyLayoutPreset(room: GalleryRoom, layout: RoomLayout): GalleryRoom {
-  if (room.layout === layout) return room;
+  // The preset is read before the same-layout guard: with a single
+  // template the guard would otherwise narrow `layout` to never.
   const preset = roomLayouts[layout];
+  if (room.layout === layout) return room;
   return {
     ...room,
     layout,
@@ -450,7 +264,8 @@ export function applyLayoutPreset(room: GalleryRoom, layout: RoomLayout): Galler
     spotlights: preset.spotlights,
     lightType: preset.lightType,
     floorType: inferFloorType(preset.floorTexture, preset.floorColor),
-    partitionWalls: preset.partitions.map((wall) => ({ ...wall, id: crypto.randomUUID() })),
+    // Sunlight has no partition walls.
+    partitionWalls: [],
     elements: [...room.elements.filter((element) => !element.seededFrom), ...seedElements(layout)],
   };
 }
@@ -461,63 +276,15 @@ export function applyLayoutPreset(room: GalleryRoom, layout: RoomLayout): Galler
 // Seeding happens for new rooms (createGalleryRoom) and when the layout
 // is switched (applyLayoutPreset swaps the seeded set); rooms saved
 // before seeding existed keep exactly what they have.
+// The Sunlight Gallery seeds nothing: its panels, pedestals, sculptures
+// and double door are fixed parts of the reference room (built by the
+// Sunlight shell in components/gallery-scene.tsx), not movable elements.
 export function seedElements(layout: RoomLayout): RoomElement[] {
-  const { width, depth, height } = roomLayouts[layout];
-  const counts = new Map<string, number>();
-  const make = (
-    type: ElementType,
-    x: number, y: number, z: number,
-    rotation = 0,
-    extra: Partial<RoomElement> = {},
-  ): RoomElement => {
-    const n = (counts.get(type) ?? 0) + 1;
-    counts.set(type, n);
-    const defaults = ELEMENT_DEFAULTS[type];
-    return {
-      id: crypto.randomUUID(),
-      type,
-      name: `${defaults.label} ${n}`,
-      // Marked with the template it came from, so a later layout switch
-      // can swap these pieces out without touching the user's own.
-      seededFrom: layout,
-      x, y, z,
-      rotation,
-      scale: 1,
-      color: defaults.color,
-      length: defaults.length,
-      variant: "standard",
-      title: "",
-      body: "",
-      fontSize: 0.35,
-      textColor: "#b3261e",
-      font: "display",
-      align: "left",
-      layout: "stacked",
-      bodySize: 0.11,
-      bodyColor: "#3a3a36",
-      ...extra,
-    };
-  };
-  switch (layout) {
-    case "gallery-skylight": // Reference room: one flush white door on
-      // the back wall (right side, clear of the hang). The side walls
-      // already carry real window openings, so no window element is
-      // seeded; the light comes from the skylight and the artwork spots.
-      return [
-        make("door", 7.5, 0, -depth / 2 + 0.15, 0),
-      ];
-    case "glass-pavilion": // One tall plinth, sheer curtains both sides.
-      return [
-        make("plinth", 0, 0, 0, 0, { variant: "tall" }),
-        make("curtain", -width / 2 + 0.3, 0, 0, Math.PI / 2),
-        make("curtain", width / 2 - 0.3, 0, 0, -Math.PI / 2),
-      ];
-    default:
-      return [];
-  }
+  void layout;
+  return [];
 }
 
-export function createGalleryRoom(index = 0, layout: RoomLayout = "cube"): GalleryRoom {
+export function createGalleryRoom(index = 0, layout: RoomLayout = "sunlight"): GalleryRoom {
   const room = applyLayoutPreset(
     {
       id: crypto.randomUUID(),
@@ -542,61 +309,32 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "cube"): Galle
   );
   // applyLayoutPreset returns a room unchanged when it already has the
   // target layout, so a NEW room created straight into a layout never
-  // received that layout's preset partitions — the Stone Gallery's
-  // arched dividing wall (and the White Cube's partition) were silently
-  // dropped, and the room opened as a single open hall ("Partition
-  // walls 0/8"). A new room has no user customisations to preserve, so
-  // seed the preset's partitions here, like the seeded elements below.
-  // (The floor also comes from the preset here: floorTexture
-  // "stone-concrete" infers floorType "stone-concrete", so a new Stone
-  // Gallery gets the Stone concrete floor, not the old Polished
-  // concrete / Concrete.)
+  // received that layout's preset partitions. A new room has no user
+  // customisations to preserve, so seed the preset's partitions here,
+  // like the seeded elements below. Sunlight has no partitions.
   return {
     ...room,
-    partitionWalls: roomLayouts[layout].partitions.map((wall) => ({ ...wall, id: crypto.randomUUID() })),
+    partitionWalls: [],
     elements: seedElements(layout),
   };
 }
 
-// The seven placeholder artworks of the Stone Gallery demo, pre-placed
-// when an exhibition is created from the stone model — as NORMAL
+// The four placeholder artworks of the Sunlight Gallery demo, pre-placed
+// when an exhibition is created from the sunlight model — as NORMAL
 // artworks (real Artwork rows), so the editor can select each one,
 // change its title, replace its image, move/resize it or delete it.
-// Positions and sizes are the demo's (Three.js source, z shifted +3 m
-// to centre the room on the origin). The works sit 0.1 m off the wall
-// face they hang on: the dividing-wall works sit 0.1 m off the arch
-// wall's face, and the back/side works sit 0.1 m off the inner face of
-// SANAA's 0.25 m wall boxes (0.225 m off the room boundary), so the
-// wood frame (0.12 m deep) clears the stone and the work stands off
-// the wall like the reference instead of sitting flush in it. The
-// images are procedural placeholders generated from the source's own
-// art (public/artworks/stone-gallery/*.jpg); the editor allows those
-// bundled paths to be saved (see isAllowedImageUrl).
+// They hang on the three freestanding panels, at the reference room's
+// own positions: P1 (-3,-4, rot .8) takes two works, P2 (-7.5,-9,
+// rot .4) one, P3 (5,-8.5, rot -.65) one. Positions are room-local
+// (x, y, z) with rotation = the panel's yaw; each work sits 0.1 m off
+// its panel face (local z = 0.25) so the wood frame clears the panel,
+// like the Stone Gallery's 0.1 m stand-off. The images are the bundled
+// procedural placeholders (public/artworks/stone-gallery/*.jpg); the
+// editor allows those bundled paths to be saved (see isAllowedImageUrl).
 // The placeholder description says plainly that the work is a
 // placeholder to replace.
-// The seven placeholder artworks of the Stone Gallery demo, pre-placed
-// when an exhibition is created from the stone model — as NORMAL
-// artworks (real Artwork rows), so the editor can select each one,
-// change its title, replace its image, move/resize it or delete it.
-// Positions and sizes are the demo's (Three.js source, z shifted +3 m
-// to centre the room on the origin), split across the two rooms: the
-// front room (Room 1, centre global z = +5.5) takes the works that hung
-// in front of the arch, the back room (Room 2, centre global z = −6.5)
-// takes the works behind it. Each position is LOCAL to its room (local
-// z = global z − 5.5 for Room 1, global z + 6.5 for Room 2); x and y
-// are unchanged. The works sit 0.1 m off the wall face they hang on:
-// the dividing-wall works sit 0.1 m off the arch wall's face, and the
-// back/side works sit 0.1 m off the inner face of SANAA's 0.25 m wall
-// boxes (0.225 m off the room boundary), so the wood frame (0.12 m
-// deep) clears the stone and the work stands off the wall like the
-// reference instead of sitting flush in it. The images are procedural
-// placeholders generated from the source's own art
-// (public/artworks/stone-gallery/*.jpg); the editor allows those
-// bundled paths to be saved (see isAllowedImageUrl).
-// The placeholder description says plainly that the work is a
-// placeholder to replace.
-export function seedStoneGalleryArtworks(frontRoomId: string, backRoomId: string) {
-  const placeholder = "Placeholder artwork from the Stone Gallery template — replace it with your own work.";
+export function seedSunlightArtworks(roomId: string) {
+  const placeholder = "Placeholder artwork from the Sunlight Gallery template — replace it with your own work.";
   const base = {
     artist: "",
     year: "",
@@ -604,149 +342,98 @@ export function seedStoneGalleryArtworks(frontRoomId: string, backRoomId: string
     description: placeholder,
     scale: 1,
     frame: "wood",
+    roomId,
   };
-  const front = { ...base, roomId: frontRoomId };
-  const back = { ...base, roomId: backRoomId };
   return [
     {
-      ...front,
-      title: "Stone Collage",
-      dimensions: "220 × 260 cm",
+      ...base,
+      title: "Sunlight Collage",
+      dimensions: "240 × 240 cm",
       color: "#cdb78f",
       accent: "#4a2f22",
-      positionX: -9.775,
-      positionY: 2.3,
-      positionZ: -5.0,
-      rotation: Math.PI / 2,
+      positionX: -2.612,
+      positionY: 2,
+      positionZ: -4.041,
+      rotation: 0.8,
       imageUrl: "/artworks/stone-gallery/collage.jpg",
     },
     {
-      ...front,
-      title: "Vivid Field I",
-      dimensions: "140 × 260 cm",
+      ...base,
+      title: "Sunlight Field I",
+      dimensions: "150 × 190 cm",
       color: "#d9a23a",
       accent: "#b4361f",
-      positionX: -6,
-      positionY: 2.4,
-      positionZ: -6.05,
-      rotation: 0,
-      imageUrl: "/artworks/stone-gallery/vivid.jpg",
-    },
-    {
-      ...front,
-      title: "Red Field I",
-      dimensions: "220 × 170 cm",
-      color: "#8b1c14",
-      accent: "#d8581e",
-      positionX: 6,
-      positionY: 2.3,
-      positionZ: -6.05,
-      rotation: 0,
-      imageUrl: "/artworks/stone-gallery/red.jpg",
-    },
-    {
-      ...back,
-      title: "Vivid Field II",
-      dimensions: "140 × 260 cm",
-      color: "#d9a23a",
-      accent: "#b4361f",
-      positionX: -3.4,
-      positionY: 2.4,
-      positionZ: -5.275,
-      rotation: 0,
-      imageUrl: "/artworks/stone-gallery/vivid.jpg",
-    },
-    {
-      ...back,
-      title: "Red Field II",
-      dimensions: "90 × 150 cm",
-      color: "#8b1c14",
-      accent: "#d8581e",
-      positionX: 0,
-      positionY: 2.6,
-      positionZ: -5.275,
-      rotation: 0,
-      imageUrl: "/artworks/stone-gallery/red.jpg",
-    },
-    {
-      ...back,
-      title: "Red Field III",
-      dimensions: "200 × 150 cm",
-      color: "#8b1c14",
-      accent: "#d8581e",
-      positionX: 5,
+      positionX: -4.632,
       positionY: 1.9,
-      positionZ: -5.275,
-      rotation: 0,
+      positionZ: -1.961,
+      rotation: 0.8,
+      imageUrl: "/artworks/stone-gallery/vivid.jpg",
+    },
+    {
+      ...base,
+      title: "Sunlight Field II",
+      dimensions: "160 × 200 cm",
+      color: "#d9a23a",
+      accent: "#b4361f",
+      positionX: -7.403,
+      positionY: 1.9,
+      positionZ: -8.77,
+      rotation: 0.4,
       imageUrl: "/artworks/stone-gallery/red.jpg",
     },
     {
-      ...back,
-      title: "Vivid Field III",
-      dimensions: "160 × 240 cm",
-      color: "#d9a23a",
-      accent: "#b4361f",
-      positionX: 9.775,
-      positionY: 2.3,
-      positionZ: 1.5,
-      rotation: -Math.PI / 2,
-      imageUrl: "/artworks/stone-gallery/vivid.jpg",
+      ...base,
+      title: "Sunlight Field III",
+      dimensions: "220 × 220 cm",
+      color: "#8b1c14",
+      accent: "#d8581e",
+      positionX: 4.849,
+      positionY: 1.9,
+      positionZ: -8.301,
+      rotation: -0.65,
+      imageUrl: "/artworks/stone-gallery/collage.jpg",
     },
   ];
 }
 
-// Galleries retired in November 2026, kept as a migration so exhibitions
+// Layouts retired in November 2026, kept as a migration so exhibitions
 // saved with the old shapes still open instead of failing validation.
+// Every retired layout becomes Sunlight Gallery — the room keeps its
+// artworks (their positions are room-local and land in the Sunlight
+// room), its name and its finishes are reset to the Sunlight preset.
 const legacyLayouts: Record<string, RoomLayout> = {
-  "white-cube": "cube",
-  "long-gallery": "grand-hall",
-  "intimate-room": "cube",
+  "white-cube": "sunlight",
+  "long-gallery": "sunlight",
+  "intimate-room": "sunlight",
+  cube: "sunlight",
+  "grand-hall": "sunlight",
+  "totem-studio": "sunlight",
+  "gallery-skylight": "sunlight",
+  "glass-pavilion": "sunlight",
+  "stone-gallery": "sunlight",
+  "stone-gallery-front": "sunlight",
+  "stone-gallery-back": "sunlight",
 };
 
 export function parseGalleryRooms(value: string): GalleryRoom[] {
   const raw: unknown = JSON.parse(value);
   const migrated = Array.isArray(raw)
-    ? raw.map((room, index, list) => {
+    ? raw.map((room) => {
         if (!room || typeof room !== "object") return room;
         const next = { ...(room as Record<string, unknown>) };
         if (typeof next.layout === "string" && next.layout in legacyLayouts) {
           next.layout = legacyLayouts[next.layout as string];
         }
         // A room saved with a layout that no longer exists (template
-        // removed from the catalogue) falls back to the White Cube
-        // instead of failing validation, so the exhibition still opens.
+        // removed from the catalogue) becomes Sunlight Gallery instead
+        // of failing validation, so the exhibition still opens.
         if (typeof next.layout === "string" && !(next.layout in roomLayouts)) {
-          next.layout = "cube";
+          next.layout = "sunlight";
         }
-        // A Stone Gallery pair saved by the split's first version: the
-        // front room kept the single "stone-gallery" layout (20 × 24 m)
-        // instead of "stone-gallery-front" (20 × 13 m), so it displayed
-        // 20×24 m / 480 m², sat at z = 0 instead of +5.5, pushed the
-        // back half beside it along X, and never switched rooms at the
-        // arch (every Stone check keys on "stone-gallery-front"). A
-        // lone "stone-gallery" room — saved before the split, no back
-        // half after it — is untouched. The pair shape itself is the
-        // fingerprint of the buggy creation (the back half is hidden
-        // from the layout picker, so it can only come from the route).
-        if (next.layout === "stone-gallery") {
-          const following = list[index + 1];
-          if (
-            following &&
-            typeof following === "object" &&
-            (following as Record<string, unknown>).layout === "stone-gallery-back"
-          ) {
-            next.layout = "stone-gallery-front";
-            // Same finishes (the two presets are identical) — only the
-            // arch moves, from the single room's middle (local z = −1)
-            // to the front half's back edge (local z = −6.5, global
-            // z = −1), where it is the shared boundary. The seeded
-            // artworks already use front-half local coordinates, so
-            // they land on the right walls once the room does.
-            next.partitionWalls = roomLayouts["stone-gallery-front"].partitions.map((wall) => ({
-              ...wall,
-              id: crypto.randomUUID(),
-            }));
-          }
+        // The Sunlight Gallery's sun, skylights and IBL are fixed by
+        // the reference room: a retired light mood never applies.
+        if (typeof next.lightType === "string" && next.lightType !== "sunlight") {
+          next.lightType = "sunlight";
         }
         // Rooms saved before floor types / light types / elements existed:
         // fill them in from what the room already looks like.
@@ -756,7 +443,7 @@ export function parseGalleryRooms(value: string): GalleryRoom[] {
             typeof next.floorColor === "string" ? next.floorColor : "#f5f2eb",
           );
         }
-        if (typeof next.lightType !== "string") next.lightType = "spot-warm";
+        if (typeof next.lightType !== "string") next.lightType = "sunlight";
         if (!next.wallPaint || typeof next.wallPaint !== "object") next.wallPaint = {};
         if (!Array.isArray(next.elements)) next.elements = [];
         return next;

@@ -41,7 +41,8 @@ import ElementThumbnail from "@/components/element-thumbnail";
 import ExhibitionMinimap from "@/components/exhibition-minimap";
 import ExhibitionPublishDialog, { type PublishVisibility } from "@/components/exhibition-publish-dialog";
 import FrameThumbnail from "@/components/frame-thumbnail";
-import GalleryScene, { artworkStandPoint, parseArtworkDimensions, type TeleportTarget } from "@/components/gallery-scene";
+import GalleryScene, { artworkStandPoint, parseArtworkDimensions, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
+import { SUNLIGHT_CAMERA_START } from "@/lib/sunlight";
 import LayersPanel, { type LayerArtwork, type LayerItemRef } from "@/components/layers-panel";
 import ThemeToggle from "@/components/theme-toggle";
 import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, FrameProfile, FrameVariant } from "@/lib/demo-data";
@@ -159,6 +160,10 @@ export default function Editor({
   // walk mode, so the plan works from the edit view too.
   const [teleportTarget, setTeleportTarget] = useState<TeleportTarget | null>(null);
   const teleportNonce = useRef(0);
+  // Live camera state for the minimap: GalleryScene writes the
+  // camera's world position and yaw here every frame; the minimap
+  // draws the camera dot and its direction line from it.
+  const cameraStateRef = useRef<CameraState | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
   const [panelTab, setPanelTab] = useState<"artworks" | "elements" | "layers">("artworks");
   const [selectedElementId, setSelectedElementId] = useState<string>();
@@ -547,6 +552,16 @@ export default function Editor({
     if (!walking) setWalking(true);
   }
 
+  // Floor-plan point teleport (minimap): walk to a point clicked on
+  // the plan, entering walk mode first when the editor is still in
+  // the edit view. The yaw stays null — walk there, keep the current
+  // direction (the same teleportTarget path as an artwork dot).
+  function handleTeleportPoint(roomId: string, x: number, z: number) {
+    teleportNonce.current += 1;
+    setTeleportTarget({ roomId, x, z, yaw: null, nonce: teleportNonce.current });
+    if (!walking) setWalking(true);
+  }
+
   // Floor-plan room click (minimap): a room name in the plan is a
   // teleport too, not just an edit-view switch — it enters walk mode
   // at that room's entrance (the same teleportTarget path as an
@@ -556,9 +571,8 @@ export default function Editor({
   function handleRoomTeleport(roomId: string) {
     const room = rooms.find((candidate) => candidate.id === roomId);
     if (!room) return;
-    const depth = roomLayouts[room.layout].depth;
     teleportNonce.current += 1;
-    setTeleportTarget({ roomId, x: 0, z: depth / 2 - 1.5, yaw: 0, nonce: teleportNonce.current });
+    setTeleportTarget({ roomId, x: SUNLIGHT_CAMERA_START.x, z: SUNLIGHT_CAMERA_START.z, yaw: SUNLIGHT_CAMERA_START.yaw, nonce: teleportNonce.current });
     if (!walking) setWalking(true);
   }
 
@@ -1351,7 +1365,10 @@ export default function Editor({
 async function compressImage(file: File): Promise<File> {
   if (file.size <= 3_500_000) return file;
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 3000 / Math.max(bitmap.width, bitmap.height));
+  // SANAA keeps images at up to 4096 px (4k); only larger images are
+  // shrunk to that ceiling (JPEG 0.85), so they still fit Vercel's
+  // 4.5 MB request cap.
+  const scale = Math.min(1, 4096 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(bitmap.width * scale));
   canvas.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -1855,20 +1872,22 @@ async function compressImage(file: File): Promise<File> {
             </div>
           )}
           <div className="scene-wrap">
-            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} editable onArtworkUpdate={handleSceneArtworkUpdate} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
+            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode={walking} walking={walking} input={walking ? movementKeys : undefined} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} editable onArtworkUpdate={handleSceneArtworkUpdate} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
             {/* Floor plan + teleport (the same minimap as the public
-                viewer): the rooms stacked along Z with their names and
-                one dot per artwork. Clicking a room switches to it;
-                clicking a dot walks to that artwork (entering walk mode
-                first). Collapsible, so it never covers the room when
-                closed — the plan navigation the Stone Gallery split
-                relies on, now in the editor too. */}
+                viewer): the Sunlight room with its panels, one dot per
+                artwork and the live camera position. Clicking the plan
+                walks to that point; clicking a dot walks to that
+                artwork (entering walk mode first). Collapsible, so it
+                never covers the room when closed — the plan navigation
+                the room relies on, now in the editor too. */}
             <ExhibitionMinimap
               rooms={sceneRooms}
               artworks={artworks}
               activeRoomId={activeRoom?.id ?? ""}
               selectedArtworkId={selectedId}
+              cameraStateRef={cameraStateRef}
               onTeleport={handleTeleport}
+              onTeleportPoint={handleTeleportPoint}
               onRoomChange={handleRoomTeleport}
             />
             <div className="scene-caption"><span className="scene-caption-dot" /> {walking ? <>WALK MODE <span className="caption-divider">·</span> CLICK THE FLOOR OR AN ARTWORK TO WALK <span className="caption-divider">·</span> WASD TO MOVE <span className="caption-divider">·</span> DRAG TO LOOK</> : <>3D VIEW <span className="caption-divider">·</span> INSIDE THE ROOM <span className="caption-divider">·</span> DRAG AN ARTWORK TO MOVE IT <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK AROUND <span className="caption-divider">·</span> SCROLL TO ZOOM</>}</div>

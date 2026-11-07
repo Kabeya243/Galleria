@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, List, Maximize2, Minimize2 } from "lucide-react";
 import { useProgress } from "@react-three/drei";
-import GalleryScene, { artworkStandPoint, type TeleportTarget } from "@/components/gallery-scene";
+import GalleryScene, { artworkStandPoint, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
 import ArtworkDetailPanel from "@/components/artwork-detail-panel";
 import ExhibitionMinimap from "@/components/exhibition-minimap";
 import ExhibitionListView from "@/components/exhibition-list-view";
@@ -98,6 +98,10 @@ export default function PublicExhibition({
   const [teleportTarget, setTeleportTarget] = useState<TeleportTarget | null>(null);
   const [shareUrl, setShareUrl] = useState("");
   const teleportNonce = useRef(0);
+  // Live camera state for the minimap: GalleryScene writes the
+  // camera's world position and yaw here every frame; the minimap
+  // draws the camera dot and its direction line from it.
+  const cameraStateRef = useRef<CameraState | null>(null);
   useEffect(() => {
     setQuality(loadRenderQuality());
     try {
@@ -131,6 +135,16 @@ export default function PublicExhibition({
     setSelected(artwork);
     setShowListView(false);
     setTeleportTarget({ roomId: artwork.roomId, ...stand, nonce: teleportNonce.current });
+    if (!walking) setWalking(true);
+  }
+
+  // Floor-plan point teleport (minimap): walk to a point clicked on
+  // the plan, entering walk mode first when the visitor is still on
+  // the entry screen. The yaw stays null — walk there, keep the
+  // current direction.
+  function handleTeleportPoint(roomId: string, x: number, z: number) {
+    teleportNonce.current += 1;
+    setTeleportTarget({ roomId, x, z, yaw: null, nonce: teleportNonce.current });
     if (!walking) setWalking(true);
   }
 
@@ -287,6 +301,7 @@ export default function PublicExhibition({
         quality={quality}
         onQualityChange={handleQualityChange}
         teleportTarget={teleportTarget}
+        cameraStateRef={cameraStateRef}
       />}
       <header className="public-topbar">
         <Link href="/" className="public-back"><ArrowLeft size={16} /> SANAA</Link>
@@ -334,7 +349,9 @@ export default function PublicExhibition({
           artworks={exhibition.artworks}
           activeRoomId={activeRoom?.id ?? ""}
           selectedArtworkId={selected?.id}
+          cameraStateRef={cameraStateRef}
           onTeleport={handleTeleport}
+          onTeleportPoint={handleTeleportPoint}
           onRoomChange={(id) => { setActiveRoomId(id); setSelected(undefined); }}
         />
       )}
@@ -347,7 +364,7 @@ export default function PublicExhibition({
           onClose={() => setShowListView(false)}
         />
       )}
-      {walking && <div className="public-controls-hint"><span>CLICK THE FLOOR OR USE WASD / ARROWS TO WALK</span><i /> <span>DRAG TO LOOK</span><i /> <span>PASS THROUGH DOORS TO CHANGE ROOMS</span></div>}
+      {walking && <div className="public-controls-hint"><span>CLICK THE FLOOR OR USE WASD / ARROWS TO WALK</span><i /> <span>DRAG TO LOOK</span><i /> <span>USE THE FLOOR PLAN TO CHANGE ROOMS</span></div>}
       {walking && <button className="public-reset-view" onClick={() => { walkReset.current += 1; }}>↺ Entrance</button>}
       {walking && <div className="walk-pad" aria-label="Touch movement controls">
         {([

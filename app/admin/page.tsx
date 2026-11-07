@@ -351,10 +351,8 @@ export default async function AdminRoute({
     year: "numeric",
   });
 
-  // Room templates for the Galleries section: the five layouts in code,
-  // with a note for the four creation models and the reference room.
-  // The Stone Gallery front/back halves are not standalone templates,
-  // so they never appear here (same as in the /galleries catalogue).
+  // Room templates for the Galleries section: the layouts in code
+  // (Sunlight only), with a note for the creation model.
   const modelNote = new Map<RoomLayout, string>(ROOM_MODELS.map((model) => [model.layout, `Creation model · ${model.id}`]));
   const galleryTemplates = (Object.keys(roomLayouts) as RoomLayout[]).filter((key) => !HIDDEN_LAYOUT_KEYS.has(key)).map((key) => {
     const preset = roomLayouts[key];
@@ -365,10 +363,7 @@ export default async function AdminRoute({
       width: preset.width,
       depth: preset.depth,
       height: preset.height,
-      note:
-        key === "gallery-skylight"
-          ? "Reference room · public exhibition"
-          : modelNote.get(key),
+      note: modelNote.get(key),
     };
   });
 

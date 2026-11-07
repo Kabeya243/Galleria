@@ -6,9 +6,9 @@ import { useT } from "@/lib/i18n";
 import { useHiddenRoomLayouts } from "@/lib/use-hidden-room-layouts";
 
 // Create-exhibition dialog (feature 7): the title is mandatory and the
-// visitor picks one of the four named room models for the first room.
-// The model only seeds the first room — layouts can still be switched
-// and rooms added in the editor afterwards.
+// visitor picks a room model for the first room. Sunlight Gallery is
+// the only model left. The model only seeds the first room — rooms can
+// still be added in the editor afterwards.
 export default function ExhibitionCreateDialog({
   onClose,
   onCreate,
@@ -18,7 +18,7 @@ export default function ExhibitionCreateDialog({
 }) {
   const t = useT();
   const [title, setTitle] = useState("");
-  const [model, setModel] = useState<RoomModelId>("minimalist");
+  const [model, setModel] = useState<RoomModelId>("sunlight");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const trimmed = title.trim();
@@ -29,14 +29,10 @@ export default function ExhibitionCreateDialog({
   const visibleModels = ROOM_MODELS.filter((candidate) => !hidden.has(candidate.layout));
   const effectiveModel = visibleModels.some((candidate) => candidate.id === model)
     ? model
-    : (visibleModels[0]?.id ?? "minimalist");
+    : (visibleModels[0]?.id ?? "sunlight");
 
   const modelText: Record<RoomModelId, { name: string; desc: string }> = {
-    minimalist: { name: t("create", "modelMinimalist"), desc: t("create", "modelMinimalistDesc") },
-    classic: { name: t("create", "modelClassic"), desc: t("create", "modelClassicDesc") },
-    studio: { name: t("create", "modelStudio"), desc: t("create", "modelStudioDesc") },
-    outdoor: { name: t("create", "modelOutdoor"), desc: t("create", "modelOutdoorDesc") },
-    stone: { name: t("create", "modelStone"), desc: t("create", "modelStoneDesc") },
+    sunlight: { name: t("create", "modelSunlight"), desc: t("create", "modelSunlightDesc") },
   };
 
   async function submit(event: React.FormEvent) {

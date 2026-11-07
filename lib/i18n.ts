@@ -177,30 +177,10 @@ export const DICTIONARY = {
     titlePlaceholder: { fr: "Nom de votre exposition", en: "Name your exhibition" },
     titleRequired: { fr: "Un titre est obligatoire", en: "A title is required" },
     chooseModel: { fr: "Choisir un modèle de salle", en: "Choose a room model" },
-    modelMinimalist: { fr: "Minimaliste", en: "Minimalist" },
-    modelMinimalistDesc: {
-      fr: "Cube blanc, lumière douce, l'œuvre d'abord.",
-      en: "White cube, soft light, the work first.",
-    },
-    modelClassic: { fr: "Classique", en: "Classic" },
-    modelClassicDesc: {
-      fr: "Grande salle lumineuse, accrochage généreux.",
-      en: "Grand light hall, generous hang.",
-    },
-    modelStudio: { fr: "Atelier", en: "Studio" },
-    modelStudioDesc: {
-      fr: "Ambiance d'atelier d'artiste, chaleur du bois.",
-      en: "Artist studio mood, warm timber.",
-    },
-    modelOutdoor: { fr: "Extérieur", en: "Outdoor" },
-    modelOutdoorDesc: {
-      fr: "Verre et lumière du jour, comme en plein air.",
-      en: "Glass and daylight, like the open air.",
-    },
-    modelStone: { fr: "Pierre", en: "Stone" },
-    modelStoneDesc: {
-      fr: "Salle en pierre, arche ronde, poutres sombres.",
-      en: "Stone hall, round arch, dark timber beams.",
+    modelSunlight: { fr: "Sunlight", en: "Sunlight" },
+    modelSunlightDesc: {
+      fr: "Grande salle lumineuse sous sept verrières — lumière du jour, sol béton, panneaux autoportants.",
+      en: "Bright hall under seven skylights — daylight, concrete floor, freestanding panels.",
     },
     create: { fr: "Créer", en: "Create" },
     creating: { fr: "Création…", en: "Creating…" },

@@ -263,7 +263,7 @@ function CameraRig({ shots, clockRef }: { shots: Shot[]; clockRef: MutableRefObj
 }
 
 function RoomScene({ room, artworks, shots, clockRef }: { room: GalleryRoom; artworks: VideoArtwork[]; shots: Shot[]; clockRef: MutableRefObject<number> }) {
-  const layout = roomLayouts[room.layout] ?? roomLayouts.cube;
+  const layout = roomLayouts[room.layout] ?? roomLayouts.sunlight;
   const width = layout.width;
   const depth = layout.depth;
   const height = layout.height;
@@ -320,7 +320,7 @@ function RoomScene({ room, artworks, shots, clockRef }: { room: GalleryRoom; art
 
 function buildDefaultShots(exhibition: VideoExhibition): Shot[] {
   const room = exhibition.rooms[0];
-  const layout = room ? (roomLayouts[room.layout] ?? roomLayouts.cube) : roomLayouts.cube;
+  const layout = room ? (roomLayouts[room.layout] ?? roomLayouts.sunlight) : roomLayouts.sunlight;
   const depth = layout.depth;
   const shots: Shot[] = [
     {
@@ -498,7 +498,7 @@ export default function VideoGenerator({
   function addShot(type: ShotType) {
     if (!exhibition) return;
     const room = exhibition.rooms[0];
-    const layout = room ? (roomLayouts[room.layout] ?? roomLayouts.cube) : roomLayouts.cube;
+    const layout = room ? (roomLayouts[room.layout] ?? roomLayouts.sunlight) : roomLayouts.sunlight;
     const depth = layout.depth;
     const base: Shot = {
       id: uid(),

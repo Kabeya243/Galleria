@@ -30,7 +30,7 @@ function parseRooms(raw: string): ParsedRoom[] {
       .map((r) => ({
         id: typeof r.id === "string" ? r.id : "room-main",
         name: typeof r.name === "string" ? r.name : "Room 1",
-        layout: typeof r.layout === "string" ? r.layout : "cube",
+        layout: typeof r.layout === "string" ? r.layout : "sunlight",
         lightType: typeof r.lightType === "string" ? r.lightType : "spot-warm",
         wallColor: typeof r.wallColor === "string" ? r.wallColor : "#f5f2eb",
       }));

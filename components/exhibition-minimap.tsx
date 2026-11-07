@@ -1,154 +1,118 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, X } from "lucide-react";
 import type { Artwork } from "@/lib/demo-data";
-import { roomLayouts, roomPlanOffsets, type GalleryRoom } from "@/lib/rooms";
+import { roomPlanOffsets, type GalleryRoom } from "@/lib/rooms";
+import {
+  SUNLIGHT_MAP_HEIGHT,
+  SUNLIGHT_MAP_WIDTH,
+  SUNLIGHT_PANELS,
+  sunlightMapPoint,
+  sunlightMapX,
+  sunlightMapZ,
+} from "@/lib/sunlight";
+import type { CameraState } from "@/components/gallery-scene";
 import { useT } from "@/lib/i18n";
 
-// Floor plan + teleport (public exhibition): a top-down plan of the
-// rooms with one clickable dot per artwork. Clicking a dot walks the
-// visitor straight to that artwork in the 3D room (via the
-// teleportTarget prop of GalleryScene); clicking a room switches to it.
-// Pure black & white, keyboard-navigable (native buttons), and
-// collapsible so it never covers the room on a small screen.
+// Floor plan + teleport (public exhibition and editor): the Sunlight
+// Gallery's plan, drawn on a canvas like the reference room's own
+// mini-plan — the room outline, the three freestanding panels as
+// lines, one orange dot per artwork, and the live camera (blue dot +
+// direction line). Clicking the plan walks the visitor to that point;
+// clicking near an artwork dot walks to that artwork. Pure black &
+// white, keyboard-navigable (native buttons), and collapsible so it
+// never covers the room on a small screen.
 export default function ExhibitionMinimap({
   rooms,
   artworks,
   activeRoomId,
   selectedArtworkId,
+  cameraStateRef,
   onTeleport,
+  onTeleportPoint,
   onRoomChange,
 }: {
   rooms: GalleryRoom[];
   artworks: Artwork[];
   activeRoomId: string;
   selectedArtworkId?: string;
+  // Live camera state (GalleryScene writes it every frame): the
+  // camera dot and its direction line. Absent = no camera dot.
+  cameraStateRef?: { current: CameraState | null };
   onTeleport: (artwork: Artwork) => void;
+  // Walk to a point clicked on the plan (yaw stays null — walk there,
+  // keep the current direction). Absent = a point click does nothing.
+  onTeleportPoint?: (roomId: string, x: number, z: number) => void;
   onRoomChange: (roomId: string) => void;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Same room offsets as the 3D scene (see roomPlanOffsets), so the
-  // plan matches the space the visitor walks through. Rooms normally
-  // line up along X; a Stone Gallery front/back pair shares one X and
-  // stacks along Z (front half below, back half above), so the plan
-  // shows both rooms and the visitor can switch between them.
-  const { offsets, zOffsets, minX, maxX, minZ, maxZ } = useMemo(() => {
-    const plan = roomPlanOffsets(rooms);
-    const minX = Math.min(...rooms.map((room, i) => plan.x[i] - roomLayouts[room.layout].width / 2));
-    const maxX = Math.max(...rooms.map((room, i) => plan.x[i] + roomLayouts[room.layout].width / 2));
-    const minZ = Math.min(...rooms.map((room, i) => plan.z[i] - roomLayouts[room.layout].depth / 2));
-    const maxZ = Math.max(...rooms.map((room, i) => plan.z[i] + roomLayouts[room.layout].depth / 2));
-    return { offsets: plan.x, zOffsets: plan.z, minX, maxX, minZ, maxZ };
-  }, [rooms]);
+  // The room's world offset in the shared 3D space (see
+  // roomPlanOffsets), so the plan matches the space the visitor walks
+  // through. A single Sunlight room per exhibition: the plan shows
+  // that room.
+  const offsets = useMemo(() => roomPlanOffsets(rooms).x, [rooms]);
+  const activeRoom = rooms.find((room) => room.id === activeRoomId) ?? rooms[0];
+  const activeIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoom?.id));
+  const activeOffsetX = offsets[activeIndex] ?? 0;
+  const activeArtworks = activeRoom ? artworks.filter((artwork) => artwork.roomId === activeRoom.id) : [];
 
-  const width = Math.max(1, maxX - minX);
-  const height = Math.max(1, maxZ - minZ);
-  // 1 m = 10 units in the SVG; the plan scales to its container.
-  const SCALE = 10;
-  // The panel is dark (#050505, pure black & white theme), so the plan
-  // must read on a dark background: the active room is a solid white
-  // block with a black label, an inactive room a dark block with a
-  // light border and a white label. (The old scheme — active 6% black,
-  // inactive white — was drawn for a light panel, so whichever room
-  // was active vanished into the dark panel with its label, and the
-  // plan looked cut off at the top where that room sits.)
-  // A padding ring keeps rooms and dots off the SVG edge: artworks
-  // hung on the back wall sit at the very edge of their room, and
-  // without it their dots are half clipped by the viewport.
-  const PAD = 12;
-  const viewWidth = width * SCALE + PAD * 2;
-  const viewHeight = height * SCALE + PAD * 2;
-  const toX = (worldX: number) => (worldX - minX) * SCALE + PAD;
-  // The back wall (most negative z) is at the top of the plan, the
-  // front wall at the bottom — like a floor plan with the entrance
-  // at the bottom.
-  const toY = (worldZ: number) => (worldZ - minZ) * SCALE + PAD;
-  // Keep every dot fully inside the plan (visible and clickable): a
-  // dot on a wall would otherwise sit half outside the viewport.
-  const clampDot = (value: number, max: number) => Math.min(Math.max(value, 8), Math.max(8, max - 8));
+  // Redraw the plan every frame while open: the camera dot and its
+  // direction line move live with the camera.
+  useEffect(() => {
+    if (!open) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    let raf = 0;
+    const draw = () => {
+      drawSunlightMinimap(ctx, activeArtworks, selectedArtworkId, cameraStateRef?.current ?? null, activeOffsetX);
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [open, activeArtworks, selectedArtworkId, cameraStateRef, activeOffsetX]);
 
-  if (rooms.length === 0) return null;
+  if (rooms.length === 0 || !activeRoom) return null;
+
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const point = sunlightMapPoint(event.clientX, event.clientY, rect);
+    // A click near an artwork dot (within ~0.6 m) walks to that
+    // artwork; anywhere else walks to the clicked point.
+    const near = activeArtworks.find((artwork) => {
+      const dx = artwork.position[0] - point.x;
+      const dz = artwork.position[2] - point.z;
+      return Math.hypot(dx, dz) <= 0.6;
+    });
+    if (near) {
+      onTeleport(near);
+    } else {
+      onTeleportPoint?.(activeRoom.id, point.x, point.z);
+    }
+  };
 
   return (
     <div className="exhibition-minimap">
       {open && (
         <div className="minimap-panel" role="group" aria-label={t("minimap", "floorPlan")}>
-          <svg
-            viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-            width="100%"
-            role="list"
+          <canvas
+            ref={canvasRef}
+            width={SUNLIGHT_MAP_WIDTH}
+            height={SUNLIGHT_MAP_HEIGHT}
+            onClick={handleCanvasClick}
+            role="img"
             aria-label={t("minimap", "floorPlan")}
-            style={{ display: "block", maxHeight: 200 }}
-          >
-            {rooms.map((room, index) => {
-              const layout = roomLayouts[room.layout];
-              const x = toX(offsets[index] - layout.width / 2);
-              const y = toY(zOffsets[index] - layout.depth / 2);
-              const w = layout.width * SCALE;
-              const h = layout.depth * SCALE;
-              const isActive = room.id === activeRoomId;
-              const roomArtworks = artworks.filter((artwork) => artwork.roomId === room.id);
-              return (
-                <g key={room.id}>
-                  <rect
-                    x={x}
-                    y={y}
-                    width={w}
-                    height={h}
-                    fill={isActive ? "var(--ink)" : "var(--accent-soft)"}
-                    stroke={isActive ? "var(--ink)" : "var(--muted)"}
-                    strokeWidth={isActive ? 2 : 1}
-                  />
-                  <text
-                    x={x + w / 2}
-                    y={y + 14}
-                    textAnchor="middle"
-                    fontSize={9}
-                    fontWeight={700}
-                    fill={isActive ? "var(--paper)" : "var(--ink)"}
-                    style={{ textTransform: "uppercase", letterSpacing: ".08em" }}
-                  >
-                    {room.name}
-                  </text>
-                  {roomArtworks.map((artwork) => {
-                    const cx = clampDot(toX(offsets[index] + artwork.position[0]), viewWidth);
-                    const cy = clampDot(toY(zOffsets[index] + artwork.position[2]), viewHeight);
-                    const isSelected = artwork.id === selectedArtworkId;
-                    return (
-                      <g key={artwork.id} role="listitem">
-                        <circle
-                          cx={cx}
-                          cy={cy}
-                          r={isSelected ? 7 : 5}
-                          fill={isSelected ? "var(--paper)" : "var(--ink)"}
-                          stroke="var(--paper)"
-                          strokeWidth={1.5}
-                        />
-                        {/* A transparent hit target so the dot is easy to
-                            tap on a small screen. Clicking it teleports;
-                            the button list below is the keyboard path. */}
-                        <circle
-                          cx={cx}
-                          cy={cy}
-                          r={13}
-                          fill="transparent"
-                          style={{ cursor: "pointer" }}
-                          onClick={() => onTeleport(artwork)}
-                        >
-                          <title>{`${artwork.title} — ${t("minimap", "goToArtwork")}`}</title>
-                        </circle>
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            })}
-          </svg>
-          {/* The dots are buttons (keyboard accessible); the SVG above is
-              the picture, the list below is the control. */}
+            style={{ display: "block", width: "100%", height: "auto", maxHeight: 280, cursor: "pointer" }}
+          />
+          {/* The dots are buttons (keyboard accessible); the canvas
+              above is the picture, the list below is the control. */}
           <ul className="minimap-list">
             {rooms.map((room) => (
               <li key={room.id}>
@@ -194,4 +158,87 @@ export default function ExhibitionMinimap({
       </button>
     </div>
   );
+}
+
+// Draw the Sunlight plan on the canvas: white room, black outline,
+// the three panels as lines, orange artwork dots, and the live camera
+// (blue dot + direction line). Room-local coordinates (the room sits
+// at its world offset in the scene, so the camera's world position is
+// shifted back by that offset to land on the plan).
+function drawSunlightMinimap(
+  ctx: CanvasRenderingContext2D,
+  artworks: Artwork[],
+  selectedArtworkId: string | undefined,
+  cameraState: CameraState | null,
+  offsetX: number,
+) {
+  const W = SUNLIGHT_MAP_WIDTH;
+  const H = SUNLIGHT_MAP_HEIGHT;
+  ctx.clearRect(0, 0, W, H);
+  // Room: white fill, black outline.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(2, 2, W - 4, H - 4);
+  // Freestanding panels: a line each, along the panel's length.
+  // The panel group is rotated y = ry, so its local +X maps to world
+  // (cos ry, -sin ry) in (x, z).
+  ctx.strokeStyle = "#333333";
+  ctx.lineWidth = 3;
+  for (const panel of SUNLIGHT_PANELS) {
+    const c = Math.cos(panel.ry);
+    const s = Math.sin(panel.ry);
+    const half = panel.len / 2;
+    ctx.beginPath();
+    ctx.moveTo(sunlightMapX(panel.x + c * half), sunlightMapZ(panel.z - s * half));
+    ctx.lineTo(sunlightMapX(panel.x - c * half), sunlightMapZ(panel.z + s * half));
+    ctx.stroke();
+  }
+  // Double door on the left wall: a gap in the outline.
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(sunlightMapX(-11), sunlightMapZ(-11.55));
+  ctx.lineTo(sunlightMapX(-11), sunlightMapZ(-10.45));
+  ctx.stroke();
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 2;
+  // Artworks: orange dots (bigger when selected) — the source's
+  // #BA7517.
+  for (const artwork of artworks) {
+    const cx = sunlightMapX(artwork.position[0]);
+    const cy = sunlightMapZ(artwork.position[2]);
+    const isSelected = artwork.id === selectedArtworkId;
+    ctx.beginPath();
+    ctx.arc(cx, cy, isSelected ? 7 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = isSelected ? "#ffffff" : "#BA7517";
+    ctx.fill();
+    ctx.strokeStyle = "#BA7517";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  // Camera: blue dot + a short direction line (yaw 0 faces -Z) — the
+  // source's #1f6feb.
+  if (cameraState) {
+    const localX = cameraState.x - offsetX;
+    const cx = sunlightMapX(localX);
+    const cy = sunlightMapZ(cameraState.z);
+    const len = 2; // metres
+    const dx = -Math.sin(cameraState.yaw) * len;
+    const dz = -Math.cos(cameraState.yaw) * len;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(sunlightMapX(localX + dx), sunlightMapZ(cameraState.z + dz));
+    ctx.strokeStyle = "#1f6feb";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#1f6feb";
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
 }

@@ -25,17 +25,10 @@ export type GalleryPresetCard = {
   ceilingTexture: keyof typeof ceilingTextures;
 };
 
-// The Stone Gallery is two rooms (front 20×13 m, back 20×11 m, arch
-// between them), not one 20×24 m hall — its card and preview say so
-// instead of the single room's dimensions. The other models keep the
-// single-room line.
+// The room card's finish line: dimensions plus the wall and floor
+// finishes.
 function finishesLine(room: GalleryPresetCard): string {
   const finishes = `${wallTextures[room.wallTexture]} walls · ${floorTextures[room.floorTexture]} floor`;
-  if (room.key === "stone-gallery") {
-    const front = roomLayouts["stone-gallery-front"];
-    const back = roomLayouts["stone-gallery-back"];
-    return `Two rooms · ${front.width}×${front.depth} m + ${back.width}×${back.depth} m · ${room.height} m high · ${finishes}`;
-  }
   return `${room.width} × ${room.depth} m · ${room.height} m high · ${finishes}`;
 }
 
@@ -173,7 +166,7 @@ export default function GalleriesPage({
   user: { id: string; name: string; email: string; isAdmin?: boolean } | null;
   ownExhibitionCount: number;
 }) {
-  const [selected, setSelected] = useState<RoomLayout>("cube");
+  const [selected, setSelected] = useState<RoomLayout>("sunlight");
   const [opening, setOpening] = useState<RoomLayout | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [walking, setWalking] = useState(false);
@@ -233,11 +226,9 @@ export default function GalleriesPage({
   // Existing flow, unchanged: create an exhibition, give its first room
   // this layout, then open the editor. Signed-out visitors go to /login.
   // The model is passed to the create call, so the API seeds exactly
-  // what the Create flow seeds — for the Stone Gallery, the two rooms
-  // with its seven artworks. The PUT below then only re-seeds the
-  // single room for the other models; for Stone it is skipped, because
-  // it would overwrite the two rooms with one blank room and no
-  // artworks ("Open in editor" used to open a blank single room).
+  // what the Create flow seeds — for Sunlight, the one room with its
+  // four artworks. No PUT follows: it would overwrite the seeded room
+  // with a blank room and no artworks.
   async function openInEditor(layout: RoomLayout) {
     setOpening(layout);
     setOpenError(null);
@@ -247,7 +238,7 @@ export default function GalleriesPage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // The title is mandatory (feature 7): the room's own label names
-        // the show, and the PUT below still seeds this layout's room.
+        // the show.
         body: JSON.stringify({ title: roomLayouts[layout].label, model }),
       });
       if (createResponse.status === 401) {
@@ -256,21 +247,6 @@ export default function GalleriesPage({
       }
       const created = await createResponse.json();
       if (!createResponse.ok) throw new Error(created.error ?? "Could not create an exhibition.");
-      if (layout !== "stone-gallery") {
-        const room = createGalleryRoom(0, layout);
-        const saveResponse = await fetch(`/api/exhibitions/${created.exhibition.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: roomLayouts[layout].label,
-            description: "",
-            rooms: [room],
-            artworks: [],
-          }),
-        });
-        const saved = await saveResponse.json();
-        if (!saveResponse.ok) throw new Error(saved.error ?? "Could not prepare this room.");
-      }
       window.location.assign(`/editor/${created.exhibition.id}`);
     } catch (error) {
       console.error("Could not open this room in the editor.", error);

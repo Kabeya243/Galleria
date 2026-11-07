@@ -476,11 +476,11 @@ export function lightingSuggestions(
       detail:
         "Cool spots sharpen blues and whites but can make warm skin tones and wood frames look grey. If the work is warm, switch the room to warm spots.",
     });
-  } else if (lightType === "stone-warm") {
+  } else if (lightType === "sunlight") {
     out.push({
-      title: "Stone warm glow — keep it",
+      title: "Sunlight — the sun does the work",
       detail:
-        "The room already uses the Stone Gallery's warm hemisphere and point lights. The glow is soft and even; keep the per-artwork spots low so the stone, not the beams, carries the warmth.",
+        "The room is lit by the sun through seven skylights, plus a soft hemisphere and IBL. The glow is bright and even; move the sun with the slider to rake light across the panels, and keep the per-artwork spots low so the daylight, not the fixtures, carries the room.",
     });
   } else {
     out.push({

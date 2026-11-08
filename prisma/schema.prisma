@@ -25,6 +25,7 @@ model User {
   resetTokens  PasswordResetToken[]
   savedWorks   SavedWork[]
   listings     Listing[]
+  libraryWorks LibraryWork[]
   teamsOwned   Team[]
   teamMemberships TeamMember[]
   teamComments TeamComment[]
@@ -123,6 +124,56 @@ model Artwork {
   exhibition   Exhibition @relation(fields: [exhibitionId], references: [id], onDelete: Cascade)
 
   @@index([exhibitionId])
+}
+
+// The artist's reusable artwork library ("Mes œuvres").
+//
+// An Artwork row belongs to exactly ONE exhibition (exhibitionId, and
+// it carries that exhibition's own position / room / frame), so two
+// exhibitions cannot share one Artwork row without fighting over where
+// the work hangs. Reuse is therefore a COPY: a new Artwork row in the
+// target exhibition with the same imageUrl — never a re-upload — and
+// this table is the canonical record of the work itself, owned by the
+// artist, across all exhibitions.
+//
+// Identity is the image URL (same R2 object = same work): one row per
+// (owner, imageUrl). Rows are created lazily — on first library read
+// (lib/library.ts ensureLibraryWorks, backfilling from the artworks
+// already hanging in the owner's exhibitions) and on every exhibition
+// save / single-artwork add — so no migration script has to run
+// against production and no existing work is ever lost from the
+// library. Works without an image (curatorial text panels) are not
+// library works: there is nothing to re-hang elsewhere.
+//
+// Deleting a LibraryWork is the one explicit, confirmed delete: it
+// removes the library row AND every copy hanging in the owner's
+// exhibitions (same imageUrl). It has to remove the copies too —
+// otherwise the next library read would backfill the row straight
+// back from the copy still on the wall. The R2 file itself is never
+// deleted (same policy as exhibition audio: orphaned files are a
+// known cleanup debt, not a silent delete). Deleting a single copy
+// from an exhibition (DELETE /api/artworks/[id]) only ever removes
+// that copy: the library row and the copies in other exhibitions
+// stay untouched.
+model LibraryWork {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  artist      String   @default("")
+  year        String   @default("")
+  medium      String   @default("")
+  dimensions  String   @default("")
+  description String   @default("")
+  imageUrl    String
+  frame       String   @default("wood")
+  palette     String?
+  altText     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([ownerId, imageUrl])
+  @@index([ownerId, createdAt])
 }
 
 // Uploaded artwork images, stored in the database (not on disk): Vercel's

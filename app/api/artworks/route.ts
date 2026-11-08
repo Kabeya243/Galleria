@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { upsertLibraryWorks } from "@/lib/library";
 
 // Create one artwork inside one of the signed-in user's exhibitions.
 // Used by Art in Context (step 1 upload, step 7 "add a copy to this
@@ -49,5 +50,9 @@ export async function POST(request: Request) {
       exhibitionId: input.exhibitionId,
     },
   });
+  // Every work added to an exhibition joins the reusable library
+  // (create-only — a copy never overwrites the canonical row), so
+  // "Mes œuvres" stays current without a separate upload step.
+  await upsertLibraryWorks(user.id, [{ ...input, imageUrl: input.imageUrl ?? null }]);
   return NextResponse.json({ artwork }, { status: 201 });
 }

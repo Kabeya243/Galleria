@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { getCurrentUser, toClientArtwork, withoutExhibitionPasswordHash } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { upsertLibraryWorks } from "@/lib/library";
 import { parseGalleryRooms } from "@/lib/rooms";
 import { exhibitionUpdateSchema } from "@/lib/validation";
 import { canEditExhibition } from "@/lib/teams";
@@ -137,6 +138,29 @@ export async function PUT(request: Request, { params }: RouteContext) {
         });
       }
     });
+
+    // Every work hanging in the saved exhibition joins the reusable
+    // library (create-only — a copy never overwrites the canonical
+    // row). This is the editor's save path: artworks are recreated
+    // here on every save, so this is where new uploads enter "Mes
+    // œuvres" without the editor client having to know about it. The
+    // library belongs to the exhibition's owner, even when a team
+    // editor does the saving.
+    await upsertLibraryWorks(
+      existing.ownerId,
+      input.artworks.map((artwork) => ({
+        title: artwork.title,
+        artist: artwork.artist,
+        year: artwork.year,
+        medium: artwork.medium,
+        dimensions: artwork.dimensions,
+        description: artwork.description,
+        imageUrl: artwork.imageUrl ?? null,
+        frame: artwork.frame,
+        palette: artwork.palette ?? null,
+        altText: artwork.altText ?? null,
+      })),
+    );
 
     const exhibition = await db.exhibition.findUniqueOrThrow({
       where: { id },

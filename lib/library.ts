@@ -1,0 +1,248 @@
+import { db } from "@/lib/db";
+
+// Shared library helpers ("Mes œuvres"): the reusable artwork library
+// behind GET /api/library, the /artworks page, the editor's "from my
+// works" picker and the reuse endpoint.
+//
+// Model (prisma/schema.prisma, LibraryWork): one canonical row per
+// (owner, imageUrl) — the image URL is the work's identity, because a
+// reused work is a COPY of the same R2 file, never a re-upload. An
+// Artwork row belongs to exactly one exhibition and carries that
+// exhibition's own position / room / frame, so copies are independent
+// rows: editing or moving a copy never touches the library row or the
+// copies in other exhibitions.
+
+export type LibraryWorkItem = {
+  id: string;
+  title: string;
+  artist: string;
+  year: string;
+  medium: string;
+  dimensions: string;
+  description: string;
+  imageUrl: string;
+  frame: string;
+  palette: string[] | null;
+  altText: string | null;
+  createdAt: string;
+  /** Exhibitions of this owner where a copy of the work hangs. */
+  exhibitionIds: string[];
+};
+
+export type LibraryArtworkFields = {
+  title: string;
+  artist: string;
+  year: string;
+  medium: string;
+  dimensions: string;
+  description: string;
+  imageUrl: string | null;
+  frame: string;
+  palette?: string[] | string | null;
+  altText?: string | null;
+};
+
+function parsePalette(value: string | null | undefined): string[] | null {
+  if (!value) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : null;
+  } catch {
+    return null;
+  }
+}
+
+function toItem(
+  row: {
+    id: string;
+    title: string;
+    artist: string;
+    year: string;
+    medium: string;
+    dimensions: string;
+    description: string;
+    imageUrl: string;
+    frame: string;
+    palette: string | null;
+    altText: string | null;
+    createdAt: Date;
+  },
+  exhibitionIds: string[],
+): LibraryWorkItem {
+  return {
+    id: row.id,
+    title: row.title,
+    artist: row.artist,
+    year: row.year,
+    medium: row.medium,
+    dimensions: row.dimensions,
+    description: row.description,
+    imageUrl: row.imageUrl,
+    frame: row.frame,
+    palette: parsePalette(row.palette),
+    altText: row.altText,
+    createdAt: row.createdAt.toISOString(),
+    exhibitionIds,
+  };
+}
+
+// Backfill: one library row per distinct image among the owner's
+// artworks (earliest hanging copy supplies the metadata). Works
+// without an image (curatorial text panels) are not library works.
+// Idempotent — rows already present (same owner + imageUrl) are left
+// alone — so it is safe to run on every library read: existing works
+// appear from the first visit, with no migration script to run
+// against production and no database access needed from the deploy.
+export async function ensureLibraryWorks(ownerId: string): Promise<void> {
+  const artworks = await db.artwork.findMany({
+    where: { exhibition: { ownerId }, imageUrl: { not: null } },
+    select: {
+      title: true,
+      artist: true,
+      year: true,
+      medium: true,
+      dimensions: true,
+      description: true,
+      imageUrl: true,
+      frame: true,
+      palette: true,
+      altText: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  const seen = new Set<string>();
+  for (const artwork of artworks) {
+    const imageUrl = artwork.imageUrl;
+    if (!imageUrl || seen.has(imageUrl)) continue;
+    seen.add(imageUrl);
+    // Create-only: never overwrite the canonical row from a copy —
+    // a copy's title or frame may have been edited for one show.
+    await db.libraryWork.upsert({
+      where: { ownerId_imageUrl: { ownerId, imageUrl } },
+      update: {},
+      create: {
+        ownerId,
+        title: artwork.title,
+        artist: artwork.artist,
+        year: artwork.year,
+        medium: artwork.medium,
+        dimensions: artwork.dimensions,
+        description: artwork.description,
+        imageUrl,
+        frame: artwork.frame,
+        palette: artwork.palette,
+        altText: artwork.altText,
+      },
+    });
+  }
+}
+
+// Record freshly saved artworks in the library (create-only, same
+// rule as the backfill). Called from the exhibition save (PUT) and
+// the single-artwork add (POST /api/artworks) so every new upload
+// joins the library without the editor client having to know about it.
+export async function upsertLibraryWorks(ownerId: string, artworks: LibraryArtworkFields[]): Promise<void> {
+  const seen = new Set<string>();
+  for (const artwork of artworks) {
+    const imageUrl = artwork.imageUrl;
+    if (!imageUrl || seen.has(imageUrl)) continue;
+    seen.add(imageUrl);
+    await db.libraryWork.upsert({
+      where: { ownerId_imageUrl: { ownerId, imageUrl } },
+      update: {},
+      create: {
+        ownerId,
+        title: artwork.title,
+        artist: artwork.artist,
+        year: artwork.year,
+        medium: artwork.medium,
+        dimensions: artwork.dimensions,
+        description: artwork.description,
+        imageUrl,
+        frame: artwork.frame,
+        palette: typeof artwork.palette === "string" ? artwork.palette : artwork.palette ? JSON.stringify(artwork.palette) : null,
+        altText: artwork.altText ?? null,
+      },
+    });
+  }
+}
+
+// The whole library for one owner: backfill first, then every row
+// with the exhibitions where a copy hangs.
+export async function listLibraryWorks(ownerId: string): Promise<LibraryWorkItem[]> {
+  await ensureLibraryWorks(ownerId);
+  const [rows, copies] = await Promise.all([
+    db.libraryWork.findMany({
+      where: { ownerId },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.artwork.findMany({
+      where: { exhibition: { ownerId }, imageUrl: { not: null } },
+      select: { imageUrl: true, exhibitionId: true },
+    }),
+  ]);
+  const byImage = new Map<string, Set<string>>();
+  for (const copy of copies) {
+    if (!copy.imageUrl) continue;
+    const set = byImage.get(copy.imageUrl) ?? new Set<string>();
+    set.add(copy.exhibitionId);
+    byImage.set(copy.imageUrl, set);
+  }
+  return rows.map((row) => toItem(row, [...(byImage.get(row.imageUrl) ?? [])]));
+}
+
+// Copy a library work into an exhibition: a NEW Artwork row with the
+// same imageUrl (the same R2 file — no upload, no new bytes), the
+// library's metadata, and a fresh default placement in the target
+// room. The copy is independent afterwards: moving it, reframing it
+// or deleting it never touches the library row or other exhibitions.
+export async function copyLibraryWorkToExhibition(
+  ownerId: string,
+  libraryWorkId: string,
+  exhibitionId: string,
+  roomId = "room-main",
+) {
+  const [work, exhibition] = await Promise.all([
+    db.libraryWork.findFirst({ where: { id: libraryWorkId, ownerId } }),
+    db.exhibition.findFirst({ where: { id: exhibitionId, ownerId }, select: { id: true } }),
+  ]);
+  if (!work) return { error: "Work not found in your library.", status: 404 as const };
+  if (!exhibition) return { error: "Exhibition not found.", status: 404 as const };
+  const artwork = await db.artwork.create({
+    data: {
+      title: work.title,
+      artist: work.artist,
+      year: work.year,
+      medium: work.medium,
+      dimensions: work.dimensions,
+      description: work.description,
+      imageUrl: work.imageUrl,
+      frame: work.frame,
+      palette: work.palette,
+      altText: work.altText,
+      positionX: 0,
+      positionY: 2.5,
+      positionZ: -5.72,
+      rotation: 0,
+      scale: 1,
+      roomId,
+      exhibitionId,
+    },
+  });
+  return { artwork, status: 201 as const };
+}
+
+// The one explicit, confirmed delete (from "Mes œuvres"): the library
+// row AND every copy hanging in the owner's exhibitions. The copies
+// have to go too — otherwise the next library read would backfill the
+// row straight back from the copy still on the wall. The R2 file is
+// never deleted. Returns how many exhibition copies went with it.
+export async function deleteLibraryWorkAndCopies(ownerId: string, libraryWorkId: string) {
+  const work = await db.libraryWork.findFirst({ where: { id: libraryWorkId, ownerId } });
+  if (!work) return { error: "Work not found in your library.", status: 404 as const };
+  const deleted = await db.artwork.deleteMany({
+    where: { imageUrl: work.imageUrl, exhibition: { ownerId } },
+  });
+  await db.libraryWork.delete({ where: { id: work.id } });
+  return { deletedCopies: deleted.count, status: 200 as const };
+}

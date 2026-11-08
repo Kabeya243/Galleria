@@ -14,6 +14,7 @@ import {
   GalleryVerticalEnd,
   Grid2X2,
   Home,
+  Image,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -72,6 +73,10 @@ const NAV_GROUPS: NavGroup[] = [
     label: "create",
     items: [
       { id: "exhibitions", href: "/exhibitions", label: "exhibitions", icon: GalleryVerticalEnd, count: true },
+      // The reusable artwork library: every work the artist has ever
+      // uploaded, all exhibitions together — the place a new
+      // exhibition's works are picked from, instead of re-uploading.
+      { id: "my-artworks", href: "/artworks", label: "myArtworks", icon: Image },
       { id: "tools-hub", href: "/tools", label: "tools", icon: Wrench },
       { id: "price", href: "/tools/price-your-work", label: "price", icon: Calculator },
     ],
@@ -133,6 +138,7 @@ const NAV_GROUPS: NavGroup[] = [
 const LEGACY_ACTIVE: Record<string, string> = {
   overview: "dashboard",
   exhibitions: "exhibitions",
+  artworks: "my-artworks",
   explore: "explore",
   galleries: "templates",
   tools: "tools-hub",
@@ -145,6 +151,7 @@ export type SidebarActive =
   | "settings"
   | "galleries"
   | "exhibitions"
+  | "artworks"
   | "explore"
   | "tools"
   | "admin"

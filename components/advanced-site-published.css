@@ -3,32 +3,62 @@
    no Tailwind directives, all rules keyed off .published-site /
    .design-* / .gallery-* class names, so it cannot leak onto SANAA.
    Imported once in app/layout.tsx. */
-.published-site { min-height: 100vh; background: var(--published-bg); color: var(--published-text); font-family: var(--published-body-font), Arial, sans-serif; font-size: var(--published-body-size); }
+.published-site { position: relative; min-height: 100vh; overflow-x: clip; background: var(--published-bg); color: var(--published-text); font-family: var(--published-body-font), Arial, sans-serif; font-size: var(--published-body-size); }
+.published-skip-link { position: absolute; top: -60px; left: 16px; z-index: 200; padding: 10px 16px; border-radius: 6px; background: var(--published-primary); color: #fff; font-size: 14px; text-decoration: none; transition: top .15s ease; }
+.published-skip-link:focus { top: 10px; }
+.published-site :focus-visible { outline: 2px solid var(--published-primary); outline-offset: 3px; }
+.published-site .gallery-lightbox :focus-visible { outline-color: #fff; }
 .published-header { max-width: 1280px; margin: auto; padding: 26px 6%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid color-mix(in srgb, var(--published-text) 12%, transparent); }
 .published-brand { color: inherit; text-decoration: none; font: 600 21px var(--published-heading-font), Georgia, serif; }
+.published-burger { display: none; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid color-mix(in srgb, var(--published-text) 25%, transparent); border-radius: var(--published-radius); background: transparent; color: inherit; cursor: pointer; }
 .published-header nav { display: flex; flex-wrap: wrap; gap: 20px; }
-.published-header nav a { color: inherit; text-decoration: none; opacity: .67; font-size: 13px; }
+.published-header nav a { color: inherit; text-decoration: none; opacity: .8; font-size: 13px; }
 .published-header nav a.current, .published-header nav a:hover { opacity: 1; color: var(--published-primary); }
 .published-page { max-width: 1280px; min-height: 76vh; margin: auto; padding: 16px 5% 70px; }
 .published-section { padding: clamp(44px, 8vw, 110px) 5%; border-bottom: 1px solid color-mix(in srgb, var(--published-text) 10%, transparent); }
 .published-block { max-width: 1000px; margin: auto; }
 .published-block h1 { margin: 0 0 20px; font: 500 clamp(38px, 7vw, 82px)/1.02 var(--published-heading-font), Georgia, serif; letter-spacing: -.045em; }
+.published-block h2 { margin: 0 0 20px; font: 500 clamp(28px, 4vw, 44px)/1.08 var(--published-heading-font), Georgia, serif; letter-spacing: -.02em; }
 .published-eyebrow { color: var(--published-primary); text-transform: uppercase; letter-spacing: .15em; font-size: 11px; margin: 0 0 22px; }
-.published-copy { max-width: 660px; font-size: clamp(16px, 2vw, 19px); line-height: 1.8; opacity: .75; }
+.published-copy { max-width: 660px; font-size: clamp(16px, 2vw, 19px); line-height: 1.8; opacity: .85; }
 .published-button { display: inline-block; margin-top: 20px; background: var(--published-button-bg); color: var(--published-button-text); border: 1px solid var(--published-primary); text-decoration: none; border-radius: var(--published-radius); padding: 14px 22px; font-size: 13px; }
+.published-button svg { vertical-align: -2px; margin-left: 6px; }
 .published-image { display: block; max-width: 100%; max-height: 680px; margin-top: 35px; object-fit: cover; }
 .published-gallery { margin-top: 38px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .published-art { min-height: 260px; display: flex; align-items: end; padding: 20px; color: white; background: linear-gradient(145deg, #c0a184, #4d554c); }
 .published-art.art-2 { background: linear-gradient(145deg, #ddc9ac, #676e6a); }
 .published-art.art-3 { background: linear-gradient(145deg, #b5907c, #514c55); }
 .published-event, .published-media { padding: 22px; margin-top: 28px; background: var(--published-secondary); max-width: 650px; line-height: 1.7; }
+.published-event svg, .published-media svg { vertical-align: -3px; margin-right: 8px; }
 .published-event span { color: var(--published-primary); font-size: 10px; letter-spacing: .12em; }
 .published-team { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 28px; }
 .published-team span { padding: 26px; background: var(--published-secondary); text-align: center; }
+.published-team span svg { display: block; margin: 0 auto 10px; }
 .published-block blockquote { margin: 30px 0; padding: 20px 30px; border-left: 2px solid var(--published-accent); font: italic 22px var(--published-heading-font), Georgia, serif; }
 .published-block details { margin-top: 26px; padding: 20px; border-bottom: 1px solid var(--published-secondary); }
-.published-footer { padding: 30px 6%; text-align: center; font-size: 12px; opacity: .65; }
-.published-footer a { color: inherit; }
+/* Full site footer: brand + tagline, site nav, contact, social links,
+   copyright + SANAA credit + back to top. Rendered by the footer block
+   when the template provides one, otherwise once at the end of the page. */
+.published-site-footer { border-top: 1px solid color-mix(in srgb, var(--published-text) 14%, transparent); padding: 52px 6% 30px; }
+.published-footer-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1.2fr 1fr; gap: 36px; }
+.published-footer-title { font: 600 20px var(--published-heading-font), Georgia, serif; color: inherit; text-decoration: none; }
+.published-footer-tagline { margin: 12px 0 0; font-size: 14px; line-height: 1.7; opacity: .8; max-width: 340px; }
+.published-footer-heading { margin: 0 0 14px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--published-primary); font-weight: 700; }
+.published-footer-nav { display: grid; gap: 10px; }
+.published-footer-nav a { color: inherit; text-decoration: none; font-size: 14px; opacity: .85; }
+.published-footer-nav a:hover { opacity: 1; color: var(--published-primary); }
+.published-footer-contact { margin: 0; }
+.published-footer-contact a { display: inline-flex; align-items: center; gap: 8px; color: inherit; font-size: 14px; overflow-wrap: anywhere; }
+.published-footer-social { display: flex; flex-wrap: wrap; gap: 10px; }
+.published-footer-social a, .published-footer-social span { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: inherit; text-decoration: none; border: 1px solid color-mix(in srgb, var(--published-text) 25%, transparent); border-radius: 999px; padding: 8px 12px; }
+.published-footer-social a:hover { border-color: var(--published-primary); color: var(--published-primary); }
+.published-footer-bottom { max-width: 1280px; margin: 40px auto 0; padding-top: 22px; border-top: 1px solid color-mix(in srgb, var(--published-text) 10%, transparent); display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between; font-size: 12px; opacity: .75; }
+.published-footer-bottom p { margin: 0; }
+.published-footer-bottom a { color: inherit; }
+.published-back-to-top { display: inline-flex; align-items: center; gap: 6px; }
+.published-block.block-footer { max-width: none; }
+.published-section:has(.block-footer) { padding: 0; border-bottom: 0; }
+.published-block.block-social .published-footer-social { margin-top: 28px; }
 @media (max-width: 680px) {
   .published-header { align-items: flex-start; flex-direction: column; gap: 17px; padding: 20px 6%; }
   .published-header nav { gap: 9px 16px; }
@@ -83,7 +113,7 @@
 .gallery-lightbox figure { max-width: min(1100px, 82vw); max-height: 100%; margin: 0; text-align: center; }
 .gallery-lightbox figure img { display: block; max-width: 100%; max-height: calc(100vh - 130px); margin: auto; object-fit: contain; }
 .gallery-lightbox figcaption { margin-top: 12px; font-size: 14px; }
-.gallery-lightbox button { width: 44px; height: 44px; border: 1px solid #ffffff75; border-radius: 50%; background: #171717a8; color: white; font-size: 28px; line-height: 1; }
+.gallery-lightbox button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #ffffff75; border-radius: 50%; background: #171717a8; color: white; font-size: 28px; line-height: 1; cursor: pointer; }
 .gallery-lightbox .gallery-lightbox-close { position: absolute; top: 16px; right: 18px; font-size: 24px; }
 .published-contact-form { display: grid; gap: 16px; max-width: 640px; margin-top: 28px; }
 .published-contact-form label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; }
@@ -92,10 +122,10 @@
 .published-contact-form .published-button { justify-self: start; cursor: pointer; }
 .contact-form-message { margin: 0; padding: 12px; background: var(--published-secondary); color: var(--published-text); font-size: 13px; }
 @media (max-width: 680px) {
-  .editorial-site .published-header { gap: 14px; padding: 18px 5%;     .gallery-lightbox { gap: 7px; padding: 64px 10px 24px; }
-    .gallery-lightbox figure { max-width: calc(100vw - 90px); }
-    .gallery-lightbox button { width: 34px; height: 34px; font-size: 22px; }
-  }
+  .editorial-site .published-header { gap: 14px; padding: 18px 5%; }
+  .gallery-lightbox { gap: 7px; padding: 64px 10px 24px; }
+  .gallery-lightbox figure { max-width: calc(100vw - 90px); }
+  .gallery-lightbox button { width: 34px; height: 34px; font-size: 22px; }
   .editorial-site .published-header nav { gap: 10px 18px; }
   .editorial-site .published-header nav a { font-size: 10px; }
   .editorial-site .editorial-hero { min-height: 570px; }
@@ -250,7 +280,8 @@
 .published-site[class*="design-"] .published-header nav a,
 .published-site[class*="design-"] .published-block h1,
 .published-site[class*="design-"] .published-copy { color: var(--published-text) !important; }
-.published-site[class*="design-"] .published-block h1 {
+.published-site[class*="design-"] .published-block h1,
+.published-site[class*="design-"] .published-block h2 {
   font-family: var(--published-heading-font) !important;
   font-size: var(--published-heading-size) !important;
 }
@@ -263,3 +294,22 @@
 .published-site[class*="design-"] .published-event,
 .published-site[class*="design-"] .published-media,
 .published-site[class*="design-"] .published-team span { background: var(--published-secondary) !important; color: var(--published-text) !important; }
+
+/* Tablet / mobile (UI/UX pass 8 Nov 2026): burger navigation replaces
+   the desktop nav at 768 px and below; galleries drop to two columns;
+   the footer stacks. The 680 px rules above keep refining small phones. */
+@media (max-width: 768px) {
+  .published-burger { display: inline-flex; }
+  .published-header { flex-wrap: wrap; row-gap: 12px; }
+  .published-header nav { display: none; width: 100%; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 0 2px; }
+  .published-header nav[data-open="true"] { display: flex; }
+  .published-header nav a { padding: 10px 4px; font-size: 14px; }
+  .published-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .editorial-site .editorial-gallery .published-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .published-footer-inner { grid-template-columns: 1fr 1fr; gap: 28px; }
+  .published-footer-bottom { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+@media (max-width: 560px) {
+  .published-footer-inner { grid-template-columns: 1fr; }
+  .published-site-footer { padding: 40px 6% 26px; }
+}

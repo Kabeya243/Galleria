@@ -4,11 +4,17 @@
 // db (lib/db), published.css imported once in app/layout.tsx instead of
 // here, footer links back to SANAA. Only published sites render;
 // getPublishedSite is also used by the /sites/[slug] route metadata.
+//
+// UI/UX pass (8 Nov 2026): burger navigation on mobile, full footer
+// (site nav, contact, social links, copyright, back to top), lucide
+// icons instead of text glyphs, one h1 per page, visible focus states.
 import { notFound } from "next/navigation";
+import { ArrowRight, ArrowUp, BarChart3, CalendarDays, Clapperboard, Globe, Instagram, Mail, MapPin, Music, Palette, Sparkles, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import type { Theme } from "@/lib/advanced-site-types";
 import { ContactForm } from "@/components/advanced-site-contact-form";
 import { GalleryLightbox } from "@/components/advanced-site-gallery-lightbox";
+import { PublishedSiteNav } from "@/components/advanced-site-nav";
 
 export async function getPublishedSite(slug: string) {
   return db.site.findUnique({
@@ -69,6 +75,104 @@ function getTheme(value: unknown): Theme {
   };
 }
 
+type SocialLink = { label: string; href?: string };
+
+function socialIconFor(label: string) {
+  const text = label.toLowerCase();
+  if (text.includes("instagram")) return Instagram;
+  if (text.includes("vimeo") || text.includes("vidéo") || text.includes("video") || text.includes("youtube")) return Clapperboard;
+  if (text.includes("newsletter") || text.includes("mail") || text.includes("courriel")) return Mail;
+  return Globe;
+}
+
+function socialLinksFromItems(items: unknown): SocialLink[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .slice(0, 5)
+    .map((item) => {
+      const text = item.trim();
+      if (/^https?:\/\//i.test(text)) {
+        const label = /instagram/i.test(text) ? "Instagram"
+          : /vimeo/i.test(text) ? "Vimeo"
+          : /youtube/i.test(text) ? "YouTube"
+          : /facebook/i.test(text) ? "Facebook"
+          : /linkedin/i.test(text) ? "LinkedIn"
+          : "Site web";
+        return { label, href: text };
+      }
+      if (text.startsWith("@")) return { label: text, href: `https://instagram.com/${text.slice(1)}` };
+      return { label: text };
+    });
+}
+
+type FooterPage = { id: string; slug: string; title: string };
+
+function SocialLinks({ socials }: { socials: SocialLink[] }) {
+  if (socials.length === 0) return null;
+  return (
+    <div className="published-footer-social">
+      {socials.map((social) => {
+        const Icon = socialIconFor(social.label);
+        const content = <><Icon size={15} aria-hidden="true" />{social.label}</>;
+        return social.href
+          ? <a key={social.label} href={social.href} target="_blank" rel="noreferrer">{content}</a>
+          : <span key={social.label}>{content}</span>;
+      })}
+    </div>
+  );
+}
+
+function PublishedSiteFooter({
+  siteSlug,
+  siteTitle,
+  pages,
+  contactEmail,
+  socials,
+  tagline
+}: {
+  siteSlug: string;
+  siteTitle: string;
+  pages: FooterPage[];
+  contactEmail: string;
+  socials: SocialLink[];
+  tagline?: string;
+}) {
+  const year = new Date().getFullYear();
+  const pageHref = (item: FooterPage) => (item.slug === "accueil" ? `/sites/${siteSlug}` : `/sites/${siteSlug}/${item.slug}`);
+  return (
+    <footer className="published-site-footer">
+      <div className="published-footer-inner">
+        <div>
+          <a href={`/sites/${siteSlug}`} className="published-footer-title">{siteTitle}</a>
+          {tagline && <p className="published-footer-tagline">{tagline}</p>}
+        </div>
+        <nav aria-label="Navigation du pied de page">
+          <p className="published-footer-heading">Naviguer</p>
+          <div className="published-footer-nav">
+            {pages.map((item) => <a key={item.id} href={pageHref(item)}>{item.title}</a>)}
+          </div>
+        </nav>
+        <div>
+          <p className="published-footer-heading">Contact</p>
+          {contactEmail
+            ? <p className="published-footer-contact"><a href={`mailto:${contactEmail}`}><Mail size={15} aria-hidden="true" />{contactEmail}</a></p>
+            : <p className="published-footer-tagline">Écrivez-nous via le formulaire de contact du site.</p>}
+        </div>
+        <div>
+          <p className="published-footer-heading">Suivre</p>
+          <SocialLinks socials={socials} />
+        </div>
+      </div>
+      <div className="published-footer-bottom">
+        <p>© {year} {siteTitle} · Création indépendante</p>
+        <p>Un site d&apos;artiste · <a href="/">SANAA</a></p>
+        <a href="#top" className="published-back-to-top"><ArrowUp size={14} aria-hidden="true" />Retour en haut</a>
+      </div>
+    </footer>
+  );
+}
+
 export async function PublishedSite({ slug, pageSlug }: { slug: string; pageSlug?: string }) {
   const site = await getPublishedSite(slug);
   if (!site) notFound();
@@ -92,12 +196,27 @@ export async function PublishedSite({ slug, pageSlug }: { slug: string; pageSlug
     "--published-button-text": theme.buttons.style === "plein" ? "#ffffff" : theme.colors.primary
   } as React.CSSProperties;
 
-  return <main className={`published-site design-${site.design ?? "minimal"} ${site.templateId === "portfolio-editorial" ? "editorial-site" : ""}`} style={style}>
+  // Site-wide footer data, collected from every page so the footer is
+  // complete even when the contact / social blocks live on another page.
+  const allBlocks = site.pages.flatMap((item) => item.sections.flatMap((section) => section.blocks));
+  const contactBlock = allBlocks.find((block) => block.type === "contact");
+  const contactEmail = readString(contactBlock?.content, "email");
+  const socialBlock = allBlocks.find((block) => block.type === "social");
+  const socials = socialLinksFromItems(isRecord(socialBlock?.content) ? socialBlock.content.items : undefined);
+  const fallbackSocials: SocialLink[] = socials.length > 0
+    ? socials
+    : [{ label: "Instagram" }, { label: "Vimeo" }, { label: "Newsletter" }];
+  const footerPages: FooterPage[] = site.pages.map((item) => ({ id: item.id, slug: item.slug, title: item.title }));
+  const hasFooterBlock = page.sections.some((section) => section.blocks.some((block) => block.type === "footer"));
+  const firstBlockId = page.sections[0]?.blocks[0]?.id;
+
+  return <main id="top" className={`published-site design-${site.design ?? "minimal"} ${site.templateId === "portfolio-editorial" ? "editorial-site" : ""}`} style={style}>
+    <a href="#contenu" className="published-skip-link">Aller au contenu</a>
     <header className="published-header">
       <a href={`/sites/${site.slug}`} className="published-brand">{site.title}</a>
-      <nav aria-label="Navigation principale">{site.pages.map((item) => <a key={item.id} className={item.id === page.id ? "current" : ""} href={item.slug === "accueil" ? `/sites/${site.slug}` : `/sites/${site.slug}/${item.slug}`}>{item.title}</a>)}</nav>
+      <PublishedSiteNav siteSlug={site.slug} pages={footerPages} currentPageId={page.id} />
     </header>
-    <div className="published-page">
+    <div className="published-page" id="contenu">
       {page.sections.map((section) => <section className={`published-section ${site.templateId === "portfolio-editorial" ? "editorial-section" : ""}`} key={section.id}>
         {section.blocks.map((block) => {
           const heading = readString(block.content, "heading", section.type);
@@ -128,31 +247,45 @@ export async function PublishedSite({ slug, pageSlug }: { slug: string; pageSlug
             image: galleryImages[index],
             category: typeof galleryCategories[index] === "string" ? galleryCategories[index].trim() : ""
           }));
-          return <div key={block.id} className={`published-block block-${type} ${site.templateId === "portfolio-editorial" ? `editorial-block editorial-${type} ${type === "hero" && image ? "has-editorial-image" : ""}` : ""}`}>
+          // A footer block renders the full site footer; a social block
+          // renders the icon row. Both replace the generic heading/body.
+          if (type === "footer") {
+            return <div key={block.id} className="published-block block-footer">
+              <PublishedSiteFooter siteSlug={site.slug} siteTitle={site.title} pages={footerPages} contactEmail={contactEmail} socials={fallbackSocials} tagline={body || undefined} />
+            </div>;
+          }
+          if (type === "social") {
+            const blockSocials = socialLinksFromItems(isRecord(block.content) ? block.content.items : undefined);
+            return <div key={block.id} className="published-block block-social">
+              {heading && <h2 style={{ fontSize: publishedHeadingSize, "--published-heading-size": publishedHeadingSize } as React.CSSProperties}>{heading}</h2>}
+              {body && <p className="published-copy">{body}</p>}
+              <SocialLinks socials={blockSocials.length > 0 ? blockSocials : fallbackSocials} />
+            </div>;
+          }
+          const HeadingTag = (block.id === firstBlockId ? "h1" : "h2") as "h1" | "h2";
+          return <div key={block.id} id={type === "contact" ? "contact" : undefined} className={`published-block block-${type} ${site.templateId === "portfolio-editorial" ? `editorial-block editorial-${type} ${type === "hero" && image ? "has-editorial-image" : ""}` : ""}`}>
             {readString(block.content, "label") && <p className="published-eyebrow">{readString(block.content, "label")}</p>}
-            <h1 style={{ fontSize: publishedHeadingSize, "--published-heading-size": publishedHeadingSize } as React.CSSProperties}>{heading}</h1>
+            <HeadingTag style={{ fontSize: publishedHeadingSize, "--published-heading-size": publishedHeadingSize } as React.CSSProperties}>{heading}</HeadingTag>
             {body && <p className="published-copy">{body}</p>}
             {image && <img className="published-image" src={image} alt={heading} />}
             {type === "gallery" && <>
               <GalleryLightbox works={galleryWorks} className="published-gallery" />
               {gallerySources.length > 0 && <p className="published-image-credit">Images du domaine public · <a href={gallerySources[0]} target="_blank" rel="noreferrer">La Joconde</a> · <a href={gallerySources[1]} target="_blank" rel="noreferrer">La Cène</a> · <a href={gallerySources[2]} target="_blank" rel="noreferrer">Portrait attribué</a> — Wikimedia Commons</p>}
             </>}
-            {type === "events" && <div className="published-event"><span>À VENIR</span><p>{body}</p></div>}
-            {type === "audio" && <div className="published-media">♫　Écouter un extrait</div>}
-            {type === "video" && <div className="published-media">▶　Voir le film</div>}
+            {type === "events" && <div className="published-event"><span>À VENIR</span><p><CalendarDays size={16} aria-hidden="true" />{body}</p></div>}
+            {type === "audio" && <div className="published-media"><Music size={16} aria-hidden="true" />Écouter un extrait</div>}
+            {type === "video" && <div className="published-media"><Clapperboard size={16} aria-hidden="true" />Voir le film</div>}
             {type === "contact" && <ContactForm email={readString(block.content, "email", "bonjour@atelier-exemple.fr")} subject={`${site.title} — ${heading}`} />}
-            {["hero", "cta", "pricing"].includes(type) && <a className="published-button" href="#contact">{action}</a>}
-            {type === "team" && <div className="published-team"><span>Artistes</span><span>Création</span><span>Rencontres</span></div>}
+            {["hero", "cta", "pricing"].includes(type) && <a className="published-button" href="#contact">{action}<ArrowRight size={14} aria-hidden="true" /></a>}
+            {type === "team" && <div className="published-team"><span><Users size={20} aria-hidden="true" />Artistes</span><span><Palette size={20} aria-hidden="true" />Création</span><span><Sparkles size={20} aria-hidden="true" />Rencontres</span></div>}
             {type === "testimonials" && <blockquote>« Une belle rencontre et un travail profondément singulier. »</blockquote>}
             {type === "faq" && <details><summary>Comment prendre contact ?</summary><p>{body || "Écrivez-nous, nous vous répondrons rapidement."}</p></details>}
-            {type === "map" && <p className="published-media">⌖　{body}</p>}
-            {type === "stats" && <div className="published-team"><span>12 ans de création</span><span>48 projets</span><span>6 expositions</span></div>}
-            {type === "social" && <p className="published-copy">Instagram　·　Vimeo　·　Newsletter</p>}
-            {type === "footer" && <p className="published-copy">© {site.title} · Création indépendante</p>}
+            {type === "map" && <p className="published-media"><MapPin size={16} aria-hidden="true" />{body}</p>}
+            {type === "stats" && <div className="published-team"><span><BarChart3 size={20} aria-hidden="true" />12 ans de création</span><span><BarChart3 size={20} aria-hidden="true" />48 projets</span><span><BarChart3 size={20} aria-hidden="true" />6 expositions</span></div>}
           </div>;
         })}
       </section>)}
     </div>
-    <footer className="published-footer">Un site d'artiste · <a href="/">SANAA</a></footer>
+    {!hasFooterBlock && <PublishedSiteFooter siteSlug={site.slug} siteTitle={site.title} pages={footerPages} contactEmail={contactEmail} socials={fallbackSocials} />}
   </main>;
 }

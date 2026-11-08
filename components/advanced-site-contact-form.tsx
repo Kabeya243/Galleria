@@ -4,6 +4,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Send } from "lucide-react";
 
 export function ContactForm({ email, subject }: { email: string; subject: string }) {
   const [message, setMessage] = useState("");
@@ -35,7 +36,7 @@ export function ContactForm({ email, subject }: { email: string; subject: string
     <label>Votre nom<input name="name" autoComplete="name" required maxLength={120} /></label>
     <label>Votre e-mail<input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
     <label>Votre message<textarea name="message" rows={5} required maxLength={5000} /></label>
-    <button className="published-button" type="submit">Préparer le message</button>
+    <button className="published-button" type="submit">Préparer le message<Send size={14} aria-hidden="true" /></button>
     {message && <p className="contact-form-message" role="status">{message}</p>}
   </form>;
 }

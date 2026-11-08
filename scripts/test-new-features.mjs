@@ -392,10 +392,15 @@ check("Portfolio PDF", "atelier-transitions", "Smooth open/close transitions, 0.
   // next to the fixed overlay sidebar.
   assert(sidebarTsx.includes("collapsible = true"), "sidebar not collapsible by default");
   assert(globals.includes(".app-shell > .sidebar-collapsible ~ * { margin-left: 64px; }"), "app-shell does not reserve the 64px rail");
-  // Hidden scrollbars (8 Nov): invisible everywhere, scrolling intact.
-  assert(globals.includes("scrollbar-width: none"), "scrollbars not hidden (Firefox)");
-  assert(globals.includes("*::-webkit-scrollbar { display: none;"), "scrollbars not hidden (Chromium/Safari)");
-  return "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + hidden scrollbars";
+  // Scrollbars (8 Nov, Kabeya decision): hidden below 1024 px, thin
+  // gold pill on desktop (min-width: 1024 px); scrolling intact.
+  assert(globals.includes("scrollbar-width: none"), "scrollbars not hidden on mobile (Firefox)");
+  assert(globals.includes("*::-webkit-scrollbar { display: none;"), "scrollbars not hidden on mobile (Chromium/Safari)");
+  assert(globals.includes("@media (min-width: 1024px)"), "desktop scrollbar breakpoint missing");
+  assert(globals.includes("scrollbar-width: thin"), "desktop scrollbar not thin (Firefox)");
+  assert(globals.includes("scrollbar-color: rgba(201, 168, 106, 0.55) transparent"), "desktop scrollbar gold missing (Firefox)");
+  assert(globals.includes("*::-webkit-scrollbar-thumb { background: rgba(201, 168, 106, 0.55); border-radius: 999px; }"), "desktop pill thumb missing (Chromium/Safari)");
+  return "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + scrollbars hidden < 1024px, thin gold pill >= 1024px";
 });
 
 check("Gallery walk", "walk-smoothing", "Velocity smoothing: no instant on/off, smooth arrive", () => {

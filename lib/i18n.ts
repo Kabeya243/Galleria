@@ -109,6 +109,7 @@ export const DICTIONARY = {
     intelligence: { fr: "Intelligence", en: "Intelligence" },
     studio: { fr: "Mon studio", en: "My Studio" },
     explore: { fr: "Explorer les expositions", en: "Explore exhibitions" },
+    feed: { fr: "Fil", en: "Feed" },
     templates: { fr: "Modèles de galeries", en: "Gallery templates" },
     home: { fr: "Accueil", en: "Home" },
     exhibitions: { fr: "Mes expositions", en: "My exhibitions" },
@@ -1037,6 +1038,37 @@ export const DICTIONARY = {
     visit: { fr: "Visiter", en: "Visit" },
     galleries: { fr: "Galeries", en: "Galleries" },
     signIn: { fr: "Se connecter", en: "Sign in" },
+  },
+  // Publication feed (/feed) — published exhibitions, newest first.
+  feed: {
+    feed: { fr: "Fil", en: "Feed" },
+    eyebrow: { fr: "SANAA · EXPOSITIONS", en: "SANAA · EXHIBITIONS" },
+    title: { fr: "Un monde d'art, à parcourir", en: "A world of art, open to wander" },
+    copy: {
+      fr: "Entrez dans les expositions créées par les artistes de SANAA.",
+      en: "Step inside exhibitions created by artists across SANAA.",
+    },
+    feedLabel: { fr: "Fil des expositions", en: "Exhibition feed" },
+    loading: { fr: "Chargement des expositions…", en: "Loading exhibitions…" },
+    empty: {
+      fr: "Aucune exposition publiée pour le moment. Les expositions apparaîtront ici dès leur publication.",
+      en: "No published exhibitions yet. When an artist opens an exhibition, it will appear here.",
+    },
+    loadMore: { fr: "Voir la suite", en: "Load more" },
+    loadingMore: { fr: "Chargement…", en: "Loading…" },
+    visit: { fr: "Visiter l'exposition", en: "Visit exhibition" },
+    like: { fr: "Aimer l'exposition", en: "Like exhibition" },
+    unlike: { fr: "Retirer le j'aime", en: "Remove like" },
+    error: {
+      fr: "Impossible de charger les expositions. Veuillez réessayer.",
+      en: "We couldn't load the exhibitions. Please try again.",
+    },
+    signIn: { fr: "Connectez-vous à SANAA pour aimer une exposition.", en: "Sign in to SANAA to like an exhibition." },
+    likeError: {
+      fr: "Votre j'aime n'a pas pu être enregistré. Veuillez réessayer.",
+      en: "Your like could not be saved. Please try again.",
+    },
+    retry: { fr: "Réessayer", en: "Try again" },
   },
   // Tools hub (/tools) — tool titles and descriptions.
   tools: {

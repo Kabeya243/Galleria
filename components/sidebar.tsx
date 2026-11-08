@@ -16,6 +16,7 @@ import {
   Home,
   Image,
   Menu,
+  Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
   Presentation,
@@ -63,6 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "discover",
     items: [
       { id: "explore", href: "/explore", label: "explore", icon: Compass },
+      { id: "feed", href: "/feed", label: "feed", icon: Newspaper },
       { id: "templates", href: "/galleries", label: "templates", icon: GalleryVerticalEnd },
       { id: "home", href: "/", label: "home", icon: Home },
     ],
@@ -140,6 +142,7 @@ const LEGACY_ACTIVE: Record<string, string> = {
   exhibitions: "exhibitions",
   artworks: "my-artworks",
   explore: "explore",
+  feed: "feed",
   galleries: "templates",
   tools: "tools-hub",
   settings: "settings",
@@ -153,6 +156,7 @@ export type SidebarActive =
   | "exhibitions"
   | "artworks"
   | "explore"
+  | "feed"
   | "tools"
   | "admin"
   | "discover"

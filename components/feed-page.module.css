@@ -1,0 +1,274 @@
+/* Publication feed (/feed) — adapted from the scaffold's dark/gold
+   design onto the SANAA theme tokens, so it follows the light/dark
+   toggle like every other page. Gold (#c8aa70) stays the accent for
+   the visit button, the like highlight and the avatar fallback. */
+
+.feedColumn {
+  width: 100%;
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 12px 16px 80px;
+}
+
+@media (min-width: 640px) {
+  .feedColumn {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+.actionError {
+  margin: 0 0 20px;
+  border: 1px solid rgba(200, 170, 112, 0.4);
+  border-radius: 12px;
+  background: rgba(200, 170, 112, 0.12);
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.statusText {
+  padding: 56px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.errorBox {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-2);
+  padding: 32px;
+  text-align: center;
+}
+
+.errorBox p {
+  margin: 0;
+  color: var(--ink);
+}
+
+.emptyBox {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-2);
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.postList {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.post {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-2);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+}
+
+.cover {
+  display: block;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  background: var(--surface-3);
+  object-fit: cover;
+}
+
+.postBody {
+  padding: 20px;
+}
+
+@media (min-width: 640px) {
+  .postBody {
+    padding: 28px;
+  }
+}
+
+.artistRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  object-fit: cover;
+}
+
+.avatarFallback {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(200, 170, 112, 0.4);
+  background: rgba(200, 170, 112, 0.12);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 18px;
+  color: #c8aa70;
+}
+
+.artistMeta {
+  min-width: 0;
+}
+
+.artistName {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.postDate {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.postTitle {
+  margin: 20px 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+@media (min-width: 640px) {
+  .postTitle {
+    font-size: 30px;
+  }
+}
+
+.postActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.visitButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #c8aa70;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #171510;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.visitButton:hover {
+  background: #ddc18b;
+}
+
+.visitButton:focus-visible,
+.likeButton:focus-visible,
+.retryButton:focus-visible,
+.loadMoreButton:focus-visible {
+  outline: 2px solid #c8aa70;
+  outline-offset: 4px;
+}
+
+.likeButton {
+  display: inline-flex;
+  min-height: 44px;
+  min-width: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.likeButton:hover {
+  border-color: rgba(200, 170, 112, 0.6);
+  color: #c8aa70;
+}
+
+.likeButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.likeButton[aria-pressed="true"] {
+  border-color: rgba(200, 170, 112, 0.6);
+  color: #c8aa70;
+}
+
+.likeButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+.loadMoreWrap {
+  padding-top: 32px;
+  text-align: center;
+}
+
+.retryButton,
+.loadMoreButton {
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 0 24px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.retryButton:hover,
+.loadMoreButton:hover {
+  border-color: #c8aa70;
+  color: #c8aa70;
+}
+
+.retryButton:disabled,
+.loadMoreButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.retryButton {
+  margin-top: 20px;
+}
+
+.pageFooter {
+  padding: 28px 20px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}

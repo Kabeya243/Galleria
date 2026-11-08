@@ -99,7 +99,7 @@ check("Works wall", "works-links", "Linked from dashboard + settings, i18n works
 });
 
 // ---------- Part 3 — Website builder, 51 templates ----------
-check("Website builder", "site-count", "51 site templates, unique ids, 10 families", () => {
+check("Website builder", "site-count", "51 LEGACY site templates kept read-only (renderer for already-published sites), unique ids, 10 families", () => {
   const src = read("lib/site-templates.ts");
   // Template entries are one-line objects: id, label, family — the family
   // list entries have no `family:` field, so this matches templates only.
@@ -110,16 +110,15 @@ check("Website builder", "site-count", "51 site templates, unique ids, 10 famili
   assert(new Set(fams).size === 10, `expected 10 families, found ${new Set(fams).size}`);
   return `51 templates, 10 families (${[...new Set(fams)].join(", ")})`;
 });
-check("Website builder", "site-render", "Preview renders hero styles + radius; builder has family filter", () => {
+check("Website builder", "site-render", "Legacy preview still renders hero styles + radius; simple editor removed", () => {
   const preview = read("components/site-preview.tsx");
   for (const s of ['heroStyle === "split"', 'heroStyle === "banner"', "imageRadius"]) {
     assert(preview.includes(s), `site-preview missing ${s}`);
   }
-  const builder = read("components/website-builder.tsx");
-  for (const s of ["SITE_TEMPLATE_COUNT", "templateFamily", "SITE_TEMPLATE_FAMILIES"]) {
-    assert(builder.includes(s), `website-builder missing ${s}`);
-  }
-  return "split/banner heroes, image radius, family filter + count in builder";
+  assert(preview.includes("LEGACY renderer"), "site-preview not marked legacy");
+  assert(!exists("components/website-builder.tsx"), "simple builder editor still present");
+  assert(read("lib/site-templates.ts").includes("LEGACY template registry"), "site-templates not marked legacy");
+  return "split/banner heroes, image radius in legacy renderer; simple editor gone";
 });
 
 
@@ -188,15 +187,16 @@ check("Advanced website builder", "adv-auth", "All advanced APIs require sign-in
   assert(read("app/api/advanced-sites/[id]/route.ts").includes("userId: user.id"), "site-by-id API not owner-scoped");
   return "getCurrentUser + 401 on all 4 routes, owner-scoped reads/writes";
 });
-check("Advanced website builder", "adv-routes", "Public route resolves slug first, SavedWork id second; simple builder intact", () => {
+check("Advanced website builder", "adv-routes", "Public route resolves slug first, SavedWork id second; simple builder removed, old route redirects", () => {
   const pub = read("app/sites/[id]/page.tsx");
   assert(pub.includes("getPublishedSite(id)"), "public route does not try the advanced site first");
   assert(pub.includes("findSite(id)"), "public route lost the SavedWork fallback");
   assert(pub.indexOf("getPublishedSite(id)") < pub.indexOf("findSite(id)"), "slug-first order broken");
   assert(exists("app/sites/[id]/[pageSlug]/page.tsx"), "advanced sub-page route missing");
-  assert(read("components/website-builder.tsx").includes("SITE_TEMPLATE_COUNT"), "simple builder broken");
-  assert(read("app/tools/website-builder/page.tsx").includes("/tools/website-builder/advanced"), "simple builder page does not link to the advanced editor");
-  return "slug-first /sites/[id], [pageSlug] sub-pages, simple builder + link intact";
+  assert(!exists("components/website-builder.tsx"), "simple builder editor still present");
+  assert(read("app/tools/website-builder/page.tsx").includes('redirect("/tools/website-builder/advanced")'), "old builder route does not redirect to the advanced editor");
+  assert(!read("app/tools/website-builder/advanced/page.tsx").includes("créateur simple"), "advanced page still links back to the simple builder");
+  return "slug-first /sites/[id], [pageSlug] sub-pages, legacy SavedWork fallback kept, /tools/website-builder redirects to advanced";
 });
 check("Advanced website builder", "adv-css", "Editor CSS scoped (no Tailwind 3, no global .topbar), published CSS imported once", () => {
   const css = read("components/advanced-site-editor.css").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -537,7 +537,7 @@ check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [
     "lib/profile.ts", "lib/works.ts", "lib/site-templates.ts", "lib/atelier-templates.ts",
     "lib/atelier-validate.ts", "lib/atelier-store.ts",
-    "components/avatar.tsx", "components/works-page.tsx", "components/website-builder.tsx",
+    "components/avatar.tsx", "components/works-page.tsx",
     "components/site-preview.tsx", "components/atelier-editor.tsx",
     "components/settings-page.tsx", "components/dashboard.tsx",
     "app/works/[id]/page.tsx", "app/api/work-kinds/route.ts", "app/tools/portfolio-pdf/page.tsx",
@@ -662,7 +662,7 @@ async function smoke() {
       return `GET /tools/portfolio-pdf → ${pdf.status}${pdf.location ? ` → ${pdf.location}` : ""}`;
     });
     const builder = await get("/tools/website-builder");
-    check("Smoke tests", "server-builder", "Website builder route exists (redirects to login without a session)", () => {
+    check("Smoke tests", "server-builder", "Old website builder route redirects (to advanced editor, or login without a session)", () => {
       assert(builder.status !== 0, `request failed: ${builder.error ?? "unknown"}`);
       assert([200, 307].includes(builder.status), `GET /tools/website-builder → ${builder.status}`);
       return `GET /tools/website-builder → ${builder.status}${builder.location ? ` → ${builder.location}` : ""}`;

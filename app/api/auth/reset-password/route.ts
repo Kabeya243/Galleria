@@ -26,16 +26,30 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    await db.$transaction([
-      db.user.update({
+    // Claim the token atomically: the usedAt check above and the
+    // update below were two steps, so two concurrent requests with
+    // the same token could both pass the check before either marked
+    // it used. updateMany with usedAt: null in the filter claims it
+    // exactly once — the loser sees count 0 and gets the expired
+    // answer instead of a second password change.
+    const claimed = await db.$transaction(async (tx) => {
+      const result = await tx.passwordResetToken.updateMany({
+        where: { id: record.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() },
+      });
+      if (result.count !== 1) return false;
+      await tx.user.update({
         where: { id: record.userId },
         data: { passwordHash: await hash(input.newPassword, 12) },
-      }),
-      db.passwordResetToken.update({
-        where: { id: record.id },
-        data: { usedAt: new Date() },
-      }),
-    ]);
+      });
+      return true;
+    });
+    if (!claimed) {
+      return NextResponse.json(
+        { error: "This reset link is invalid or has expired. Please request a new one." },
+        { status: 400 },
+      );
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof ZodError) {

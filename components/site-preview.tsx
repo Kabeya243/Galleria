@@ -1,9 +1,18 @@
 "use client";
 
-// Shared artist-site model + renderer. Used by the Website Builder's live
-// preview (components/website-builder.tsx) and by the public shareable page
-// (app/sites/[id]/page.tsx), so what the artist sees while editing is
-// exactly what a visitor sees. One source of truth, no drift.
+// LEGACY renderer — read-only since 8 Nov 2026. The simple website
+// builder editor (components/website-builder.tsx) was removed on
+// Kabeya's decision (keep only the advanced builder), so no new sites
+// can be created with these 51 themes. This file and lib/site-templates.ts
+// are KEPT deliberately: sites already published with the old builder
+// live as SavedWork rows of kind "website" and are still served at
+// /sites/[id] by app/sites/[id]/page.tsx — deleting this renderer would
+// break those published pages. Do not add features here; new sites are
+// built with the advanced builder (components/advanced-site-editor.tsx).
+//
+// Shared artist-site model + renderer. Used by the public shareable page
+// (app/sites/[id]/page.tsx), so what visitors see is exactly what the
+// old editor showed. One source of truth, no drift.
 //
 // Themes are real: each one changes background, ink, accent, heading font,
 // body font and layout (hero alignment, hero style, gallery columns,

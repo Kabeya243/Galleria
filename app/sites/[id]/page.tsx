@@ -4,16 +4,19 @@ import SitePreview, { siteConfigFromSaved, type SiteExhibition } from "@/compone
 import { getPublishedSite, PublishedSite } from "@/components/advanced-site-view";
 import { db } from "@/lib/db";
 
-// Public artist site, published from the Website Builder. A SavedWork row
-// of kind "website" holds the site config; this route renders it read-only
-// for anyone with the link. Deleting the SavedWork row unpublishes the page
+// Public artist site. Advanced-builder sites are served by slug;
+// LEGACY fallback (read-only): sites published with the old simple
+// builder live as a SavedWork row of kind "website" and are rendered
+// here by components/site-preview.tsx. The simple editor was removed
+// on 8 Nov 2026, so no new legacy sites can be created — but existing
+// ones keep working: deleting the SavedWork row unpublishes the page
 // (it 404s). No sign-in, no editing, no admin here.
 //
 // Route conflict, resolved slug-first (8 Nov 2026): the same /sites/[id]
 // path also serves advanced-builder sites, whose public URL is
 // /sites/[slug]. An advanced site is looked up by slug FIRST (published
 // only); only if no published advanced site matches does the SavedWork
-// lookup by id run — so every site published by the simple builder keeps
+// lookup by id run — so every site published by the old builder keeps
 // working unchanged, and a slug can never shadow a SavedWork id unless a
 // published advanced site actually owns that slug. Advanced sub-pages
 // live at /sites/[id]/[pageSlug].

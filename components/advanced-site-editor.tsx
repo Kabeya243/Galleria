@@ -8,8 +8,9 @@
 //    Site table (prop); every call is owner-scoped server-side;
 //  - slugs are made unique per site (template ids alone would collide
 //    across users, since slug is the public URL).
-// The simple SANAA builder (components/website-builder.tsx) is untouched
-// and stays available at /tools/website-builder.
+// The simple SANAA builder was removed on 8 Nov 2026 (Kabeya's
+// decision: keep only this advanced builder). /tools/website-builder
+// now redirects here.
 "use client";
 
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";

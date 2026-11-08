@@ -167,7 +167,7 @@ const TOOLS = [
     description: "videoGeneratorDesc",
   },
   {
-    href: "/tools/website-builder",
+    href: "/tools/website-builder/advanced",
     icon: Globe,
     title: "websiteBuilder",
     description: "websiteBuilderDesc",

@@ -1,3 +1,13 @@
+// LEGACY template registry — read-only since 8 Nov 2026. The simple
+// website builder editor was removed on Kabeya's decision (keep only
+// the advanced builder), so no new sites can be created with these
+// 51 themes. This file is KEPT deliberately: sites already published
+// with the old builder live as SavedWork rows of kind "website" and
+// are still rendered at /sites/[id] by components/site-preview.tsx —
+// deleting this registry would break those published pages. Do not add
+// templates here; new sites use the advanced builder's 11 templates
+// (lib/advanced-site-templates.ts).
+//
 // Artist-site template registry — 50+ ORIGINAL templates, data-driven.
 // Each template is one data object (colours, fonts, hero style, gallery
 // columns, image radius); the renderer (components/site-preview.tsx)

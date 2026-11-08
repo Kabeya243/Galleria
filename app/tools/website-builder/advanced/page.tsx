@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import ToolsShell from "@/components/tools-shell";
 import AdvancedSiteEditor from "@/components/advanced-site-editor";
 import { getCurrentUser } from "@/lib/auth";
@@ -15,9 +14,9 @@ export const metadata = {
     "Visual drag-and-drop website editor: 11 original templates, multi-page sites, 18 block types, theme and SEO controls, responsive preview, publish to /sites/[slug]. Drafts are saved in PostgreSQL; media goes to R2.",
 };
 
-// Advanced editor (Claude « atelier-sites »). The simple builder at
-// /tools/website-builder stays available — this page ADDS the visual
-// editor, it does not replace it.
+// Advanced editor (Claude « atelier-sites »). Since 8 Nov 2026 this is
+// the ONLY website builder: the simple builder was removed and
+// /tools/website-builder redirects here.
 export default async function AdvancedWebsiteBuilderRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -45,9 +44,8 @@ export default async function AdvancedWebsiteBuilderRoute() {
       description="websiteBuilderDesc"
     >
       <p style={{ margin: "0 0 12px", fontSize: 13, opacity: 0.75 }}>
-        Éditeur visuel avancé : 11 modèles, plusieurs pages, 18 blocs, thème et SEO, aperçu
-        ordinateur / tablette / mobile. Les brouillons sont enregistrés dans votre compte.{" "}
-        <Link href="/tools/website-builder">← Retour au créateur simple (51 thèmes, données SANAA)</Link>
+        Éditeur visuel : 11 modèles, plusieurs pages, 18 blocs, thème et SEO, aperçu
+        ordinateur / tablette / mobile. Les brouillons sont enregistrés dans votre compte.
       </p>
       <AdvancedSiteEditor initialSites={sites} templates={templates} />
     </ToolsShell>

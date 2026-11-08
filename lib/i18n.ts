@@ -922,8 +922,8 @@ export const DICTIONARY = {
     },
     websiteBuilder: { fr: "Créateur de site d'artiste", en: "Artist Website Builder" },
     websiteBuilderDesc: {
-      fr: "Un site portfolio à partir de vos propres œuvres — thèmes, bio, CV, expositions, aperçu en direct et page publique.",
-      en: "A portfolio site from your own works — themes, bio, CV, exhibitions, live preview and a public page.",
+      fr: "Un site portfolio avec l'éditeur visuel avancé — 11 modèles, plusieurs pages, 18 blocs, glisser-déposer et page publique.",
+      en: "A portfolio site with the advanced visual editor — 11 templates, multiple pages, 18 blocks, drag-and-drop and a public page.",
     },
     marketingStudio: { fr: "Studio marketing", en: "Marketing Studio" },
     marketingStudioDesc: {
@@ -1137,8 +1137,8 @@ export const DICTIONARY = {
     },
     websiteBuilder: { fr: "Créateur de site d'artiste", en: "Artist Website Builder" },
     websiteBuilderDesc: {
-      fr: "Un site portfolio à partir de vos propres œuvres — thèmes, bio, CV, expositions, aperçu en direct et page publique.",
-      en: "A portfolio site from your own works — themes, bio, CV, exhibitions, live preview and a public page.",
+      fr: "Un site portfolio avec l'éditeur visuel avancé — 11 modèles, plusieurs pages, 18 blocs, glisser-déposer et page publique.",
+      en: "A portfolio site with the advanced visual editor — 11 templates, multiple pages, 18 blocks, drag-and-drop and a public page.",
     },
     marketingStudio: { fr: "Studio marketing", en: "Marketing Studio" },
     marketingStudioDesc: {
@@ -1398,8 +1398,8 @@ export const DICTIONARY = {
     websiteBuilder: { fr: "Créateur de site d'artiste", en: "Artist Website Builder" },
     websiteBuilderEyebrow: { fr: "OUTILS · CRÉATEUR DE SITE", en: "TOOLS · WEBSITE BUILDER" },
     websiteBuilderDesc: {
-      fr: "Créez un site portfolio à partir de vos propres œuvres et expositions. Choisissez un thème, modifiez chaque section, prévisualisez aux tailles bureau, tablette et mobile — puis publiez-le comme une vraie page publique que toute personne avec le lien peut ouvrir.",
-      en: "Build a portfolio site from your own artworks and exhibitions. Pick a theme, edit every section, preview it at desktop, tablet and mobile sizes — then publish it as a real public page anyone with the link can open.",
+      fr: "Créez un site portfolio avec l'éditeur visuel avancé : 11 modèles, plusieurs pages, 18 blocs en glisser-déposer, thème et SEO — puis publiez-le comme une vraie page publique que toute personne avec le lien peut ouvrir.",
+      en: "Build a portfolio site with the advanced visual editor: 11 templates, multiple pages, 18 drag-and-drop blocks, theme and SEO — then publish it as a real public page anyone with the link can open.",
     },
     forArtists: { fr: "Pour les artistes", en: "For Artists" },
     forArtistsEyebrow: { fr: "OUTILS · POUR LES ARTISTES", en: "TOOLS · FOR ARTISTS" },

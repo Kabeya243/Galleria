@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-11-08T03:08:23.999Z",
-  "commit": "dbbee06",
+  "generatedAt": "2026-11-08T03:17:34.697Z",
+  "commit": "e69d56d",
   "summary": {
-    "total": 42,
-    "passed": 33,
-    "failed": 0,
+    "total": 44,
+    "passed": 34,
+    "failed": 1,
     "skipped": 9
   },
   "checks": [
@@ -184,6 +184,13 @@
       "detail": "velocity eases in/out (accel 10/s, decel 7/s), arrive slows inside 1.5 m, top speed still 4 m/s"
     },
     {
+      "feature": "Exhibitions — all galleries",
+      "id": "exhibitions-all",
+      "name": "21 galleries: defs, opening, Compose wall, place-on-wall, navigation",
+      "status": "fail",
+      "detail": "exhibition tests failed: FAIL  [arche] Compose wall, 7 works (solo-expo wall) on the longest wall — family-photo: hangs inside a collision block at (-9.90, -4.22) — block {\"x\":-5.75,\"z\":-4.1,\"ry\":0,\"hl\":4.25,\"hw\":0.4} stands in front of the left wall"
+    },
+    {
       "feature": "Code quality",
       "id": "no-alert",
       "name": "No window.alert in the new code",
@@ -201,8 +208,8 @@
       "feature": "Code quality",
       "id": "build",
       "name": "Production build passes (npm run build)",
-      "status": "skip",
-      "detail": "not run — pass --build to include it"
+      "status": "pass",
+      "detail": "npm run build exit 0"
     },
     {
       "feature": "Smoke tests",
@@ -301,6 +308,13 @@
       "name": "Open an Atelier template, edit, save, export a real PDF",
       "status": "skip",
       "detail": "needs a live browser session (subagent cannot drive the browser)"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-exhibitions",
+      "name": "Open an exhibition in each of the 21 galleries: artworks visible on walls (none floating, none buried in a wall), walk + mini-plan teleport in every room",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user"
     }
   ]
 }

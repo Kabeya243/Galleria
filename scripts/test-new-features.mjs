@@ -421,7 +421,25 @@ check("Gallery walk", "walk-smoothing", "Velocity smoothing: no instant on/off, 
   return "velocity eases in/out (accel 10/s, decel 7/s), arrive slows inside 1.5 m, top speed still 4 m/s";
 });
 
-// ---------- Cross-cutting ----------
+// ---------- Part 5 — Exhibitions in every gallery (Chantier 5) ----------
+// The per-gallery exhibition checks live in their own script
+// (scripts/test-exhibitions-all-galleries.mjs): it executes the repo's
+// own TypeScript (gallery defs, Compose wall, seed artworks) for all
+// 21 galleries and checks every placement against the wall it hangs
+// on. This section wires it into the suite, so the whole battery stays
+// one command. A failure here is a REAL recorded bug (see the script's
+// report), not a harness problem — do not "fix" it by weakening the
+// check; the debug chantier owns the fix.
+check("Exhibitions — all galleries", "exhibitions-all", "21 galleries: defs, opening, Compose wall, place-on-wall, navigation", () => {
+  try {
+    const out = execFileSync("node", ["scripts/test-exhibitions-all-galleries.mjs", "--report=public/test-reports/exhibitions-latest.json"], { cwd: ROOT, stdio: "pipe", timeout: 120000, encoding: "utf8" });
+    return String(out).trim().split("\n").filter(Boolean).slice(-8).join(" | ");
+  } catch (err) {
+    const stdout = String(err.stdout ?? "");
+    const fails = stdout.split("\n").filter((l) => l.startsWith("FAIL"));
+    throw new Error(`exhibition tests failed: ${fails.join(" // ").slice(0, 900) || String(err.message).slice(0, 300)}`);
+  }
+});
 check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [
     "lib/profile.ts", "lib/works.ts", "lib/site-templates.ts", "lib/atelier-templates.ts",
@@ -590,6 +608,7 @@ skip("Manual (browser)", "manual-site", "Pick a site template, edit, preview, pu
 skip("Manual (browser)", "manual-adv-site", "Advanced editor: pick a template, edit, autosave, publish, open /sites/[slug] + sub-page", "needs a live browser session with a signed-in user");
 skip("Manual (browser)", "manual-adv-site-ux", "Published site UX in a real browser: burger opens/closes at 390px, full footer on all 11 designs, lightbox keyboard nav, no horizontal overflow at 390/768/1280px", "needs a live browser session with a signed-in user");
 skip("Manual (browser)", "manual-pdf", "Open an Atelier template, edit, save, export a real PDF", "needs a live browser session (subagent cannot drive the browser)");
+skip("Manual (browser)", "manual-exhibitions", "Open an exhibition in each of the 21 galleries: artworks visible on walls (none floating, none buried in a wall), walk + mini-plan teleport in every room", "needs a live browser session with a signed-in user");
 
 // ---------- Report ----------
 let commit = "unknown";

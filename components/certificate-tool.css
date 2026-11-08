@@ -1,0 +1,707 @@
+/* Certificate Studio — the Atelier editor's visual language, scoped under
+   .certificate-scope so none of it leaks into the rest of SANAA (same
+   pattern as .atelier-scope in atelier-editor.css): dark/charcoal panels,
+   off-white text, restrained gold accent, Manrope. The certificate sheet
+   itself stays paper-coloured — it is the document being made, not the
+   chrome around it. Uses SANAA's own tokens (--paper, --ink, --muted,
+   --line, --surface-2, --surface-3) so the tool follows the light/dark
+   toggle. */
+
+.certificate-scope {
+  --cert-gold: #c9a86a;
+  --cert-gold-ink: #141210;
+  --cert-gold-soft: rgba(201, 168, 106, 0.16);
+  --cert-panel: var(--surface-3);
+  --cert-panel-2: var(--surface-2);
+  --cert-workspace-bg: #131313;
+  --cert-danger: #e07856;
+  font-family: "Manrope", system-ui, sans-serif;
+}
+
+[data-theme="light"] .certificate-scope {
+  --cert-gold: #8a6d2b;
+  --cert-gold-soft: rgba(138, 109, 43, 0.12);
+  --cert-workspace-bg: #e9e9e7;
+  --cert-danger: #b3261e;
+}
+
+/* -- Topbar -------------------------------------------------------------- */
+.certificate-scope .cert-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-height: 58px;
+  padding: 10px 17px;
+  background: var(--cert-panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
+.certificate-scope .cert-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+}
+
+.certificate-scope .cert-brand-mark {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #2f3932;
+  color: #f5f2eb;
+  font-size: 17px;
+  font-weight: 700;
+  padding-bottom: 3px;
+  letter-spacing: 0;
+}
+
+.certificate-scope .cert-top-divider {
+  height: 25px;
+  border-left: 1px solid var(--line);
+}
+
+.certificate-scope .cert-title-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+}
+
+.certificate-scope .cert-title-wrap strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.certificate-scope .cert-title-wrap span {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.certificate-scope .cert-top-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+/* -- Buttons --------------------------------------------------------------- */
+.certificate-scope .cert-button,
+.certificate-scope .cert-button-save {
+  border: 1px solid var(--line);
+  background: var(--cert-panel-2);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 8px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.certificate-scope .cert-button:hover {
+  border-color: var(--cert-gold);
+  color: var(--ink);
+}
+
+.certificate-scope .cert-button:disabled,
+.certificate-scope .cert-button-save:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.certificate-scope .cert-button-save {
+  background: var(--cert-gold);
+  border-color: var(--cert-gold);
+  color: var(--cert-gold-ink);
+}
+
+.certificate-scope .cert-button-save:hover {
+  filter: brightness(1.08);
+}
+
+.certificate-scope .cert-button-danger {
+  border-color: var(--cert-danger);
+  color: var(--cert-danger);
+}
+
+/* -- Inline messages -------------------------------------------------------- */
+.certificate-scope .cert-msg {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.certificate-scope .cert-msg-ok {
+  color: #3d5a3a;
+}
+
+.certificate-scope .cert-msg-error {
+  color: #8a2f2f;
+}
+
+.certificate-scope .cert-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* -- Layout: left panel + dark workspace ------------------------------------- */
+.certificate-scope .cert-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .certificate-scope .cert-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.certificate-scope .cert-panel {
+  display: grid;
+  gap: 0;
+  background: var(--cert-panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.certificate-scope .cert-panel-section {
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.certificate-scope .cert-panel-section:last-child {
+  border-bottom: 0;
+}
+
+.certificate-scope .cert-eyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--cert-gold);
+}
+
+.certificate-scope .cert-panel-section h3 {
+  margin: -8px 0 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.certificate-scope .cert-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.certificate-scope .cert-id-row {
+  display: flex;
+  gap: 8px;
+}
+
+.certificate-scope .cert-id-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.certificate-scope .cert-textarea {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.certificate-scope .cert-checks {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-height: 40px;
+  flex-wrap: wrap;
+}
+
+.certificate-scope .cert-checks label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* -- Template gallery -------------------------------------------------------- */
+.certificate-scope .cert-tpl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.certificate-scope .cert-tpl {
+  text-align: left;
+  background: var(--cert-panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.certificate-scope .cert-tpl:hover {
+  border-color: var(--cert-gold);
+}
+
+.certificate-scope .cert-tpl.active {
+  border-color: var(--cert-gold);
+  background: var(--cert-gold-soft);
+}
+
+.certificate-scope .cert-tpl-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 64px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.certificate-scope .cert-tpl-mini-kicker {
+  width: 22px;
+  height: 2px;
+}
+
+.certificate-scope .cert-tpl-mini-title {
+  width: 34px;
+  height: 4px;
+  opacity: 0.85;
+}
+
+.certificate-scope .cert-tpl-mini-line {
+  width: 26px;
+  height: 2px;
+  opacity: 0.6;
+}
+
+.certificate-scope .cert-tpl-mini-line.short {
+  width: 18px;
+}
+
+.certificate-scope .cert-tpl-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.certificate-scope .cert-tpl-blurb {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* -- Workspace (dark canvas, like the Atelier editor) -------------------------- */
+.certificate-scope .cert-workspace {
+  background: var(--cert-workspace-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.certificate-scope .cert-workspace-hint {
+  margin: 0;
+  color: #9a9a94;
+  font-size: 12px;
+}
+
+[data-theme="light"] .certificate-scope .cert-workspace-hint {
+  color: #6b6b66;
+}
+
+/* -- The sheet (the document itself) ------------------------------------------- */
+.certificate-scope .cert-print-sheet {
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
+}
+
+.certificate-scope .cert-kicker {
+  margin: 0 0 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+  line-height: 1.15;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-artist {
+  margin: 0 0 28px;
+  font-size: 15px;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-img-large {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  margin: 0 0 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-img {
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  margin: 0 0 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-details {
+  margin: 0 0 20px;
+  display: grid;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-details.cert-details-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.certificate-scope .cert-details div {
+  display: grid;
+  gap: 2px;
+}
+
+.certificate-scope .cert-details dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.certificate-scope .cert-details dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.certificate-scope .cert-details-ruled div {
+  border-bottom: 1px solid #d8d2c4;
+  padding-bottom: 6px;
+}
+
+.certificate-scope .cert-statement {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-foot {
+  margin-top: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-sign {
+  display: flex;
+  gap: 28px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.certificate-scope .cert-sign-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.certificate-scope .cert-sign-col p {
+  margin: 6px 0 0;
+  font-size: 11px;
+}
+
+.certificate-scope .cert-sig-script {
+  display: block;
+  font-family: "Fraunces", Georgia, serif;
+  font-style: italic;
+  font-size: 24px;
+  line-height: 1.2;
+  min-height: 30px;
+}
+
+.certificate-scope .cert-sig-blank {
+  display: block;
+  height: 30px;
+}
+
+.certificate-scope .cert-sig-line {
+  display: block;
+  height: 1px;
+}
+
+.certificate-scope .cert-stamp {
+  flex-shrink: 0;
+  border: 2px solid;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  transform: rotate(-4deg);
+}
+
+.certificate-scope .cert-verify-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.certificate-scope .cert-verify-row > p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.certificate-scope .cert-seal {
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fdfdfc;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.certificate-scope .cert-qr {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.certificate-scope .cert-qr canvas {
+  width: 88px;
+  height: 88px;
+  display: block;
+}
+
+.certificate-scope .cert-qr p {
+  margin: 4px 0 0;
+  font-size: 10px;
+}
+
+.certificate-scope .cert-qr-fallback {
+  margin: 0;
+  font-size: 11px;
+  max-width: 132px;
+}
+
+/* -- Template ornaments ---------------------------------------------------------- */
+.certificate-scope .cert-orn-band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+}
+
+.certificate-scope .cert-orn-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid;
+}
+
+.certificate-scope .cert-orn-corner.tl {
+  top: 22px;
+  left: 22px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.certificate-scope .cert-orn-corner.tr {
+  top: 22px;
+  right: 22px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.certificate-scope .cert-orn-corner.bl {
+  bottom: 22px;
+  left: 22px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+
+.certificate-scope .cert-orn-corner.br {
+  bottom: 22px;
+  right: 22px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+.certificate-scope .cert-orn-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 300px;
+  line-height: 1;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.certificate-scope .cert-orn-topbar {
+  height: 10px;
+  margin-bottom: 22px;
+}
+
+.certificate-scope .cert-orn-diamonds {
+  display: flex;
+  gap: 90px;
+  justify-content: center;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-scope .cert-orn-diamonds span {
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+}
+
+/* -- Verification box + issued list ------------------------------------------------ */
+.certificate-scope .cert-verify-box {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cert-panel);
+}
+
+.certificate-scope .cert-verify-box h3 {
+  margin: 0 0 8px;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.certificate-scope .cert-verify-box p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.certificate-scope .cert-verify-box p:last-child {
+  margin-bottom: 0;
+}
+
+.certificate-scope .cert-issued {
+  margin-top: 32px;
+}
+
+.certificate-scope .cert-issued h3 {
+  margin: 0 0 4px;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.certificate-scope .cert-issued-sub {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.certificate-scope .cert-issued-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.certificate-scope .cert-issued-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.certificate-scope .cert-issued-row.active {
+  background: var(--cert-gold-soft);
+  border-color: var(--cert-gold);
+}
+
+.certificate-scope .cert-issued-info {
+  min-width: 200px;
+}
+
+.certificate-scope .cert-issued-info strong {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.certificate-scope .cert-issued-info span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.certificate-scope .cert-issued-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

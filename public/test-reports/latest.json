@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T03:54:57.861Z",
-  "commit": "bf3055d",
+  "generatedAt": "2026-11-08T09:29:02.766Z",
+  "commit": "033589b",
   "summary": {
-    "total": 44,
-    "passed": 34,
+    "total": 65,
+    "passed": 51,
     "failed": 0,
-    "skipped": 10
+    "skipped": 14
   },
   "checks": [
     {
@@ -53,16 +53,16 @@
     {
       "feature": "Website builder",
       "id": "site-count",
-      "name": "51 site templates, unique ids, 10 families",
+      "name": "51 LEGACY site templates kept read-only (renderer for already-published sites), unique ids, 10 families",
       "status": "pass",
       "detail": "51 templates, 10 families (gallery, dark, minimal, editorial, earth, botanical, ocean, sunset, bold, pastel)"
     },
     {
       "feature": "Website builder",
       "id": "site-render",
-      "name": "Preview renders hero styles + radius; builder has family filter",
+      "name": "Legacy preview still renders hero styles + radius; simple editor removed",
       "status": "pass",
-      "detail": "split/banner heroes, image radius, family filter + count in builder"
+      "detail": "split/banner heroes, image radius in legacy renderer; simple editor gone"
     },
     {
       "feature": "Advanced website builder",
@@ -102,9 +102,9 @@
     {
       "feature": "Advanced website builder",
       "id": "adv-routes",
-      "name": "Public route resolves slug first, SavedWork id second; simple builder intact",
+      "name": "Public route resolves slug first, SavedWork id second; simple builder removed, old route redirects",
       "status": "pass",
-      "detail": "slug-first /sites/[id], [pageSlug] sub-pages, simple builder + link intact"
+      "detail": "slug-first /sites/[id], [pageSlug] sub-pages, legacy SavedWork fallback kept, /tools/website-builder redirects to advanced"
     },
     {
       "feature": "Advanced website builder",
@@ -174,7 +174,7 @@
       "id": "atelier-transitions",
       "name": "Smooth open/close transitions, 0.25s max",
       "status": "pass",
-      "detail": "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + hidden scrollbars"
+      "detail": "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + scrollbars hidden < 1024px, thin gold pill >= 1024px"
     },
     {
       "feature": "Gallery walk",
@@ -188,14 +188,84 @@
       "id": "exhibitions-all",
       "name": "21 galleries: defs, opening, Compose wall, place-on-wall, navigation",
       "status": "pass",
-      "detail": "  PASS patio: 7 pass, 0 fail |   PASS escalier: 7 pass, 0 fail |   PASS salles-vertes: 7 pass, 0 fail |   PASS couloir-sombre: 7 pass, 0 fail |   PASS couloir-dore: 7 pass, 0 fail |   PASS voutes: 7 pass, 0 fail |   PASS courbes: 7 pass, 0 fail |   PASS atrium-lattes: 7 pass, 0 fail"
+      "detail": "  PASS patio: 8 pass, 0 fail |   PASS escalier: 8 pass, 0 fail |   PASS salles-vertes: 8 pass, 0 fail |   PASS couloir-sombre: 8 pass, 0 fail |   PASS couloir-dore: 8 pass, 0 fail |   PASS voutes: 8 pass, 0 fail |   PASS courbes: 8 pass, 0 fail |   PASS atrium-lattes: 8 pass, 0 fail"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-schema",
+      "name": "Prisma: audioUrl/audioTitle/audioLoop/audioVolume on Exhibition",
+      "status": "pass",
+      "detail": "4 fields, nullable + defaults (additive migration via db push)"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-validation",
+      "name": "Validation accepts the 4 audio fields, same-origin URL only",
+      "status": "pass",
+      "detail": "audioUrl nullable + /api/audio/ prefix, title ≤120, volume 0..1, loop boolean"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-api",
+      "name": "PUT persists the 4 fields; public page passes music to the viewer",
+      "status": "pass",
+      "detail": "PUT writes audio fields when sent; /exhibition/[slug] forwards url/title/loop/volume"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-upload",
+      "name": "Audio upload route: MP3/AAC only, 4.5 MB cap, audio/<userId>/ prefix",
+      "status": "pass",
+      "detail": "allowlist audio/mpeg + audio/mp4, 413 over 4.5 MB, R2 audio/<userId>/<uuid>"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-serve",
+      "name": "Audio serve route: Range (206), Accept-Ranges, same access rule as images",
+      "status": "pass",
+      "detail": "bytes= ranges honoured via R2 (206/416), public show open, else owner only"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-player",
+      "name": "Player: no autoplay on mount, starts on Enter gesture, ducks under TTS, volume persisted",
+      "status": "pass",
+      "detail": "play() only from startSignal (Enter/teleport), duck 15% while speaking, volume in localStorage"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-entry",
+      "name": "Entry screen shows the track title when the show has music",
+      "status": "pass",
+      "detail": "“Music: <title>” under the visit meta, only when a track exists"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-editor",
+      "name": "Editor Music section: upload, title, volume, loop, remove, preview, saved via Save",
+      "status": "pass",
+      "detail": "Room settings → Music: upload MP3/AAC, title, volume, loop, remove, <audio> preview; Save sends the 4 fields"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-i18n",
+      "name": "FR + EN strings for music, incl. the rights line",
+      "status": "pass",
+      "detail": "music section FR+EN; rights line in both locales"
+    },
+    {
+      "feature": "Exhibition music",
+      "id": "music-no-delete",
+      "name": "Removing a track never deletes the R2 file (no DeleteObject)",
+      "status": "pass",
+      "detail": "no DeleteObject anywhere in the music path — orphaned files are a noted cleanup debt"
     },
     {
       "feature": "Code quality",
       "id": "no-alert",
       "name": "No window.alert in the new code",
       "status": "pass",
-      "detail": "20 new/changed files checked"
+      "detail": "27 new/changed files checked"
     },
     {
       "feature": "Code quality",
@@ -235,7 +305,7 @@
     {
       "feature": "Smoke tests",
       "id": "server-builder",
-      "name": "Website builder route exists (redirects to login without a session)",
+      "name": "Old website builder route redirects (to advanced editor, or login without a session)",
       "status": "pass",
       "detail": "GET /tools/website-builder → 307 → /login"
     },
@@ -266,6 +336,76 @@
       "name": "Saved-work API responds (401/307 without a session)",
       "status": "pass",
       "detail": "GET /api/saved-work?kind=portfolio-pdf → 401"
+    },
+    {
+      "feature": "Certificates",
+      "id": "cert-files",
+      "name": "Archive route + helper + Atelier-style CSS + Python export exist",
+      "status": "pass",
+      "detail": "tool-archive lib + /api/tool-archives + certificate-tool(.css) + api/index.py + qrcode"
+    },
+    {
+      "feature": "Certificates",
+      "id": "cert-templates",
+      "name": "10 original certificate templates, unique ids",
+      "status": "pass",
+      "detail": "Classic, Minimal, Gallery, Heritage, Modern, Atelier Noir, Deco, Monogram, Ledger, Ribbon"
+    },
+    {
+      "feature": "Certificates",
+      "id": "cert-archive",
+      "name": "R2 archive mirrors Atelier: certificates/<userId> keys, auth, 501 when unconfigured",
+      "status": "pass",
+      "detail": "certificates/<userId>/<id>.json + tool-archives/<kind>/<userId>/<id>.json, user-scoped, best-effort"
+    },
+    {
+      "feature": "Certificates",
+      "id": "cert-pdf",
+      "name": "Python certificate PDF: route before the generic export, template-aware, QR",
+      "status": "pass",
+      "detail": "POST /api/atelier/export/certificate → one-page PDF, 10 templates, QR, auth via sanaa_session"
+    },
+    {
+      "feature": "Certificates",
+      "id": "cert-design",
+      "name": "Certificate Studio uses the Atelier dark/gold language, no window.alert",
+      "status": "pass",
+      "detail": "topbar + left panel + dark workspace + template gallery; errors inline"
+    },
+    {
+      "feature": "Document tools",
+      "id": "doc-tools-archive",
+      "name": "All five other document tools archive to R2 on save and delete the archive on delete",
+      "status": "pass",
+      "detail": "presentation, exhibition-plan, marketing-asset, print-job, context-project"
+    },
+    {
+      "feature": "Certificates",
+      "id": "cert-i18n",
+      "name": "Documents description updated FR+EN (10 templates, account save, R2 archive, PDF)",
+      "status": "pass",
+      "detail": "documentsDesc FR+EN: 10 templates, saved in account + DB, R2 archive, one-page PDF"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-music-enter",
+      "name": "Exhibition music: enter with Son ON (music starts) and Son OFF (silent); pause/resume; sound switch mid-visit; volume persisted across visits",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user + a real MP3"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-music-tts",
+      "name": "Exhibition music: TTS audio guide ducks the music to ~15% while speaking, full volume after; music keeps playing across room changes and in List view",
+      "status": "skip",
+      "detail": "needs a live browser session"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-music-ios",
+      "name": "Exhibition music: real playback on iOS Safari (play from the Enter gesture, no autoplay block), seek inside the track (Range/206), file > 4.5 MB shows the clear error, show without music shows no control",
+      "status": "skip",
+      "detail": "needs a real device/browser session"
     },
     {
       "feature": "Manual (browser)",
@@ -299,6 +439,13 @@
       "feature": "Manual (browser)",
       "id": "manual-adv-site-ux",
       "name": "Published site UX in a real browser: burger opens/closes at 390px, full footer on all 11 designs, lightbox keyboard nav, no horizontal overflow at 390/768/1280px",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-certificates",
+      "name": "Certificate Studio: pick each of the 10 templates, check the live preview, issue a certificate, confirm the 'Archived in your account' note, download the PDF (one page, right template, QR scans), reprint, revoke",
       "status": "skip",
       "detail": "needs a live browser session with a signed-in user"
     },

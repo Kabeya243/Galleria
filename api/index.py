@@ -933,6 +933,300 @@ def _export(format_name: str, project: dict, request: Request):
     return Response(body, media_type=media, headers={"Content-Disposition": f'attachment; filename="{name}.{extension}"'})
 
 
+# ---------------------------------------------------------------- certificate PDF
+# Server-side PDF for the Certificate Studio, rendered by the same
+# Python function as the Atelier exports (same auth, same bundled
+# fonts). The browser print dialog stays available; this route gives a
+# real one-page PDF download instead. The QR code is drawn from the
+# `qrcode` package (pure Python, Pillow only); if the package is ever
+# missing the PDF still renders, with the certificate ID in text.
+# The artwork image is fetched from R2 exactly like Atelier images
+# (fetch_image); a missing image is skipped, never fatal.
+
+_CERT_TEMPLATES = {
+    # id: (align, kicker_spacing, title_size, ornament)
+    "classic": ("center", 3.0, 30, "double-rule"),
+    "minimal": ("left", 2.0, 26, "thin-rule"),
+    "gallery": ("center", 3.0, 30, "double-rule"),
+    "heritage": ("center", 3.5, 30, "corners"),
+    "modern": ("left", 2.5, 32, "top-bar"),
+    "noir": ("center", 3.5, 30, "gold-rule"),
+    "deco": ("center", 4.0, 30, "diamonds"),
+    "monogram": ("center", 3.0, 30, "watermark"),
+    "ledger": ("left", 1.5, 26, "ruled"),
+    "ribbon": ("center", 3.0, 30, "band"),
+}
+
+
+def _wrap(text, font, size, max_width, pdf):
+    words = str(text or "").split()
+    lines, current = [], ""
+    for word in words:
+        trial = f"{current} {word}".strip()
+        if pdf.stringWidth(trial, font, size) <= max_width or not current:
+            current = trial
+        else:
+            lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
+def export_certificate_pdf(cfg):
+    _register_fonts()
+    paper = str(cfg.get("paperSize", "A4")).upper()
+    landscape = str(cfg.get("orientation", "portrait")) == "landscape"
+    page_w, page_h = (841.89, 595.27) if paper == "A4" and landscape else (595.27, 841.89) if paper == "A4" else (792.0, 612.0) if landscape else (612.0, 792.0)
+    template = str(cfg.get("template", "classic"))
+    align, kicker_spacing, title_size, ornament = _CERT_TEMPLATES.get(template, _CERT_TEMPLATES["classic"])
+    gold = "#b08d3e" if cfg.get("goldAccent", True) else "#1a1a1a"
+    dark = template == "noir"
+    ink = "#f5f2eb" if dark else "#1a1a1a"
+    muted = "#c9b896" if dark else "#666666"
+    paper_bg = "#141210" if dark else "#fdfdfc"
+    border = str(cfg.get("border", "double"))
+    margin = 54.0
+    inner_w = page_w - margin * 2
+
+    output = BytesIO()
+    pdf = pdf_canvas.Canvas(output, pageCompression=1)
+    pdf.setPageSize((page_w, page_h))
+    pdf.setFillColor(HexColor(paper_bg))
+    pdf.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+
+    # -- frame ------------------------------------------------------------
+    frame = gold if border == "gold" else ink
+    if border in ("single", "gold"):
+        pdf.setStrokeColor(HexColor(frame))
+        pdf.setLineWidth(1)
+        pdf.rect(margin - 18, margin - 18, page_w - (margin - 18) * 2, page_h - (margin - 18) * 2, fill=0, stroke=1)
+    elif border == "double":
+        pdf.setStrokeColor(HexColor(frame))
+        pdf.setLineWidth(2.2)
+        pdf.rect(margin - 18, margin - 18, page_w - (margin - 18) * 2, page_h - (margin - 18) * 2, fill=0, stroke=1)
+        pdf.setLineWidth(0.6)
+        pdf.rect(margin - 11, margin - 11, page_w - (margin - 11) * 2, page_h - (margin - 11) * 2, fill=0, stroke=1)
+    if ornament == "corners":
+        pdf.setStrokeColor(HexColor(gold))
+        pdf.setLineWidth(0.8)
+        for cx, cy, sx, sy in ((margin, page_h - margin, 1, -1), (page_w - margin, page_h - margin, -1, -1), (margin, margin, 1, 1), (page_w - margin, margin, -1, 1)):
+            pdf.line(cx, cy, cx + 26 * sx, cy)
+            pdf.line(cx, cy, cx, cy + 26 * sy)
+    if ornament == "top-bar":
+        pdf.setFillColor(HexColor(ink))
+        pdf.rect(margin, page_h - margin - 10, inner_w, 10, fill=1, stroke=0)
+    if ornament == "band":
+        pdf.setFillColor(HexColor(gold))
+        pdf.rect(0, page_h - 64, page_w, 64, fill=1, stroke=0)
+    if ornament == "diamonds":
+        pdf.setFillColor(HexColor(gold))
+        for dx in (page_w / 2 - 90, page_w / 2, page_w / 2 + 90):
+            path = pdf.beginPath()
+            path.moveTo(dx, page_h - margin - 6)
+            path.lineTo(dx + 5, page_h - margin - 1)
+            path.lineTo(dx, page_h - margin + 4)
+            path.lineTo(dx - 5, page_h - margin - 1)
+            path.close()
+            pdf.drawPath(path, fill=1, stroke=0)
+
+    y = page_h - margin - 34
+    if ornament == "band":
+        y = page_h - 92
+    x0 = margin if align == "left" else 0
+
+    def text_line(text, font, size, yy, color=None, spacing=0.0, centered=None):
+        use_center = align == "center" if centered is None else centered
+        width = pdf.stringWidth(text, font, size) + spacing * max(0, len(text) - 1)
+        x = (page_w - width) / 2 if use_center else x0
+        if spacing:
+            # Character spacing lives on the text object, not the canvas.
+            text_obj = pdf.beginText()
+            text_obj.setFont(font, size)
+            text_obj.setFillColor(HexColor(color or ink))
+            text_obj.setCharSpace(spacing)
+            text_obj.setTextOrigin(x, yy)
+            text_obj.textOut(text)
+            pdf.drawText(text_obj)
+        else:
+            pdf.setFont(font, size)
+            pdf.setFillColor(HexColor(color or ink))
+            pdf.drawString(x, yy, text)
+        return yy
+
+    # -- monogram watermark ------------------------------------------------
+    if ornament == "watermark":
+        initial = (str(cfg.get("artist", "")).strip() or "A")[:1].upper()
+        pdf.saveState()
+        pdf.setFont("Times-Roman", 300)
+        pdf.setFillColor(HexColor("#f0ede6" if not dark else "#221e1a"))
+        pdf.drawCentredString(page_w / 2, page_h / 2 - 90, initial)
+        pdf.restoreState()
+
+    # -- kicker ------------------------------------------------------------
+    kicker_color = "#f5f2eb" if ornament == "band" else gold
+    text_line("CERTIFICATE OF AUTHENTICITY", "Helvetica-Bold", 11, y, kicker_color, kicker_spacing)
+    y -= 26
+
+    # -- artwork image ------------------------------------------------------
+    image_url = str(cfg.get("imageUrl") or "")
+    show_image = bool(cfg.get("showImage", True)) and bool(image_url)
+    if show_image:
+        try:
+            image = fetch_image(image_url).convert("RGB")
+            max_w = inner_w if template == "gallery" else min(inner_w, 340)
+            max_h = 210 if template == "gallery" else 150
+            scale = min(max_w / image.width, max_h / image.height, 1)
+            iw, ih = image.width * scale, image.height * scale
+            ix = (page_w - iw) / 2 if align == "center" else x0
+            pdf.drawImage(ImageReader(image), ix, y - ih, iw, ih, mask="auto")
+            y -= ih + 22
+        except Exception:
+            pass
+
+    # -- title + artist ------------------------------------------------------
+    for line in _wrap(cfg.get("title") or "Untitled", "Times-Bold", title_size, inner_w, pdf):
+        text_line(line, "Times-Bold", title_size, y)
+        y -= title_size + 6
+    y -= 2
+    text_line(str(cfg.get("artist", "")), "Helvetica", 13, y, muted)
+    y -= 34
+
+    # -- details --------------------------------------------------------------
+    edition_n = str(cfg.get("editionNumber", "1") or "1").strip()
+    edition_size = str(cfg.get("editionSize", "1") or "1").strip()
+    edition = f"{edition_n} / 1 — unique work" if edition_size == "1" else f"No. {edition_n} of {edition_size}"
+    rows = [
+        ("Medium", str(cfg.get("medium") or "—")),
+        ("Dimensions", str(cfg.get("dimensions") or "—")),
+        ("Year", str(cfg.get("year") or "—")),
+        ("Edition", edition),
+        ("Certificate ID", str(cfg.get("certificateId") or "—")),
+    ]
+    pdf.setStrokeColor(HexColor(gold if ornament != "thin-rule" else ink))
+    pdf.setLineWidth(0.7)
+    if align == "center":
+        pdf.line(page_w / 2 - 60, y + 12, page_w / 2 + 60, y + 12)
+    for label, value in rows:
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.setFillColor(HexColor(muted))
+        if align == "center":
+            label_width = pdf.stringWidth(label.upper(), "Helvetica-Bold", 9)
+            pdf.drawString((page_w - label_width) / 2, y, label.upper())
+        else:
+            pdf.drawString(x0, y, label.upper())
+        pdf.setFont("Helvetica", 11)
+        pdf.setFillColor(HexColor(ink))
+        if align == "center":
+            value_width = pdf.stringWidth(value, "Helvetica", 11)
+            pdf.drawString((page_w - value_width) / 2, y - 15, value)
+            y -= 32
+        else:
+            pdf.drawString(x0, y - 15, value)
+            y -= 32
+        if ornament == "ruled":
+            pdf.setStrokeColor(HexColor("#d8d2c4"))
+            pdf.setLineWidth(0.5)
+            pdf.line(x0, y + 6, x0 + inner_w, y + 6)
+
+    # -- certification paragraph ----------------------------------------------
+    y -= 8
+    issue = str(cfg.get("issueDate") or "")
+    try:
+        from datetime import date as _date
+
+        parts = issue.split("-")
+        pretty = _date(int(parts[0]), int(parts[1]), int(parts[2])).strftime("%d %B %Y") if len(parts) == 3 else issue
+    except Exception:
+        pretty = issue
+    statement = (
+        f"This document certifies that the work described above is an original work by "
+        f"{cfg.get('artist', '')}, issued in {cfg.get('place', '')} on {pretty}."
+    )
+    for line in _wrap(statement, "Helvetica", 11, inner_w, pdf):
+        text_line(line, "Helvetica", 11, y)
+        y -= 17
+
+    # -- signature + stamp -----------------------------------------------------
+    y = max(y - 14, 150)
+    sig = str(cfg.get("signatureText") or "")
+    if sig:
+        text_line(sig, "Times-Italic", 22, y)
+        y -= 8
+    pdf.setStrokeColor(HexColor(ink))
+    pdf.setLineWidth(0.7)
+    sig_w = inner_w / 2 - 30
+    sx = (page_w - sig_w) / 2 if align == "center" else x0
+    pdf.line(sx, y, sx + sig_w, y)
+    y -= 16
+    text_line(f"{cfg.get('signatureName', '')} — Artist", "Helvetica", 10, y, muted)
+    y -= 14
+    text_line(f"{cfg.get('place', '')} — {pretty}", "Helvetica", 10, y, muted)
+    if ornament == "ruled":
+        pdf.setStrokeColor(HexColor(ink))
+        pdf.setLineWidth(1)
+        pdf.rect(page_w - margin - 110, 118, 110, 52, fill=0, stroke=1)
+        pdf.setFont("Helvetica-Bold", 11)
+        pdf.setFillColor(HexColor(ink))
+        pdf.drawCentredString(page_w - margin - 55, 142, "ORIGINAL")
+
+    # -- verification note + QR --------------------------------------------------
+    note = str(cfg.get("verificationNote") or "")
+    note_lines = _wrap(note, "Helvetica", 8.5, inner_w - 130, pdf)
+    ny = 108
+    for line in note_lines[:4]:
+        pdf.setFont("Helvetica", 8.5)
+        pdf.setFillColor(HexColor(muted))
+        pdf.drawString(x0, ny, line)
+        ny -= 12
+    pdf.setFont("Helvetica-Bold", 8.5)
+    pdf.setFillColor(HexColor(ink))
+    pdf.drawString(x0, ny, f"Certificate ID: {cfg.get('certificateId', '')}")
+
+    payload = (
+        f"Certificate of Authenticity {cfg.get('certificateId', '')}\n"
+        f"\"{cfg.get('title', '')}\" by {cfg.get('artist', '')}, {cfg.get('year', '')}\n"
+        f"{cfg.get('medium', '')}, {cfg.get('dimensions', '')}\n"
+        f"Edition {edition}\nVerify this certificate ID against the artist's records."
+    )
+    try:
+        import qrcode as qr_lib
+
+        qr = qr_lib.QRCode(border=1)
+        qr.add_data(payload)
+        qr.make()
+        qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        pdf.drawImage(ImageReader(qr_img), page_w - margin - 84, 52, 84, 84, mask="auto")
+        pdf.setFont("Helvetica", 8)
+        pdf.setFillColor(HexColor(muted))
+        pdf.drawCentredString(page_w - margin - 42, 44, "Scan to verify")
+    except Exception:
+        pass
+
+    pdf.showPage()
+    pdf.save()
+    return output.getvalue()
+
+
+@app.post("/api/atelier/export/certificate")
+async def export_certificate(request: Request):
+    user_id = verify_session(request)
+    if not user_id:
+        return JSONResponse({"detail": "Connectez-vous pour exporter."}, status_code=401)
+    try:
+        cfg = await request.json()
+    except Exception:
+        return JSONResponse({"detail": "Document invalide."}, status_code=422)
+    if not isinstance(cfg, dict) or not str(cfg.get("title") or "").strip():
+        return JSONResponse({"detail": "Le certificat doit avoir un titre."}, status_code=422)
+    try:
+        body = export_certificate_pdf(cfg)
+    except (OSError, ValueError, KeyError) as error:
+        return JSONResponse({"detail": f"Impossible de créer le certificat : {error}"}, status_code=422)
+    name = re.sub(r"[^a-zA-Z0-9_-]+", "-", str(cfg.get("certificateId") or "certificate")).strip("-") or "certificate"
+    return Response(body, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{name}.pdf"'})
+
+
 @app.post("/api/atelier/export/{format_name}")
 async def export_document(format_name: str, request: Request):
     try:

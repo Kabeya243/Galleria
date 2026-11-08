@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { archiveToolDocument, deleteToolArchive } from "@/lib/tool-archive";
 
 // Exhibition Planner — plan one exhibition: title, concept, curatorial
 // statement, dates, artwork selection from the user's own works, room
@@ -201,6 +202,12 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
       }
       setDirty(false);
       setStatus(`Plan “${title}” saved.`);
+      // R2 archive copy, same mechanism as Atelier designs (best-effort).
+      const archiveId = json.saved?.id ?? currentId;
+      if (archiveId) {
+        const archived = await archiveToolDocument("exhibition-plan", archiveId, data);
+        if (archived.archived) setStatus(`Plan “${title}” saved. Archived in your account.`);
+      }
       await loadPlans();
     } catch {
       setError("Could not save the plan — check your connection and try again.");
@@ -214,6 +221,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
     try {
       const res = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error("delete");
+      await deleteToolArchive("exhibition-plan", id);
       setConfirmDeleteId(null);
       if (currentId === id) newPlan();
       setStatus("Plan deleted.");

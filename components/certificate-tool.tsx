@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { convert, formatCurrency, formatRateDate } from "@/lib/currency";
+import { archiveToolDocument, deleteToolArchive } from "@/lib/tool-archive";
 import { useExchangeRates } from "@/lib/use-exchange-rates";
 import styles from "./tools.module.css";
+import "./certificate-tool.css";
 
 export type CertificateArtwork = {
   id: string;
@@ -17,17 +19,39 @@ export type CertificateArtwork = {
 };
 
 // ---------------------------------------------------------------------------
-// Certificate Studio
+// Certificate Studio — redesigned on the Atelier editor's visual language
+// (SANAA dark/gold theme: charcoal panels, off-white text, restrained gold
+// accent, Manrope; see components/certificate-tool.css, scoped under
+// .certificate-scope like .atelier-scope). Same certificate data as before
+// — artwork, artist, dimensions, date, signature — only the chrome
+// around it changed.
 //
-// A certificate of authenticity, built from the artist's own artwork record:
-// editable fields, three templates in the white-gallery design language,
-// a real QR code drawn on canvas (no external QR service), and issue /
-// reprint / revoke backed by /api/saved-work (kind "certificate").
-// Export is honest: the browser's print dialog saves the certificate as a
-// one-page PDF — there is no separate PDF generator.
+// Saving is twofold, like Atelier designs:
+//   1. the database, via /api/saved-work (kind "certificate") — the
+//      issued list on this page, open / reprint / revoke;
+//   2. the R2 archive, via /api/tool-archives — a JSON copy at
+//      certificates/<userId>/<id>.json in the « sanaa » bucket, the same
+//      mechanism as Atelier designs at atelier/projects/<userId>/<id>.json.
+//      (The Python function api/index.py renders exports; it never
+//      persists anything — the archive lives in the Next.js route, as
+//      Atelier's own save does.)
+// Export is a real one-page PDF from that same Python function
+// (POST /api/atelier/export/certificate); the browser print dialog
+// stays available as before. All errors are shown inline, never in a
+// browser alert dialog.
 // ---------------------------------------------------------------------------
 
-type TemplateId = "classic" | "minimal" | "gallery";
+type TemplateId =
+  | "classic"
+  | "minimal"
+  | "gallery"
+  | "heritage"
+  | "modern"
+  | "noir"
+  | "deco"
+  | "monogram"
+  | "ledger"
+  | "ribbon";
 type PaperSize = "A4" | "Letter";
 type Orientation = "portrait" | "landscape";
 type BorderStyle = "none" | "single" | "double" | "gold";
@@ -69,9 +93,42 @@ type SavedCertificate = {
   updatedAt: string;
 };
 
-const GOLD = "#000000";
+// Ten original certificate designs, drawn for artworks — no copies of
+// existing certificate layouts. Each one is a distinct composition:
+// alignment, paper tone, rule, ornament and detail layout differ.
+type TemplateMeta = {
+  id: TemplateId;
+  name: string;
+  blurb: string;
+  align: "center" | "left";
+  bg: string;
+  ink: string;
+  muted: string;
+  accent: string;
+  ornament: "none" | "corners" | "topbar" | "band" | "diamonds" | "watermark" | "ruled" | "seal";
+  details: "stack" | "grid";
+  kickerSpacing: string;
+  titleSize: number;
+};
+
+const TEMPLATES: TemplateMeta[] = [
+  { id: "classic", name: "Classic", blurb: "Centred, formal, double rule — the traditional certificate.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "minimal", name: "Minimal", blurb: "Quiet and spare: small type, wide margins, one thin rule.", align: "left", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#1a1a1a", ornament: "none", details: "stack", kickerSpacing: "0.18em", titleSize: 26 },
+  { id: "gallery", name: "Gallery", blurb: "The work leads: large image, generous title, gallery-label details.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "heritage", name: "Heritage", blurb: "Warm ivory paper, double gold rule, corner flourishes and a wax seal.", align: "center", bg: "#faf6ec", ink: "#2b2416", muted: "#7a6a45", accent: "#8a6d2b", ornament: "corners", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
+  { id: "modern", name: "Modern", blurb: "Left-aligned, thick black top bar, bold grotesque type, details in two columns.", align: "left", bg: "#ffffff", ink: "#111111", muted: "#555555", accent: "#111111", ornament: "topbar", details: "grid", kickerSpacing: "0.2em", titleSize: 32 },
+  { id: "noir", name: "Atelier Noir", blurb: "Charcoal sheet, gold type — the certificate as a dark gallery wall.", align: "center", bg: "#141210", ink: "#f5f2eb", muted: "#c9b896", accent: "#c9a86a", ornament: "none", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
+  { id: "deco", name: "Deco", blurb: "A row of gold diamonds, wide letterspacing, double rule — geometry, not clutter.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "diamonds", details: "stack", kickerSpacing: "0.34em", titleSize: 30 },
+  { id: "monogram", name: "Monogram", blurb: "The artist's initial as a pale watermark behind the title, hairline frame.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "watermark", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "ledger", name: "Ledger", blurb: "An archival ledger: ruled lines, typewriter details, an ORIGINAL stamp box.", align: "left", bg: "#fbfaf6", ink: "#22201a", muted: "#6b6558", accent: "#22201a", ornament: "ruled", details: "stack", kickerSpacing: "0.12em", titleSize: 26 },
+  { id: "ribbon", name: "Ribbon", blurb: "A gold band across the top and a seal circle — the certificate as an award.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "band", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+];
+
+const TEMPLATE_IDS = TEMPLATES.map((item) => item.id) as TemplateId[];
+const GOLD = "#b08d3e";
 const INK = "#1a1a1a";
 const SERIF = '"Fraunces", Georgia, serif';
+const MONO = '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
 const DEFAULT_VERIFICATION_NOTE =
   "This certificate accompanies the original work described above. To check it, compare the certificate ID printed here with the artist's own records, or scan the QR code, which carries the certificate ID, the work's title and the artist's name.";
@@ -123,7 +180,7 @@ function configForArtwork(artwork: CertificateArtwork, artistName: string): Cert
 function configFromSaved(data: Record<string, unknown>, fallback: CertificateConfig): CertificateConfig {
   const merged = { ...fallback, ...(data as Partial<CertificateConfig>) };
   // Guard the enums against stale / hand-edited rows.
-  if (!["classic", "minimal", "gallery"].includes(merged.template)) merged.template = "classic";
+  if (!TEMPLATE_IDS.includes(merged.template)) merged.template = "classic";
   if (!["A4", "Letter"].includes(merged.paperSize)) merged.paperSize = "A4";
   if (!["portrait", "landscape"].includes(merged.orientation)) merged.orientation = "portrait";
   if (!["none", "single", "double", "gold"].includes(merged.border)) merged.border = "double";
@@ -147,12 +204,6 @@ function editionLabel(cfg: CertificateConfig): string {
   return size === "1" ? `${n} / 1 — unique work` : `No. ${n} of ${size}`;
 }
 
-const TEMPLATES: { id: TemplateId; name: string; blurb: string }[] = [
-  { id: "classic", name: "Classic", blurb: "Centred, formal, double rule — the traditional certificate." },
-  { id: "minimal", name: "Minimal", blurb: "Quiet and spare: small type, wide margins, one thin rule." },
-  { id: "gallery", name: "Gallery", blurb: "The work leads: large image, generous title, gallery-label details." },
-];
-
 export default function CertificateTool({
   artistName,
   artworks,
@@ -168,11 +219,17 @@ export default function CertificateTool({
   const [savedLoading, setSavedLoading] = useState(true);
   const [savedError, setSavedError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [issueMsg, setIssueMsg] = useState<string | null>(null);
   const [issueError, setIssueError] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // R2 archive state: which issued ids also have a JSON copy in the
+  // user's bucket (certificates/<userId>/<id>.json). null = unknown
+  // (archive not configured or not yet checked).
+  const [archivedIds, setArchivedIds] = useState<Set<string> | null>(null);
+  const [archiveNote, setArchiveNote] = useState<string | null>(null);
   const qrRef = useRef<HTMLCanvasElement | null>(null);
   const [qrError, setQrError] = useState(false);
   const rates = useExchangeRates();
@@ -190,7 +247,7 @@ export default function CertificateTool({
     [artworks, cfg?.artworkId, firstArtwork],
   );
 
-  // Load issued certificates.
+  // Load issued certificates + which of them are archived in R2.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -203,6 +260,15 @@ export default function CertificateTool({
         if (!cancelled) setSavedError(error instanceof Error ? error.message : "Could not load your issued certificates.");
       } finally {
         if (!cancelled) setSavedLoading(false);
+      }
+      try {
+        const res = await fetch("/api/tool-archives?kind=certificate");
+        if (res.ok) {
+          const json = (await res.json()) as { ids?: string[]; configured?: boolean };
+          if (!cancelled) setArchivedIds(json.configured === false ? null : new Set(json.ids ?? []));
+        }
+      } catch {
+        if (!cancelled) setArchivedIds(null);
       }
     })();
     return () => {
@@ -224,9 +290,11 @@ export default function CertificateTool({
 
   if (!cfg || !selectedArtwork) {
     return (
-      <div className={styles.emptyBox}>
-        <strong>No artworks yet.</strong>
-        <p>Add a work in the editor first — a certificate needs a real piece behind it.</p>
+      <div className="certificate-scope">
+        <div className={styles.emptyBox}>
+          <strong>No artworks yet.</strong>
+          <p>Add a work in the editor first — a certificate needs a real piece behind it.</p>
+        </div>
       </div>
     );
   }
@@ -263,7 +331,9 @@ export default function CertificateTool({
     setSaving(true);
     setIssueMsg(null);
     setIssueError(null);
+    setArchiveNote(null);
     try {
+      let row: SavedCertificate;
       if (asNew || !loadedId) {
         const res = await fetch("/api/saved-work", {
           method: "POST",
@@ -277,9 +347,9 @@ export default function CertificateTool({
         });
         if (!res.ok) throw new Error("Could not issue the certificate. Sign in and try again.");
         const json = (await res.json()) as { saved: SavedCertificate };
-        setSaved((prev) => [json.saved, ...prev]);
-        setLoadedId(json.saved.id);
-        setIssueMsg(`Issued as ${cfg.certificateId}. It is now in your issued list below — print it or save it as a PDF from the print dialog.`);
+        row = json.saved;
+        setSaved((prev) => [row, ...prev]);
+        setLoadedId(row.id);
       } else {
         const res = await fetch("/api/saved-work", {
           method: "PUT",
@@ -288,9 +358,28 @@ export default function CertificateTool({
         });
         if (!res.ok) throw new Error("Could not update the saved certificate.");
         const json = (await res.json()) as { saved: SavedCertificate };
-        setSaved((prev) => prev.map((item) => (item.id === loadedId ? json.saved : item)));
-        setIssueMsg(`Saved changes to ${cfg.certificateId}.`);
+        row = json.saved;
+        setSaved((prev) => prev.map((item) => (item.id === loadedId ? row : item)));
       }
+      // Second half of the save: the R2 archive copy, same mechanism as
+      // Atelier designs. Best-effort — the database save above already
+      // succeeded, so an archive failure only adds an inline note.
+      const archived = await archiveToolDocument("certificate", row.id, { ...cfg, title: cfg.title });
+      if (archived.archived) {
+        setArchivedIds((prev) => new Set([...(prev ?? []), row.id]));
+        setArchiveNote("Archived in your account (R2).");
+      } else {
+        setArchiveNote(
+          archived.reason === "archive-unavailable"
+            ? "Saved in your account. The file archive is not configured, so no R2 copy was made."
+            : "Saved in your account. The file archive copy could not be made — try again later.",
+        );
+      }
+      setIssueMsg(
+        asNew || !loadedId
+          ? `Issued as ${cfg.certificateId}. It is now in your issued list below — download the PDF or print it.`
+          : `Saved changes to ${cfg.certificateId}.`,
+      );
     } catch (error) {
       setIssueError(error instanceof Error ? error.message : "Could not save the certificate.");
     } finally {
@@ -319,6 +408,14 @@ export default function CertificateTool({
     try {
       const res = await fetch(`/api/saved-work?id=${encodeURIComponent(row.id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Could not revoke the certificate.");
+      // Remove the R2 archive copy too, so nothing lingers.
+      await deleteToolArchive("certificate", row.id);
+      setArchivedIds((prev) => {
+        if (!prev) return prev;
+        const next = new Set(prev);
+        next.delete(row.id);
+        return next;
+      });
       setSaved((prev) => prev.filter((item) => item.id !== row.id));
       if (loadedId === row.id) {
         setLoadedId(null);
@@ -333,34 +430,68 @@ export default function CertificateTool({
     }
   };
 
-  // -- Preview styling (same white-gallery language: paper #fdfdfc, ink, gold) --
+  const downloadPdf = async () => {
+    setExportingPdf(true);
+    setIssueMsg(null);
+    setIssueError(null);
+    try {
+      const res = await fetch("/api/atelier/export/certificate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cfg),
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(json?.detail ?? "Could not create the PDF. Sign in and try again.");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${cfg.certificateId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setIssueMsg(`PDF downloaded as ${cfg.certificateId}.pdf — one page, in the template and paper size shown above.`);
+    } catch (error) {
+      setIssueError(error instanceof Error ? error.message : "Could not create the PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  // -- Preview styling: per-template paper, ink and ornament ---------------
+  const template = TEMPLATES.find((item) => item.id === cfg.template) ?? TEMPLATES[0];
   const isLandscape = cfg.orientation === "landscape";
   const paperRatio = cfg.paperSize === "A4" ? (isLandscape ? 297 / 210 : 210 / 297) : isLandscape ? 11 / 8.5 : 8.5 / 11;
+  const accent = cfg.goldAccent ? template.accent : template.ink;
+  const frameColor = cfg.border === "gold" ? (cfg.goldAccent ? GOLD : template.ink) : template.ink;
   const borderStyle =
     cfg.border === "none"
-      ? "1px solid #e8e6e0"
+      ? `1px solid ${template.ink}22`
       : cfg.border === "single"
-        ? "1px solid #1a1a1a"
+        ? `1px solid ${frameColor}`
         : cfg.border === "double"
-          ? "4px double #1a1a1a"
-          : "1px solid #000000";
-  const accent = cfg.goldAccent ? GOLD : INK;
-  const template = TEMPLATES.find((item) => item.id === cfg.template) ?? TEMPLATES[0];
-
+          ? `4px double ${frameColor}`
+          : `1px solid ${frameColor}`;
   const sheetStyle: React.CSSProperties = {
     maxWidth: isLandscape ? 820 : 640,
     width: "100%",
     margin: "0 auto",
     padding: "clamp(22px, 5vw, 52px) clamp(20px, 6vw, 56px)",
     border: borderStyle,
-    background: "#fdfdfc",
-    color: INK,
-    textAlign: cfg.template === "minimal" ? "left" : "center",
+    background: template.bg,
+    color: template.ink,
+    textAlign: template.align,
     aspectRatio: `${paperRatio}`,
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
+    position: "relative",
   };
+
+  const watermarkInitial = (cfg.artist.trim() || "A").charAt(0).toUpperCase();
 
   const printCss = `
 @media print {
@@ -376,250 +507,307 @@ export default function CertificateTool({
 `;
 
   return (
-    <div>
+    <div className="certificate-scope">
       {/* Print stylesheet: only the certificate sheet prints, on one page. */}
       <style>{printCss}</style>
 
-      {/* -- Controls ------------------------------------------------------ */}
-      <div className={styles.certificateControls}>
-        <label className={styles.field}>
-          <span>Artwork</span>
-          <select value={cfg.artworkId} onChange={(event) => pickArtwork(event.target.value)}>
-            {artworks.map((artwork) => (
-              <option key={artwork.id} value={artwork.id}>
-                {artwork.title} ({artwork.year})
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" className="primary-button" onClick={() => issueCertificate(false)} disabled={saving}>
-          {saving ? "Saving…" : loadedId ? "Update saved certificate" : "Issue certificate"}
-        </button>
-        {loadedId && (
-          <button type="button" className="editor-secondary-button" onClick={() => issueCertificate(true)} disabled={saving}>
-            Issue as new
+      {/* -- Topbar (Atelier language: brand, title, save status, actions) -- */}
+      <header className="cert-topbar">
+        <span className="cert-brand">
+          <span className="cert-brand-mark">S.</span>SANAA
+        </span>
+        <span className="cert-top-divider" />
+        <div className="cert-title-wrap">
+          <strong>Certificate Studio</strong>
+          <span>
+            {cfg.certificateId} · {template.name} · {cfg.paperSize} {cfg.orientation}
+            {loadedId ? " · editing a saved certificate" : ""}
+          </span>
+        </div>
+        <div className="cert-top-actions">
+          <button type="button" className="cert-button-save" onClick={() => issueCertificate(false)} disabled={saving}>
+            {saving ? "Saving…" : loadedId ? "Update saved certificate" : "Issue certificate"}
           </button>
-        )}
-        <button type="button" className="editor-secondary-button" onClick={() => window.print()}>
-          Print / save as PDF
-        </button>
-        <button type="button" className="editor-secondary-button" onClick={newCertificate}>
-          New certificate
-        </button>
-      </div>
+          {loadedId && (
+            <button type="button" className="cert-button" onClick={() => issueCertificate(true)} disabled={saving}>
+              Issue as new
+            </button>
+          )}
+          <button type="button" className="cert-button" onClick={downloadPdf} disabled={exportingPdf}>
+            {exportingPdf ? "Making PDF…" : "Download PDF"}
+          </button>
+          <button type="button" className="cert-button" onClick={() => window.print()}>
+            Print
+          </button>
+          <button type="button" className="cert-button" onClick={newCertificate}>
+            New
+          </button>
+        </div>
+      </header>
 
       {issueMsg && (
-        <p role="status" style={{ margin: "0 0 16px", color: "#3d5a3a", fontSize: 13 }}>
+        <p role="status" className="cert-msg cert-msg-ok">
           {issueMsg}
+          {archiveNote ? ` ${archiveNote}` : ""}
         </p>
       )}
       {issueError && (
-        <p role="alert" style={{ margin: "0 0 16px", color: "#8a2f2f", fontSize: 13 }}>
+        <p role="alert" className="cert-msg cert-msg-error">
           {issueError}
         </p>
       )}
-      {loadedId && (
-        <p style={{ margin: "0 0 16px", color: "#666", fontSize: 12 }}>
-          Editing a saved certificate. “Update saved certificate” keeps the same record; “Issue as new” mints a separate one.
-        </p>
-      )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, alignItems: "start" }}>
-        {/* -- Field editor ------------------------------------------------ */}
-        <div style={{ display: "grid", gap: 14 }}>
-          <h3 style={{ margin: "4px 0 0", fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>Certificate details</h3>
-
-          <label className={styles.field}>
-            <span>Artwork title</span>
-            <input value={cfg.title} onChange={(event) => set("title", event.target.value)} />
-          </label>
-          <label className={styles.field}>
-            <span>Artist</span>
-            <input value={cfg.artist} onChange={(event) => set("artist", event.target.value)} />
-          </label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="cert-layout">
+        {/* -- Field editor (left panel) ------------------------------------- */}
+        <aside className="cert-panel">
+          <div className="cert-panel-section">
+            <p className="cert-eyebrow">CHOOSE</p>
+            <h3>Artwork</h3>
             <label className={styles.field}>
-              <span>Year</span>
-              <input value={cfg.year} onChange={(event) => set("year", event.target.value)} />
-            </label>
-            <label className={styles.field}>
-              <span>Dimensions</span>
-              <input value={cfg.dimensions} onChange={(event) => set("dimensions", event.target.value)} />
-            </label>
-          </div>
-          <label className={styles.field}>
-            <span>Medium</span>
-            <input value={cfg.medium} onChange={(event) => set("medium", event.target.value)} />
-          </label>
-          <label className={styles.field}>
-            <span>Sale price (USD, optional)</span>
-            <input
-              inputMode="decimal"
-              placeholder="e.g. 1500 — leave empty to print no price"
-              value={cfg.priceUsd}
-              onChange={(event) => set("priceUsd", event.target.value)}
-            />
-          </label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <label className={styles.field}>
-              <span>Edition number</span>
-              <input inputMode="numeric" value={cfg.editionNumber} onChange={(event) => set("editionNumber", event.target.value)} />
-            </label>
-            <label className={styles.field}>
-              <span>Edition size</span>
-              <input inputMode="numeric" value={cfg.editionSize} onChange={(event) => set("editionSize", event.target.value)} />
-            </label>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <label className={styles.field}>
-              <span>Date of issue</span>
-              <input type="date" value={cfg.issueDate} onChange={(event) => set("issueDate", event.target.value)} />
-            </label>
-            <label className={styles.field}>
-              <span>Place of issue</span>
-              <input value={cfg.place} onChange={(event) => set("place", event.target.value)} />
-            </label>
-          </div>
-
-          <label className={styles.field}>
-            <span>Certificate ID</span>
-            <span style={{ display: "flex", gap: 8 }}>
-              <input value={cfg.certificateId} onChange={(event) => set("certificateId", event.target.value)} style={{ flex: 1, minWidth: 0 }} />
-              <button type="button" className="editor-secondary-button" onClick={() => set("certificateId", generateCertificateId())}>
-                New ID
-              </button>
-            </span>
-          </label>
-
-          <label className={styles.field}>
-            <span>Signature — typed name as it appears above the line</span>
-            <input
-              value={cfg.signatureText}
-              placeholder="Type your signature, e.g. Kabeya Ilunga"
-              onChange={(event) => set("signatureText", event.target.value)}
-            />
-          </label>
-          <label className={styles.field}>
-            <span>Signed by (printed name under the line)</span>
-            <input value={cfg.signatureName} onChange={(event) => set("signatureName", event.target.value)} />
-          </label>
-          <label className={styles.field}>
-            <span>Verification note</span>
-            <textarea
-              value={cfg.verificationNote}
-              rows={3}
-              onChange={(event) => set("verificationNote", event.target.value)}
-              style={{ padding: "10px", border: "1px solid var(--line)", borderRadius: 5, background: "var(--paper)", color: "var(--ink)", fontSize: 14, fontFamily: "inherit", resize: "vertical" }}
-            />
-          </label>
-
-          <h3 style={{ margin: "12px 0 0", fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>Design</h3>
-          <label className={styles.field}>
-            <span>Template</span>
-            <select value={cfg.template} onChange={(event) => set("template", event.target.value as TemplateId)}>
-              {TEMPLATES.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} — {item.blurb}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <label className={styles.field}>
-              <span>Paper size</span>
-              <select value={cfg.paperSize} onChange={(event) => set("paperSize", event.target.value as PaperSize)}>
-                <option value="A4">A4</option>
-                <option value="Letter">Letter</option>
-              </select>
-            </label>
-            <label className={styles.field}>
-              <span>Orientation</span>
-              <select value={cfg.orientation} onChange={(event) => set("orientation", event.target.value as Orientation)}>
-                <option value="portrait">Portrait</option>
-                <option value="landscape">Landscape</option>
+              <span>Artwork</span>
+              <select value={cfg.artworkId} onChange={(event) => pickArtwork(event.target.value)}>
+                {artworks.map((artwork) => (
+                  <option key={artwork.id} value={artwork.id}>
+                    {artwork.title} ({artwork.year})
+                  </option>
+                ))}
               </select>
             </label>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+
+          <div className="cert-panel-section">
+            <p className="cert-eyebrow">DETAILS</p>
+            <h3>Certificate details</h3>
             <label className={styles.field}>
-              <span>Border / frame</span>
-              <select value={cfg.border} onChange={(event) => set("border", event.target.value as BorderStyle)}>
-                <option value="double">Double rule</option>
-                <option value="single">Single rule</option>
-                <option value="gold">Gold rule</option>
-                <option value="none">None</option>
-              </select>
+              <span>Artwork title</span>
+              <input value={cfg.title} onChange={(event) => set("title", event.target.value)} />
             </label>
-            <span className={styles.field}>
-              <span>Accents</span>
-              <span style={{ display: "flex", gap: 16, alignItems: "center", minHeight: 40 }}>
-                <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400, color: "var(--ink)" }}>
-                  <input type="checkbox" checked={cfg.goldAccent} onChange={(event) => set("goldAccent", event.target.checked)} /> Gold accent
-                </label>
-                <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400, color: "var(--ink)" }}>
-                  <input type="checkbox" checked={cfg.showImage} disabled={!cfg.imageUrl} onChange={(event) => set("showImage", event.target.checked)} /> Show artwork image
-                </label>
+            <label className={styles.field}>
+              <span>Artist</span>
+              <input value={cfg.artist} onChange={(event) => set("artist", event.target.value)} />
+            </label>
+            <div className="cert-field-row">
+              <label className={styles.field}>
+                <span>Year</span>
+                <input value={cfg.year} onChange={(event) => set("year", event.target.value)} />
+              </label>
+              <label className={styles.field}>
+                <span>Dimensions</span>
+                <input value={cfg.dimensions} onChange={(event) => set("dimensions", event.target.value)} />
+              </label>
+            </div>
+            <label className={styles.field}>
+              <span>Medium</span>
+              <input value={cfg.medium} onChange={(event) => set("medium", event.target.value)} />
+            </label>
+            <label className={styles.field}>
+              <span>Sale price (USD, optional)</span>
+              <input
+                inputMode="decimal"
+                placeholder="e.g. 1500 — leave empty to print no price"
+                value={cfg.priceUsd}
+                onChange={(event) => set("priceUsd", event.target.value)}
+              />
+            </label>
+            <div className="cert-field-row">
+              <label className={styles.field}>
+                <span>Edition number</span>
+                <input inputMode="numeric" value={cfg.editionNumber} onChange={(event) => set("editionNumber", event.target.value)} />
+              </label>
+              <label className={styles.field}>
+                <span>Edition size</span>
+                <input inputMode="numeric" value={cfg.editionSize} onChange={(event) => set("editionSize", event.target.value)} />
+              </label>
+            </div>
+            <div className="cert-field-row">
+              <label className={styles.field}>
+                <span>Date of issue</span>
+                <input type="date" value={cfg.issueDate} onChange={(event) => set("issueDate", event.target.value)} />
+              </label>
+              <label className={styles.field}>
+                <span>Place of issue</span>
+                <input value={cfg.place} onChange={(event) => set("place", event.target.value)} />
+              </label>
+            </div>
+            <label className={styles.field}>
+              <span>Certificate ID</span>
+              <span className="cert-id-row">
+                <input value={cfg.certificateId} onChange={(event) => set("certificateId", event.target.value)} />
+                <button type="button" className="cert-button" onClick={() => set("certificateId", generateCertificateId())}>
+                  New ID
+                </button>
               </span>
-            </span>
+            </label>
+            <label className={styles.field}>
+              <span>Signature — typed name as it appears above the line</span>
+              <input
+                value={cfg.signatureText}
+                placeholder="Type your signature, e.g. Kabeya Ilunga"
+                onChange={(event) => set("signatureText", event.target.value)}
+              />
+            </label>
+            <label className={styles.field}>
+              <span>Signed by (printed name under the line)</span>
+              <input value={cfg.signatureName} onChange={(event) => set("signatureName", event.target.value)} />
+            </label>
+            <label className={styles.field}>
+              <span>Verification note</span>
+              <textarea
+                value={cfg.verificationNote}
+                rows={3}
+                onChange={(event) => set("verificationNote", event.target.value)}
+                className="cert-textarea"
+              />
+            </label>
           </div>
-          {!cfg.imageUrl && (
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>This artwork has no image uploaded yet, so the certificate prints without one. Add an image in the editor to include it.</p>
-          )}
-        </div>
 
-        {/* -- Live preview -------------------------------------------------- */}
-        <div>
-          <p style={{ margin: "4px 0 10px", color: "#666", fontSize: 12 }}>
-            Live preview — {template.name} · {cfg.paperSize} {cfg.orientation}. What you see here is what prints, on one page.
+          <div className="cert-panel-section">
+            <p className="cert-eyebrow">DESIGN</p>
+            <h3>Template — 10 original designs</h3>
+            <div className="cert-tpl-grid">
+              {TEMPLATES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`cert-tpl ${cfg.template === item.id ? "active" : ""}`}
+                  onClick={() => set("template", item.id)}
+                  aria-pressed={cfg.template === item.id}
+                >
+                  <span className="cert-tpl-mini" style={{ background: item.bg }}>
+                    <span className="cert-tpl-mini-kicker" style={{ background: item.accent }} />
+                    <span className="cert-tpl-mini-title" style={{ background: item.ink }} />
+                    <span className="cert-tpl-mini-line" style={{ background: item.muted }} />
+                    <span className="cert-tpl-mini-line short" style={{ background: item.muted }} />
+                  </span>
+                  <span className="cert-tpl-name">{item.name}</span>
+                  <span className="cert-tpl-blurb">{item.blurb}</span>
+                </button>
+              ))}
+            </div>
+            <div className="cert-field-row">
+              <label className={styles.field}>
+                <span>Paper size</span>
+                <select value={cfg.paperSize} onChange={(event) => set("paperSize", event.target.value as PaperSize)}>
+                  <option value="A4">A4</option>
+                  <option value="Letter">Letter</option>
+                </select>
+              </label>
+              <label className={styles.field}>
+                <span>Orientation</span>
+                <select value={cfg.orientation} onChange={(event) => set("orientation", event.target.value as Orientation)}>
+                  <option value="portrait">Portrait</option>
+                  <option value="landscape">Landscape</option>
+                </select>
+              </label>
+            </div>
+            <div className="cert-field-row">
+              <label className={styles.field}>
+                <span>Border / frame</span>
+                <select value={cfg.border} onChange={(event) => set("border", event.target.value as BorderStyle)}>
+                  <option value="double">Double rule</option>
+                  <option value="single">Single rule</option>
+                  <option value="gold">Gold rule</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+              <span className={styles.field}>
+                <span>Accents</span>
+                <span className="cert-checks">
+                  <label>
+                    <input type="checkbox" checked={cfg.goldAccent} onChange={(event) => set("goldAccent", event.target.checked)} /> Gold accent
+                  </label>
+                  <label>
+                    <input type="checkbox" checked={cfg.showImage} disabled={!cfg.imageUrl} onChange={(event) => set("showImage", event.target.checked)} /> Show artwork image
+                  </label>
+                </span>
+              </span>
+            </div>
+            {!cfg.imageUrl && (
+              <p className="cert-hint">This artwork has no image uploaded yet, so the certificate prints without one. Add an image in the editor to include it.</p>
+            )}
+          </div>
+        </aside>
+
+        {/* -- Live preview (workspace) ---------------------------------------- */}
+        <section className="cert-workspace">
+          <p className="cert-workspace-hint">
+            Live preview — {template.name} · {cfg.paperSize} {cfg.orientation}. What you see here is what prints and what the PDF contains, on one page.
           </p>
-          <div className="cert-print-sheet" style={sheetStyle}>
-            <p className={styles.certificateKicker} style={{ color: accent }}>
+          <div
+            className="cert-print-sheet"
+            style={{ ...sheetStyle, paddingTop: template.ornament === "band" ? 84 : sheetStyle.paddingTop }}
+          >
+            {template.ornament === "band" && <div className="cert-orn-band" style={{ background: accent }} />}
+            {template.ornament === "corners" && (
+              <>
+                <span className="cert-orn-corner tl" style={{ borderColor: accent }} />
+                <span className="cert-orn-corner tr" style={{ borderColor: accent }} />
+                <span className="cert-orn-corner bl" style={{ borderColor: accent }} />
+                <span className="cert-orn-corner br" style={{ borderColor: accent }} />
+              </>
+            )}
+            {template.ornament === "watermark" && (
+              <span className="cert-orn-watermark" style={{ color: template.ink }}>
+                {watermarkInitial}
+              </span>
+            )}
+            {template.ornament === "topbar" && <div className="cert-orn-topbar" style={{ background: template.ink }} />}
+            {template.ornament === "diamonds" && (
+              <div className="cert-orn-diamonds">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} style={{ background: accent }} />
+                ))}
+              </div>
+            )}
+
+            <p
+              className="cert-kicker"
+              style={{ color: template.ornament === "band" ? "#fdfdfc" : accent, letterSpacing: template.kickerSpacing }}
+            >
               CERTIFICATE OF AUTHENTICITY
             </p>
 
             {cfg.template === "gallery" && cfg.showImage && cfg.imageUrl && (
-              <img src={cfg.imageUrl} alt={cfg.title} style={{ width: "100%", maxHeight: 220, objectFit: "contain", margin: "0 0 16px" }} />
+              <img src={cfg.imageUrl} alt={cfg.title} className="cert-img-large" />
             )}
 
             <h2
-              style={{
-                margin: "0 0 6px",
-                fontFamily: SERIF,
-                fontSize: cfg.template === "minimal" ? 26 : 30,
-                fontWeight: 600,
-                lineHeight: 1.15,
-              }}
+              className="cert-title"
+              style={{ fontSize: template.titleSize, fontFamily: template.id === "ledger" ? MONO : SERIF }}
             >
               {cfg.title || "Untitled"}
             </h2>
-            <p className={styles.certificateArtist} style={{ margin: cfg.template === "minimal" ? "0 0 18px" : "0 0 28px" }}>
+            <p className="cert-artist" style={{ color: template.muted }}>
               {cfg.artist}
             </p>
 
             {cfg.template !== "gallery" && cfg.showImage && cfg.imageUrl && (
-              <img src={cfg.imageUrl} alt={cfg.title} style={{ width: "100%", maxHeight: 150, objectFit: "contain", margin: "0 0 18px" }} />
+              <img src={cfg.imageUrl} alt={cfg.title} className="cert-img" />
             )}
 
-            <dl className={styles.certificateDetails} style={cfg.template === "minimal" ? { borderTop: `1px solid ${accent}` } : undefined}>
+            <dl
+              className={`cert-details ${template.details === "grid" ? "cert-details-grid" : ""} ${template.ornament === "ruled" ? "cert-details-ruled" : ""}`}
+              style={template.id === "minimal" ? { borderTop: `1px solid ${accent}` } : undefined}
+            >
               <div>
-                <dt>Medium</dt>
-                <dd>{cfg.medium || "—"}</dd>
+                <dt style={{ color: template.muted }}>Medium</dt>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.medium || "—"}</dd>
               </div>
               <div>
-                <dt>Dimensions</dt>
-                <dd>{cfg.dimensions || "—"}</dd>
+                <dt style={{ color: template.muted }}>Dimensions</dt>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.dimensions || "—"}</dd>
               </div>
               <div>
-                <dt>Year</dt>
-                <dd>{cfg.year || "—"}</dd>
+                <dt style={{ color: template.muted }}>Year</dt>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.year || "—"}</dd>
               </div>
               <div>
-                <dt>Edition</dt>
-                <dd>{editionLabel(cfg)}</dd>
+                <dt style={{ color: template.muted }}>Edition</dt>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{editionLabel(cfg)}</dd>
               </div>
               {priceNumber !== null && (
                 <div>
-                  <dt>Price</dt>
+                  <dt style={{ color: template.muted }}>Price</dt>
                   <dd>
                     {formatCurrency(priceNumber, "USD")}
                     {rates.status === "ready" && (
@@ -633,7 +821,7 @@ export default function CertificateTool({
                           })
                           .filter((text): text is string => text !== null)
                           .join(" · ")}
-                        <span style={{ color: "#666", fontWeight: 400 }}>
+                        <span style={{ color: template.muted, fontWeight: 400 }}>
                           {" "}
                           (ECB reference rates of {formatRateDate(rates.date)}
                           {rates.stale ? " — last rates available" : ""})
@@ -641,91 +829,100 @@ export default function CertificateTool({
                       </>
                     )}
                     {rates.status === "unavailable" && (
-                      <span style={{ color: "#666", fontWeight: 400 }}> (exchange rates unavailable)</span>
+                      <span style={{ color: template.muted, fontWeight: 400 }}> (exchange rates unavailable)</span>
                     )}
                   </dd>
                 </div>
               )}
               <div>
-                <dt>Certificate ID</dt>
-                <dd>{cfg.certificateId}</dd>
+                <dt style={{ color: template.muted }}>Certificate ID</dt>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.certificateId}</dd>
               </div>
             </dl>
 
-            <p className={styles.certificateText} style={{ textAlign: cfg.template === "minimal" ? "left" : "center" }}>
+            <p className="cert-statement">
               This document certifies that the work described above is an original work by {cfg.artist}, issued in {cfg.place} on{" "}
               {formatIssueDate(cfg.issueDate)}.
             </p>
 
-            <div style={{ marginTop: "auto" }}>
-              <div className={styles.certificateSign} style={{ marginBottom: 20 }}>
-                <div style={{ flex: 1 }}>
+            <div className="cert-foot">
+              <div className="cert-sign">
+                <div className="cert-sign-col">
                   {cfg.signatureText ? (
-                    <span style={{ display: "block", fontFamily: SERIF, fontStyle: "italic", fontSize: 24, lineHeight: 1.2, minHeight: 30 }}>
-                      {cfg.signatureText}
-                    </span>
+                    <span className="cert-sig-script">{cfg.signatureText}</span>
                   ) : (
-                    <span className={styles.signatureLine} style={{ height: 30, background: "transparent" }} />
+                    <span className="cert-sig-blank" />
                   )}
-                  <span className={styles.signatureLine} />
-                  <p>{cfg.signatureName} — Artist</p>
+                  <span className="cert-sig-line" style={{ background: template.ink }} />
+                  <p style={{ color: template.muted }}>{cfg.signatureName} — Artist</p>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <span className={styles.signatureLine} style={{ height: 30, background: "transparent" }} />
-                  <span className={styles.signatureLine} />
-                  <p>
+                <div className="cert-sign-col">
+                  <span className="cert-sig-blank" />
+                  <span className="cert-sig-line" style={{ background: template.ink }} />
+                  <p style={{ color: template.muted }}>
                     {cfg.place} — {formatIssueDate(cfg.issueDate)}
                   </p>
                 </div>
+                {template.ornament === "ruled" && (
+                  <div className="cert-stamp" style={{ borderColor: template.ink, color: template.ink }}>
+                    ORIGINAL
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: "flex", gap: 16, alignItems: "flex-end", justifyContent: "space-between", textAlign: "left" }}>
-                <p style={{ margin: 0, color: "#666", fontSize: 11, lineHeight: 1.5, flex: 1 }}>
+              <div className="cert-verify-row">
+                {template.id === "heritage" && (
+                  <div className="cert-seal" style={{ background: accent }}>
+                    S.
+                  </div>
+                )}
+                <p style={{ color: template.muted }}>
                   {cfg.verificationNote}
                   <br />
-                  <strong style={{ color: INK }}>Certificate ID: {cfg.certificateId}</strong>
+                  <strong style={{ color: template.ink }}>Certificate ID: {cfg.certificateId}</strong>
                 </p>
-                <div style={{ textAlign: "center", flexShrink: 0 }}>
+                <div className="cert-qr">
                   {qrError ? (
-                    <p style={{ margin: 0, fontSize: 11, color: "#666", maxWidth: 132 }}>QR unavailable — verify with the certificate ID above.</p>
+                    <p className="cert-qr-fallback">QR unavailable — verify with the certificate ID above.</p>
                   ) : (
                     <>
-                      <canvas ref={qrRef} width={132} height={132} style={{ width: 88, height: 88, display: "block" }} aria-label={`QR code for certificate ${cfg.certificateId}`} />
-                      <p style={{ margin: "4px 0 0", fontSize: 10, color: "#666" }}>Scan to verify</p>
+                      <canvas ref={qrRef} width={132} height={132} aria-label={`QR code for certificate ${cfg.certificateId}`} />
+                      <p style={{ color: template.muted }}>Scan to verify</p>
                     </>
                   )}
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* -- How verification works (honest, no invented service) ------------ */}
-      <div style={{ marginTop: 32, padding: 20, border: "1px solid var(--line)", borderRadius: 8, background: "var(--room-color)" }}>
-        <h3 style={{ margin: "0 0 8px", fontFamily: SERIF, fontSize: 17, fontWeight: 600 }}>How anyone verifies this certificate</h3>
-        <p style={{ margin: "0 0 8px", color: "#444", fontSize: 13, lineHeight: 1.6 }}>
-          There is no automatic online verification service for these certificates. A buyer or collector checks the certificate in two ways:
-          scan the QR code, which carries the certificate ID, the artwork title and the artist&apos;s name — or read the certificate ID printed
-          on the certificate and compare it with the artist&apos;s own records (your issued list on this page) and with the artwork itself:
-          title, medium, dimensions, year and edition must match. When in doubt, the holder should contact the artist directly and quote the
-          certificate ID.
-        </p>
-        <p style={{ margin: 0, color: "#444", fontSize: 13, lineHeight: 1.6 }}>
-          Export is through your browser: “Print / save as PDF” opens the print dialog, where you choose “Save as PDF”. The certificate prints
-          on one page, in the paper size and orientation chosen above.
-        </p>
+          {/* -- How verification works (honest, no invented service) ------------ */}
+          <div className="cert-verify-box">
+            <h3>How anyone verifies this certificate</h3>
+            <p>
+              There is no automatic online verification service for these certificates. A buyer or collector checks the certificate in two ways:
+              scan the QR code, which carries the certificate ID, the artwork title and the artist&apos;s name — or read the certificate ID printed
+              on the certificate and compare it with the artist&apos;s own records (your issued list on this page) and with the artwork itself:
+              title, medium, dimensions, year and edition must match. When in doubt, the holder should contact the artist directly and quote the
+              certificate ID.
+            </p>
+            <p>
+              Export is a real one-page PDF (“Download PDF”, rendered server-side in the template and paper size shown above) or through your
+              browser (“Print” opens the print dialog, where you choose “Save as PDF”).
+            </p>
+          </div>
+        </section>
       </div>
 
       {/* -- Issued certificates -------------------------------------------- */}
-      <div style={{ marginTop: 32 }}>
-        <h3 style={{ margin: "0 0 4px", fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>Issued certificates</h3>
-        <p style={{ margin: "0 0 14px", color: "#666", fontSize: 13 }}>
-          Every certificate you issue is saved here. Open one to edit or reprint it; revoking removes it from this list.
+      <section className="cert-issued">
+        <h3>Issued certificates</h3>
+        <p className="cert-issued-sub">
+          Every certificate you issue is saved in your account and in the database. Open one to edit or reprint it; revoking removes it from
+          this list and from its file archive.
         </p>
-        {savedLoading && <p style={{ color: "#666", fontSize: 13 }}>Loading your issued certificates…</p>}
+        {savedLoading && <p className="cert-hint">Loading your issued certificates…</p>}
         {savedError && (
-          <p role="alert" style={{ color: "#8a2f2f", fontSize: 13 }}>
+          <p role="alert" className="cert-msg cert-msg-error">
             {savedError}
           </p>
         )}
@@ -736,58 +933,46 @@ export default function CertificateTool({
           </div>
         )}
         {saved.length > 0 && (
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 10 }}>
+          <ul className="cert-issued-list">
             {saved.map((row) => {
               const data = row.data as Partial<CertificateConfig>;
               const certId = typeof data.certificateId === "string" ? data.certificateId : "";
               const issued = new Date(row.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
               const confirming = confirmDeleteId === row.id;
+              const archived = archivedIds?.has(row.id) ?? false;
               return (
-                <li
-                  key={row.id}
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 10,
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "12px 14px",
-                    border: "1px solid var(--line)",
-                    borderRadius: 8,
-                    background: loadedId === row.id ? "var(--room-color)" : "#fff",
-                  }}
-                >
-                  <div style={{ minWidth: 200 }}>
-                    <strong style={{ display: "block", fontSize: 14 }}>{row.title}</strong>
-                    <span style={{ color: "#666", fontSize: 12 }}>
+                <li key={row.id} className={`cert-issued-row ${loadedId === row.id ? "active" : ""}`}>
+                  <div className="cert-issued-info">
+                    <strong>{row.title}</strong>
+                    <span>
                       Issued {issued}
                       {certId ? ` · ${certId}` : ""}
+                      {archived ? " · Archived in your account" : ""}
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button type="button" className="editor-secondary-button" onClick={() => loadSaved(row)}>
+                  <div className="cert-issued-actions">
+                    <button type="button" className="cert-button" onClick={() => loadSaved(row)}>
                       View
                     </button>
-                    <button type="button" className="editor-secondary-button" onClick={() => reprintSaved(row)}>
+                    <button type="button" className="cert-button" onClick={() => reprintSaved(row)}>
                       Reprint
                     </button>
                     {confirming ? (
                       <>
                         <button
                           type="button"
-                          className="editor-secondary-button"
+                          className="cert-button cert-button-danger"
                           disabled={deletingId === row.id}
                           onClick={() => revokeSaved(row)}
-                          style={{ borderColor: "#8a2f2f", color: "#8a2f2f" }}
                         >
                           {deletingId === row.id ? "Revoking…" : "Confirm revoke"}
                         </button>
-                        <button type="button" className="editor-secondary-button" onClick={() => setConfirmDeleteId(null)}>
+                        <button type="button" className="cert-button" onClick={() => setConfirmDeleteId(null)}>
                           Keep
                         </button>
                       </>
                     ) : (
-                      <button type="button" className="editor-secondary-button" onClick={() => setConfirmDeleteId(row.id)}>
+                      <button type="button" className="cert-button" onClick={() => setConfirmDeleteId(row.id)}>
                         Revoke
                       </button>
                     )}
@@ -797,7 +982,7 @@ export default function CertificateTool({
             })}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }

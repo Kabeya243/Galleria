@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { archiveToolDocument, deleteToolArchive } from "@/lib/tool-archive";
 import styles from "@/components/tools.module.css";
 
 // Print Production Studio — production-ready materials from the artist's own
@@ -222,6 +223,7 @@ export default function PrintStudio({
     setSaving(true);
     setSaveMsg(null);
     try {
+      let savedId: string | null = loadedId;
       if (loadedId) {
         const res = await fetch("/api/saved-work", {
           method: "PUT",
@@ -238,8 +240,14 @@ export default function PrintStudio({
         });
         if (!res.ok) throw new Error("Could not save this print job.");
         const json = (await res.json()) as { saved: SavedJob };
+        savedId = json.saved.id;
         setLoadedId(json.saved.id);
         setSaveMsg(`Saved “${title}”.`);
+      }
+      // R2 archive copy, same mechanism as Atelier designs (best-effort).
+      if (savedId) {
+        const archived = await archiveToolDocument("print-job", savedId, jobRef.current);
+        if (archived.archived) setSaveMsg((prev) => `${prev ?? ""} Archived in your account.`);
       }
       setSaveTitle("");
       await refreshSaved();
@@ -265,6 +273,7 @@ export default function PrintStudio({
       try {
         const res = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
         if (!res.ok) throw new Error("Could not delete this print job.");
+        await deleteToolArchive("print-job", id);
         if (loadedId === id) setLoadedId(null);
         setConfirmDeleteId(null);
         await refreshSaved();

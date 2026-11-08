@@ -698,6 +698,86 @@ async function smoke() {
 
 await smoke();
 
+// ---------- Certificates & document tools (8 Nov mission) ----------
+check("Certificates", "cert-files", "Archive route + helper + Atelier-style CSS + Python export exist", () => {
+  for (const f of ["lib/tool-archive.ts", "app/api/tool-archives/route.ts", "components/certificate-tool.tsx", "components/certificate-tool.css", "api/index.py"]) {
+    assert(exists(f), `missing ${f}`);
+  }
+  assert(read("api/requirements.txt").includes("qrcode"), "requirements.txt missing qrcode (PDF QR code)");
+  return "tool-archive lib + /api/tool-archives + certificate-tool(.css) + api/index.py + qrcode";
+});
+check("Certificates", "cert-templates", "10 original certificate templates, unique ids", () => {
+  const src = read("components/certificate-tool.tsx");
+  const ids = [...src.matchAll(/id: "(classic|minimal|gallery|heritage|modern|noir|deco|monogram|ledger|ribbon)"/g)].map((m) => m[1]);
+  assert(ids.length === 10, `expected 10 templates, found ${ids.length}`);
+  assert(new Set(ids).size === 10, "duplicate template ids");
+  for (const name of ["Heritage", "Modern", "Atelier Noir", "Deco", "Monogram", "Ledger", "Ribbon"]) {
+    assert(src.includes(name), `template ${name} missing`);
+  }
+  return "Classic, Minimal, Gallery, Heritage, Modern, Atelier Noir, Deco, Monogram, Ledger, Ribbon";
+});
+check("Certificates", "cert-archive", "R2 archive mirrors Atelier: certificates/<userId> keys, auth, 501 when unconfigured", () => {
+  const api = read("app/api/tool-archives/route.ts");
+  assert(api.includes("certificates/${userId}/${id}.json"), "certificate R2 key prefix missing");
+  assert(api.includes("tool-archives/${kind}/${userId}/${id}.json"), "other-tools R2 key prefix missing");
+  assert(api.includes("getCurrentUser"), "archive route missing auth");
+  assert(api.includes("501"), "archive route missing 501 when R2 unconfigured");
+  const helper = read("lib/tool-archive.ts");
+  assert(helper.includes('"/api/tool-archives"'), "helper does not post to /api/tool-archives");
+  const tool = read("components/certificate-tool.tsx");
+  assert(tool.includes('archiveToolDocument("certificate"'), "certificate tool does not archive on issue");
+  assert(tool.includes('deleteToolArchive("certificate"'), "certificate tool does not delete the archive on revoke");
+  assert(tool.includes("archivedIds"), "certificate tool does not track archived ids");
+  return "certificates/<userId>/<id>.json + tool-archives/<kind>/<userId>/<id>.json, user-scoped, best-effort";
+});
+check("Certificates", "cert-pdf", "Python certificate PDF: route before the generic export, template-aware, QR", () => {
+  const src = read("api/index.py");
+  const certRoute = src.indexOf('"/api/atelier/export/certificate"');
+  const genericRoute = src.indexOf('"/api/atelier/export/{format_name}"');
+  assert(certRoute > 0 && genericRoute > certRoute, "certificate route must be registered before the generic export route");
+  assert(src.includes("def export_certificate_pdf"), "export_certificate_pdf missing");
+  assert(src.includes("_CERT_TEMPLATES"), "per-template PDF rendering missing");
+  assert(src.includes("import qrcode"), "QR code generation missing");
+  const tool = read("components/certificate-tool.tsx");
+  assert(tool.includes('"/api/atelier/export/certificate"'), "tool does not call the certificate PDF export");
+  return "POST /api/atelier/export/certificate → one-page PDF, 10 templates, QR, auth via sanaa_session";
+});
+check("Certificates", "cert-design", "Certificate Studio uses the Atelier dark/gold language, no window.alert", () => {
+  const tool = read("components/certificate-tool.tsx");
+  assert(tool.includes("certificate-scope"), "tool missing .certificate-scope");
+  assert(tool.includes("cert-topbar"), "tool missing the Atelier-style topbar");
+  assert(tool.includes("cert-tpl-grid"), "tool missing the template gallery");
+  assert(!tool.includes("window.alert"), "tool still uses window.alert");
+  const css = read("components/certificate-tool.css");
+  assert(css.includes("--cert-gold"), "CSS missing the gold token");
+  assert(css.includes(".certificate-scope .cert-topbar"), "CSS not scoped under .certificate-scope");
+  return "topbar + left panel + dark workspace + template gallery; errors inline";
+});
+check("Document tools", "doc-tools-archive", "All five other document tools archive to R2 on save and delete the archive on delete", () => {
+  const kinds = {
+    "components/presentation-designer.tsx": "presentation",
+    "components/exhibition-planner.tsx": "exhibition-plan",
+    "components/marketing-studio.tsx": "marketing-asset",
+    "components/print-studio.tsx": "print-job",
+    "components/art-in-context.tsx": "context-project",
+  };
+  for (const [file, kind] of Object.entries(kinds)) {
+    const src = read(file);
+    assert(src.includes("lib/tool-archive"), `${file} missing the archive helper import`);
+    assert(src.includes(`archiveToolDocument("${kind}"`), `${file} does not archive ${kind} on save`);
+    assert(src.includes(`deleteToolArchive("${kind}"`), `${file} does not delete the ${kind} archive`);
+  }
+  return "presentation, exhibition-plan, marketing-asset, print-job, context-project";
+});
+check("Certificates", "cert-i18n", "Documents description updated FR+EN (10 templates, account save, R2 archive, PDF)", () => {
+  const src = read("lib/i18n.ts");
+  const fr = src.includes("dix modèles originaux");
+  const en = src.includes("ten original templates");
+  assert(fr && en, "documentsDesc missing the 10-template wording in FR or EN");
+  assert(src.includes("R2"), "documentsDesc does not mention the R2 archive");
+  return "documentsDesc FR+EN: 10 templates, saved in account + DB, R2 archive, one-page PDF";
+});
+
 // Manual (browser-only) checks — recorded as skipped, to be verified live.
 skip("Manual (browser)", "manual-music-enter", "Exhibition music: enter with Son ON (music starts) and Son OFF (silent); pause/resume; sound switch mid-visit; volume persisted across visits", "needs a live browser session with a signed-in user + a real MP3");
 skip("Manual (browser)", "manual-music-tts", "Exhibition music: TTS audio guide ducks the music to ~15% while speaking, full volume after; music keeps playing across room changes and in List view", "needs a live browser session");
@@ -707,6 +787,7 @@ skip("Manual (browser)", "manual-works", "Tag a work's kind on /works/[id] as th
 skip("Manual (browser)", "manual-site", "Pick a site template, edit, preview, publish a site", "needs a live browser session");
 skip("Manual (browser)", "manual-adv-site", "Advanced editor: pick a template, edit, autosave, publish, open /sites/[slug] + sub-page", "needs a live browser session with a signed-in user");
 skip("Manual (browser)", "manual-adv-site-ux", "Published site UX in a real browser: burger opens/closes at 390px, full footer on all 11 designs, lightbox keyboard nav, no horizontal overflow at 390/768/1280px", "needs a live browser session with a signed-in user");
+skip("Manual (browser)", "manual-certificates", "Certificate Studio: pick each of the 10 templates, check the live preview, issue a certificate, confirm the 'Archived in your account' note, download the PDF (one page, right template, QR scans), reprint, revoke", "needs a live browser session with a signed-in user");
 skip("Manual (browser)", "manual-pdf", "Open an Atelier template, edit, save, export a real PDF", "needs a live browser session (subagent cannot drive the browser)");
 skip("Manual (browser)", "manual-exhibitions", "Open an exhibition in each of the 21 galleries: artworks visible on walls (none floating, none buried in a wall), walk + mini-plan teleport in every room", "needs a live browser session with a signed-in user");
 

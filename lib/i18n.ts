@@ -1294,8 +1294,8 @@ export const DICTIONARY = {
     documents: { fr: "Documents", en: "Documents" },
     documentsEyebrow: { fr: "OUTILS · DOCUMENTS ET RAPPORTS", en: "TOOLS · DOCUMENTS & REPORTING" },
     documentsDesc: {
-      fr: "Le papier qui accompagne une vente. Créez un certificat d'authenticité dans le studio — détails modifiables, trois modèles, un QR code pour la vérification — puis délivrez-le, réimprimez-le ou révoquez-le. L'export passe par la boîte de dialogue d'impression de votre navigateur, enregistré en PDF d'une page.",
-      en: "The paper that goes with a sale. Build a certificate of authenticity in the studio — editable details, three templates, a QR code for verification — then issue it, reprint it, or revoke it. Export is through your browser's print dialog, saved as a one-page PDF.",
+      fr: "Le papier qui accompagne une vente. Créez un certificat d'authenticité dans le studio — détails modifiables, dix modèles originaux, un QR code pour la vérification — puis délivrez-le, réimprimez-le ou révoquez-le. Chaque certificat est enregistré dans votre compte et dans la base de données, avec une copie archivée dans votre espace R2 ; l'export est un vrai PDF d'une page, ou passe par la boîte de dialogue d'impression de votre navigateur.",
+      en: "The paper that goes with a sale. Build a certificate of authenticity in the studio — editable details, ten original templates, a QR code for verification — then issue it, reprint it, or revoke it. Every certificate is saved in your account and in the database, with a copy archived in your R2 storage; export is a real one-page PDF, or through your browser's print dialog.",
     },
     educationStudio: { fr: "Studio d'éducation artistique", en: "Art Education Studio" },
     educationStudioEyebrow: { fr: "OUTILS · STUDIO D'ÉDUCATION ARTISTIQUE", en: "TOOLS · ART EDUCATION STUDIO" },

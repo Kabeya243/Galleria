@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { archiveToolDocument, deleteToolArchive } from "@/lib/tool-archive";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { FRAME_VARIANTS, type FrameVariant } from "@/lib/demo-data";
@@ -333,6 +334,10 @@ export default function ArtInContext({
       });
       if (!res.ok) throw new Error("create");
       const json = (await res.json()) as { saved: RawProject };
+      // R2 archive copy, same mechanism as Atelier designs (best-effort;
+      // the autosave below stays database-only, so keystrokes do not
+      // write a file to R2 on every change).
+      void archiveToolDocument("context-project", json.saved.id, emptyProjectData());
       const row: RawProject = { id: json.saved.id, title: json.saved.title, data: json.saved.data as Record<string, unknown>, updatedAt: String(json.saved.updatedAt) };
       setProjects((prev) => [row, ...prev]);
       setActiveId(row.id);
@@ -361,6 +366,7 @@ export default function ArtInContext({
     try {
       const res = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error("delete");
+      await deleteToolArchive("context-project", id);
       const rest = projects.filter((p) => p.id !== id);
       setProjects(rest);
       setConfirmDeleteId(null);

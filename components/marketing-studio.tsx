@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { archiveToolDocument, deleteToolArchive } from "@/lib/tool-archive";
 import styles from "@/components/tools.module.css";
 
 // Marketing Studio — generate exhibition marketing assets from the artist's
@@ -430,6 +431,7 @@ export default function MarketingStudio({
     setSaving(true);
     setSaveMsg(null);
     try {
+      let savedId: string | null = loadedId;
       if (loadedId) {
         const res = await fetch("/api/saved-work", {
           method: "PUT",
@@ -446,8 +448,14 @@ export default function MarketingStudio({
         });
         if (!res.ok) throw new Error("Could not save this design.");
         const json = (await res.json()) as { saved: SavedAsset };
+        savedId = json.saved.id;
         setLoadedId(json.saved.id);
         setSaveMsg(`Saved “${title}”.`);
+      }
+      // R2 archive copy, same mechanism as Atelier designs (best-effort).
+      if (savedId) {
+        const archived = await archiveToolDocument("marketing-asset", savedId, cfgRef.current);
+        if (archived.archived) setSaveMsg((prev) => `${prev ?? ""} Archived in your account.`);
       }
       setSaveTitle("");
       await refreshSaved();
@@ -473,6 +481,7 @@ export default function MarketingStudio({
       try {
         const res = await fetch(`/api/saved-work?id=${encodeURIComponent(id)}`, { method: "DELETE" });
         if (!res.ok) throw new Error("Could not delete this design.");
+        await deleteToolArchive("marketing-asset", id);
         if (loadedId === id) setLoadedId(null);
         setConfirmDeleteId(null);
         await refreshSaved();

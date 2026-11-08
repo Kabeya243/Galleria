@@ -3858,7 +3858,7 @@ export function GalleryWalkControls(props: {
     // in room-local coordinates.
     const blocks = def?.blocks ?? [];
     const bounds = def?.bounds ?? { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
-    const v = (def?.walkSpeed ?? 3) * delta;
+    const v = (def?.walkSpeed ?? 4) * delta;
     if (fw || st) {
       destination.current = null;
       lookYaw.current = null;

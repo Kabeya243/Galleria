@@ -504,7 +504,7 @@ function hallDef(o: HallDefOptions): GalleryDef {
     environment: true,
     cameraStart: { x: 0, y: 1.6, z: o.L / 2 - 2, yaw: 0, pitch: -0.03 },
     bounds: { minX: -hw + 0.3, maxX: hw - 0.3, minZ: -o.L / 2 + 0.3, maxZ: o.L / 2 - 0.3 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks,
     hangWalls,
     planLines,
@@ -522,7 +522,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: 7, y: 1.6, z: 21, yaw: 0.35, pitch: -0.03 },
     bounds: { minX: -24, maxX: 24, minZ: -36, maxZ: 32 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     blocks: serpentineBlocks(),
     hangWalls: serpentineFaces(),
     planLines: serpentinePlanLines(),
@@ -536,7 +536,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: false,
     cameraStart: { x: 3.1, y: 1.6, z: 8, yaw: 0, pitch: -0.03 },
     bounds: { minX: -14, maxX: 14, minZ: -11.5, maxZ: 12 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     blocks: [
       rectBlock(8.6, 40, -13, 0),
       rectBlock(-40, -8.6, -13, 0),
@@ -576,7 +576,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: false,
     cameraStart: { x: 2, y: 1.6, z: 6.5, yaw: 0.15, pitch: -0.03 },
     bounds: { minX: -8.5, maxX: 8.5, minZ: -11.4, maxZ: 7.4 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     blocks: [rectBlock(-3.4, 0.4, -4.2, -3.8), rectBlock(2.05, 5.15, -3.5, -2.5)],
     hangWalls: [
       face("left", 1, 0, -9, -2, 0, 1, 10, 0, 4.3),
@@ -601,7 +601,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: -5, y: 1.6, z: 15, yaw: -0.1, pitch: -0.03 },
     bounds: { minX: -12, maxX: 11.4, minZ: -16, maxZ: 16 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     blocks: HALLE_SEGMENTS.map(([ax, az, bx, bz]) => segmentBlock(ax, az, bx, bz)),
     hangWalls: [
       face("left", 1, 0, -13, 0, 0, 1, 17, 0, 8.2),
@@ -621,7 +621,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: false,
     cameraStart: { x: -1, y: 1.6, z: 5.5, yaw: 0, pitch: -0.04 },
     bounds: { minX: -9.2, maxX: 9.2, minZ: -14.2, maxZ: 8.2 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     // The dividing wall (the source's arch check): the wall band is
     // z −4.9…−3.3 and the passage is |x| < 1.5.
     blocks: [
@@ -653,7 +653,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: 0, y: 1.6, z: 9.5, yaw: 0, pitch: -0.03 },
     bounds: { minX: -13, maxX: 13, minZ: -7, maxZ: 11 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     blocks: [
       { x: 7.6, z: -4.6, ry: -0.45, hl: 3, hw: 0.3 },
       { x: -7.6, z: -4.6, ry: 0.45, hl: 3, hw: 0.3 },
@@ -678,7 +678,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: -4.2, y: 1.6, z: 8.2, yaw: -0.35, pitch: -0.03 },
     bounds: { minX: -5.4, maxX: 4.4, minZ: -12.4, maxZ: 9.5 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     blocks: [{ x: 1.2, z: -7.5, ry: 0, hl: 1, hw: 0.5 }],
     hangWalls: [
       face("left", 1, 0, -6, -1.5, 0, 1, 11.5, 0, 7.6),
@@ -697,7 +697,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: 0, y: 1.6, z: 9, yaw: 0, pitch: -0.03 },
     bounds: { minX: -11, maxX: 11, minZ: -9.4, maxZ: 11 },
-    walkSpeed: 3,
+    walkSpeed: 4,
     blocks: [
       { x: 1.9, z: -5.6, ry: -0.75, hl: 1.6, hw: 0.2 },
       { x: -1.9, z: -5.6, ry: 0.75, hl: 1.6, hw: 0.2 },
@@ -736,7 +736,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: false,
     cameraStart: { x: -2.2, y: 1.6, z: 5.5, yaw: -0.2, pitch: -0.05 },
     bounds: { minX: -18, maxX: 18, minZ: -16, maxZ: 10 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     // FIX (the source has no collision at all, so the visitor walks
     // straight through the five solid panels): one block per panel.
     // The architecture is unchanged — this is navigation data only.
@@ -775,7 +775,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     // rooms, two door passages), with blocks carving the walls and the
     // dead zones beside the side rooms out of the bounding rectangle.
     bounds: { minX: -7.6, maxX: 7.6, minZ: -7.2, maxZ: 5.7 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks: [
       // The glass-brick side walls (x = ±4.2), split around the door
       // openings (z −1.9…−0.1).
@@ -832,7 +832,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: 0, y: 1.6, z: 18, yaw: 0, pitch: -0.03 },
     bounds: { minX: -3.7, maxX: 3.7, minZ: -19, maxZ: 19 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks: [
       // The twelve granite columns (the source's colliders) and the
       // sculpture at (−2.2, 8.5).
@@ -868,7 +868,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: 0, y: 1.6, z: 11, yaw: 0, pitch: -0.03 },
     bounds: { minX: -12.4, maxX: 12.4, minZ: -13.4, maxZ: 12.4 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks: [
       // The four columns and the furniture (the source's colliders).
       { x: -5, z: -2, ry: 0, hl: 0.85, hw: 0.85 },
@@ -913,7 +913,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: -6, y: 1.6, z: 7, yaw: -0.64, pitch: 0.12 },
     bounds: { minX: -18, maxX: 18, minZ: -18, maxZ: 18 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks: [
       // The seven trees (the source's colliders).
       ...[[-4.5, -2], [-2, -3.6], [0.5, -2.6], [3, -3.4], [5.5, -0.6], [-3.6, 1.2], [1.5, 0.2]].map(([x, z]) => ({
@@ -958,7 +958,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: 0, y: 1.6, z: 8, yaw: 0, pitch: -0.03 },
     bounds: { minX: -7.7, maxX: 7.7, minZ: -9.7, maxZ: 9.7 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks: [
       // The central column and the staircase (the source's colliders).
       { x: 0, z: -1, ry: 0, hl: 0.5, hw: 0.5 },
@@ -1051,7 +1051,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     // The source's two walkable rects (a cross) inside the ±11 m
     // square, with the four corners blocked out.
     bounds: { minX: -11, maxX: 11, minZ: -11, maxZ: 11 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks: [
       rectBlock(8, 11, 8, 11),
       rectBlock(-11, -8, 8, 11),
@@ -1095,7 +1095,7 @@ const GALLERY_DEFS: Record<string, GalleryDef> = {
     environment: true,
     cameraStart: { x: 0, y: 1.6, z: 7.5, yaw: 0, pitch: -0.03 },
     bounds: { minX: -6.7, maxX: 6.7, minZ: -8.7, maxZ: 8.7 },
-    walkSpeed: 3.2,
+    walkSpeed: 4.2,
     blocks: [
       // The mezzanine zone and the two staircases (the source's
       // colliders).

@@ -6,18 +6,19 @@
 // loads the scripts in order, then calls window.AtelierEditor.init().
 // All errors are shown inline, never window.alert.
 // `standalone` renders the editor as its own full-viewport page
-// (no platform shell): the saved-designs bar stays on top and the
-// editor shell fills the rest, edge to edge.
+// (no platform shell): the editor shell fills the whole viewport,
+// edge to edge, with no bar above it. Saved designs live in the
+// editor's own "Designs" tab (left rail, rendered by editor.js),
+// not in a bar above the editor.
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Script from "next/script";
 import "./atelier-editor.css";
 
 type ArtworkRef = { id: string; title: string; imageUrl: string };
-type SavedDesign = { id: string; name: string; updatedAt: string | null; thumbnail: string | null };
 
 declare global {
   interface Window {
@@ -28,7 +29,6 @@ declare global {
 }
 
 export default function AtelierEditor({ artworks, standalone }: { artworks: ArtworkRef[]; standalone?: boolean }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project") ?? "";
   const templateId = searchParams.get("template") ?? "";
@@ -36,30 +36,7 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
   const [fabricReady, setFabricReady] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [scriptError, setScriptError] = useState<string | null>(null);
-  const [designs, setDesigns] = useState<SavedDesign[]>([]);
-  const [designsLoading, setDesignsLoading] = useState(true);
-  const [designsError, setDesignsError] = useState<string | null>(null);
-  const [barMsg, setBarMsg] = useState<string | null>(null);
-  const [armDelete, setArmDelete] = useState<string | null>(null);
   const initedRef = useRef(false);
-
-  const refreshDesigns = useCallback(async () => {
-    setDesignsLoading(true);
-    setDesignsError(null);
-    try {
-      const res = await fetch("/api/atelier/projects");
-      if (!res.ok) throw new Error("Impossible de charger vos designs.");
-      setDesigns((await res.json()) as SavedDesign[]);
-    } catch (err) {
-      setDesignsError(err instanceof Error ? err.message : "Impossible de charger vos designs.");
-    } finally {
-      setDesignsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshDesigns();
-  }, [refreshDesigns]);
 
   // The editor script reads this at init.
   useEffect(() => {
@@ -85,86 +62,12 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
     [],
   );
 
-  const openDesign = (id: string) => {
-    router.push(`/tools/portfolio-pdf?project=${encodeURIComponent(id)}`);
-  };
-
-  const duplicateDesign = async (id: string) => {
-    setBarMsg(null);
-    try {
-      const res = await fetch(`/api/atelier/projects/${encodeURIComponent(id)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "duplicate" }),
-      });
-      if (!res.ok) throw new Error("Impossible de dupliquer ce design.");
-      setBarMsg("Copie créée.");
-      await refreshDesigns();
-    } catch (err) {
-      setBarMsg(err instanceof Error ? err.message : "Impossible de dupliquer ce design.");
-    }
-  };
-
-  const deleteDesign = async (id: string) => {
-    if (armDelete !== id) {
-      setArmDelete(id);
-      window.setTimeout(() => setArmDelete((cur) => (cur === id ? null : cur)), 3000);
-      return;
-    }
-    setArmDelete(null);
-    setBarMsg(null);
-    try {
-      const res = await fetch(`/api/atelier/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Impossible de supprimer ce design.");
-      setBarMsg("Design supprimé.");
-      if (projectId === id) router.push("/tools/portfolio-pdf");
-      await refreshDesigns();
-    } catch (err) {
-      setBarMsg(err instanceof Error ? err.message : "Impossible de supprimer ce design.");
-    }
-  };
-
   return (
     <div className={standalone ? "atelier-scope atelier-standalone" : "atelier-scope"}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
       <Script src="/vendor/fabric.min.js" strategy="afterInteractive" onLoad={() => setFabricReady(true)} onError={() => setScriptError("Fabric.js n’a pas pu être chargé.")} />
       <Script src="/atelier/editor.js" strategy="afterInteractive" onLoad={() => setEditorReady(true)} onError={() => setScriptError("Le script de l’éditeur n’a pas pu être chargé.")} />
 
-      <div className="atelier-projects-bar">
-        <h2>Mes designs</h2>
-        {designsLoading ? (
-          <p className="atelier-projects-note">Chargement…</p>
-        ) : designsError ? (
-          <p className="atelier-projects-note">{designsError}</p>
-        ) : designs.length === 0 ? (
-          <p className="atelier-projects-note">Aucun design enregistré — ouvrez un modèle ci-dessous, puis Enregistrer.</p>
-        ) : (
-          designs.map((d) => (
-            <span key={d.id} className="atelier-project-chip" role="group" aria-label={d.name}>
-              <button type="button" onClick={() => openDesign(d.id)} style={{ display: "contents" }} title={`Ouvrir ${d.name}`}>
-                {d.thumbnail ? <img src={d.thumbnail} alt="" /> : null}
-                <span>
-                  {d.name}
-                  {d.updatedAt ? <small>{new Date(d.updatedAt).toLocaleDateString("fr-FR")}</small> : null}
-                </span>
-              </button>
-              <button type="button" onClick={() => void duplicateDesign(d.id)} title="Dupliquer" aria-label={`Dupliquer ${d.name}`}>
-                ⧉
-              </button>
-              <button
-                type="button"
-                className="atelier-danger"
-                onClick={() => void deleteDesign(d.id)}
-                title={armDelete === d.id ? "Cliquez à nouveau pour confirmer" : "Supprimer"}
-                aria-label={`Supprimer ${d.name}`}
-              >
-                {armDelete === d.id ? "Confirmer ?" : "×"}
-              </button>
-            </span>
-          ))
-        )}
-      </div>
-      {barMsg ? <p className="atelier-projects-note" role="status">{barMsg}</p> : null}
       {scriptError ? <p className="atelier-error" role="alert">{scriptError}</p> : null}
 
       <div className="editor-shell">
@@ -199,6 +102,7 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
         </header>
         <main className="editor-layout">
           <aside className="left-rail">
+            <button className="tool-tab" data-tab="designs"><span>▤</span>Designs</button>
             <button className="tool-tab active" data-tab="templates"><span>▧</span>Modèles</button>
             <button className="tool-tab" data-tab="elements"><span>◈</span>Éléments</button>
             <button className="tool-tab" data-tab="text"><span>T</span>Texte</button>

@@ -175,6 +175,20 @@ check("Portfolio PDF", "atelier-files", "Atelier editor, export function, API ro
   assert(editorPage.includes("standalone"), "editor page missing standalone editor");
   assert(read("components/sidebar.tsx").includes("collapsed"), "sidebar missing collapsed mode");
   assert(read("components/atelier-editor.tsx").includes("atelier-standalone"), "editor missing standalone styles");
+  // Saved-designs bar removed (8 Nov): the editor page must fit the
+  // window — no bar above the editor's own top bar. Designs live in
+  // the editor's own "Designs" tab (left rail) instead.
+  const editorTsx = read("components/atelier-editor.tsx");
+  assert(!editorTsx.includes("atelier-projects-bar"), "editor still renders the Mes designs bar");
+  assert(!editorTsx.includes("Mes designs"), "editor still renders the Mes designs bar");
+  assert(editorTsx.includes('data-tab="designs"'), "editor missing Designs rail tab");
+  const editorJs = read("public/atelier/editor.js");
+  assert(editorJs.includes('designs:["MES DESIGNS"'), "editor.js missing designs tab");
+  assert(editorJs.includes("loadDesigns"), "editor.js missing designs list loader");
+  assert(
+    read("components/atelier-editor.css").includes(".atelier-standalone-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }"),
+    "standalone main can overflow the viewport (needs min-height: 0 + overflow hidden)",
+  );
   return "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug";
 });
 

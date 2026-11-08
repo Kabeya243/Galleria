@@ -149,14 +149,17 @@
   function escapeText(text){return escapeHTML(text).replace(/\n/g," ");}
   function setPanel(tab) {
     state.activeTab = tab;
-    const labels = {templates:["COMMENCER","Modèles"],elements:["COMPOSER","Éléments"],text:["ÉCRIRE","Texte"],photos:["INSPIRATION","Photos"],uploads:["VOTRE BIBLIOTHÈQUE","Importer"],artworks:["VOS ŒUVRES","Mes œuvres"],background:["PERSONNALISER","Fond"]};
+    const labels = {designs:["MES DESIGNS","Mes designs"],templates:["COMMENCER","Modèles"],elements:["COMPOSER","Éléments"],text:["ÉCRIRE","Texte"],photos:["INSPIRATION","Photos"],uploads:["VOTRE BIBLIOTHÈQUE","Importer"],artworks:["VOS ŒUVRES","Mes œuvres"],background:["PERSONNALISER","Fond"]};
     $("#panel-kicker").textContent=labels[tab][0];$("#panel-title").textContent=labels[tab][1];
     $$(".tool-tab[data-tab]").forEach((button)=>button.classList.toggle("active",button.dataset.tab===tab));
     renderPanel();
   }
   function renderPanel() {
     const root=$("#panel-content");
-    if (state.activeTab==="templates") {
+    if (state.activeTab==="designs") {
+      root.innerHTML=`<div class="action-card"><h3>Vos designs enregistrés</h3><p>Ouvrez un design pour le modifier, dupliquez-le ou supprimez-le.</p></div><div id="designs-list" class="design-list"></div>`;
+      loadDesigns();
+    } else if (state.activeTab==="templates") {
       root.innerHTML=`<input class="panel-search" id="template-search" placeholder="Rechercher un modèle…"><div class="action-card"><h3>Créer votre format</h3><div class="field"><label>Unité</label><select id="custom-unit"><option value="px">Pixels</option><option value="mm">Millimètres</option><option value="cm">Centimètres</option></select></div><div class="field-row"><div class="field"><label>Largeur</label><input id="custom-width" type="number" value="1080" min="1" max="6000"></div><div class="field"><label>Hauteur</label><input id="custom-height" type="number" value="1080" min="1" max="6000"></div></div><button id="create-custom">Créer une page vierge</button></div><div class="panel-template-list" id="panel-template-list" style="display:contents"></div>`;
       root.querySelector("#create-custom").onclick=()=>{const unit=$("#custom-unit").value,factor={px:1,mm:96/25.4,cm:96/2.54}[unit],rawWidth=Number($("#custom-width").value),rawHeight=Number($("#custom-height").value),width=Math.round(rawWidth*factor),height=Math.round(rawHeight*factor);if(!width||!height||width>6000||height>6000){toast("Dimensions valides requises (1 à 6000 px après conversion).",true);return;}const physicalWidthMm=unit==="px"?rawWidth*25.4/96:unit==="cm"?rawWidth*10:rawWidth,physicalHeightMm=unit==="px"?rawHeight*25.4/96:unit==="cm"?rawHeight*10:rawHeight;state.project={id:null,name:$("#project-name").value,pages:[{width,height,physicalWidthMm,physicalHeightMm,background:"#ffffff",objects:[]}]};setPage(state.project.pages[0]);};
       loadTemplatesIntoPanel(); root.querySelector("#template-search").addEventListener("input",filterTemplates);
@@ -184,6 +187,35 @@
       root.innerHTML=`<div class="action-card"><h3>Couleur de la page</h3><p>Choisissez une couleur pour l’arrière-plan de votre design.</p><div class="field"><label>Couleur personnalisée</label><input type="color" id="page-color" value="${escapeHTML(currentPage().background||"#ffffff")}"></div></div><div class="background-colors">${palette.map(color=>`<button data-bg="${color}" style="background:${color}" title="${color}"></button>`).join("")}</div><div class="action-card"><h3>Pages</h3><div class="page-size-presets"><button data-size="1080,1080">Carré · 1080</button><button data-size="1080,1920">Story · 1080</button><button data-size="794,1123">A4 · 794</button><button data-size="1600,900">Présentation</button></div></div>`;
       $("#page-color").oninput=(event)=>setBackground(event.target.value);$$("[data-bg]",root).forEach(button=>button.onclick=()=>setBackground(button.dataset.bg));$$("[data-size]",root).forEach(button=>button.onclick=()=>resizePage(...button.dataset.size.split(",").map(Number)));
     }
+  }
+  async function loadDesigns() {
+    const list=$("#designs-list");if(!list)return;
+    list.innerHTML=`<div class="action-card"><p>Chargement…</p></div>`;
+    try {
+      const response=await fetch("/api/atelier/projects");if(!response.ok)throw new Error("Impossible de charger vos designs.");
+      const designs=await response.json();
+      if(!designs.length){list.innerHTML=`<div class="action-card"><h3>Aucun design enregistré</h3><p>Ouvrez un modèle, puis Enregistrer.</p></div>`;return;}
+      list.innerHTML=designs.map((d)=>`<div class="design-row"><button class="design-open" data-open="${escapeHTML(d.id)}" title="Ouvrir ${escapeHTML(d.name)}">${d.thumbnail?`<img class="design-thumb" src="${escapeHTML(d.thumbnail)}" alt="">`:""}<span class="design-meta"><strong>${escapeHTML(d.name)}</strong>${d.updatedAt?`<small>${new Date(d.updatedAt).toLocaleDateString("fr-FR")}</small>`:""}</span></button><button class="design-action" data-duplicate="${escapeHTML(d.id)}" title="Dupliquer">⧉</button><button class="design-action design-danger" data-delete="${escapeHTML(d.id)}" title="Supprimer">×</button></div>`).join("");
+      $$("[data-open]",list).forEach(button=>button.onclick=()=>openDesign(button.dataset.open));
+      $$("[data-duplicate]",list).forEach(button=>button.onclick=()=>duplicateDesign(button.dataset.duplicate));
+      $$("[data-delete]",list).forEach(button=>button.onclick=()=>deleteDesign(button));
+    } catch(error){list.innerHTML=`<div class="action-card"><p>${escapeHTML(error.message)}</p></div>`;}
+  }
+  async function openDesign(id) {
+    await loadProject(id);
+    if(state.project.id===id){history.replaceState(null,"",`/tools/portfolio-pdf?project=${encodeURIComponent(id)}`);toast("Design ouvert.");}
+  }
+  async function duplicateDesign(id) {
+    try {const response=await fetch(`/api/atelier/projects/${encodeURIComponent(id)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"duplicate"})});if(!response.ok)throw new Error((await response.json()).detail||"Impossible de dupliquer ce design.");toast("Copie créée.");loadDesigns();}
+    catch(error){toast(error.message,true);}
+  }
+  async function deleteDesign(button) {
+    const id=button.dataset.delete;
+    if(!button.dataset.armed){button.dataset.armed="1";button.textContent="Confirmer ?";button.classList.add("armed");window.setTimeout(()=>{delete button.dataset.armed;button.textContent="×";button.classList.remove("armed");},3000);return;}
+    try {const response=await fetch(`/api/atelier/projects/${encodeURIComponent(id)}`,{method:"DELETE"});if(!response.ok)throw new Error((await response.json()).detail||"Impossible de supprimer ce design.");toast("Design supprimé.");
+      if(state.project.id===id){state.project={id:null,name:"Design sans titre",pages:[{width:1080,height:1080,background:"#ffffff",objects:[]}]};$("#project-name").value=state.project.name;state.saved=false;$("#save-status").textContent="Modifications non enregistrées";history.replaceState(null,"","/tools/portfolio-pdf");setPage(state.project.pages[0],0);}
+      loadDesigns();}
+    catch(error){toast(error.message,true);}
   }
   async function loadTemplatesIntoPanel() {
     const list=$("#panel-template-list");if(!list)return;
@@ -317,7 +349,7 @@
   }
   async function saveProject() {
     storeCurrentPage();state.project.name=$("#project-name").value.trim()||"Design sans titre";$("#save-status").textContent="Enregistrement…";
-    try {const payload={...state.project,thumbnailDataUrl:captureThumbnail()};const response=await fetch("/api/atelier/projects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const result=await response.json();if(!response.ok)throw new Error(result.detail||"Enregistrement impossible.");state.project=result;state.saved=true;$("#save-status").textContent="Enregistré";if(!new URL(location.href).searchParams.has("project"))history.replaceState(null,"",`/tools/portfolio-pdf?project=${encodeURIComponent(result.id)}`);toast("Projet enregistré.");}
+    try {const payload={...state.project,thumbnailDataUrl:captureThumbnail()};const response=await fetch("/api/atelier/projects",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const result=await response.json();if(!response.ok)throw new Error(result.detail||"Enregistrement impossible.");state.project=result;state.saved=true;$("#save-status").textContent="Enregistré";if(!new URL(location.href).searchParams.has("project"))history.replaceState(null,"",`/tools/portfolio-pdf?project=${encodeURIComponent(result.id)}`);toast("Projet enregistré.");if(state.activeTab==="designs")loadDesigns();}
     catch(error){$("#save-status").textContent="Erreur d’enregistrement";toast(error.message,true);}
   }
   async function exportProject(format) {

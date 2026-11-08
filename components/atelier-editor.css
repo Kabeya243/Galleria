@@ -427,44 +427,19 @@
 }
 .atelier-scope .page-size-presets button:hover { border-color: var(--atelier-gold); }
 
-/* Saved designs bar (React wrapper, above the editor) */
-.atelier-scope .atelier-projects-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-.atelier-scope .atelier-projects-bar h2 {
-  font-family: Fraunces, Georgia, serif;
-  font-size: 17px;
-  margin: 0 8px 0 0;
-  color: var(--ink);
-}
-.atelier-scope .atelier-project-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
-  padding: 6px 10px 6px 6px;
-  cursor: pointer;
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-}
-.atelier-scope .atelier-project-chip img {
-  width: 34px;
-  height: 34px;
-  object-fit: cover;
-  border-radius: 5px;
-  background: var(--atelier-panel-2);
-}
-.atelier-scope .atelier-project-chip:hover { border-color: var(--atelier-gold); }
-.atelier-scope .atelier-project-chip small { display: block; color: var(--muted); font-size: 10px; }
-.atelier-scope .atelier-project-chip .atelier-danger { color: var(--atelier-danger); font-size: 11px; padding: 2px 4px; }
-.atelier-scope .atelier-projects-note { font-size: 12px; color: var(--muted); margin: 0; }
+/* Saved designs list (editor "Designs" tab, left panel) */
+.atelier-scope .design-list { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.atelier-scope .design-row { display: flex; align-items: center; gap: 6px; }
+.atelier-scope .design-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--atelier-panel); padding: 6px; cursor: pointer; color: var(--ink); font: inherit; text-align: left; }
+.atelier-scope .design-open:hover { border-color: var(--atelier-gold); }
+.atelier-scope .design-thumb { width: 38px; height: 38px; object-fit: cover; border-radius: 4px; background: var(--atelier-panel-2); flex: none; }
+.atelier-scope .design-meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.atelier-scope .design-meta strong { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atelier-scope .design-meta small { color: var(--muted); font-size: 10px; }
+.atelier-scope .design-action { flex: none; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--atelier-panel); color: var(--muted); font-size: 13px; cursor: pointer; }
+.atelier-scope .design-action:hover { color: var(--ink); border-color: var(--atelier-gold); }
+.atelier-scope .design-action.design-danger { color: var(--atelier-danger); }
+.atelier-scope .design-action.armed { width: auto; padding: 0 8px; background: var(--atelier-danger); border-color: var(--atelier-danger); color: #fff; font-size: 10px; }
 .atelier-scope .atelier-error { font-size: 13px; color: #ff9a8a; margin: 0 0 12px; }
 [data-theme="light"] .atelier-scope .atelier-error { color: #b3261e; }
 
@@ -511,10 +486,10 @@
 
 /* Standalone editor page (no platform shell): the editor owns the
    viewport next to the collapsible platform sidebar (icons only by
-   default, full menu on expand). The saved-designs bar stays on top;
-   the editor shell fills the rest, edge to edge, no border/radius. */
+   default, full menu on expand). Nothing sits above the editor's own
+   top bar: the shell fills the whole viewport height, edge to edge,
+   no border/radius, no page scroll — only the inner panels scroll. */
 .atelier-standalone-page { display: flex; height: 100dvh; overflow: hidden; }
-.atelier-standalone-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.atelier-standalone-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .atelier-scope.atelier-standalone { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--atelier-panel-2); }
-.atelier-scope.atelier-standalone .atelier-projects-bar { flex-shrink: 0; padding: 12px 16px 0; margin-bottom: 10px; }
 .atelier-scope.atelier-standalone .editor-shell { height: auto; flex: 1; min-height: 0; border: 0; border-radius: 0; }

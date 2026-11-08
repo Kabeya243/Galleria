@@ -1,0 +1,55 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import ToolsShell from "@/components/tools-shell";
+import AdvancedSiteEditor from "@/components/advanced-site-editor";
+import { getCurrentUser } from "@/lib/auth";
+import { logToolUse } from "@/lib/tool-use";
+import { db } from "@/lib/db";
+import { getSiteTemplates, listAdvancedSites } from "@/lib/advanced-sites";
+import { templates as bundledTemplates } from "@/lib/advanced-site-templates";
+import type { SiteDocument, TemplateSummary } from "@/lib/advanced-site-types";
+
+export const metadata = {
+  title: "Advanced Website Builder — SANAA Tools",
+  description:
+    "Visual drag-and-drop website editor: 11 original templates, multi-page sites, 18 block types, theme and SEO controls, responsive preview, publish to /sites/[slug]. Drafts are saved in PostgreSQL; media goes to R2.",
+};
+
+// Advanced editor (Claude « atelier-sites »). The simple builder at
+// /tools/website-builder stays available — this page ADDS the visual
+// editor, it does not replace it.
+export default async function AdvancedWebsiteBuilderRoute() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await logToolUse("website-builder-advanced", user.id);
+  const exhibitionCount = await db.exhibition.count({ where: { ownerId: user.id } });
+
+  // Templates come from the Template table (seeded on first call);
+  // sites are the user's own Site rows. If the database is unreachable
+  // the editor still renders with the bundled template definitions and
+  // an empty site list — saves will then surface the API error inline.
+  let templates: TemplateSummary[] = bundledTemplates;
+  let sites: SiteDocument[] = [];
+  try {
+    [templates, sites] = await Promise.all([getSiteTemplates(), listAdvancedSites(user.id)]);
+  } catch (error) {
+    console.error("Advanced website builder: database unavailable, using bundled templates.", error);
+  }
+
+  return (
+    <ToolsShell
+      user={user}
+      exhibitionCount={exhibitionCount}
+      title="websiteBuilder"
+      eyebrowOverride="TOOLS · ADVANCED EDITOR — ÉDITEUR AVANCÉ"
+      description="websiteBuilderDesc"
+    >
+      <p style={{ margin: "0 0 12px", fontSize: 13, opacity: 0.75 }}>
+        Éditeur visuel avancé : 11 modèles, plusieurs pages, 18 blocs, thème et SEO, aperçu
+        ordinateur / tablette / mobile. Les brouillons sont enregistrés dans votre compte.{" "}
+        <Link href="/tools/website-builder">← Retour au créateur simple (51 thèmes, données SANAA)</Link>
+      </p>
+      <AdvancedSiteEditor initialSites={sites} templates={templates} />
+    </ToolsShell>
+  );
+}

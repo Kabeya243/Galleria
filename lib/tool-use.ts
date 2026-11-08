@@ -37,6 +37,7 @@ export const TOOL_SLUGS = [
   "video-generator",
   // Phase 6 — Professional Ecosystem
   "website-builder",
+  "website-builder-advanced",
   "marketing-studio",
   "print-studio",
   "portfolio-pdf",
@@ -78,6 +79,7 @@ export const TOOL_LABELS: Record<ToolSlug, string> = {
   "video-generator": "Exhibition Video Generator",
   // Phase 6 — Professional Ecosystem
   "website-builder": "Artist Website Builder",
+  "website-builder-advanced": "Advanced Website Builder",
   "marketing-studio": "Marketing Studio",
   "print-studio": "Print Production Studio",
   "portfolio-pdf": "Portfolio PDF Builder",

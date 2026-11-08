@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
+import "@/components/advanced-site-editor.css";
+import "@/components/advanced-site-published.css";
 
 // Clean white-gallery typography: Fraunces (light serif headlines) + DM Sans (body/UI).
 const fraunces = Fraunces({

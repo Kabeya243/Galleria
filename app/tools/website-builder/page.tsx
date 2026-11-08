@@ -62,6 +62,12 @@ export default async function WebsiteBuilderRoute() {
       eyebrow="websiteBuilderEyebrow"
       description="websiteBuilderDesc"
     >
+      <p style={{ margin: "0 0 16px", fontSize: 13, opacity: 0.75 }}>
+        Ce créateur simple construit votre site à partir de vos œuvres et expositions SANAA
+        (51 thèmes). Pour un éditeur visuel avancé — 11 modèles, plusieurs pages, 18 blocs,
+        glisser-déposer —{" "}
+        <Link href="/tools/website-builder/advanced">ouvrez l’éditeur avancé →</Link>
+      </p>
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No exhibitions yet.</strong>

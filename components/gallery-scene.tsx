@@ -47,7 +47,7 @@ import {
 import { galleryDef, galleryHangWalls, isGalleryLayout, roomFloorCenterZ } from "@/lib/gallery-defs";
 import { buildGalleryShell, disposeGroup, GalleryEnvironment, GalleryWalkControls } from "@/components/gallery-rooms";
 import { FLOOR_SHINE_DEFAULT, partitionDimsOf, sunlightPartitionDimsOf } from "@/lib/editor-params";
-import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, type CameraViewPreset } from "@/lib/editor-params";
+import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
 import { floorPatternTexture } from "@/lib/floor-patterns";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
@@ -3325,6 +3325,9 @@ function SunlightWalkControls({
   // Smoothed camera height (Claude's camY): a view preset sets the
   // target and every frame eases toward it, instead of jumping.
   const camYRef = useRef(SUNLIGHT_CAMERA_START.y);
+  // Smoothed walk velocity (room-local m/s): the velocity eases toward
+  // its target instead of jumping to full speed / stopping dead.
+  const velRef = useRef({ x: 0, z: 0 });
   const lastViewNonce = useRef<number | null>(null);
   const currentRoomIndex = useRef(Math.max(0, rooms.findIndex((room) => room.id === activeRoomId)));
   const handledRoomId = useRef(activeRoomId);
@@ -3492,6 +3495,10 @@ function SunlightWalkControls({
       pitchRef.current = SUNLIGHT_CAMERA_START.pitch;
       destination.current = null;
       lookYaw.current = null;
+      // A teleport carries no momentum: the reset must not keep a
+      // stale velocity gliding the camera away from the entrance.
+      velRef.current.x = 0;
+      velRef.current.z = 0;
       if (currentRoomIndex.current !== 0) {
         currentRoomIndex.current = 0;
         handledRoomId.current = rooms[0].id;
@@ -3514,17 +3521,34 @@ function SunlightWalkControls({
     // socle, vitrine, banc, fauteuils…), rebuilt every frame so a moved
     // element's block follows it. The spotlight contributes no block.
     const blocks = [...SUNLIGHT_BLOCKS, ...sunlightElementCollisionBlocks(rooms[roomIndex]?.sunlightElements ?? [])];
-    const v = SUNLIGHT_WALK_SPEED * delta;
+    // Walk-velocity smoothing: the velocity eases toward its target
+    // (exponential damping, frame-rate independent) instead of jumping
+    // to full speed the frame a key is pressed and stopping dead the
+    // frame it is released — that instant on/off was the jerkiness.
+    // One shared velocity drives keys and click-to-move, so the two
+    // never fight: keys set the target direction, a destination sets a
+    // target that slows down as it is approached, and no input lets the
+    // velocity glide to a stop.
+    const speed = SUNLIGHT_WALK_SPEED;
+    const sy = Math.sin(yawRef.current);
+    const cy = Math.cos(yawRef.current);
+    let tvx = 0;
+    let tvz = 0;
+    let destActive = false;
     if (fw || st) {
       destination.current = null;
       lookYaw.current = null;
-      const sy = Math.sin(yawRef.current);
-      const cy = Math.cos(yawRef.current);
-      const nx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + (-sy * fw + cy * st) * v));
-      const nz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + (-cy * fw - sy * st) * v));
-      if (!sunlightHitWith(blocks, nx, localZ)) camera.position.x = ox + nx;
-      if (!sunlightHitWith(blocks, camera.position.x - ox, nz)) camera.position.z = oz + nz;
+      tvx = (-sy * fw + cy * st) * speed;
+      tvz = (-cy * fw - sy * st) * speed;
+      // A diagonal (two keys) is √2× as fast without this — clamp the
+      // target to the walk speed so the maximum stays 4 m/s.
+      const tl = Math.hypot(tvx, tvz);
+      if (tl > speed) {
+        tvx = (tvx / tl) * speed;
+        tvz = (tvz / tl) * speed;
+      }
     } else if (destination.current) {
+      destActive = true;
       const dest = destination.current;
       const dx = dest.x - camera.position.x;
       const dz = dest.z - camera.position.z;
@@ -3532,38 +3556,54 @@ function SunlightWalkControls({
       if (L < 0.1) {
         destination.current = null;
         lookYaw.current = null;
+        velRef.current.x = 0;
+        velRef.current.z = 0;
+        destActive = false;
       } else {
-        const q = Math.min(v * 1.5, L);
-        const mx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + (dx / L) * q));
-        const mz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + (dz / L) * q));
-        // If the bounds clamp leaves no room to move at all, the
-        // target is unreachable (a wall): stop walking instead of
-        // pressing against it forever.
-        if (mx === localX && mz === localZ) {
-          destination.current = null;
-          lookYaw.current = null;
-        } else {
-          let ok = 0;
-          if (!sunlightHitWith(blocks, mx, localZ)) {
-            camera.position.x = ox + mx;
-            ok = 1;
-          }
-          if (!sunlightHitWith(blocks, camera.position.x - ox, mz)) {
-            camera.position.z = oz + mz;
-            ok = 1;
-          }
-          if (!ok) {
-            destination.current = null;
-            lookYaw.current = null;
-          }
-        }
-        if (lookYaw.current !== null) {
-          const step = Math.min(delta, 0.05) * 2.5;
-          let diff = lookYaw.current - yawRef.current;
-          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-          yawRef.current += MathUtils.clamp(diff, -step, step);
-        }
+        // Arrive: full speed far away (1.5× walk speed, as before),
+        // easing down inside WALK_ARRIVE_DIST so the camera slows
+        // into the target instead of stopping dead on it.
+        const arrive = Math.min(1, L / WALK_ARRIVE_DIST) * 1.5 * speed;
+        tvx = (dx / L) * arrive;
+        tvz = (dz / L) * arrive;
       }
+    }
+    const rate = fw || st || destActive ? WALK_ACCEL : WALK_DECEL;
+    const k = 1 - Math.exp(-rate * delta);
+    velRef.current.x += (tvx - velRef.current.x) * k;
+    velRef.current.z += (tvz - velRef.current.z) * k;
+    if (Math.hypot(velRef.current.x, velRef.current.z) < WALK_STOP_EPS) {
+      velRef.current.x = 0;
+      velRef.current.z = 0;
+    }
+    const mvx = velRef.current.x * delta;
+    const mvz = velRef.current.z * delta;
+    if (mvx || mvz) {
+      const nx = Math.max(SUNLIGHT_BOUNDS.minX, Math.min(SUNLIGHT_BOUNDS.maxX, localX + mvx));
+      const nz = Math.max(SUNLIGHT_BOUNDS.minZ, Math.min(SUNLIGHT_BOUNDS.maxZ, localZ + mvz));
+      const beforeX = camera.position.x;
+      const beforeZ = camera.position.z;
+      if (!sunlightHitWith(blocks, nx, localZ)) camera.position.x = ox + nx;
+      if (!sunlightHitWith(blocks, camera.position.x - ox, nz)) camera.position.z = oz + nz;
+      // A wall stops you: zero the blocked axis so no velocity is
+      // stored pressing against it.
+      if (camera.position.x === beforeX && mvx !== 0) velRef.current.x = 0;
+      if (camera.position.z === beforeZ && mvz !== 0) velRef.current.z = 0;
+      // If the bounds clamp leaves no room to move at all, the
+      // destination is unreachable (a wall): stop walking instead of
+      // pressing against it forever.
+      if (destActive && camera.position.x === beforeX && camera.position.z === beforeZ) {
+        destination.current = null;
+        lookYaw.current = null;
+        velRef.current.x = 0;
+        velRef.current.z = 0;
+      }
+    }
+    if (destActive && lookYaw.current !== null) {
+      const step = Math.min(delta, 0.05) * 2.5;
+      let diff = lookYaw.current - yawRef.current;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      yawRef.current += MathUtils.clamp(diff, -step, step);
     }
     camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
     // Final guard: the camera can never leave the room, whatever moved

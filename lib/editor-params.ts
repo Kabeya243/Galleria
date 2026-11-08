@@ -34,6 +34,23 @@ export const VIEW_PRESETS: Record<
 // (per second, as in the HTML file: y += (target − y) × min(1, dt × 5)).
 export const CAMERA_HEIGHT_EASE = 5;
 
+// Walk-velocity smoothing (8 Nov 2026): the first-person velocity eases
+// toward its target with exponential damping instead of jumping to full
+// speed the frame a key is pressed and stopping dead the frame it is
+// released — that instant on/off was the jerkiness.
+// WALK_ACCEL: how fast the velocity rises toward its target (per
+// second) — ~95% of top speed in ~0.3 s, brisk but smooth.
+// WALK_DECEL: how fast it falls back to zero (per second) — the camera
+// glides ~0.5 m to a stop in ~0.4 s instead of halting dead.
+// WALK_ARRIVE_DIST: click-to-move slows down inside this distance (m),
+// so the camera eases into its target instead of stopping on it.
+// WALK_STOP_EPS: below this speed (m/s) the velocity snaps to zero so
+// the camera never creeps forever.
+export const WALK_ACCEL = 10;
+export const WALK_DECEL = 7;
+export const WALK_ARRIVE_DIST = 1.5;
+export const WALK_STOP_EPS = 0.02;
+
 // --- Ceiling finishes ---------------------------------------------------
 // One choice sets the ceiling colour AND roughness together, and syncs
 // the ceiling colour picker (the HTML file's CF table).

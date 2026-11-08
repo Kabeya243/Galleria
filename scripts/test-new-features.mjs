@@ -240,6 +240,29 @@ check("Portfolio PDF", "atelier-transitions", "Smooth open/close transitions, 0.
   return "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + hidden scrollbars";
 });
 
+check("Gallery walk", "walk-smoothing", "Velocity smoothing: no instant on/off, smooth arrive", () => {
+  const params = read("lib/editor-params.ts");
+  assert(params.includes("export const WALK_ACCEL = 10;"), "missing WALK_ACCEL");
+  assert(params.includes("export const WALK_DECEL = 7;"), "missing WALK_DECEL");
+  assert(params.includes("export const WALK_ARRIVE_DIST = 1.5;"), "missing WALK_ARRIVE_DIST");
+  assert(params.includes("export const WALK_STOP_EPS = 0.02;"), "missing WALK_STOP_EPS");
+  for (const f of ["components/gallery-scene.tsx", "components/gallery-rooms.tsx"]) {
+    const src = read(f);
+    assert(src.includes("velRef = useRef({ x: 0, z: 0 })"), `${f} missing velocity ref`);
+    assert(src.includes("1 - Math.exp(-rate * delta)"), `${f} missing exponential velocity easing`);
+    assert(src.includes("WALK_ARRIVE_DIST"), `${f} missing arrive slowdown`);
+    assert(src.includes("WALK_STOP_EPS"), `${f} missing velocity snap-to-zero`);
+  }
+  // No instant movement left: the old `v = SPEED * delta` applied
+  // directly to the camera is gone from both walk loops.
+  assert(!read("components/gallery-scene.tsx").includes("const v = SUNLIGHT_WALK_SPEED * delta;"), "Sunlight still moves instantly");
+  assert(!read("components/gallery-rooms.tsx").includes("const v = (def?.walkSpeed ?? 4) * delta;"), "rooms still move instantly");
+  // Top speed unchanged: 4 m/s (4.2 for the faster rooms).
+  assert(read("lib/sunlight.ts").includes("SUNLIGHT_WALK_SPEED = 4;"), "Sunlight walk speed changed");
+  assert(!read("lib/gallery-defs.ts").includes("walkSpeed: 3,"), "a room still walks at 3 m/s");
+  return "velocity eases in/out (accel 10/s, decel 7/s), arrive slows inside 1.5 m, top speed still 4 m/s";
+});
+
 // ---------- Cross-cutting ----------
 check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [

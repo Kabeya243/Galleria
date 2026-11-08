@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T02:04:53.338Z",
-  "commit": "81325fd",
+  "generatedAt": "2026-11-08T02:14:59.350Z",
+  "commit": "10ae9d8",
   "summary": {
-    "total": 23,
-    "passed": 16,
+    "total": 24,
+    "passed": 17,
     "failed": 0,
     "skipped": 7
   },
@@ -84,6 +84,13 @@
       "name": "Smooth open/close transitions, 0.25s max",
       "status": "pass",
       "detail": "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + hidden scrollbars"
+    },
+    {
+      "feature": "Gallery walk",
+      "id": "walk-smoothing",
+      "name": "Velocity smoothing: no instant on/off, smooth arrive",
+      "status": "pass",
+      "detail": "velocity eases in/out (accel 10/s, decel 7/s), arrive slows inside 1.5 m, top speed still 4 m/s"
     },
     {
       "feature": "Code quality",

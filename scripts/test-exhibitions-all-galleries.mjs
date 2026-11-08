@@ -40,7 +40,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const STAGING = join(ROOT, "scripts", ".exh-staging");
-const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette"];
+const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "snap-to-wall"];
 
 const checks = [];
 function check(room, id, name, fn) {
@@ -75,6 +75,7 @@ try {
   const sun = await import(pathToFileURL(join(STAGING, "sunlight.ts")).href);
   const sunEl = await import(pathToFileURL(join(STAGING, "sunlight-elements.ts")).href);
   const compose = await import(pathToFileURL(join(STAGING, "compose-wall.ts")).href);
+  const snap = await import(pathToFileURL(join(STAGING, "snap-to-wall.ts")).href);
   const rooms = await import(pathToFileURL(join(STAGING, "rooms.ts")).href);
 
   const { galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, galleryPlaceOnWall, galleryCameraStart } = defs;
@@ -317,7 +318,7 @@ try {
     check(layout, "compose-3", "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)", () => {
       const face = composeTarget(layout);
       const envelope = physicalEnvelope(layout);
-      const res = composeWall(THREE_WORKS, face);
+      const res = composeWall(THREE_WORKS, face, blocks);
       // La Serpentine has no single face longer than 2.2 m (its walls
       // are 2.2 m arc segments), so a 3-large-work row cannot fit one
       // face: Compose must degrade gracefully — place what fits, report
@@ -362,7 +363,7 @@ try {
     check(layout, "compose-7", "Compose wall, 7 works (solo-expo wall) on the longest wall", () => {
       const face = longestWall(layout);
       const envelope = physicalEnvelope(layout);
-      const res = composeWall(SEVEN_WORKS, face);
+      const res = composeWall(SEVEN_WORKS, face, blocks);
       assert(res.placements.length > 0, `nothing placed on ${face.id} — ${res.message}`);
       const perimeter = ["back", "front", "left", "right", "back-left", "back-right", "back-below", "back-above"].includes(face.id);
       for (const p of res.placements) {
@@ -370,7 +371,57 @@ try {
         assertPlacementOnWall(p, item, face, envelope, blocks, perimeter);
       }
       assertNoOverlaps(res.placements, SEVEN_WORKS);
-      return `${res.placements.length}/7 placed (${res.layout}) on ${face.id} (${(face.halfLen * 2).toFixed(1)} m)${res.unplaced.length ? ` — unplaced: ${res.unplaced.map((u) => u.id).join(", ")}` : ""}`;
+      // Every OTHER long perimeter wall too: a dividing wall or
+      // furniture joining one side wall (Arche's dividing wall joins
+      // BOTH side walls) must not bury a work on any of them — the
+      // longest wall alone would miss the mirror side.
+      const others = roomData(layout).hangWalls.filter(
+        (f) => f.id !== face.id && ["back", "front", "left", "right", "back-left", "back-right", "back-below", "back-above"].includes(f.id) && f.halfLen >= 4,
+      );
+      for (const other of others) {
+        const otherRes = composeWall(SEVEN_WORKS, other, blocks);
+        for (const p of otherRes.placements) {
+          const item = SEVEN_WORKS.find((i) => i.id === p.id);
+          assertPlacementOnWall(p, item, other, envelope, blocks, true);
+        }
+        assertNoOverlaps(otherRes.placements, SEVEN_WORKS);
+      }
+      return `${res.placements.length}/7 placed (${res.layout}) on ${face.id} (${(face.halfLen * 2).toFixed(1)} m)${res.unplaced.length ? ` — unplaced: ${res.unplaced.map((u) => u.id).join(", ")}` : ""}${others.length ? `; +${others.length} other long wall(s) clear` : ""}`;
+    });
+
+    check(layout, "drag-snap", "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall", () => {
+      const face = longestWall(layout);
+      const drops = [
+        { x: (bounds.minX + bounds.maxX) / 2, y: 1.5, z: (bounds.minZ + bounds.maxZ) / 2, label: "room centre" },
+        { x: face.cx + face.ax * (face.halfLen + 2), y: 1.5, z: face.cz + face.az * (face.halfLen + 2), label: "past the wall's end" },
+        { x: face.cx, y: face.maxY + 1.5, z: face.cz, label: "above the wall" },
+      ];
+      if (layout === "arche") drops.push({ x: -9.9, y: 1.5, z: -4.22, label: "dividing-wall junction" });
+      const room = rooms.createGalleryRoom(0, layout);
+      const faces = roomData(layout).hangWalls;
+      for (const drop of drops) {
+        // The editor's real snap (lib/snap-to-wall.ts): a wall under
+        // the drop point first, else the closest face, then a face
+        // with the work's own facing — always a wall, never floating,
+        // and shifted along the wall clear of any solid volume.
+        const placed = snap.snapArtworkToWall(
+          { position: [drop.x, drop.y, drop.z], rotation: 0, width: 1.3, height: 0.94 },
+          room,
+        );
+        assert(placed, `drop at ${drop.label}: snap returned nothing — the work would stay floating`);
+        const snapFace = faces.find((f) => approx(placed.rotation, Math.atan2(f.nx, f.nz), 0.001)
+          && Math.abs((placed.position[0] - f.cx) * f.nx + (placed.position[2] - f.cz) * f.nz - 0.1) < 0.002
+          && Math.abs((placed.position[0] - f.cx) * f.ax + (placed.position[2] - f.cz) * f.az) + 0.65 <= f.halfLen + 0.002);
+        assert(snapFace, `drop at ${drop.label}: snapped position (${placed.position.map((v) => v.toFixed(2)).join(", ")}) is not 0.1 m off any wall`);
+        const along = (placed.position[0] - snapFace.cx) * snapFace.ax + (placed.position[2] - snapFace.cz) * snapFace.az;
+        assert(Math.abs(along) + 0.65 <= snapFace.halfLen + 0.002, `drop at ${drop.label}: snapped along ${along.toFixed(2)} outside ${snapFace.id}`);
+        assert(placed.position[1] >= snapFace.minY && placed.position[1] <= snapFace.maxY, `drop at ${drop.label}: snapped y ${placed.position[1].toFixed(2)} outside ${snapFace.id} height ${snapFace.minY}…${snapFace.maxY}`);
+        if (["back", "front", "left", "right", "back-left", "back-right", "back-below", "back-above"].includes(snapFace.id)) {
+          const burying = blocks.find((b) => rawBlockHit([b], placed.position[0], placed.position[2]) && !blockStraddlesFace(b, snapFace));
+          assert(!burying, `drop at ${drop.label}: snapped work buried in a block in front of the ${snapFace.id} wall`);
+        }
+      }
+      return `${drops.length} awkward drops all snapped onto a wall`;
     });
 
     check(layout, "place-on-wall", "Single work: raycast from camera start + galleryPlaceOnWall", () => {
@@ -388,6 +439,13 @@ try {
       assert(placed.position[1] >= hit.face.minY + 0.47 && placed.position[1] <= hit.face.maxY - 0.47, `placed y ${placed.position[1].toFixed(2)} outside ${hit.face.id} height`);
       const envelope = physicalEnvelope(layout);
       assert(placed.position[0] >= envelope.minX && placed.position[0] <= envelope.maxX && placed.position[2] >= envelope.minZ && placed.position[2] <= envelope.maxZ, `placed position outside the room's physical envelope`);
+      // And not buried in a solid volume standing in front of the hit
+      // wall (a dividing wall, furniture): wall-straddling collision
+      // bands are the wall itself and do not count.
+      if (["back", "front", "left", "right", "back-left", "back-right", "back-below", "back-above"].includes(hit.face.id)) {
+        const burying = blocks.find((b) => rawBlockHit([b], placed.position[0], placed.position[2]) && !blockStraddlesFace(b, hit.face));
+        assert(!burying, `placed work hangs inside a collision block at (${placed.position[0].toFixed(2)}, ${placed.position[2].toFixed(2)}) — block ${JSON.stringify(burying)} stands in front of the ${hit.face.id} wall`);
+      }
       return `hit ${hit.face.id}, placed at (${placed.position.map((v) => v.toFixed(2)).join(", ")})`;
     });
 

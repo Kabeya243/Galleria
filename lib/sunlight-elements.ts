@@ -444,10 +444,54 @@ export function sunlightPlaceOnWall(
   const halfW = artworkWidth / 2;
   const minY = hit.face.minY + halfH + 0.05;
   const maxY = hit.face.maxY - halfH - 0.05;
-  const y = Math.min(Math.max(hit.point.y, minY), Math.max(minY, maxY));
-  const along = (hit.point.x - hit.face.cx) * hit.face.ax + (hit.point.z - hit.face.cz) * hit.face.az + alongOffset;
-  const clampedAlong = Math.min(Math.max(along, -hit.face.halfLen + halfW), Math.max(-hit.face.halfLen + halfW, hit.face.halfLen - halfW));
-  const cx = hit.face.cx + hit.face.ax * clampedAlong + hit.normal.x * 0.1;
-  const cz = hit.face.cz + hit.face.az * clampedAlong + hit.normal.z * 0.1;
+  // A work taller than its wall cannot sit inside the wall's height:
+  // centre it on the wall instead of pinning its centre to the lower
+  // bound (which would push its top through the ceiling and its bottom
+  // below the floor line). Same along the wall for a work wider than
+  // the face: centre it, so the overhang is even on both sides instead
+  // of hanging off one end.
+  const y =
+    minY > maxY
+      ? (hit.face.minY + hit.face.maxY) / 2
+      : Math.min(Math.max(hit.point.y, minY), Math.max(minY, maxY));
+  const along =
+    halfW >= hit.face.halfLen
+      ? 0
+      : Math.min(
+          Math.max(
+            (hit.point.x - hit.face.cx) * hit.face.ax + (hit.point.z - hit.face.cz) * hit.face.az + alongOffset,
+            -hit.face.halfLen + halfW,
+          ),
+          Math.max(-hit.face.halfLen + halfW, hit.face.halfLen - halfW),
+        );
+  const cx = hit.face.cx + hit.face.ax * along + hit.normal.x * 0.1;
+  const cz = hit.face.cz + hit.face.az * along + hit.normal.z * 0.1;
   return { position: [cx, y, cz], rotation: Math.atan2(hit.normal.x, hit.normal.z) };
+}
+
+// The hangable face closest to a position, with no tolerance cut-off:
+// the closest point on each face's rectangle (its plane, clamped
+// along its length and height), by 3D distance. Unlike
+// nearestHangWall — which only counts faces the position already
+// stands near — this always returns a face when one exists, so a
+// drag-end snap can always put a dropped artwork on a wall instead of
+// leaving it floating mid-air (where it would still be at the next
+// opening, saved with the exhibition).
+export function closestHangWall(
+  position: { x: number; y: number; z: number },
+  faces: HangWallFace[],
+): { face: HangWallFace; rotation: number; distance: number } | null {
+  let best: { face: HangWallFace; rotation: number; distance: number } | null = null;
+  for (const face of faces) {
+    const dist = (position.x - face.cx) * face.nx + (position.z - face.cz) * face.nz;
+    const along = (position.x - face.cx) * face.ax + (position.z - face.cz) * face.az;
+    const alongClamped = Math.min(Math.max(along, -face.halfLen), face.halfLen);
+    const yClamped = Math.min(Math.max(position.y, face.minY), face.maxY);
+    const dAlong = along - alongClamped;
+    const dY = position.y - yClamped;
+    const distance = Math.hypot(dist, dAlong, dY);
+    if (best && distance >= best.distance) continue;
+    best = { face, rotation: Math.atan2(face.nx, face.nz), distance };
+  }
+  return best;
 }

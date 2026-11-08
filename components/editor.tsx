@@ -50,23 +50,24 @@ import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, Fram
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { dominantHex, extractPalette, HARMONY_LABELS, harmonyOf, harmonyScore, hueFamilyOf, HUE_FAMILY_LABELS, isWarmHex, suggestedFrameVariant, suggestedWallColor } from "@/lib/palette";
 import { DEFAULT_ARTWORK_DESCRIPTION, enrichWithGemini, generateCaption, isGeminiAvailable } from "@/lib/caption";
-import { composeWall, dominantFamilyOf, wallFaceLabel, type ComposeItem } from "@/lib/compose-wall";
+import { composeWall, dominantFamilyOf, wallFaceLabel, type ComposeItem, type ComposeObstacle } from "@/lib/compose-wall";
 import type { ArtworkCaption, CaptionSource, CaptionStatus } from "@/lib/caption";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
 import { useLocale } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
-import { galleryCameraStart, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
+import { galleryCameraStart, galleryDef, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import {
   createSunlightElement,
-  nearestHangWall,
+  closestHangWall,
   rotationMatches,
   SUNLIGHT_ELEMENT_BOUNDS,
   SUNLIGHT_ELEMENT_DEFAULTS,
   SUNLIGHT_ELEMENT_TYPES,
   SUNLIGHT_MAX_SPOTS,
   SUNLIGHT_TEXT_FONTS,
+  sunlightElementCollisionBlocks,
   sunlightHangWalls,
   sunlightPlaceOnWall,
   sunlightTextArtworkSize,
@@ -92,6 +93,8 @@ import {
   type CeilingFinishKey,
   type FloorPatternKey,
 } from "@/lib/editor-params";
+import { snapArtworkToWall } from "@/lib/snap-to-wall";
+import { SUNLIGHT_BLOCKS } from "@/lib/sunlight";
 import {
   carriedArtworks,
   grabCarriedArtworks,
@@ -1640,46 +1643,58 @@ export default function Editor({
   // off the new wall. Snapping it onto the wall (0.1 m off, facing
   // outward, at its current height) makes it sit as if just hung
   // there, never sideways or backwards. A curatorial text is an
-  // artwork, so it lands the same way. No wall nearby: it stays where
-  // it was dropped. Runs inside the drag's undo session (beginEdit at
-  // drag start, endEdit after this), so the drag + snap undo together.
+  // artwork, so it lands the same way. Runs inside the drag's undo
+  // session (beginEdit at drag start, endEdit after this), so the
+  // drag + snap undo together.
+  // Snap one artwork onto its wall after a drag (lib/snap-to-wall):
+  // 0.1 m off, facing outward, at its current height — as if just
+  // hung there, never sideways or backwards — and shifted along the
+  // wall when a solid volume stands in front of it, so a dropped work
+  // never ends up buried in a wall or floating mid-air.
   function handleArtworkDragEnd(id: string) {
     if (!activeRoom) return;
     const artwork = artworks.find((item) => item.id === id);
     if (!artwork || artwork.roomId !== activeRoom.id) return;
-    // Which wall to snap onto: prefer the wall the artwork already
-    // faces — a wall-aware drag may have turned it onto a new wall, and
-    // the snap must keep that wall instead of yanking it back to the
-    // one it started on. No wall nearby (dropped mid-air past a wall's
-    // end): snap onto the nearest hangable face instead of leaving the
-    // work floating.
-    const faces = activeRoom.layout === "sunlight"
-      ? sunlightHangWalls(activeRoom.sunlightElements ?? [])
-      : galleryHangWalls(activeRoom.layout, activeRoom.elements);
-    const walls = wallsForArtwork(artwork, activeRoom);
-    const wall = walls.find((item) => rotationMatches(item.rotation, artwork.rotation)) ?? walls[0];
-    let face = wall ? faces.find((item) => item.id === wall.key) : undefined;
-    if (!face) {
-      const nearest = nearestHangWall(
-        { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] },
-        faces,
-      );
-      if (!nearest) return;
-      face = nearest.face;
-    }
-    const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
-    const width = ((parsed?.widthCm ?? 80) / 100) * artwork.scale;
-    const height = ((parsed?.heightCm ?? 100) / 100) * artwork.scale;
-    const place = activeRoom.layout === "sunlight" ? sunlightPlaceOnWall : galleryPlaceOnWall;
-    const { position, rotation } = place(
-      { point: { x: artwork.position[0], y: artwork.position[1], z: artwork.position[2] }, normal: { x: face.nx, z: face.nz }, face },
-      height,
-      width,
+    // The dragged work AND its followers: a multi-select or grouped
+    // drag moves the whole set by the same delta, so a follower that
+    // started on another wall ends up off its wall too — snapping
+    // only the dragged one left the followers floating or inside a
+    // wall. One state update, inside the drag's undo session.
+    const selectedIds = new Set(selectionRef.current.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
+    const targets = artworks.filter(
+      (item) =>
+        item.roomId === activeRoom.id &&
+        (item.id === id ||
+          selectedIds.has(item.id) ||
+          (artwork.groupId !== undefined && item.groupId === artwork.groupId)),
     );
-    const moved = Math.abs(position[0] - artwork.position[0]) > 0.01 || Math.abs(position[1] - artwork.position[1]) > 0.01 || Math.abs(position[2] - artwork.position[2]) > 0.01;
-    const turned = Math.abs(rotation - artwork.rotation) > 0.01;
-    if (!moved && !turned) return;
-    updateArtwork(id, (item) => ({ ...item, position, rotation }));
+    const snapped = new Map<string, { position: [number, number, number]; rotation: number }>();
+    for (const target of targets) {
+      const parsed = parseArtworkDimensions(target.dimensions ?? "");
+      const next = snapArtworkToWall(
+        {
+          position: target.position,
+          rotation: target.rotation,
+          width: ((parsed?.widthCm ?? 80) / 100) * target.scale,
+          height: ((parsed?.heightCm ?? 100) / 100) * target.scale,
+        },
+        activeRoom,
+      );
+      if (!next) continue;
+      const moved =
+        Math.abs(next.position[0] - target.position[0]) > 0.01 ||
+        Math.abs(next.position[1] - target.position[1]) > 0.01 ||
+        Math.abs(next.position[2] - target.position[2]) > 0.01;
+      const turned = Math.abs(next.rotation - target.rotation) > 0.01;
+      if (moved || turned) snapped.set(target.id, next);
+    }
+    if (snapped.size === 0) return;
+    setArtworks((current) =>
+      current.map((item) => {
+        const next = snapped.get(item.id);
+        return next ? { ...item, position: next.position, rotation: next.rotation } : item;
+      }),
+    );
   }
 
   function handleSceneSunlightElementUpdate(id: string, patch: { x?: number; y?: number; z?: number; scale?: number }) {
@@ -2132,9 +2147,36 @@ export default function Editor({
         if (hit) return sunlightPlaceOnWall(hit, height, width, alongOffset);
       }
     }
-    const layout = roomLayouts[activeRoom?.layout ?? "sunlight"];
-    const zCenter = roomFloorCenterZ(activeRoom?.layout ?? "sunlight");
-    return { position: [0, 1.55, zCenter - layout.depth / 2 + 0.28], rotation: 0 };
+    // No wall in view (camera facing the ceiling, the floor, or out
+    // of the room): fall back to the room's real back wall — the
+    // face's own centre, 0.1 m off it, at 1.55 m — not a formula from
+    // the room's preset depth. The preset depth is NOT the back wall:
+    // the Musée's back wall sits at z = −12 in a 40 m-deep preset, the
+    // Vitrine's at −12 in a 16 m preset, the Parquet's at −10 — so the
+    // old `zCenter − depth / 2 + 0.28` landed works 1.7 m in front of
+    // the Vitrine's wall, 0.7 m BEHIND the Parquet's, 7.7 m outside
+    // the Musée's room, and floating outdoors in the Serpentine,
+    // which has no back wall at all. Those works opened in mid-air or
+    // inside a wall and stayed there, saved with the exhibition.
+    const layout = activeRoom?.layout ?? "sunlight";
+    const faces =
+      layout === "sunlight"
+        ? sunlightHangWalls(activeRoom?.sunlightElements ?? [])
+        : galleryHangWalls(layout, activeRoom?.elements);
+    const back =
+      faces.find((face) => face.id === "back") ??
+      [...faces].sort((a, b) => b.halfLen - a.halfLen)[0];
+    if (back) {
+      return sunlightPlaceOnWall(
+        { point: { x: back.cx, y: 1.55, z: back.cz }, normal: { x: back.nx, z: back.nz }, face: back },
+        height,
+        width,
+        alongOffset,
+      );
+    }
+    const preset = roomLayouts[layout];
+    const zCenter = roomFloorCenterZ(layout);
+    return { position: [0, 1.55, zCenter - preset.depth / 2 + 0.28], rotation: 0 };
   }
 
   // The hangable face the camera is looking at (the same raycast
@@ -2193,7 +2235,32 @@ export default function Editor({
         dominantFamily: dominantFamilyOf(artwork.palette),
       };
     });
-    const result = composeWall(items, face);
+    // The solid volumes standing in front of the chosen wall: the
+    // room's own collision blocks (the Arche dividing wall joins its
+    // side walls — a row centred on one buries a work in it) plus the
+    // blocks of the elements in the room. A block that straddles the
+    // wall's own plane is the wall itself and forbids nothing (see
+    // lib/compose-wall.ts); anything else shifts the row or drops the
+    // work instead of burying it.
+    const obstacles: ComposeObstacle[] =
+      activeRoom.layout === "sunlight"
+        ? [...SUNLIGHT_BLOCKS, ...sunlightElementCollisionBlocks(activeRoom.sunlightElements ?? [])]
+        : [
+            ...(galleryDef(activeRoom.layout)?.blocks ?? []),
+            ...(activeRoom.elements ?? [])
+              .filter((element) => element.type === "partition" && !element.hidden)
+              .map((element) => {
+                const dims = partitionDimsOf(element);
+                return {
+                  x: element.x,
+                  z: element.z,
+                  ry: element.rotation,
+                  hl: (dims.length * (element.scale ?? 1)) / 2,
+                  hw: dims.thickness / 2,
+                };
+              }),
+          ];
+    const result = composeWall(items, face, obstacles);
     setComposeMessage(result.message);
     if (result.placements.length === 0) return;
     const byId = new Map(result.placements.map((placement) => [placement.id, placement]));

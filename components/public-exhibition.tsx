@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, List, Maximize2, Minimize2, Route } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Headset, Info, List, Maximize2, Minimize2, Route } from "lucide-react";
+import type { WebGLRenderer } from "three";
 import { useProgress } from "@react-three/drei";
 import Avatar from "@/components/avatar";
 import GalleryScene, { artworkStandPoint, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
@@ -15,6 +16,7 @@ import ExhibitionShare from "@/components/exhibition-share";
 import LanguageSwitcher from "@/components/language-switcher";
 import { loadRenderQuality, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import { hasUsableTour, tourStopToTeleportTarget, type GuidedTour } from "@/lib/tour";
+import { describeVrError, detectXrSupport, requestVrSession, type XrSupport } from "@/lib/webxr";
 import { useT } from "@/lib/i18n";
 import type { Artwork } from "@/lib/demo-data";
 import type { GalleryRoom } from "@/lib/rooms";
@@ -268,6 +270,78 @@ export default function PublicExhibition({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState<string | null>(null);
 
+  // VR visit (WebXR immersive-vr, shared with the Digital Twin tool —
+  // lib/webxr.ts for detection + session start, components/vr-rig.tsx
+  // for the in-scene movement). The button is offered only when this
+  // device/browser reports immersive-vr support; everywhere else the
+  // entry screen says so plainly instead of promising VR that cannot
+  // start. The session renders the SAME gallery scene (GalleryScene
+  // below, vrEnabled) in stereo — no second scene, no layout change.
+  const [xrSupport, setXrSupport] = useState<XrSupport>("unknown");
+  const [vrInSession, setVrInSession] = useState(false);
+  const [vrStatus, setVrStatus] = useState<string | null>(null);
+  const glRef = useRef<WebGLRenderer | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const support = await detectXrSupport();
+        if (!cancelled) setXrSupport(support.vr);
+      } catch {
+        if (!cancelled) setXrSupport("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Entering VR mounts the dolly at the current viewpoint BEFORE the
+  // session is requested (see GalleryScene / VrDolly), so the visitor
+  // arrives in VR exactly where they were standing. If the request
+  // fails the dolly unmounts, the camera is restored exactly, and the
+  // normal visit continues with an inline message — never a broken
+  // page. Ending the session (here, or from the headset's own system
+  // button — the "end" listener covers both) returns to the normal
+  // visit at the spot reached in VR; only the look direction resets
+  // to the pre-VR yaw, which the flat walk controls own.
+  async function enterVR() {
+    if (xrSupport !== "supported") {
+      setVrStatus(t("vr", "notSupported"));
+      return;
+    }
+    const gl = glRef.current;
+    if (!gl) {
+      setVrStatus(t("vr", "viewLoading"));
+      return;
+    }
+    setVrStatus(null);
+    setVrInSession(true);
+    try {
+      const session = await requestVrSession(gl);
+      setWalking(true);
+      setEnterSignal((n) => n + 1);
+      setVrStatus(t("vr", "inSession"));
+      session.addEventListener("end", () => {
+        setVrInSession(false);
+        setVrStatus(t("vr", "ended"));
+      });
+    } catch (error) {
+      setVrInSession(false);
+      setVrStatus(t("vr", describeVrError(error)));
+    }
+  }
+
+  async function exitVR() {
+    try {
+      await glRef.current?.xr.getSession()?.end();
+    } catch {
+      // The "end" listener above already resets the state when the
+      // session ends; a failure here just forces the same outcome.
+      setVrInSession(false);
+    }
+  }
+
   // Keep the button in sync with fullscreen state (e.g. the user exits
   // with Esc), so the same button always offers the opposite action.
   useEffect(() => {
@@ -375,6 +449,8 @@ export default function PublicExhibition({
         onQualityChange={handleQualityChange}
         teleportTarget={teleportTarget}
         cameraStateRef={cameraStateRef}
+        vrEnabled={vrInSession}
+        onGlReady={(gl) => { glRef.current = gl; }}
         // A floor tap is the visitor walking somewhere of their own
         // choosing — it ends the tour, like any other manual move.
         onFloorClick={() => exitTour()}
@@ -435,6 +511,9 @@ export default function PublicExhibition({
           onOpenListView={() => setShowListView(true)}
           tourAvailable={tourAvailable}
           onStartTour={startTour}
+          xrSupport={xrSupport}
+          onEnterVR={() => void enterVR()}
+          vrStatus={vrStatus}
         />
       )}
       {walking && !showListView && (
@@ -485,8 +564,18 @@ export default function PublicExhibition({
           >{icon}</button>
         ))}
       </div>}
+      {walking && xrSupport === "supported" && (
+        <button
+          className="public-fullscreen public-vr-button"
+          aria-label={vrInSession ? t("vr", "exitVR") : t("vr", "enterVR")}
+          aria-pressed={vrInSession}
+          title={vrInSession ? t("vr", "exitVR") : t("vr", "enterVR")}
+          onClick={() => void (vrInSession ? exitVR() : enterVR())}
+        ><Headset size={17} /></button>
+      )}
       <button className="public-fullscreen" aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void toggleFullscreen()}>{isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
       {fullscreenError && <p className="public-fullscreen-note" role="alert">{fullscreenError}</p>}
+      {vrStatus && <p className="public-fullscreen-note" role="status">{vrStatus}</p>}
       {selected && !showListView && (
         <ArtworkDetailPanel
           artwork={selected}

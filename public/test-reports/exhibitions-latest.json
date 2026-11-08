@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-11-08T04:02:18.682Z",
-  "commit": "7e938c4",
+  "generatedAt": "2026-11-08T10:24:28.852Z",
+  "commit": "d994afe",
   "mission": "chantier-5-exhibition-tests-all-galleries",
   "summary": {
-    "total": 151,
-    "passed": 151,
+    "total": 179,
+    "passed": 179,
     "failed": 0
   },
   "rooms": {
     "—": {
-      "passed": 4,
+      "passed": 11,
       "failed": 0,
       "checks": [
         {
@@ -35,11 +35,53 @@
           "name": "Walk collision: a user-added partition wall blocks the visitor",
           "status": "pass",
           "detail": "partition 4 m × 0.15 m blocks the walk at its centre only"
+        },
+        {
+          "id": "tour-model",
+          "name": "Guided tour: parse round-trip (object + JSON string), order kept, bad data → null",
+          "status": "pass",
+          "detail": "2 stops round-trip in order; malformed/empty/disabled tours rejected"
+        },
+        {
+          "id": "tour-stops",
+          "name": "Guided tour: stop from the camera, ≤ 12 stops, dead-room stops pruned, teleport keeps room/point/yaw",
+          "status": "pass",
+          "detail": "camera stop rounded, dead room pruned, teleport target = stop + nonce"
+        },
+        {
+          "id": "tour-wiring",
+          "name": "Guided tour: column + save/load + editor + visitor wired end to end",
+          "status": "pass",
+          "detail": "column + validation + PUT/GET + public loader + editor (add/reorder/delete) + visitor (start/next/prev/exit) + FR/EN"
+        },
+        {
+          "id": "vr-movement",
+          "name": "VR: movement numbers shared with the Twin (walk 1.6 m/s, teleport 2 m, dead zone 0.08)",
+          "status": "pass",
+          "detail": "1.6 m/s · 2 m teleport · 0.08 dead zone · dolly carries the camera"
+        },
+        {
+          "id": "vr-wiring",
+          "name": "VR: public visit gates the button on support, reuses the same scene + rig, exits cleanly; Twin reuses the shared code",
+          "status": "pass",
+          "detail": "gated button (entry + toolbar) · same scene in stereo · dolly rig · clean end/fail · Twin shares the code · FR/EN"
+        },
+        {
+          "id": "vr-session",
+          "name": "VR: session starts only on a real renderer and fails cleanly (denied / not supported / failed)",
+          "status": "pass",
+          "detail": "attach + local/bounded-floor; denied/notSupported/failed mapped"
+        },
+        {
+          "id": "vr-detect",
+          "name": "VR: support detection is honest (supported / unsupported / error, never throws)",
+          "status": "pass",
+          "detail": "supported / unsupported distinguished; null + rejecting XR never throws"
         }
       ]
     },
     "sunlight": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -79,6 +121,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -13.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -87,7 +135,7 @@
       ]
     },
     "serpentine": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -127,6 +175,12 @@
           "detail": "hit serp-0i0, placed at (-1.03, 1.50, 7.16)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -135,7 +189,7 @@
       ]
     },
     "vitrine": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -175,6 +229,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -11.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -183,7 +243,7 @@
       ]
     },
     "loft": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -223,6 +283,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -11.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -231,7 +297,7 @@
       ]
     },
     "halle": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -271,6 +337,12 @@
           "detail": "hit screen-6+, placed at (-4.52, 1.58, 8.41)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -279,7 +351,7 @@
       ]
     },
     "arche": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -319,6 +391,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -14.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -327,7 +405,7 @@
       ]
     },
     "musee": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -367,6 +445,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -11.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -375,7 +459,7 @@
       ]
     },
     "claire-voie": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -415,6 +499,12 @@
           "detail": "hit back, placed at (-0.50, 1.50, -12.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -423,7 +513,7 @@
       ]
     },
     "parquet": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -463,6 +553,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -9.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -471,7 +567,7 @@
       ]
     },
     "verriere": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -511,6 +607,12 @@
           "detail": "hit panel-b+, placed at (-1.08, 1.55, -6.53)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -519,7 +621,7 @@
       ]
     },
     "pavillon": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -559,6 +661,12 @@
           "detail": "hit left-a, placed at (-3.90, 1.50, -4.95)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -567,7 +675,7 @@
       ]
     },
     "classique": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -607,6 +715,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -19.80)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -615,7 +729,7 @@
       ]
     },
     "atrium-blanc": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -655,6 +769,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -13.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -663,7 +783,7 @@
       ]
     },
     "patio": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -703,6 +823,12 @@
           "detail": "hit wall0, placed at (5.41, 1.50, 20.19)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -711,7 +837,7 @@
       ]
     },
     "escalier": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -751,6 +877,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -9.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -759,7 +891,7 @@
       ]
     },
     "salles-vertes": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -799,6 +931,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -15.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -807,7 +945,7 @@
       ]
     },
     "couloir-sombre": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -847,6 +985,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -22.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -855,7 +999,7 @@
       ]
     },
     "couloir-dore": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -895,6 +1039,12 @@
           "detail": "hit panel-l-0+, placed at (-3.31, 1.50, 0.20)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -903,7 +1053,7 @@
       ]
     },
     "voutes": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -943,6 +1093,12 @@
           "detail": "hit back, placed at (0.00, 1.50, -14.90)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -951,7 +1107,7 @@
       ]
     },
     "courbes": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -991,6 +1147,12 @@
           "detail": "hit curve0, placed at (-7.96, 1.50, 9.51)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -999,7 +1161,7 @@
       ]
     },
     "atrium-lattes": {
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -1039,6 +1201,12 @@
           "detail": "hit left, placed at (-6.90, 1.50, 0.00)"
         },
         {
+          "id": "place-in-view",
+          "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+          "status": "pass",
+          "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+        },
+        {
           "id": "navigation",
           "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
           "status": "pass",
@@ -1075,6 +1243,41 @@
       "name": "Walk collision: a user-added partition wall blocks the visitor",
       "status": "pass",
       "detail": "partition 4 m × 0.15 m blocks the walk at its centre only"
+    },
+    {
+      "room": "—",
+      "id": "tour-model",
+      "name": "Guided tour: parse round-trip (object + JSON string), order kept, bad data → null",
+      "status": "pass",
+      "detail": "2 stops round-trip in order; malformed/empty/disabled tours rejected"
+    },
+    {
+      "room": "—",
+      "id": "tour-stops",
+      "name": "Guided tour: stop from the camera, ≤ 12 stops, dead-room stops pruned, teleport keeps room/point/yaw",
+      "status": "pass",
+      "detail": "camera stop rounded, dead room pruned, teleport target = stop + nonce"
+    },
+    {
+      "room": "—",
+      "id": "tour-wiring",
+      "name": "Guided tour: column + save/load + editor + visitor wired end to end",
+      "status": "pass",
+      "detail": "column + validation + PUT/GET + public loader + editor (add/reorder/delete) + visitor (start/next/prev/exit) + FR/EN"
+    },
+    {
+      "room": "—",
+      "id": "vr-movement",
+      "name": "VR: movement numbers shared with the Twin (walk 1.6 m/s, teleport 2 m, dead zone 0.08)",
+      "status": "pass",
+      "detail": "1.6 m/s · 2 m teleport · 0.08 dead zone · dolly carries the camera"
+    },
+    {
+      "room": "—",
+      "id": "vr-wiring",
+      "name": "VR: public visit gates the button on support, reuses the same scene + rig, exits cleanly; Twin reuses the shared code",
+      "status": "pass",
+      "detail": "gated button (entry + toolbar) · same scene in stereo · dolly rig · clean end/fail · Twin shares the code · FR/EN"
     },
     {
       "room": "sunlight",
@@ -1117,6 +1320,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -13.90)"
+    },
+    {
+      "room": "sunlight",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "sunlight",
@@ -1169,6 +1379,13 @@
     },
     {
       "room": "serpentine",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "serpentine",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1215,6 +1432,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+    },
+    {
+      "room": "vitrine",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "vitrine",
@@ -1267,6 +1491,13 @@
     },
     {
       "room": "loft",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "loft",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1313,6 +1544,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit screen-6+, placed at (-4.52, 1.58, 8.41)"
+    },
+    {
+      "room": "halle",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "halle",
@@ -1365,6 +1603,13 @@
     },
     {
       "room": "arche",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "arche",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1411,6 +1656,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+    },
+    {
+      "room": "musee",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "musee",
@@ -1463,6 +1715,13 @@
     },
     {
       "room": "claire-voie",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "claire-voie",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1509,6 +1768,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -9.90)"
+    },
+    {
+      "room": "parquet",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "parquet",
@@ -1561,6 +1827,13 @@
     },
     {
       "room": "verriere",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "verriere",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1607,6 +1880,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit left-a, placed at (-3.90, 1.50, -4.95)"
+    },
+    {
+      "room": "pavillon",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "pavillon",
@@ -1659,6 +1939,13 @@
     },
     {
       "room": "classique",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "classique",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1705,6 +1992,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -13.90)"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "atrium-blanc",
@@ -1757,6 +2051,13 @@
     },
     {
       "room": "patio",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "patio",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1803,6 +2104,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -9.90)"
+    },
+    {
+      "room": "escalier",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "escalier",
@@ -1855,6 +2163,13 @@
     },
     {
       "room": "salles-vertes",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "salles-vertes",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1901,6 +2216,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -22.90)"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "couloir-sombre",
@@ -1953,6 +2275,13 @@
     },
     {
       "room": "couloir-dore",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "couloir-dore",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -1999,6 +2328,13 @@
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
       "detail": "hit back, placed at (0.00, 1.50, -14.90)"
+    },
+    {
+      "room": "voutes",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
     },
     {
       "room": "voutes",
@@ -2051,6 +2387,13 @@
     },
     {
       "room": "courbes",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "courbes",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
@@ -2100,10 +2443,31 @@
     },
     {
       "room": "atrium-lattes",
+      "id": "place-in-view",
+      "name": "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame",
+      "status": "pass",
+      "detail": "camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims 1.0000"
+    },
+    {
+      "room": "atrium-lattes",
       "id": "navigation",
       "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
       "status": "pass",
       "detail": "camera start (0, 7.5) walkable, plan offset (18, 0)"
+    },
+    {
+      "room": "—",
+      "id": "vr-session",
+      "name": "VR: session starts only on a real renderer and fails cleanly (denied / not supported / failed)",
+      "status": "pass",
+      "detail": "attach + local/bounded-floor; denied/notSupported/failed mapped"
+    },
+    {
+      "room": "—",
+      "id": "vr-detect",
+      "name": "VR: support detection is honest (supported / unsupported / error, never throws)",
+      "status": "pass",
+      "detail": "supported / unsupported distinguished; null + rejecting XR never throws"
     }
   ]
 }

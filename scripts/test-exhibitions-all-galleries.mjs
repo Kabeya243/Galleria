@@ -28,6 +28,15 @@
 //       from the camera keeps room/point/yaw, stops in deleted rooms
 //       are pruned, and the column + save/load + editor + visitor are
 //       wired end to end (start, follow in order, exit on takeover).
+//   (f) VR visit (global, code-level, no headset): the shared WebXR
+//       helpers (lib/webxr.ts) detect support honestly, start a
+//       session only on a real renderer, and map failures to a small
+//       key; the public visit gates its "Enter VR" button on support,
+//       renders the same gallery scene in stereo through the shared
+//       rig (components/vr-rig.tsx — dolly, not camera moves), and
+//       returns cleanly to the normal visit when a session ends or
+//       fails. No headset is available here, so a real-headset check
+//       is explicitly NOT claimed.
 //
 // Code-level only: this script executes the repo's own TypeScript
 // (imported via Node 24 type-stripping from staged copies with the
@@ -45,21 +54,35 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const STAGING = join(ROOT, "scripts", ".exh-staging");
-const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "snap-to-wall", "place-in-view", "tour"];
+const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "snap-to-wall", "place-in-view", "tour", "webxr"];
 
 const checks = [];
+const pendingChecks = [];
 function check(room, id, name, fn) {
-  try {
-    const detail = fn();
-    checks.push({ room, id, name, status: "pass", detail: String(detail ?? "") });
-    console.log(`PASS  [${room}] ${name} — ${detail ?? ""}`);
-  } catch (err) {
-    checks.push({ room, id, name, status: "fail", detail: err instanceof Error ? err.message : String(err) });
-    console.log(`FAIL  [${room}] ${name} — ${err instanceof Error ? err.message : err}`);
-  }
+  // Async-aware: a check may return a promise (the VR checks await
+  // the staged lib). Every check runs in call order; the report
+  // section awaits all of them before counting.
+  pendingChecks.push((async () => {
+    try {
+      const detail = await fn();
+      checks.push({ room, id, name, status: "pass", detail: String(detail ?? "") });
+      console.log(`PASS  [${room}] ${name} — ${detail ?? ""}`);
+    } catch (err) {
+      checks.push({ room, id, name, status: "fail", detail: err instanceof Error ? err.message : String(err) });
+      console.log(`FAIL  [${room}] ${name} — ${err instanceof Error ? err.message : err}`);
+    }
+  })());
 }
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
+}
+async function assertRejects(fn, msg) {
+  try {
+    await fn();
+  } catch {
+    return;
+  }
+  throw new Error(msg);
 }
 const approx = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
 
@@ -85,6 +108,7 @@ try {
   const rooms = await import(pathToFileURL(join(STAGING, "rooms.ts")).href);
   const placeInView = await import(pathToFileURL(join(STAGING, "place-in-view.ts")).href);
   const tourLib = await import(pathToFileURL(join(STAGING, "tour.ts")).href);
+  const webxrLib = await import(pathToFileURL(join(STAGING, "webxr.ts")).href);
 
   const { galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, galleryPlaceOnWall, galleryCameraStart } = defs;
   const { SUNLIGHT_BOUNDS, SUNLIGHT_WALK_SPEED, SUNLIGHT_CAMERA_START, SUNLIGHT_BLOCKS, sunlightHitWith } = sun;
@@ -399,6 +423,83 @@ try {
     return "column + validation + PUT/GET + public loader + editor (add/reorder/delete) + visitor (start/next/prev/exit) + FR/EN";
   });
 
+  // ---------- VR visit (Nov 2026, code-level — no headset here) ----------
+  // Shared WebXR helpers (lib/webxr.ts) + shared in-scene rig
+  // (components/vr-rig.tsx), reused by the Digital Twin tool and the
+  // public visit so the two never drift apart. A real-headset check
+  // is explicitly out of scope for this harness.
+  check("—", "vr-detect", "VR: support detection is honest (supported / unsupported / error, never throws)", async () => {
+    const { detectXrSupport } = webxrLib;
+    const supporting = { isSessionSupported: async (mode) => mode === "immersive-vr" };
+    assert((await detectXrSupport(supporting)).vr === "supported", "supporting device not reported supported");
+    assert((await detectXrSupport(supporting)).ar === "unsupported", "AR reported supported without hit-test support");
+    assert((await detectXrSupport(null)).vr === "unsupported", "no navigator.xr not reported unsupported");
+    assert((await detectXrSupport(undefined)).vr === "unsupported", "undefined navigator.xr (node) not reported unsupported");
+    const throwing = { isSessionSupported: async () => { throw new Error("boom"); } };
+    // A rejecting isSessionSupported answers false per call, so the
+    // check lands on "unsupported" rather than throwing the page.
+    assert((await detectXrSupport(throwing)).vr === "unsupported", "rejecting isSessionSupported did not land on unsupported");
+    return "supported / unsupported distinguished; null + rejecting XR never throws";
+  });
+  check("—", "vr-session", "VR: session starts only on a real renderer and fails cleanly (denied / not supported / failed)", async () => {
+    const { requestVrSession, describeVrError, VR_SESSION_OPTIONS } = webxrLib;
+    assert(Array.isArray(VR_SESSION_OPTIONS.optionalFeatures) && VR_SESSION_OPTIONS.optionalFeatures.includes("local-floor"), "session options lost local-floor");
+    let set = null;
+    const gl = { xr: { enabled: false, setSession: async (s) => { set = s; } } };
+    const session = { id: "fake-session" };
+    const xr = { requestSession: async (mode, options) => { assert(mode === "immersive-vr", `wrong mode ${mode}`); assert(options.optionalFeatures.includes("bounded-floor"), "bounded-floor not requested"); return session; } };
+    const started = await requestVrSession(gl, xr);
+    assert(started === session && set === session && gl.xr.enabled === true, "session was not attached to the renderer");
+    await assertRejects(() => requestVrSession(gl, null), "session started without navigator.xr");
+    const denied = { requestSession: async () => { const e = new Error("denied by user"); e.name = "NotAllowedError"; throw e; } };
+    try { await requestVrSession(gl, denied); assert(false, "denied session did not throw"); } catch (e) { assert(describeVrError(e) === "denied", `denied error mapped to ${describeVrError(e)}`); }
+    const unsupported = { requestSession: async () => { const e = new Error("not supported"); e.name = "NotSupportedError"; throw e; } };
+    try { await requestVrSession(gl, unsupported); assert(false, "unsupported session did not throw"); } catch (e) { assert(describeVrError(e) === "notSupported", `unsupported error mapped to ${describeVrError(e)}`); }
+    assert(describeVrError(new Error("weird")) === "failed", "unknown error did not map to failed");
+    assert(describeVrError("not an error") === "failed", "non-Error failure did not map to failed");
+    return "attach + local/bounded-floor; denied/notSupported/failed mapped";
+  });
+  check("—", "vr-movement", "VR: movement numbers shared with the Twin (walk 1.6 m/s, teleport 2 m, dead zone 0.08)", () => {
+    const { VR_WALK_SPEED_M_S, VR_TELEPORT_M, VR_DEAD_ZONE, VR_EYE_HEIGHT_M } = webxrLib;
+    assert(VR_WALK_SPEED_M_S === 1.6, `walk speed ${VR_WALK_SPEED_M_S} != 1.6`);
+    assert(VR_TELEPORT_M === 2, `teleport ${VR_TELEPORT_M} != 2 m`);
+    assert(VR_DEAD_ZONE === 0.08, `dead zone ${VR_DEAD_ZONE} != 0.08`);
+    assert(VR_EYE_HEIGHT_M === 1.6, `eye height ${VR_EYE_HEIGHT_M} != 1.6`);
+    const rig = readFileSync(join(ROOT, "components", "vr-rig.tsx"), "utf8");
+    for (const s of ["VR_WALK_SPEED_M_S", "VR_TELEPORT_M", "VR_DEAD_ZONE", "dolly.add(camera)", "gl.xr.isPresenting"]) {
+      assert(rig.includes(s), `shared rig missing ${s}`);
+    }
+    assert(!rig.includes("camera.position.addScaledVector"), "rig still moves the camera directly (headset pose overwrites that every frame)");
+    return "1.6 m/s · 2 m teleport · 0.08 dead zone · dolly carries the camera";
+  });
+  check("—", "vr-wiring", "VR: public visit gates the button on support, reuses the same scene + rig, exits cleanly; Twin reuses the shared code", () => {
+    const pub = readFileSync(join(ROOT, "components", "public-exhibition.tsx"), "utf8");
+    for (const s of ["detectXrSupport", "requestVrSession", "describeVrError", "xrSupport === \"supported\"", "vrEnabled={vrInSession}", "onGlReady", "session.addEventListener(\"end\"", "setVrInSession(false)"]) {
+      assert(pub.includes(s), `public viewer missing ${s}`);
+    }
+    assert(!pub.includes("window.alert"), "public viewer uses window.alert");
+    const entry = readFileSync(join(ROOT, "components", "exhibition-entry-screen.tsx"), "utf8");
+    for (const s of ["xrSupport", "onEnterVR", "notSupportedHint", "checking"]) {
+      assert(entry.includes(s), `entry screen missing VR ${s}`);
+    }
+    const scene = readFileSync(join(ROOT, "components", "gallery-scene.tsx"), "utf8");
+    for (const s of ["vrEnabled", "onGlReady", "VrDolly enabled={vrEnabled}", "VrRig enabled={vrEnabled}", "&& !vrEnabled", "vrClamp"]) {
+      assert(scene.includes(s), `gallery scene missing VR ${s}`);
+    }
+    assert(!scene.includes("window.alert"), "gallery scene uses window.alert");
+    const twin = readFileSync(join(ROOT, "components", "digital-twin.tsx"), "utf8");
+    for (const s of ["detectXrSupport", "requestVrSession", "VrDolly", "VrRig", "from \"@/components/vr-rig\"", "from \"@/lib/webxr\""]) {
+      assert(twin.includes(s), `digital twin no longer reuses the shared VR code (${s})`);
+    }
+    assert(!/function VrRig\(/.test(twin), "digital twin still carries its own VrRig duplicate");
+    assert(!twin.includes("camera.position.addScaledVector"), "digital twin still moves the camera directly in VR");
+    const i18n = readFileSync(join(ROOT, "lib", "i18n.ts"), "utf8");
+    for (const key of ["enterVR", "exitVR", "checking", "inSession", "ended", "notSupported", "notSupportedHint", "viewLoading", "denied", "failed"]) {
+      assert(new RegExp(`${key}: \\{[^}]*fr:`).test(i18n), `i18n missing vr key ${key}`);
+    }
+    return "gated button (entry + toolbar) · same scene in stereo · dolly rig · clean end/fail · Twin shares the code · FR/EN";
+  });
+
   // ---------- Per room ----------
   for (const layout of LAYOUTS) {
     const data = roomData(layout);
@@ -702,6 +803,9 @@ try {
     });
   }
 } finally {
+  // Wait for the async checks (VR) before removing the staging dir
+  // their imports live in.
+  await Promise.all(pendingChecks);
   rmSync(STAGING, { recursive: true, force: true });
 }
 

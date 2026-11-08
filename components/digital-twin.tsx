@@ -1,10 +1,12 @@
 "use client";
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import styles from "./tools.module.css";
+import { detectXrSupport, requestVrSession } from "@/lib/webxr";
+import { VrDolly, VrRig, type VrDollyRef } from "@/components/vr-rig";
 
 // ---------------------------------------------------------------------------
 // Digital Twin + VR/AR
@@ -428,6 +430,8 @@ function PlanView({ twin, artworks }: { twin: TwinData; artworks: TwinArtwork[] 
 
 // --- Main component ---------------------------------------------------------
 
+// XR support states, as returned by detectXrSupport (lib/webxr.ts)
+// — shared with the public exhibition visit.
 type XrSupport = {
   vr: "unknown" | "supported" | "unsupported" | "error";
   ar: "unknown" | "supported" | "unsupported" | "error";
@@ -517,22 +521,13 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
   }, [loadSaved]);
 
   // --- XR capability checks (up front, honest about what is missing) -------
+  // Shared detection (lib/webxr.ts) — the same check the public
+  // exhibition visit runs, so the two never disagree about a device.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (typeof navigator === "undefined" || !("xr" in navigator) || !navigator.xr) {
-        if (!cancelled) setXr({ vr: "unsupported", ar: "unsupported" });
-        return;
-      }
-      try {
-        const [vr, ar] = await Promise.all([
-          navigator.xr.isSessionSupported("immersive-vr").catch(() => false),
-          navigator.xr.isSessionSupported("immersive-ar").catch(() => false),
-        ]);
-        if (!cancelled) setXr({ vr: vr ? "supported" : "unsupported", ar: ar ? "supported" : "unsupported" });
-      } catch {
-        if (!cancelled) setXr({ vr: "error", ar: "error" });
-      }
+      const support = await detectXrSupport();
+      if (!cancelled) setXr(support);
     })();
     return () => {
       cancelled = true;
@@ -693,6 +688,13 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
   }
 
   // --- VR ----------------------------------------------------------------------
+  // Session start is shared with the public visit (lib/webxr.ts:
+  // requestVrSession); the in-Canvas movement is the shared rig
+  // (components/vr-rig.tsx). vrInSession is set true BEFORE the
+  // request so the dolly mounts at the current viewpoint first — if
+  // the request fails the dolly unmounts and the camera is restored
+  // exactly, the visit underneath never breaks.
+  const dollyRef = useRef<THREE.Group | null>(null);
   async function enterVR() {
     const gl = glRef.current;
     if (!navigator.xr) {
@@ -704,14 +706,10 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
       return;
     }
     setVrStatus("Requesting a VR session…");
+    setVrInSession(true);
     try {
-      const session = await navigator.xr.requestSession("immersive-vr", {
-        optionalFeatures: ["local-floor", "bounded-floor"],
-      });
+      const session = await requestVrSession(gl);
       vrSessionRef.current = session;
-      gl.xr.enabled = true;
-      await gl.xr.setSession(session);
-      setVrInSession(true);
       setVrStatus("You are in VR. Use the thumbstick to walk, point at the floor and press select to teleport, and press select on a work to see its panel.");
       session.addEventListener("end", () => {
         setVrInSession(false);
@@ -719,6 +717,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
         setVrStatus("VR session ended. The walkthrough below is still available as a preview.");
       });
     } catch (error) {
+      setVrInSession(false);
       setVrStatus(
         error instanceof Error
           ? `VR session could not start: ${error.message}`
@@ -1065,62 +1064,32 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
   }
 
 // --- VR movement rig ----------------------------------------------------------
-// Runs inside the VR Canvas: while a session is presenting, the thumbstick
-// (gamepad axes) walks the camera on the floor plane, and pressing the
-// primary button teleports the viewer to the floor point 2 m ahead.
-function VrRig({ enabled }: { enabled: boolean }) {
-  const { gl, camera } = useThree();
-  const buttonWasPressed = useRef(false);
-  const tmp = useMemo(() => new THREE.Vector3(), []);
+// Shared: components/vr-rig.tsx (VrDolly + VrRig). The Twin's first
+// rig moved the camera directly, which three.js overwrites with the
+// headset pose every XR frame — the shared rig moves a dolly group
+// instead, so the thumbstick and the teleport actually move the
+// visitor. The guided tour below moves the same dolly.
 
-  useFrame(() => {
-    if (!enabled || !gl.xr.isPresenting) return;
-    const session = gl.xr.getSession();
-    if (!session) return;
-    const speed = 1.6;
-    for (const source of session.inputSources) {
-      const gamepad = source.gamepad;
-      if (!gamepad) continue;
-      const axes = gamepad.axes;
-      if (axes.length >= 4) {
-        const forward = -(axes[3] ?? 0);
-        const strafe = axes[2] ?? 0;
-        if (Math.abs(forward) > 0.08 || Math.abs(strafe) > 0.08) {
-          camera.getWorldDirection(tmp);
-          tmp.y = 0;
-          tmp.normalize();
-          const right = new THREE.Vector3().crossVectors(tmp, new THREE.Vector3(0, 1, 0)).negate();
-          camera.position.addScaledVector(tmp, forward * speed * 0.016);
-          camera.position.addScaledVector(right, strafe * speed * 0.016);
-          camera.position.y = 1.6;
-        }
-      }
-      const pressed = gamepad.buttons[0]?.pressed ?? false;
-      if (pressed && !buttonWasPressed.current) {
-        // Teleport: 2 m ahead on the floor, at eye height.
-        camera.getWorldDirection(tmp);
-        tmp.y = 0;
-        tmp.normalize();
-        camera.position.addScaledVector(tmp, 2);
-        camera.position.y = 1.6;
-      }
-      buttonWasPressed.current = pressed;
-    }
-  });
-  return null;
-}
-
-function VrCameraTour({ target, active }: { target: [number, number, number] | null; active: boolean }) {
+function VrCameraTour({ target, active, dollyRef }: { target: [number, number, number] | null; active: boolean; dollyRef: VrDollyRef }) {
   const { camera } = useThree();
   const controls = useThree((state) => state.controls) as unknown as { target?: THREE.Vector3; update?: () => void } | null;
   useEffect(() => {
     if (!active || !target) return;
-    camera.position.set(target[0], 1.6, target[2] + 2.2);
+    const stand: [number, number, number] = [target[0], 1.6, target[2] + 2.2];
+    const dolly = dollyRef.current;
+    if (dolly) {
+      // In VR the headset owns the look direction, so the tour moves
+      // the dolly to the stand point and turns it to face the work.
+      dolly.position.set(stand[0], 0, stand[2]);
+      dolly.rotation.y = Math.atan2(-(target[0] - stand[0]), -(target[2] - stand[2]));
+      return;
+    }
+    camera.position.set(stand[0], stand[1], stand[2]);
     if (controls?.target) {
       controls.target.set(target[0], target[1], target[2]);
       controls.update?.();
     }
-  }, [target, active, camera, controls]);
+  }, [target, active, camera, controls, dollyRef]);
   return null;
 }
 
@@ -1569,8 +1538,9 @@ function VrCameraTour({ target, active }: { target: [number, number, number] | n
                     <Suspense fallback={null}>
                       <TwinScene twin={vrTwin} artworks={vrWorks} selectedId={vrSelectedId} onSelect={setVrSelectedId} />
                     </Suspense>
-                    <VrRig enabled={vrInSession} />
-                    <VrCameraTour target={tourActive ? tourTarget : null} active={tourActive} />
+                    <VrDolly enabled={vrInSession} dollyRef={dollyRef} />
+                    <VrRig enabled={vrInSession} dollyRef={dollyRef} />
+                    <VrCameraTour target={tourActive ? tourTarget : null} active={tourActive} dollyRef={dollyRef} />
                   </Canvas>
                 </div>
                 <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0" }}>

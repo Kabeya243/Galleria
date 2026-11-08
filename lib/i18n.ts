@@ -244,6 +244,39 @@ export const DICTIONARY = {
       en: "Picked for your device — changeable at any time.",
     },
   },
+  vr: {
+    enterVR: { fr: "Entrer en VR", en: "Enter VR" },
+    exitVR: { fr: "Quitter la VR", en: "Exit VR" },
+    checking: { fr: "Vérification de la VR…", en: "Checking VR support…" },
+    inSession: {
+      fr: "Vous êtes en VR. Joystick pour marcher, bouton principal pour vous téléporter de 2 m. Quittez avec le bouton système du casque.",
+      en: "You are in VR. Thumbstick to walk, primary button to teleport 2 m ahead. Exit with the headset's system button.",
+    },
+    ended: {
+      fr: "Session VR terminée. Vous êtes de retour dans la visite normale, au même endroit.",
+      en: "VR session ended. You are back in the normal visit, at the same spot.",
+    },
+    notSupported: {
+      fr: "La VR n'est pas disponible sur cet appareil ou navigateur.",
+      en: "VR is not available on this device or browser.",
+    },
+    notSupportedHint: {
+      fr: "La VR n'est pas disponible sur cet appareil ou navigateur. Pour essayer la VR, ouvrez cette exposition dans le navigateur d'un casque (par ex. Meta Quest) ou un autre navigateur compatible WebXR.",
+      en: "VR is not available on this device or browser. To try VR, open this exhibition in a headset browser (e.g. Meta Quest) or another WebXR-capable browser.",
+    },
+    viewLoading: {
+      fr: "La vue 3D charge encore — attendez un instant et réessayez.",
+      en: "The 3D view is still loading — wait a moment and try again.",
+    },
+    denied: {
+      fr: "La session VR n'a pas pu démarrer : autorisation refusée ou casque indisponible.",
+      en: "The VR session could not start: permission denied or headset unavailable.",
+    },
+    failed: {
+      fr: "La session VR n'a pas pu démarrer sur cet appareil.",
+      en: "The VR session could not start on this device.",
+    },
+  },
   music: {
     music: { fr: "Musique", en: "Music" },
     playMusic: { fr: "Jouer la musique", en: "Play music" },

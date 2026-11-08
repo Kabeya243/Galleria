@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Footprints, Hand, Keyboard, List, MousePointer2, Music, Route, Volume2, VolumeX } from "lucide-react";
+import { Footprints, Hand, Headset, Keyboard, List, MousePointer2, Music, Route, Volume2, VolumeX } from "lucide-react";
 import Avatar from "@/components/avatar";
 import type { RenderQuality } from "@/lib/render-quality";
 import { RENDER_QUALITIES, recommendQuality } from "@/lib/render-quality";
+import type { XrSupport } from "@/lib/webxr";
 import { useT } from "@/lib/i18n";
 
 // Entry screen (public exhibition): shown before the visitor enters the
@@ -27,6 +28,13 @@ export default function ExhibitionEntryScreen({
   onOpenListView,
   tourAvailable = false,
   onStartTour,
+  // VR visit (WebXR): the button is offered only when this
+  // device/browser reports immersive-vr support; while the check is
+  // running the button waits disabled, and when VR is unavailable the
+  // screen says why instead of promising a session that cannot start.
+  xrSupport = "unknown",
+  onEnterVR,
+  vrStatus = null,
 }: {
   title: string;
   ownerName: string;
@@ -44,6 +52,9 @@ export default function ExhibitionEntryScreen({
   // entry button starts it at the first stop instead of free walking.
   tourAvailable?: boolean;
   onStartTour?: () => void;
+  xrSupport?: XrSupport;
+  onEnterVR?: () => void;
+  vrStatus?: string | null;
 }) {
   const t = useT();
   const [recommended, setRecommended] = useState<RenderQuality>("high");
@@ -140,6 +151,16 @@ export default function ExhibitionEntryScreen({
         <button type="button" className="entry-enter" onClick={onEnter}>
           <Footprints size={16} /> {t("entry", "enterRoom")}
         </button>
+        {onEnterVR && xrSupport === "supported" && (
+          <button type="button" className="entry-list" onClick={onEnterVR}>
+            <Headset size={15} /> {t("vr", "enterVR")}
+          </button>
+        )}
+        {onEnterVR && xrSupport === "unknown" && (
+          <button type="button" className="entry-list" disabled>
+            <Headset size={15} /> {t("vr", "checking")}
+          </button>
+        )}
         {tourAvailable && onStartTour && (
           <button type="button" className="entry-list" onClick={onStartTour}>
             <Route size={15} /> {t("tour", "guidedTour")}
@@ -149,6 +170,12 @@ export default function ExhibitionEntryScreen({
           <List size={15} /> {t("listView", "listView")}
         </button>
       </div>
+      {(xrSupport === "unsupported" || xrSupport === "error") && (
+        <p className="entry-vr-note">{t("vr", "notSupportedHint")}</p>
+      )}
+      {vrStatus && (
+        <p className="entry-vr-note" role="status">{vrStatus}</p>
+      )}
     </div>
   );
 }

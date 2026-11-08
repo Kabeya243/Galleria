@@ -466,6 +466,8 @@ button { color: inherit; }
 .public-controls-hint { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 9px 13px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--muted); font: 500 7px "DM Sans", sans-serif; letter-spacing: .1em; white-space: nowrap; }
 .public-controls-hint i { height: 10px; width: 1px; background: var(--border); }
 .public-fullscreen { position: absolute; right: 24px; bottom: 25px; }
+.public-vr-button { right: 65px; }
+.public-vr-button[aria-pressed="true"] { background: #141414; color: #fdfdfc; border-color: #141414; }
 .public-fullscreen-note { position: absolute; right: 24px; bottom: 64px; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--muted); font-size: 10px; line-height: 1.4; }
 .not-found { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 40px; text-align: center; }
 .not-found h1 { margin: 0; font: 450 clamp(26px, 3vw, 38px)/1.15 var(--font-display), Georgia, serif; letter-spacing: -.01em; }
@@ -556,6 +558,7 @@ button { color: inherit; }
 .entry-quality-buttons button.active { border-color: #000; background: #000; color: #fff; }
 .entry-quality-buttons button em { font-style: normal; font-weight: 400; opacity: .75; }
 .entry-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.entry-vr-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .entry-enter { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border: 1px solid #000; border-radius: 999px; background: #000; color: #fff; font: 600 13px var(--font-body), "DM Sans", sans-serif; cursor: pointer; }
 .entry-list { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font: 600 13px var(--font-body), "DM Sans", sans-serif; cursor: pointer; }
 @media (max-width: 560px) { .entry-controls { grid-template-columns: 1fr; } .exhibition-entry { padding: 20px; } }
@@ -943,6 +946,7 @@ button { color: inherit; }
   .public-room-label { left: 13px; top: 73px; }
   .public-controls-hint { bottom: 21px; font-size: 6px; }
   .public-fullscreen { right: 10px; bottom: 17px; }
+  .public-vr-button { right: 51px; }
   .public-footer { right: 12px; bottom: 65px; left: 12px; font-size: 6px; }
   .artwork-info-card { right: 12px; }
 }

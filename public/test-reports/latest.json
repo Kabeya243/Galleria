@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T09:29:02.766Z",
-  "commit": "033589b",
+  "generatedAt": "2026-11-08T10:24:52.788Z",
+  "commit": "d994afe",
   "summary": {
-    "total": 65,
-    "passed": 51,
+    "total": 79,
+    "passed": 62,
     "failed": 0,
-    "skipped": 14
+    "skipped": 17
   },
   "checks": [
     {
@@ -261,11 +261,88 @@
       "detail": "no DeleteObject anywhere in the music path — orphaned files are a noted cleanup debt"
     },
     {
+      "feature": "Video artworks",
+      "id": "video-schema",
+      "name": "Prisma: videoUrl on Artwork + LibraryWork (imageUrl nullable there)",
+      "status": "pass",
+      "detail": "videoUrl nullable on both models; no data migration (existing rows keep null)"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-lib",
+      "name": "lib/video.ts: MP4-only allowlist, 4.5 MB cap, serving-URL shape, proximity gate constants",
+      "status": "pass",
+      "detail": "MP4 only, 4.5 MB, /api/video/videos/<userId>/<uuid>.mp4, gate 7 m + facing"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-validation",
+      "name": "Validation accepts videoUrl (same-origin only); PUT persists it; single-artwork add accepts it",
+      "status": "pass",
+      "detail": "videoUrl nullable + /api/video/ prefix; PUT + single-add persist it"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-upload",
+      "name": "Video upload route: MP4 only, 4.5 MB cap, videos/<userId>/ prefix, same-origin URL",
+      "status": "pass",
+      "detail": "allowlist video/mp4, 413 over 4.5 MB, 415 otherwise, R2 videos/<userId>/<uuid>.mp4"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-serve",
+      "name": "Video serve route: Range (206), Accept-Ranges, same access rule as images",
+      "status": "pass",
+      "detail": "bytes= ranges honoured via R2 (206/416), public show open, else owner only"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-wall",
+      "name": "Wall render: VideoTexture, muted + loop, proximity gate, placeholder while loading, selected plays",
+      "status": "pass",
+      "detail": "VideoTexture from a muted looping element; plays near+facing or when selected, pauses otherwise; never throws"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-panel",
+      "name": "Detail panel: video player, play/pause, sound OFF by default, sound only on an explicit click",
+      "status": "pass",
+      "detail": "muted loop player, play/pause + sound buttons, sound starts off"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-editor",
+      "name": "Editor: add video (upload), replace/remove, library reuse copies the video, inspector preview",
+      "status": "pass",
+      "detail": "Add video + library copy + replace/remove; 16:9 default; errors inline via setUploadError"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-library",
+      "name": "Library: video works backfilled, listed and copied by videoUrl; delete removes video copies",
+      "status": "pass",
+      "detail": "identity = videoUrl ?? imageUrl; backfill + save + reuse + delete all handle video"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-i18n",
+      "name": "FR + EN strings for video, incl. the rights line and the size hint",
+      "status": "pass",
+      "detail": "video section FR+EN; rights line in both locales"
+    },
+    {
+      "feature": "Video artworks",
+      "id": "video-views",
+      "name": "List view, library page and public works wall render video works (not a broken image)",
+      "status": "pass",
+      "detail": "list view + Mes œuvres + /works render <video> for video works"
+    },
+    {
       "feature": "Code quality",
       "id": "no-alert",
       "name": "No window.alert in the new code",
       "status": "pass",
-      "detail": "27 new/changed files checked"
+      "detail": "37 new/changed files checked"
     },
     {
       "feature": "Code quality",
@@ -385,6 +462,27 @@
       "name": "Documents description updated FR+EN (10 templates, account save, R2 archive, PDF)",
       "status": "pass",
       "detail": "documentsDesc FR+EN: 10 templates, saved in account + DB, R2 archive, one-page PDF"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-video-wall",
+      "name": "Video artwork: upload an MP4 (≤ 4.5 MB) in the editor, see it hang 16:9 on the wall; walk up to it — it plays muted in loop; walk away — it pauses on its first frame; a second video across the room stays paused; the selected video keeps playing in the editor",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user + a real MP4"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-video-panel",
+      "name": "Video artwork: click the wall video — detail panel opens with the video playing muted; play/pause button works; sound stays off until the sound button is clicked, then the video plays with sound; sound off mutes at once",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user + a real MP4"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-video-limits",
+      "name": "Video artwork: file over 4.5 MB shows the clear size error (inline, no alert); a non-MP4 file is refused; a video reused from 'Mes œuvres' hangs in a second exhibition without re-upload; seeking inside the panel video works (Range/206)",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user + a real MP4"
     },
     {
       "feature": "Manual (browser)",

@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, Group, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VideoTexture, VSMShadowMap, type DirectionalLight } from "three";
+import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, Group, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VideoTexture, VSMShadowMap, type DirectionalLight, type WebGLRenderer } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
@@ -50,6 +50,7 @@ import { FLOOR_SHINE_DEFAULT, partitionDimsOf, sunlightPartitionDimsOf } from "@
 import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
 import { floorPatternTexture } from "@/lib/floor-patterns";
 import { VIDEO_PLAY_DISTANCE_M, VIDEO_PLAY_FACING_DOT } from "@/lib/video";
+import { VrDolly, VrRig } from "@/components/vr-rig";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
 // The renderer is Three.js in the browser: ACES tone mapping, a locally
@@ -4210,6 +4211,8 @@ export default function GalleryScene({
   lookAtRequest,
   appearingId,
   bare,
+  vrEnabled,
+  onGlReady,
 }: {
   artworks: Artwork[];
   selectedId?: string;
@@ -4287,6 +4290,14 @@ export default function GalleryScene({
   // Bare render (the gallery capture page): no quality toggle, no sun
   // slider — just the room, so a screenshot is a clean entrance view.
   bare?: boolean;
+  // VR visit (public exhibition): while true the scene renders the
+  // shared VR rig (components/vr-rig.tsx) and the flat walk controls
+  // stand down — the headset owns the look direction and the dolly
+  // owns the position, so the two must never fight over the camera.
+  vrEnabled?: boolean;
+  // The R3F renderer, handed to the parent once the Canvas is
+  // created, so it can start a WebXR session on it (gl.xr).
+  onGlReady?: (gl: WebGLRenderer) => void;
 }) {
   const sceneRooms = rooms?.length ? rooms : [room];
   // Where each room sits in the shared 3D space (see roomPlanOffsets):
@@ -4301,6 +4312,24 @@ export default function GalleryScene({
   const artworkOffsets = walkMode ? offsets : [0];
   const artworkZOffsets = walkMode ? zOffsets : [0];
   const destination = useRef<Vector3 | null>(null);
+  // VR rig: the dolly group that carries the camera while a session
+  // is presenting (components/vr-rig.tsx), and the clamp that keeps
+  // the VR visitor inside the active room's walk bounds — the same
+  // bounds the flat walk controls use (Sunlight's, or the active
+  // room def's), shifted by the room's world offset. Rooms and their
+  // layouts are untouched; this only bounds where the visitor stands.
+  const vrDollyRef = useRef<Group | null>(null);
+  const vrClamp = useCallback((position: Vector3) => {
+    const index = Math.max(0, sceneRooms.findIndex((r) => r.id === (activeRoomId ?? room.id)));
+    const ox = offsets[index] ?? 0;
+    const oz = zOffsets[index] ?? 0;
+    const bounds = sceneRooms[index]?.layout === "sunlight"
+      ? SUNLIGHT_BOUNDS
+      : (galleryDef(sceneRooms[index]?.layout ?? room.layout)?.bounds ?? { minX: -10, maxX: 10, minZ: -10, maxZ: 10 });
+    position.x = ox + Math.max(bounds.minX, Math.min(bounds.maxX, position.x - ox));
+    position.z = oz + Math.max(bounds.minZ, Math.min(bounds.maxZ, position.z - oz));
+    position.y = 0;
+  }, [sceneRooms, activeRoomId, room.id, room.layout, offsets, zOffsets]);
   const lookYaw = useRef<number | null>(null);
   const dragged = useRef(false);
   // Gentle turn toward a newly added artwork (the editor's
@@ -4708,7 +4737,7 @@ export default function GalleryScene({
       }}
       onPointerUp={() => { dragStartPoint.current = null; }}
     >
-      <Canvas camera={{ position: interiorView ? [0, 2.0, (room.layout === "sunlight" ? 0 : roomFloorCenterZ(room.layout)) + startDepth / 2 - 1.8] : walkMode ? [startOffset + startCam.x, startCam.y, startZOffset + startCam.z] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 66 : 43 }} dpr={qualityCfg.dpr} shadows="variance">
+      <Canvas camera={{ position: interiorView ? [0, 2.0, (room.layout === "sunlight" ? 0 : roomFloorCenterZ(room.layout)) + startDepth / 2 - 1.8] : walkMode ? [startOffset + startCam.x, startCam.y, startZOffset + startCam.z] : [0, 3.2, 11], fov: interiorView ? 60 : walkMode ? 66 : 43 }} dpr={qualityCfg.dpr} shadows="variance" onCreated={({ gl }) => { onGlReady?.(gl); }}>
         {/* Backdrop: Sunlight keeps the source's pale sky (#dfe6ee),
             no fog; a generic room reads its background (and fog, when
             its source has one) from its def. The sun, hemisphere and
@@ -4723,6 +4752,12 @@ export default function GalleryScene({
         {activeIsSunlight && <SunlightRig sunValue={sunValue} quality={quality} sunColor={sunlightSunColor(startRoom.lightType)} />}
         {!activeIsSunlight && activeDef?.environment && <GalleryEnvironment />}
         {cameraStateRef && <CameraStateReporter cameraStateRef={cameraStateRef} />}
+        {vrEnabled && (
+          <>
+            <VrDolly enabled={vrEnabled} dollyRef={vrDollyRef} />
+            <VrRig enabled={vrEnabled} dollyRef={vrDollyRef} clamp={vrClamp} />
+          </>
+        )}
         {/* Artwork textures load through Suspense so a slow image suspends
             only the artworks — never the whole room or page. */}
         <Suspense fallback={null}>{artworkNodes}</Suspense>
@@ -4767,9 +4802,9 @@ export default function GalleryScene({
         )}
         {walkMode && input ? (
           activeIsSunlight ? (
-            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
+            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={(walking ?? false) && !vrEnabled} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
           ) : (
-            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={walking ?? false} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
+            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={(walking ?? false) && !vrEnabled} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
           )
         ) : (
           <OrbitControls

@@ -1,5 +1,6 @@
 # Python dependencies for the Atelier export serverless function
-# (api/atelier/export.py). Vercel installs these for the api/ runtime.
+# (api/atelier/export.py) and the publication feed (api/social.py).
+# Vercel installs these for the api/ runtime.
 # No FastAPI server is run — the file exposes a FastAPI `app` object
 # and Vercel serves it as an ASGI function.
 fastapi==0.115.12
@@ -7,3 +8,8 @@ pillow==11.2.1
 reportlab==4.4.1
 PyJWT==2.10.1
 qrcode==8.2
+# Publication feed (api/social.py): PostgreSQL driver + ORM.
+# Pinned to the latest patch of the 2.0 / 3.2 lines, inside the scaffold's
+# ranges (SQLAlchemy>=2.0,<3 ; psycopg[binary]>=3.2,<4).
+SQLAlchemy==2.0.57
+psycopg[binary]==3.2.13

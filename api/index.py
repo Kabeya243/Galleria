@@ -44,6 +44,7 @@ import base64
 import math
 import os
 import re
+import sys
 import urllib.request
 import xml.etree.ElementTree as ET
 from io import BytesIO
@@ -898,8 +899,24 @@ def export_raster(project, fmt="JPEG", dpi=150):
 
 
 # ---------------------------------------------------------------- FastAPI app
+# Publication feed (api/social.py): mounted on this same app, NOT a second
+# FastAPI app. Vercel serves this file for both /api/atelier/export/* and
+# /api/social/* (see the rewrites in vercel.json); the routes are declared
+# at their full public paths, which is what the ASGI app sees after the
+# rewrite. The standalone `app` object in api/social.py is the scaffold's
+# own app, kept only so the scaffold tests can import it — it is not served.
+# The `api.*` imports below need the repo root on sys.path; Vercel does not
+# guarantee it, so add it explicitly (no-op locally / in the scaffold tests,
+# where the root is already on the path).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from sqlalchemy.exc import SQLAlchemyError  # noqa: E402
+from api.social import handle_database_error, router as social_router  # noqa: E402
 
 app = FastAPI(title="SANAA Atelier export", version="1.0.0")
+app.include_router(social_router)
+# Same DB-error mapping as the scaffold's standalone app (503, not 500).
+app.add_exception_handler(SQLAlchemyError, handle_database_error)
 
 
 @app.get("/api/atelier/export/health")

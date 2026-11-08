@@ -83,6 +83,19 @@ export async function getCurrentUser() {
   return { ...user, avatarUrl: profile.avatarUrl, bio: profile.bio, isAdmin: isAdminEmail(user.email) };
 }
 
+// The exhibition access-password hash must never leave the server:
+// the editor and the list only need the visibility, never the hash.
+// (The GET-by-id route already stripped it; the list, create and save
+// routes spread the whole row and leaked the bcrypt hash to any
+// signed-in owner/editor.)
+export function withoutExhibitionPasswordHash<T extends { accessPasswordHash?: string | null }>(
+  exhibition: T,
+): Omit<T, "accessPasswordHash"> {
+  const { accessPasswordHash: _accessPasswordHash, ...rest } = exhibition;
+  void _accessPasswordHash;
+  return rest;
+}
+
 export function toClientArtwork(artwork: {
   id: string;
   title: string;

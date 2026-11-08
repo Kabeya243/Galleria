@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
-import { getCurrentUser, toClientArtwork } from "@/lib/auth";
+import { getCurrentUser, toClientArtwork, withoutExhibitionPasswordHash } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
 import { exhibitionUpdateSchema } from "@/lib/validation";
@@ -65,8 +65,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   // The access password hash never leaves the server — the editor only
   // needs the visibility, never the hash itself.
-  const { accessPasswordHash: _accessPasswordHash, ...exhibitionWithoutHash } = exhibition;
-  void _accessPasswordHash;
+  const exhibitionWithoutHash = withoutExhibitionPasswordHash(exhibition);
   return NextResponse.json({
     exhibition: {
       ...exhibitionWithoutHash,
@@ -139,7 +138,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
     });
     return NextResponse.json({
       exhibition: {
-        ...exhibition,
+        ...withoutExhibitionPasswordHash(exhibition),
         rooms: parseGalleryRooms(exhibition.rooms),
         artworks: exhibition.artworks.map(toClientArtwork),
       },

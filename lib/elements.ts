@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { partitionDimsOf } from "@/lib/editor-params";
 
 // Every placeable object in the Elements palette. The first seven are the
 // core set; the rest come from Kabeya's reference photos of real galleries
@@ -185,6 +186,30 @@ export const ELEMENT_DEFAULTS: Record<ElementType, ElementDefaults> = {
   // the default matches the velvet.
   sofa: { label: "Teal sofa", color: "#1d5566", length: 1, y: 0, wallOffset: 0 },
 };
+
+// Collision blocks of a room's Asset Library elements, for the walk
+// controls: a partition wall is a real wall — the visitor must not
+// walk through it. Only partitions carry exact dimensions (length /
+// thickness, via partitionDimsOf); the other element types have no
+// stored footprint, so they contribute nothing here rather than a
+// guessed block. Hidden elements are not rendered and block nothing.
+export function roomElementCollisionBlocks(
+  elements: RoomElement[],
+): { x: number; z: number; ry: number; hl: number; hw: number }[] {
+  const blocks: { x: number; z: number; ry: number; hl: number; hw: number }[] = [];
+  for (const element of elements) {
+    if (element.type !== "partition" || element.hidden) continue;
+    const dims = partitionDimsOf(element);
+    blocks.push({
+      x: element.x,
+      z: element.z,
+      ry: element.rotation,
+      hl: (dims.length * (element.scale ?? 1)) / 2,
+      hw: dims.thickness / 2,
+    });
+  }
+  return blocks;
+}
 
 // A new element, placed sensibly for its type: floor pieces near the
 // centre of the room, wall pieces against the back wall, the track light

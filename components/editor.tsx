@@ -2210,6 +2210,32 @@ export default function Editor({
     setComposeOpen(true);
   }
 
+  // The solid volumes standing in front of a room's walls, for
+  // Compose and for the layout-change re-hang below: the room's own
+  // collision blocks (the Arche dividing wall joins its side walls)
+  // plus the blocks of the room's partition elements. A block that
+  // straddles a wall's own plane is the wall itself and forbids
+  // nothing there (see lib/compose-wall.ts).
+  function roomObstacles(room: GalleryRoom): ComposeObstacle[] {
+    return room.layout === "sunlight"
+      ? [...SUNLIGHT_BLOCKS, ...sunlightElementCollisionBlocks(room.sunlightElements ?? [])]
+      : [
+          ...(galleryDef(room.layout)?.blocks ?? []),
+          ...(room.elements ?? [])
+            .filter((element) => element.type === "partition" && !element.hidden)
+            .map((element) => {
+              const dims = partitionDimsOf(element);
+              return {
+                x: element.x,
+                z: element.z,
+                ry: element.rotation,
+                hl: (dims.length * (element.scale ?? 1)) / 2,
+                hw: dims.thickness / 2,
+              };
+            }),
+        ];
+  }
+
   // Automatic wall composition ("Compose wall"): place the selected
   // artworks of the active room on the chosen wall — one row at eye
   // level when they fit, otherwise as many as the wall holds (see
@@ -2236,30 +2262,9 @@ export default function Editor({
       };
     });
     // The solid volumes standing in front of the chosen wall: the
-    // room's own collision blocks (the Arche dividing wall joins its
-    // side walls — a row centred on one buries a work in it) plus the
-    // blocks of the elements in the room. A block that straddles the
-    // wall's own plane is the wall itself and forbids nothing (see
-    // lib/compose-wall.ts); anything else shifts the row or drops the
-    // work instead of burying it.
-    const obstacles: ComposeObstacle[] =
-      activeRoom.layout === "sunlight"
-        ? [...SUNLIGHT_BLOCKS, ...sunlightElementCollisionBlocks(activeRoom.sunlightElements ?? [])]
-        : [
-            ...(galleryDef(activeRoom.layout)?.blocks ?? []),
-            ...(activeRoom.elements ?? [])
-              .filter((element) => element.type === "partition" && !element.hidden)
-              .map((element) => {
-                const dims = partitionDimsOf(element);
-                return {
-                  x: element.x,
-                  z: element.z,
-                  ry: element.rotation,
-                  hl: (dims.length * (element.scale ?? 1)) / 2,
-                  hw: dims.thickness / 2,
-                };
-              }),
-          ];
+    // room's own collision blocks plus the blocks of its elements
+    // (see roomObstacles above).
+    const obstacles = roomObstacles(activeRoom);
     const result = composeWall(items, face, obstacles);
     setComposeMessage(result.message);
     if (result.placements.length === 0) return;
@@ -2658,9 +2663,63 @@ async function compressImage(file: File): Promise<File> {
     };
     setRooms((current) => current.map((room) => room.id === id ? normalizedRoom : room));
     if (updatedRoom.layout !== currentRoom.layout) {
-      setArtworks((current) => current.map((artwork) => artwork.roomId === id
-        ? { ...artwork, position: [Math.max(-width / 2 + 1.5, Math.min(width / 2 - 1.5, artwork.position[0])), artwork.position[1], -depth / 2 + 0.28] }
-        : artwork));
+      // Re-hang the room's artworks on the NEW layout's walls: the old
+      // code moved every work to z = −depth / 2 + 0.28 — the preset
+      // depth is not the back wall (the Musée's back wall sits at
+      // z = −12 in a 40 m preset, the Vitrine's at −12 in a 16 m one,
+      // the Serpentine has no back wall at all) — so a layout switch
+      // stacked all the works on one bogus line, 1.7 m in front of the
+      // Vitrine's wall, 0.7 m behind the Parquet's, 7.7 m outside the
+      // Musée's room, or floating outdoors, and saved them there: the
+      // exhibition then opened with its works in mid-air or inside a
+      // wall. Compose re-hangs them properly — one row at eye level on
+      // the new back wall (or the longest wall), clear of any solid
+      // volume — and any work Compose cannot place is snapped onto its
+      // nearest wall instead of being left where it fell.
+      const newRoom = normalizedRoom;
+      setArtworks((current) => {
+        const roomArtworks = current.filter((artwork) => artwork.roomId === id);
+        if (roomArtworks.length === 0) return current;
+        const faces =
+          newRoom.layout === "sunlight"
+            ? sunlightHangWalls(newRoom.sunlightElements ?? [])
+            : galleryHangWalls(newRoom.layout, newRoom.elements);
+        const face =
+          faces.find((item) => item.id === "back") ??
+          [...faces].sort((a, b) => b.halfLen - a.halfLen)[0];
+        const byId = new Map<string, { position: [number, number, number]; rotation: number }>();
+        if (face) {
+          const items: ComposeItem[] = roomArtworks.map((artwork) => {
+            const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
+            return {
+              id: artwork.id,
+              title: artwork.title,
+              width: ((parsed?.widthCm ?? 80) / 100) * artwork.scale,
+              height: ((parsed?.heightCm ?? 100) / 100) * artwork.scale,
+              dominantFamily: dominantFamilyOf(artwork.palette),
+            };
+          });
+          for (const placement of composeWall(items, face, roomObstacles(newRoom)).placements) {
+            byId.set(placement.id, { position: placement.position, rotation: placement.rotation });
+          }
+        }
+        return current.map((artwork) => {
+          if (artwork.roomId !== id) return artwork;
+          const placed = byId.get(artwork.id);
+          if (placed) return { ...artwork, position: placed.position, rotation: placed.rotation };
+          const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
+          const snapped = snapArtworkToWall(
+            {
+              position: artwork.position,
+              rotation: artwork.rotation,
+              width: ((parsed?.widthCm ?? 80) / 100) * artwork.scale,
+              height: ((parsed?.heightCm ?? 100) / 100) * artwork.scale,
+            },
+            newRoom,
+          );
+          return snapped ? { ...artwork, position: snapped.position, rotation: snapped.rotation } : artwork;
+        });
+      });
       // Elements stay inside the resized room too.
       setRooms((current) => current.map((room) => room.id === id
         ? {
@@ -2701,8 +2760,9 @@ async function compressImage(file: File): Promise<File> {
   }
 
   // Switching a room's layout keeps the owner's artworks (updateRoom's
-  // layout-change repositioning moves them to the back wall); nothing
-  // is seeded — the new layout opens with bare walls.
+  // layout-change re-hang composes them onto the new layout's back
+  // wall at eye level); nothing is seeded — the new layout opens with
+  // bare walls when it has no artworks of its own.
   function changeRoomLayout(roomId: string, layout: RoomLayout) {
     const room = rooms.find((item) => item.id === roomId);
     if (!room) return;

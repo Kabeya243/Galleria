@@ -71,6 +71,7 @@ import {
   type Texture,
 } from "three";
 import { roomLayouts, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
+import { roomElementCollisionBlocks } from "@/lib/elements";
 import { galleryDef } from "@/lib/gallery-defs";
 import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
 import { PHOTO, photoTexture } from "@/lib/gallery-photos";
@@ -3258,8 +3259,12 @@ export function GalleryWalkControls(props: {
     const localX = camera.position.x - ox;
     const localZ = camera.position.z - oz;
     // Collision: the room's own blocks (panels, plinths, screens…),
-    // in room-local coordinates.
-    const blocks = def?.blocks ?? [];
+    // in room-local coordinates — plus the blocks of the partition
+    // walls the owner added to this room. Without them the visitor
+    // walked straight through a user-added partition (Sunlight's walk
+    // controls already included its elements' blocks; the generic
+    // rooms did not).
+    const blocks = [...(def?.blocks ?? []), ...roomElementCollisionBlocks(rooms[roomIndex]?.elements ?? [])];
     const bounds = def?.bounds ?? { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
     // Walk-velocity smoothing: the velocity eases toward its target
     // (exponential damping, frame-rate independent) instead of jumping

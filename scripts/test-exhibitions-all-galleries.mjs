@@ -76,6 +76,7 @@ try {
   const sunEl = await import(pathToFileURL(join(STAGING, "sunlight-elements.ts")).href);
   const compose = await import(pathToFileURL(join(STAGING, "compose-wall.ts")).href);
   const snap = await import(pathToFileURL(join(STAGING, "snap-to-wall.ts")).href);
+  const elementsLib = await import(pathToFileURL(join(STAGING, "elements.ts")).href);
   const rooms = await import(pathToFileURL(join(STAGING, "rooms.ts")).href);
 
   const { galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, galleryPlaceOnWall, galleryCameraStart } = defs;
@@ -269,6 +270,54 @@ try {
     assert(pub.includes("GalleryScene"), "public exhibition does not render GalleryScene");
     assert(pub.includes("parseGalleryRooms") || readFileSync(join(ROOT, "app/exhibition/[slug]/page.tsx"), "utf8").includes("parseGalleryRooms"), "exhibition page does not parse rooms");
     return "Exhibition.rooms + Artwork.roomId + /galleries + /exhibition/[slug] + GalleryScene";
+  });
+
+  // ---------- Global: switching a room's layout re-hangs its works ----------
+  // A layout switch used to move every artwork to z = −depth / 2 +
+  // 0.28 — the preset depth is not the back wall — stacking them on a
+  // bogus line (in front of / behind / outside the new room). The
+  // editor now composes them onto the new layout's back wall instead;
+  // this check replays that re-hang for every target layout with the
+  // real Compose logic, so no switch ever lands a work in mid-air or
+  // inside a wall.
+  check("—", "layout-switch-rehang", "Layout switch: 3 real works re-hung on every other layout's back/longest wall", () => {
+    for (const target of LAYOUTS) {
+      const face = composeTarget(target);
+      const envelope = physicalEnvelope(target);
+      const { blocks } = roomData(target);
+      const res = composeWall(THREE_WORKS, face, blocks);
+      if (target === "serpentine") {
+        assert(res.placements.length >= 1, `switch to serpentine placed nothing — ${res.message}`);
+        continue;
+      }
+      assert(res.unplaced.length === 0, `switch to ${target}: unplaced ${res.unplaced.map((u) => u.id).join(", ")} — ${res.message}`);
+      const perimeter = ["back", "front", "left", "right", "back-left", "back-right", "back-below", "back-above"].includes(face.id);
+      for (const p of res.placements) {
+        const item = THREE_WORKS.find((i) => i.id === p.id);
+        assertPlacementOnWall(p, item, face, envelope, blocks, perimeter);
+      }
+      assertNoOverlaps(res.placements, THREE_WORKS);
+    }
+    return "3 works re-hung cleanly on all 21 layouts";
+  });
+
+  // A user-added partition wall blocks the walk in every room type:
+  // the generic walk controls used only the room's own blocks, so a
+  // visitor walked straight through a partition added by the owner
+  // (Sunlight's walk controls already included its elements' blocks).
+  check("—", "partition-collision", "Walk collision: a user-added partition wall blocks the visitor", () => {
+    const partition = { id: "p1", type: "partition", name: "Partition 1", x: 0, y: 0, z: 0, rotation: 0, scale: 1, color: "#f5f2eb", length: 4, variant: "standard" };
+    const blocks = elementsLib.roomElementCollisionBlocks([partition]);
+    assert(blocks.length === 1, `expected 1 collision block for the partition, got ${blocks.length}`);
+    assert(approx(blocks[0].hl, 2, 0.001) && approx(blocks[0].hw, 0.075, 0.001), `partition block half-extents ${blocks[0].hl}×${blocks[0].hw} (expected 2×0.075)`);
+    // The wall runs along x at z = 0: its centre blocks, 2.5 m along
+    // it does not, and a point 1 m in front of it does not.
+    assert(sunlightHitWith(blocks, 0, 0), "partition centre does not block the walk");
+    assert(!sunlightHitWith(blocks, 2.5, 0), "walk blocked 2.5 m past the partition's end");
+    assert(!sunlightHitWith(blocks, 0, 1), "walk blocked 1 m in front of the partition");
+    // A hidden partition blocks nothing (it is not rendered).
+    assert(elementsLib.roomElementCollisionBlocks([{ ...partition, hidden: true }]).length === 0, "hidden partition still blocks the walk");
+    return "partition 4 m × 0.15 m blocks the walk at its centre only";
   });
 
   // ---------- Per room ----------

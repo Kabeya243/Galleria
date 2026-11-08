@@ -12,7 +12,7 @@ import { resolveFrameSpec } from "@/lib/demo-data";
 import type { FrameSpec } from "@/lib/demo-data";
 import { frameTileTexture, matTexture } from "@/lib/frame-textures";
 import { frameRingGeometry, perimeterPositions, profileBevel, profileLevels, rosetteGeometry, scrollGeometry, setInstancedMatrices, type FrameLevel } from "@/lib/frame-geometry";
-import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
+import { ELEMENT_DEFAULTS, ELEMENT_PLANES, elementTypes, PLINTH_HEIGHTS, roomElementCollisionBlocks, WALL_TEXT_FONTS, type ElementType, type RoomElement } from "@/lib/elements";
 import { roomLayouts, roomPlanOffsets, type GalleryRoom, type PartitionWall, type RoomLayout, type WallId } from "@/lib/rooms";
 import {
   SUNLIGHT_BLOCKS,
@@ -3515,8 +3515,14 @@ function SunlightWalkControls({
     // Collision: the room's fixed blocks (panels + pedestals) plus the
     // blocks of the Sunlight elements in this room (cloison, colonne,
     // socle, vitrine, banc, fauteuils…), rebuilt every frame so a moved
-    // element's block follows it. The spotlight contributes no block.
-    const blocks = [...SUNLIGHT_BLOCKS, ...sunlightElementCollisionBlocks(rooms[roomIndex]?.sunlightElements ?? [])];
+    // element's block follows it — plus the blocks of any Asset Library
+    // partition added to this room, so the visitor cannot walk through
+    // that wall either. The spotlight contributes no block.
+    const blocks = [
+      ...SUNLIGHT_BLOCKS,
+      ...sunlightElementCollisionBlocks(rooms[roomIndex]?.sunlightElements ?? []),
+      ...roomElementCollisionBlocks(rooms[roomIndex]?.elements ?? []),
+    ];
     // Walk-velocity smoothing: the velocity eases toward its target
     // (exponential damping, frame-rate independent) instead of jumping
     // to full speed the frame a key is pressed and stopping dead the

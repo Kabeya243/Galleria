@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser, toClientArtwork } from "@/lib/auth";
+import { getCurrentUser, toClientArtwork, withoutExhibitionPasswordHash } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createGalleryRoom, ROOM_MODELS, roomModelLayout } from "@/lib/rooms";
 
@@ -16,7 +16,7 @@ export async function GET() {
   });
   return NextResponse.json({
     exhibitions: exhibitions.map((exhibition) => ({
-      ...exhibition,
+      ...withoutExhibitionPasswordHash(exhibition),
       artworks: exhibition.artworks.map(toClientArtwork),
     })),
   });
@@ -69,5 +69,5 @@ export async function POST(request: Request) {
       // works (or composes a wall) in the editor.
     },
   });
-  return NextResponse.json({ exhibition }, { status: 201 });
+  return NextResponse.json({ exhibition: withoutExhibitionPasswordHash(exhibition) }, { status: 201 });
 }

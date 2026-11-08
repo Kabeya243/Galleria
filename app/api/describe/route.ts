@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
 
 // Optional richer artwork descriptions (Google Gemini 2.5 Flash).
 //
@@ -38,6 +39,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Signed in only: every call spends the site's Gemini quota (250
+  // requests/day on the free tier), so an anonymous caller could burn
+  // it for the whole site in minutes. The editor calls this while
+  // signed in; nothing public needs it.
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Sign in to describe an artwork." }, { status: 401 });
+  }
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(

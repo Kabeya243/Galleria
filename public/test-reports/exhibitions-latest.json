@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-11-08T03:33:16.834Z",
-  "commit": "877d4de",
+  "generatedAt": "2026-11-08T03:54:35.007Z",
+  "commit": "bf3055d",
   "mission": "chantier-5-exhibition-tests-all-galleries",
   "summary": {
-    "total": 128,
-    "passed": 127,
-    "failed": 1
+    "total": 151,
+    "passed": 151,
+    "failed": 0
   },
   "rooms": {
     "—": {
-      "passed": 2,
+      "passed": 4,
       "failed": 0,
       "checks": [
         {
@@ -23,11 +23,23 @@
           "name": "Prisma Exhibition has rooms JSON + artworks with roomId; pages exist",
           "status": "pass",
           "detail": "Exhibition.rooms + Artwork.roomId + /galleries + /exhibition/[slug] + GalleryScene"
+        },
+        {
+          "id": "layout-switch-rehang",
+          "name": "Layout switch: 3 real works re-hung on every other layout's back/longest wall",
+          "status": "pass",
+          "detail": "3 works re-hung cleanly on all 21 layouts"
+        },
+        {
+          "id": "partition-collision",
+          "name": "Walk collision: a user-added partition wall blocks the visitor",
+          "status": "pass",
+          "detail": "partition 4 m × 0.15 m blocks the walk at its centre only"
         }
       ]
     },
     "sunlight": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -52,7 +64,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (26.0 m)"
+          "detail": "7/7 placed (row) on left (26.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -69,7 +87,7 @@
       ]
     },
     "serpentine": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -97,6 +115,12 @@
           "detail": "2/7 placed (packed) on serp-0i0 (2.2 m) — unplaced: boy-gold, w4, w5, w6, w7"
         },
         {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
           "id": "place-on-wall",
           "name": "Single work: raycast from camera start + galleryPlaceOnWall",
           "status": "pass",
@@ -111,7 +135,7 @@
       ]
     },
     "vitrine": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -136,7 +160,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (16.0 m)"
+          "detail": "7/7 placed (row) on left (16.0 m); +2 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -153,7 +183,7 @@
       ]
     },
     "loft": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -178,7 +208,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (20.0 m)"
+          "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -195,7 +231,7 @@
       ]
     },
     "halle": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -220,7 +256,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (34.0 m)"
+          "detail": "7/7 placed (row) on left (34.0 m); +2 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -237,8 +279,8 @@
       ]
     },
     "arche": {
-      "passed": 5,
-      "failed": 1,
+      "passed": 7,
+      "failed": 0,
       "checks": [
         {
           "id": "def-integrity",
@@ -261,8 +303,14 @@
         {
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
-          "status": "fail",
-          "detail": "family-photo: hangs inside a collision block at (-9.90, -4.22) — block {\"x\":-5.75,\"z\":-4.1,\"ry\":0,\"hl\":4.25,\"hw\":0.4} stands in front of the left wall"
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (24.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "4 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -279,7 +327,7 @@
       ]
     },
     "musee": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -304,7 +352,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (40.0 m)"
+          "detail": "7/7 placed (row) on left (40.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -321,7 +375,7 @@
       ]
     },
     "claire-voie": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -346,7 +400,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (23.0 m)"
+          "detail": "7/7 placed (row) on left (23.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -363,7 +423,7 @@
       ]
     },
     "parquet": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -388,7 +448,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on front (24.0 m)"
+          "detail": "7/7 placed (row) on front (24.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -405,7 +471,7 @@
       ]
     },
     "verriere": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -433,6 +499,12 @@
           "detail": "7/7 placed (row) on back (40.0 m)"
         },
         {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
           "id": "place-on-wall",
           "name": "Single work: raycast from camera start + galleryPlaceOnWall",
           "status": "pass",
@@ -447,7 +519,7 @@
       ]
     },
     "pavillon": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -475,6 +547,12 @@
           "detail": "7/7 placed (packed) on left-a (6.1 m)"
         },
         {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
           "id": "place-on-wall",
           "name": "Single work: raycast from camera start + galleryPlaceOnWall",
           "status": "pass",
@@ -489,7 +567,7 @@
       ]
     },
     "classique": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -514,7 +592,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (40.0 m)"
+          "detail": "7/7 placed (row) on left (40.0 m); +2 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -531,7 +615,7 @@
       ]
     },
     "atrium-blanc": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -556,7 +640,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (27.0 m)"
+          "detail": "7/7 placed (row) on left (27.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -573,7 +663,7 @@
       ]
     },
     "patio": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -601,6 +691,12 @@
           "detail": "7/7 placed (row) on wall0 (11.0 m)"
         },
         {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
           "id": "place-on-wall",
           "name": "Single work: raycast from camera start + galleryPlaceOnWall",
           "status": "pass",
@@ -615,7 +711,7 @@
       ]
     },
     "escalier": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -640,7 +736,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (20.0 m)"
+          "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -657,7 +759,7 @@
       ]
     },
     "salles-vertes": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -682,7 +784,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (32.0 m)"
+          "detail": "7/7 placed (row) on left (32.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -699,7 +807,7 @@
       ]
     },
     "couloir-sombre": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -724,7 +832,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (46.0 m)"
+          "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -741,7 +855,7 @@
       ]
     },
     "couloir-dore": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -766,7 +880,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (46.0 m)"
+          "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -783,7 +903,7 @@
       ]
     },
     "voutes": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -808,7 +928,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (30.0 m)"
+          "detail": "7/7 placed (row) on left (30.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -825,7 +951,7 @@
       ]
     },
     "courbes": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -853,6 +979,12 @@
           "detail": "7/7 placed (packed) on curve0 (8.1 m)"
         },
         {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
           "id": "place-on-wall",
           "name": "Single work: raycast from camera start + galleryPlaceOnWall",
           "status": "pass",
@@ -867,7 +999,7 @@
       ]
     },
     "atrium-lattes": {
-      "passed": 6,
+      "passed": 7,
       "failed": 0,
       "checks": [
         {
@@ -892,7 +1024,13 @@
           "id": "compose-7",
           "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
           "status": "pass",
-          "detail": "7/7 placed (row) on left (18.0 m)"
+          "detail": "7/7 placed (row) on left (18.0 m); +4 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
         },
         {
           "id": "place-on-wall",
@@ -925,6 +1063,20 @@
       "detail": "Exhibition.rooms + Artwork.roomId + /galleries + /exhibition/[slug] + GalleryScene"
     },
     {
+      "room": "—",
+      "id": "layout-switch-rehang",
+      "name": "Layout switch: 3 real works re-hung on every other layout's back/longest wall",
+      "status": "pass",
+      "detail": "3 works re-hung cleanly on all 21 layouts"
+    },
+    {
+      "room": "—",
+      "id": "partition-collision",
+      "name": "Walk collision: a user-added partition wall blocks the visitor",
+      "status": "pass",
+      "detail": "partition 4 m × 0.15 m blocks the walk at its centre only"
+    },
+    {
       "room": "sunlight",
       "id": "def-integrity",
       "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
@@ -950,7 +1102,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (26.0 m)"
+      "detail": "7/7 placed (row) on left (26.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "sunlight",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "sunlight",
@@ -996,6 +1155,13 @@
     },
     {
       "room": "serpentine",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "serpentine",
       "id": "place-on-wall",
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
@@ -1034,7 +1200,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (16.0 m)"
+      "detail": "7/7 placed (row) on left (16.0 m); +2 other long wall(s) clear"
+    },
+    {
+      "room": "vitrine",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "vitrine",
@@ -1076,7 +1249,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (20.0 m)"
+      "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "loft",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "loft",
@@ -1118,7 +1298,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (34.0 m)"
+      "detail": "7/7 placed (row) on left (34.0 m); +2 other long wall(s) clear"
+    },
+    {
+      "room": "halle",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "halle",
@@ -1159,8 +1346,15 @@
       "room": "arche",
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
-      "status": "fail",
-      "detail": "family-photo: hangs inside a collision block at (-9.90, -4.22) — block {\"x\":-5.75,\"z\":-4.1,\"ry\":0,\"hl\":4.25,\"hw\":0.4} stands in front of the left wall"
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (24.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "arche",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "4 awkward drops all snapped onto a wall"
     },
     {
       "room": "arche",
@@ -1202,7 +1396,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (40.0 m)"
+      "detail": "7/7 placed (row) on left (40.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "musee",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "musee",
@@ -1244,7 +1445,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (23.0 m)"
+      "detail": "7/7 placed (row) on left (23.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "claire-voie",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "claire-voie",
@@ -1286,7 +1494,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on front (24.0 m)"
+      "detail": "7/7 placed (row) on front (24.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "parquet",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "parquet",
@@ -1332,6 +1547,13 @@
     },
     {
       "room": "verriere",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "verriere",
       "id": "place-on-wall",
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
@@ -1374,6 +1596,13 @@
     },
     {
       "room": "pavillon",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "pavillon",
       "id": "place-on-wall",
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
@@ -1412,7 +1641,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (40.0 m)"
+      "detail": "7/7 placed (row) on left (40.0 m); +2 other long wall(s) clear"
+    },
+    {
+      "room": "classique",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "classique",
@@ -1454,7 +1690,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (27.0 m)"
+      "detail": "7/7 placed (row) on left (27.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "atrium-blanc",
@@ -1500,6 +1743,13 @@
     },
     {
       "room": "patio",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "patio",
       "id": "place-on-wall",
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
@@ -1538,7 +1788,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (20.0 m)"
+      "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "escalier",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "escalier",
@@ -1580,7 +1837,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (32.0 m)"
+      "detail": "7/7 placed (row) on left (32.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "salles-vertes",
@@ -1622,7 +1886,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (46.0 m)"
+      "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "couloir-sombre",
@@ -1664,7 +1935,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (46.0 m)"
+      "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "couloir-dore",
@@ -1706,7 +1984,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (30.0 m)"
+      "detail": "7/7 placed (row) on left (30.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "voutes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "voutes",
@@ -1752,6 +2037,13 @@
     },
     {
       "room": "courbes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "courbes",
       "id": "place-on-wall",
       "name": "Single work: raycast from camera start + galleryPlaceOnWall",
       "status": "pass",
@@ -1790,7 +2082,14 @@
       "id": "compose-7",
       "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
       "status": "pass",
-      "detail": "7/7 placed (row) on left (18.0 m)"
+      "detail": "7/7 placed (row) on left (18.0 m); +4 other long wall(s) clear"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
     },
     {
       "room": "atrium-lattes",

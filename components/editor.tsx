@@ -2625,21 +2625,70 @@ async function compressImage(file: File): Promise<File> {
   }
 
   function duplicateArtwork() {
-    if (!selected) return;
+    if (!selected || !activeRoom) return;
+    // The copy sits 1.5 m along the SAME wall as the original — the
+    // offset follows the wall's own axis (cos r, −sin r), not world X:
+    // a +1.5 m world-X shift on a side-wall work pushed the copy 1.5 m
+    // off its wall, floating mid-room (or inside the opposite wall),
+    // and the copy was saved like that. The snap then seats it 0.1 m
+    // off its wall, clear of any solid volume.
+    const axis = { x: Math.cos(selected.rotation), z: -Math.sin(selected.rotation) };
     const copy: LayerArtwork = {
       ...selected,
       id: crypto.randomUUID(),
       title: `${selected.title} copy`.slice(0, 120),
-      position: [selected.position[0] + 1.5, selected.position[1], selected.position[2]],
+      position: [
+        selected.position[0] + axis.x * 1.5,
+        selected.position[1],
+        selected.position[2] + axis.z * 1.5,
+      ],
       // A copy starts ungrouped, visible and unlocked.
       hidden: false,
       locked: false,
       groupId: undefined,
     };
+    const parsed = parseArtworkDimensions(copy.dimensions ?? "");
+    const snapped = snapArtworkToWall(
+      {
+        position: copy.position,
+        rotation: copy.rotation,
+        width: ((parsed?.widthCm ?? 80) / 100) * copy.scale,
+        height: ((parsed?.heightCm ?? 100) / 100) * copy.scale,
+      },
+      activeRoom,
+    );
+    if (snapped) {
+      copy.position = snapped.position;
+      copy.rotation = snapped.rotation;
+    }
     snapshot();
     setArtworks((current) => [...current, copy]);
     selectArtwork(copy.id);
     setSaved(false);
+  }
+
+  // "Fit to wall": seat the selected artwork on its nearest wall at
+  // eye level, at true scale. The old handler parked every artwork at
+  // the hardcoded position [0, 1.55, −5.72] — a spot that belongs to
+  // no room in particular — so in most galleries the work landed
+  // floating mid-room or inside a wall.
+  function fitArtworkToWall() {
+    if (!selected || !activeRoom) return;
+    const parsed = parseArtworkDimensions(selected.dimensions ?? "");
+    const snapped = snapArtworkToWall(
+      {
+        // Eye level: the snap clamps the centre inside the wall's
+        // height when the work is too tall for 1.55 m.
+        position: [selected.position[0], 1.55, selected.position[2]],
+        rotation: selected.rotation,
+        width: ((parsed?.widthCm ?? 80) / 100) * 1,
+        height: ((parsed?.heightCm ?? 100) / 100) * 1,
+      },
+      activeRoom,
+    );
+    if (!snapped) return;
+    snapshot();
+    updateArtwork(selected.id, (artwork) => ({ ...artwork, position: snapped.position, rotation: snapped.rotation, scale: 1 }));
   }
 
   function updateRoom(id: string, update: (room: GalleryRoom) => GalleryRoom) {
@@ -3443,7 +3492,7 @@ async function compressImage(file: File): Promise<File> {
                       )}
                     </div>
                   )}
-                  <div className="property-actions"><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, position: [0, 1.55, -5.72], rotation: 0, scale: 1 })); }}><Sparkles size={14} /> Fit to wall</button><button aria-label={selected.hidden ? "Show artwork in 3D" : "Hide artwork in 3D"} title={selected.hidden ? "Show in 3D" : "Hide in 3D"} onClick={() => toggleHidden({ kind: "artwork", id: selected.id })}>{selected.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button><button aria-label={selected.locked ? "Unlock artwork" : "Lock artwork"} title={selected.locked ? "Unlock (allow dragging)" : "Lock (cannot be dragged)"} onClick={() => toggleLocked({ kind: "artwork", id: selected.id })}>{selected.locked ? <Lock size={14} /> : <Unlock size={14} />}</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
+                  <div className="property-actions"><button onClick={() => { if (!selected) return; fitArtworkToWall(); }}><Sparkles size={14} /> Fit to wall</button><button aria-label={selected.hidden ? "Show artwork in 3D" : "Hide artwork in 3D"} title={selected.hidden ? "Show in 3D" : "Hide in 3D"} onClick={() => toggleHidden({ kind: "artwork", id: selected.id })}>{selected.hidden ? <EyeOff size={14} /> : <Eye size={14} />}</button><button aria-label={selected.locked ? "Unlock artwork" : "Lock artwork"} title={selected.locked ? "Unlock (allow dragging)" : "Lock (cannot be dragged)"} onClick={() => toggleLocked({ kind: "artwork", id: selected.id })}>{selected.locked ? <Lock size={14} /> : <Unlock size={14} />}</button><button aria-label="Duplicate artwork" onClick={duplicateArtwork}><Copy size={14} /></button><button className="delete-action" aria-label="Delete artwork" onClick={removeArtwork}><Trash2 size={14} /></button></div>
                 </>
               ) : selectedElement ? (
                 <>

@@ -74,13 +74,20 @@ export async function GET(request: Request) {
     if (!profileResponse.ok) return NextResponse.redirect(`${origin}/login?error=google`);
     const profile = (await profileResponse.json()) as GoogleUserInfo;
     if (!profile.sub || !profile.email) return NextResponse.redirect(`${origin}/login?error=google`);
+    // Only a verified Google email may sign in or link an account:
+    // an unverified address must never take over the matching local
+    // account. Registration lowercases emails, so compare and store
+    // lowercased too — a mixed-case Google address would otherwise
+    // miss the existing account and fail on the unique constraint.
+    if (profile.email_verified === false) return NextResponse.redirect(`${origin}/login?error=google`);
+    const email = profile.email.toLowerCase();
 
     // Find-or-create: a returning Google account by googleId; an
     // existing email account is linked to Google (googleId set, no
     // password change — the email login keeps working).
     let user = await db.user.findUnique({ where: { googleId: profile.sub } });
     if (!user) {
-      const byEmail = await db.user.findUnique({ where: { email: profile.email } });
+      const byEmail = await db.user.findUnique({ where: { email: email } });
       if (byEmail) {
         user = await db.user.update({
           where: { id: byEmail.id },
@@ -91,8 +98,8 @@ export async function GET(request: Request) {
     if (!user) {
       user = await db.user.create({
         data: {
-          email: profile.email,
-          name: profile.name?.trim() || profile.email.split("@")[0],
+          email: email,
+          name: profile.name?.trim() || email.split("@")[0],
           googleId: profile.sub,
         },
       });

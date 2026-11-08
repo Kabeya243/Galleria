@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-11-08T03:33:36.457Z",
-  "commit": "877d4de",
+  "generatedAt": "2026-11-08T03:54:57.861Z",
+  "commit": "bf3055d",
   "summary": {
     "total": 44,
-    "passed": 33,
-    "failed": 1,
+    "passed": 34,
+    "failed": 0,
     "skipped": 10
   },
   "checks": [
@@ -187,8 +187,8 @@
       "feature": "Exhibitions — all galleries",
       "id": "exhibitions-all",
       "name": "21 galleries: defs, opening, Compose wall, place-on-wall, navigation",
-      "status": "fail",
-      "detail": "exhibition tests failed: FAIL  [arche] Compose wall, 7 works (solo-expo wall) on the longest wall — family-photo: hangs inside a collision block at (-9.90, -4.22) — block {\"x\":-5.75,\"z\":-4.1,\"ry\":0,\"hl\":4.25,\"hw\":0.4} stands in front of the left wall"
+      "status": "pass",
+      "detail": "  PASS patio: 7 pass, 0 fail |   PASS escalier: 7 pass, 0 fail |   PASS salles-vertes: 7 pass, 0 fail |   PASS couloir-sombre: 7 pass, 0 fail |   PASS couloir-dore: 7 pass, 0 fail |   PASS voutes: 7 pass, 0 fail |   PASS courbes: 7 pass, 0 fail |   PASS atrium-lattes: 7 pass, 0 fail"
     },
     {
       "feature": "Code quality",

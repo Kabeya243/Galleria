@@ -146,25 +146,40 @@ export async function saveAdvancedSite(userId: string, site: SiteDocument) {
   }
   const existing = await db.site.findFirst({ where: { id: site.id, userId }, select: { id: true } });
   const input = toCreateInput(site);
-  if (!existing) {
-    return db.site.create({ data: { ...input, userId }, include: siteInclude });
-  }
-  return db.$transaction(async (tx) => {
-    await tx.page.deleteMany({ where: { siteId: site.id } });
-    return tx.site.update({
-      where: { id: site.id },
-      data: {
-        slug: site.slug,
-        title: site.title,
-        templateId: site.templateId || null,
-        design: site.design ?? null,
-        theme: site.theme as Prisma.InputJsonValue,
-        published: site.published,
-        pages: { create: input.pages.create },
-      },
-      include: siteInclude,
+  // The slug check above runs before the write, so two concurrent
+  // saves with the same slug can both pass it: the @unique constraint
+  // is the real guard, and its P2002 must become the same friendly
+  // 409 the route already returns for a taken slug — never a raw
+  // database error (and never a 503 for a name that is simply taken).
+  try {
+    if (!existing) {
+      return await db.site.create({ data: { ...input, userId }, include: siteInclude });
+    }
+    return await db.$transaction(async (tx) => {
+      await tx.page.deleteMany({ where: { siteId: site.id } });
+      return tx.site.update({
+        where: { id: site.id },
+        data: {
+          slug: site.slug,
+          title: site.title,
+          templateId: site.templateId || null,
+          design: site.design ?? null,
+          theme: site.theme as Prisma.InputJsonValue,
+          published: site.published,
+          pages: { create: input.pages.create },
+        },
+        include: siteInclude,
+      });
     });
-  });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new Error("Ce nom d'URL est déjà utilisé par un autre site.");
+    }
+    throw error;
+  }
 }
 
 export async function listAdvancedSites(userId: string) {

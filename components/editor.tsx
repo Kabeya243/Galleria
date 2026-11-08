@@ -57,7 +57,7 @@ import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, f
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
 import { useLocale, useT } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
-import { galleryCameraStart, galleryDef, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
+import { galleryCameraStart, galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import {
   createSunlightElement,
   closestHangWall,
@@ -69,7 +69,6 @@ import {
   SUNLIGHT_TEXT_FONTS,
   sunlightElementCollisionBlocks,
   sunlightHangWalls,
-  sunlightPlaceOnWall,
   sunlightTextArtworkSize,
   sunlightWallHit,
   sunlightWallsForPosition,
@@ -94,6 +93,7 @@ import {
   type FloorPatternKey,
 } from "@/lib/editor-params";
 import { snapArtworkToWall } from "@/lib/snap-to-wall";
+import { placeArtworkInView, PLACE_IN_VIEW_EYE_Y } from "@/lib/place-in-view";
 import { SUNLIGHT_BLOCKS } from "@/lib/sunlight";
 import {
   carriedArtworks,
@@ -246,6 +246,38 @@ export default function Editor({
   function resetCameraView() {
     setCameraView("eye");
     setViewRequest(null);
+  }
+  // Gentle turn toward a newly added artwork (placeOnCameraWall's
+  // turnYaw): the scene eases the yaw toward it (see GalleryScene's
+  // lookAtRequest), only when the work could not be placed in view.
+  // The nonce makes a repeat turn to the same yaw a new request.
+  const [lookAtRequest, setLookAtRequest] = useState<{ nonce: number; yaw: number } | null>(null);
+  const lookAtNonce = useRef(0);
+  // The artwork just added, for its fade-in (GalleryScene passes it
+  // to the artwork's frame). Cleared once the fade is done so a later
+  // remount (room switch) does not replay it.
+  const [appearingId, setAppearingId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!appearingId) return;
+    const timer = setTimeout(() => setAppearingId((current) => (current === appearingId ? null : current)), 1500);
+    return () => clearTimeout(timer);
+  }, [appearingId]);
+  // Bring a newly added artwork before the visitor's eyes: fade it in
+  // (appearingId) and, when the placement needed it, turn the view
+  // gently toward it — or, when the camera looks steeply down (High /
+  // Plan / Wide views), return to eye level first, since no wall-hung
+  // work can be in frame from up there. Both requests can fire
+  // together: the view preset clears the look target in the walk
+  // controls, and the scene's look-at effect (a parent effect, so it
+  // runs after the walk controls') re-applies it.
+  function revealNewArtwork(id: string, turnYaw: number | null) {
+    setAppearingId(id);
+    const camera = cameraStateRef.current;
+    if (camera && Math.abs(camera.pitch) > 0.35) requestCameraView("eye");
+    if (turnYaw !== null) {
+      lookAtNonce.current += 1;
+      setLookAtRequest({ nonce: lookAtNonce.current, yaw: turnYaw });
+    }
   }
   // WASD is ignored while typing (the walk controls guard the keys
   // too): when the focus lands in a form field, any held walk keys
@@ -2144,66 +2176,44 @@ export default function Editor({
     }
   }
 
-  // Place a new artwork (or a text panel) on the wall the camera is
-  // looking at (the file's wallHit/putOnWall): every wall can carry one
-  // — the room's four walls, the three freestanding panels, and any
-  // cloison/suspendu the user added. Falls back to the back wall when
-  // the camera faces no wall (ceiling, floor, or out of the room).
-  // `alongOffset` spreads consecutive adds along the wall so they do
-  // not stack on the same spot.
-  function placeOnCameraWall(width: number, height: number, alongOffset = 0): { position: [number, number, number]; rotation: number } {
-    const camera = cameraStateRef.current;
-    if (camera && activeRoom) {
-      // Camera look direction from yaw and pitch (YXZ): forward =
-      // (-cos(pitch)·sin(yaw), sin(pitch), -cos(pitch)·cos(yaw)).
-      const direction = {
-        x: -Math.cos(camera.pitch) * Math.sin(camera.yaw),
-        y: Math.sin(camera.pitch),
-        z: -Math.cos(camera.pitch) * Math.cos(camera.yaw),
-      };
-      // The camera state is in world coordinates; convert to the active
-      // room's local frame (subtract the room's plan offset).
-      const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
-      const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
-      const origin = { x: camera.x - offsetX, y: camera.y, z: camera.z };
-      if (activeRoom.layout !== "sunlight") {
-        const hit = galleryWallHit(origin, direction, activeRoom.layout, activeRoom.elements);
-        if (hit) return galleryPlaceOnWall(hit, height, width, alongOffset);
-      } else {
-        const hit = sunlightWallHit(origin, direction, activeRoom.sunlightElements ?? []);
-        if (hit) return sunlightPlaceOnWall(hit, height, width, alongOffset);
-      }
+  // Place a new artwork (or a text panel) where the visitor can
+  // actually see it (lib/place-in-view.ts): on the wall the camera
+  // is looking at, clamped into a safe cone around the gaze
+  // (±20° horizontal) so the ±2 m spread of consecutive adds can
+  // never push the work off-screen — the old code hung it at the
+  // ray's hit point plus the spread, and at a wall 1–2 m away that
+  // is 45–63° off axis, invisible. When no wall is in view at all
+  // the work goes on the face most in front of the camera, NOT the
+  // blind back wall (which can sit behind the camera), and
+  // `turnYaw` carries the yaw the camera must turn to for the work
+  // to be centred — the editor turns the view gently toward it.
+  // `turnYaw` is null when the work already sits in view.
+  // Every wall can carry one — the room's four walls, the three
+  // freestanding panels, and any cloison/suspendu the user added.
+  function placeOnCameraWall(width: number, height: number, alongOffset = 0): { position: [number, number, number]; rotation: number; turnYaw: number | null } {
+    if (!activeRoom) {
+      return { position: [0, PLACE_IN_VIEW_EYE_Y, 0], rotation: 0, turnYaw: null };
     }
-    // No wall in view (camera facing the ceiling, the floor, or out
-    // of the room): fall back to the room's real back wall — the
-    // face's own centre, 0.1 m off it, at 1.55 m — not a formula from
-    // the room's preset depth. The preset depth is NOT the back wall:
-    // the Musée's back wall sits at z = −12 in a 40 m-deep preset, the
-    // Vitrine's at −12 in a 16 m preset, the Parquet's at −10 — so the
-    // old `zCenter − depth / 2 + 0.28` landed works 1.7 m in front of
-    // the Vitrine's wall, 0.7 m BEHIND the Parquet's, 7.7 m outside
-    // the Musée's room, and floating outdoors in the Serpentine,
-    // which has no back wall at all. Those works opened in mid-air or
-    // inside a wall and stayed there, saved with the exhibition.
-    const layout = activeRoom?.layout ?? "sunlight";
+    const layout = activeRoom.layout;
+    // The camera state is in world coordinates; convert to the
+    // active room's local frame (subtract the room's plan offset).
+    // Before the scene reports a camera (first frame), fall back to
+    // the room's entrance pose — facing the back wall from the
+    // entrance — instead of hanging the work blind.
+    const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
+    const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
+    const camera = cameraStateRef.current;
+    const localCamera = camera
+      ? { x: camera.x - offsetX, y: camera.y, z: camera.z, yaw: camera.yaw, pitch: camera.pitch }
+      : galleryCameraStart(layout);
     const faces =
       layout === "sunlight"
-        ? sunlightHangWalls(activeRoom?.sunlightElements ?? [])
-        : galleryHangWalls(layout, activeRoom?.elements);
-    const back =
-      faces.find((face) => face.id === "back") ??
-      [...faces].sort((a, b) => b.halfLen - a.halfLen)[0];
-    if (back) {
-      return sunlightPlaceOnWall(
-        { point: { x: back.cx, y: 1.55, z: back.cz }, normal: { x: back.nx, z: back.nz }, face: back },
-        height,
-        width,
-        alongOffset,
-      );
-    }
-    const preset = roomLayouts[layout];
-    const zCenter = roomFloorCenterZ(layout);
-    return { position: [0, 1.55, zCenter - preset.depth / 2 + 0.28], rotation: 0 };
+        ? sunlightHangWalls(activeRoom.sunlightElements ?? [])
+        : galleryHangWalls(layout, activeRoom.elements);
+    const placed = placeArtworkInView(localCamera, faces, width, height, alongOffset);
+    // The placement is room-local; the artwork position the editor
+    // stores is room-local too (the scene adds the room offset).
+    return { position: placed.position, rotation: placed.rotation, turnYaw: placed.needsTurn ? placed.yawToFace : null };
   }
 
   // The hangable face the camera is looking at (the same raycast
@@ -2342,7 +2352,7 @@ export default function Editor({
     }
     setSunlightMessage(null);
     const size = sunlightTextArtworkSize(text, curatorialTextFont);
-    const { position, rotation } = placeOnCameraWall(size.width, size.height);
+    const { position, rotation, turnYaw } = placeOnCameraWall(size.width, size.height);
     const artwork: Artwork = {
       id: crypto.randomUUID(),
       title: "Curatorial text",
@@ -2365,6 +2375,7 @@ export default function Editor({
     snapshot();
     setArtworks((current) => [...current, artwork]);
     selectArtwork(artwork.id);
+    revealNewArtwork(artwork.id, turnYaw);
     setSaved(false);
   }
 
@@ -2396,10 +2407,11 @@ export default function Editor({
     const index = currentArtworks.length;
     // New artworks go on the wall the camera is looking at (every wall
     // can carry one, including an added cloison/suspendu), spread along
-    // the wall so consecutive adds do not stack. Falls back to the back
-    // wall when the camera faces no wall.
+    // the wall so consecutive adds do not stack — clamped into the
+    // view cone, and the view turns gently toward the work when no
+    // wall is in view (see placeOnCameraWall).
     const alongOffset = (index % 5 - 2) * 1.0;
-    const { position, rotation } = placeOnCameraWall(0.8, 1.0, alongOffset);
+    const { position, rotation, turnYaw } = placeOnCameraWall(0.8, 1.0, alongOffset);
     const artwork: Artwork = {
       id: crypto.randomUUID(),
       title: `New artwork ${index + 1}`,
@@ -2421,6 +2433,7 @@ export default function Editor({
     snapshot();
     setArtworks((current) => [...current, artwork]);
     selectArtwork(artwork.id);
+    revealNewArtwork(artwork.id, turnYaw);
     setSaved(false);
     return artwork.id;
   }
@@ -3209,7 +3222,7 @@ async function compressImage(file: File): Promise<File> {
             </div>
           )}
           <div className="scene-wrap">
-            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode walking input={movementKeys} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); resetCameraView(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} viewRequest={viewRequest} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
+            {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode walking input={movementKeys} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); resetCameraView(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} viewRequest={viewRequest} lookAtRequest={lookAtRequest} appearingId={appearingId} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}
             {/* Floor plan + teleport (the same minimap as the public
                 viewer): the Sunlight room with its panels, one dot per
                 artwork and the live camera position. Clicking the plan

@@ -3196,6 +3196,10 @@ export function GalleryWalkControls(props: {
       // lastX/lastY are still updated so the look does not jump when
       // the drag ends.
       if (!dragActive?.current) {
+        // A manual look takes over from any gentle turn in progress
+        // (a newly added artwork's look-at): the visitor's pointer
+        // always wins over the automatic turn.
+        if (event.clientX !== lastX || event.clientY !== lastY) lookYaw.current = null;
         yawRef.current -= (event.clientX - lastX) * 0.004;
         pitchRef.current = MathUtils.clamp(pitchRef.current - (event.clientY - lastY) * 0.004, -1.2, 1.2);
       }
@@ -3249,9 +3253,11 @@ export function GalleryWalkControls(props: {
     const keys = input.current;
     const fw = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
     const st = Number(keys.has("KeyD")) - Number(keys.has("KeyA"));
-    // Arrow keys turn the view (the source's navigation).
-    if (keys.has("ArrowLeft")) yawRef.current += delta * 1.5;
-    if (keys.has("ArrowRight")) yawRef.current -= delta * 1.5;
+    // Arrow keys turn the view (the source's navigation) — and take
+    // over from any gentle turn in progress (a newly added artwork's
+    // look-at), like the pointer look above.
+    if (keys.has("ArrowLeft")) { lookYaw.current = null; yawRef.current += delta * 1.5; }
+    if (keys.has("ArrowRight")) { lookYaw.current = null; yawRef.current -= delta * 1.5; }
     const roomIndex = currentRoomIndex.current;
     const def = defOf(roomIndex);
     const ox = offsets[roomIndex];
@@ -3344,11 +3350,22 @@ export function GalleryWalkControls(props: {
         velRef.current.z = 0;
       }
     }
-    if (destActive && lookYaw.current !== null) {
+    // The look target eases in place, not only while walking to a
+    // destination: a newly added artwork's turn has no destination
+    // (the camera stays where it is), and under the old
+    // `destActive &&` guard it never happened at all. Same gentle
+    // speed as the teleport's turn (2.5 rad/s); it clears itself
+    // once reached, and any manual look, walk key or view preset
+    // clears it sooner.
+    if (lookYaw.current !== null) {
       const step = Math.min(delta, 0.05) * 2.5;
       let diff = lookYaw.current - yawRef.current;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      yawRef.current += MathUtils.clamp(diff, -step, step);
+      if (Math.abs(diff) < 0.01) {
+        lookYaw.current = null;
+      } else {
+        yawRef.current += MathUtils.clamp(diff, -step, step);
+      }
     }
     camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
     // Final guard: the camera can never leave the room, whatever moved

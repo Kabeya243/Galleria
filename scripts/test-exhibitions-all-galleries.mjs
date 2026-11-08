@@ -40,7 +40,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const STAGING = join(ROOT, "scripts", ".exh-staging");
-const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "snap-to-wall"];
+const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "snap-to-wall", "place-in-view"];
 
 const checks = [];
 function check(room, id, name, fn) {
@@ -78,6 +78,7 @@ try {
   const snap = await import(pathToFileURL(join(STAGING, "snap-to-wall.ts")).href);
   const elementsLib = await import(pathToFileURL(join(STAGING, "elements.ts")).href);
   const rooms = await import(pathToFileURL(join(STAGING, "rooms.ts")).href);
+  const placeInView = await import(pathToFileURL(join(STAGING, "place-in-view.ts")).href);
 
   const { galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, galleryPlaceOnWall, galleryCameraStart } = defs;
   const { SUNLIGHT_BOUNDS, SUNLIGHT_WALK_SPEED, SUNLIGHT_CAMERA_START, SUNLIGHT_BLOCKS, sunlightHitWith } = sun;
@@ -496,6 +497,93 @@ try {
         assert(!burying, `placed work hangs inside a collision block at (${placed.position[0].toFixed(2)}, ${placed.position[2].toFixed(2)}) — block ${JSON.stringify(burying)} stands in front of the ${hit.face.id} wall`);
       }
       return `hit ${hit.face.id}, placed at (${placed.position.map((v) => v.toFixed(2)).join(", ")})`;
+    });
+
+    check(layout, "place-in-view", "Add artwork: the new work lands in front of the visitor's eyes, never behind or off-frame", () => {
+      const faces = roomData(layout).hangWalls;
+      const onWall = (placed, label) => {
+        // The face the work hangs on: same facing (rotation), 0.1 m
+        // stand-off, and the work inside its length. Rotation alone
+        // does not identify it — coplanar wall segments (back-left /
+        // back-below) and panel rows share one rotation and one
+        // stand-off, so the extent check picks the real face.
+        const face = faces.find((f) => approx(placed.rotation, Math.atan2(f.nx, f.nz), 0.001)
+          && Math.abs((placed.position[0] - f.cx) * f.nx + (placed.position[2] - f.cz) * f.nz - 0.1) < 0.002
+          && Math.abs((placed.position[0] - f.cx) * f.ax + (placed.position[2] - f.cz) * f.az) + 0.4 <= f.halfLen + 0.002);
+        assert(face, `${label}: placed at (${placed.position.map((v) => v.toFixed(2)).join(", ")}) is not 0.1 m off any wall, inside its length`);
+        const along = (placed.position[0] - face.cx) * face.ax + (placed.position[2] - face.cz) * face.az;
+        assert(Math.abs(along) + 0.4 <= face.halfLen + 0.002, `${label}: along ${along.toFixed(2)} hangs off the ${face.id} wall`);
+        assert(placed.position[1] >= face.minY + 0.5 && placed.position[1] <= face.maxY - 0.5, `${label}: y ${placed.position[1].toFixed(2)} outside ${face.id} height`);
+        return face;
+      };
+      // (a) From the camera start, every spread offset (−2…+2 m, the
+      // editor's consecutive-add spread): in view, no turn needed —
+      // unless no wall is in view at all (an open pavilion: the
+      // entrance looks down an open axis), in which case one gentle
+      // turn must centre the work. This is the old bug — at a near
+      // wall ±2 m is 45–63° off axis.
+      for (const off of [-2, -1, 0, 1, 2]) {
+        const placed = placeInView.placeArtworkInView(cameraStart, faces, 0.8, 1.0, off);
+        if (placed.fallback) {
+          // No wall in view at all (an open pavilion): the fallback
+          // face may already sit in the cone (no turn needed), or
+          // one gentle turn must centre it.
+          if (placed.needsTurn) {
+            assert(placed.yawToFace !== null, `camera start, offset ${off}: no wall in view, but no turn was requested although the work is off-frame`);
+            const afterTurn = placeInView.placeArtworkInView({ ...cameraStart, yaw: placed.yawToFace }, faces, 0.8, 1.0, off);
+            assert(afterTurn.inView, `camera start, offset ${off}: after turning toward the work it is still ${afterTurn.horizAngleDeg.toFixed(1)}° off axis`);
+            onWall(afterTurn, `camera start, offset ${off}, after turn`);
+          } else {
+            assert(placed.inView, `camera start, offset ${off}: fallback work at ${placed.horizAngleDeg.toFixed(1)}° off axis is out of view`);
+            onWall(placed, `camera start, offset ${off}`);
+          }
+          continue;
+        }
+        assert(placed.inView, `camera start, offset ${off}: work at ${placed.horizAngleDeg.toFixed(1)}° off axis (face ${placed.faceId}, ${placed.distance.toFixed(1)} m) is out of view`);
+        assert(!placed.needsTurn, `camera start, offset ${off}: a turn was requested although the work is on the faced wall`);
+        onWall(placed, `camera start, offset ${off}`);
+      }
+      // (b) Close to a wall (1.5 m): the spread is clamped into the
+      // view cone instead of pushing the work off-screen.
+      const nearFace = composeTarget(layout);
+      const nearCamera = {
+        x: nearFace.cx + nearFace.nx * 1.5,
+        y: 1.6,
+        z: nearFace.cz + nearFace.nz * 1.5,
+        yaw: Math.atan2(nearFace.nx, nearFace.nz),
+        pitch: 0,
+      };
+      for (const off of [-2, 2]) {
+        const placed = placeInView.placeArtworkInView(nearCamera, faces, 0.8, 1.0, off);
+        assert(placed.inView, `1.5 m from the ${nearFace.id} wall, offset ${off}: work at ${placed.horizAngleDeg.toFixed(1)}° off axis is out of view`);
+        assert(!placed.needsTurn, `1.5 m from the ${nearFace.id} wall, offset ${off}: a turn was requested although the clamp should hold`);
+        onWall(placed, `near wall, offset ${off}`);
+      }
+      // (c) No wall in view — the camera stands 1.5 m in front of a
+      // wall, facing away from it, so the wall is behind the camera:
+      // no blind back-wall drop — the turn target aims exactly at
+      // the work, and after the turn the work is centred in view.
+      const backFace = faces.find((f) => f.id === "back") ?? nearFace;
+      const awayCamera = {
+        x: backFace.cx + backFace.nx * 1.5,
+        y: 1.6,
+        z: backFace.cz + backFace.nz * 1.5,
+        yaw: Math.atan2(-backFace.nx, -backFace.nz),
+        pitch: 0,
+      };
+      const turned = placeInView.placeArtworkInView(awayCamera, [backFace], 0.8, 1.0, 0);
+      assert(turned.fallback, "facing away from the only wall: the fallback did not trigger");
+      assert(turned.needsTurn && turned.yawToFace !== null, "facing away from the only wall: no turn was requested although the work is behind the camera");
+      const fx = -Math.sin(turned.yawToFace);
+      const fz = -Math.cos(turned.yawToFace);
+      const dx = turned.position[0] - awayCamera.x;
+      const dz = turned.position[2] - awayCamera.z;
+      const aim = (fx * dx + fz * dz) / Math.hypot(dx, dz);
+      assert(aim > 0.999, `turn target aims ${aim.toFixed(4)} at the work (expected ~1.0)`);
+      const afterTurn = placeInView.placeArtworkInView({ ...awayCamera, yaw: turned.yawToFace }, [backFace], 0.8, 1.0, 0);
+      assert(afterTurn.inView, `after turning toward the work it is still ${afterTurn.horizAngleDeg.toFixed(1)}° off axis`);
+      onWall(afterTurn, "after turn");
+      return `camera start ×5 offsets in view, near-wall ±2 m clamped in view, behind-camera turn aims ${aim.toFixed(4)}`;
     });
 
     check(layout, "navigation", "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets", () => {

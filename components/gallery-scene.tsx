@@ -602,6 +602,7 @@ function PlaceholderPrint({ width, height, z, frameless, color, accent }: { widt
 
 function LoadedArtwork({ imageUrl, width, height, z = 0.083, color, accent, frameless }: { imageUrl: string; width: number; height: number; z?: number; color: string; accent: string; frameless: boolean }) {
   const texture = useArtworkTexture(imageUrl);
+  const fadeMaterial = usePrintFadeIn();
   if (!texture) {
     // Still loading, or the image failed to load: show the placeholder
     // print, never a blank frame — and never throw.
@@ -610,9 +611,28 @@ function LoadedArtwork({ imageUrl, width, height, z = 0.083, color, accent, fram
   return (
     <mesh position={[0, 0, z]}>
       <planeGeometry args={[width, height]} />
-      <meshBasicMaterial map={texture} />
+      <meshBasicMaterial ref={fadeMaterial} map={texture} transparent opacity={0} />
     </mesh>
   );
+}
+
+// Fade a freshly mounted print in over ~0.5 s (opacity 0 → 1): a
+// texture that arrives late must not pop onto the wall over the
+// placeholder — the frame and the placeholder are already there, the
+// photo dissolves in. The ramp runs once, in place, and leaves the
+// material opaque at full opacity, so the finished print renders
+// exactly as before (no lingering transparency).
+function usePrintFadeIn() {
+  const materialRef = useRef<MeshBasicMaterial | null>(null);
+  const progress = useRef(0);
+  useFrame((_, delta) => {
+    const material = materialRef.current;
+    if (!material || progress.current >= 1) return;
+    progress.current = Math.min(1, progress.current + delta / 0.5);
+    material.opacity = progress.current;
+    if (progress.current >= 1) material.transparent = false;
+  });
+  return materialRef;
 }
 
 // A curatorial-text artwork: the text drawn on a 640 px canvas (the
@@ -623,6 +643,7 @@ function LoadedArtwork({ imageUrl, width, height, z = 0.083, color, accent, fram
 // its #f6f6f4 ground, never a blank frame.
 function SunlightTextPrint({ text, font, width, height, z = 0.083 }: { text: string; font: SunlightTextFont; width: number; height: number; z?: number }) {
   const texture = useSunlightTextTexture(text, font);
+  const fadeMaterial = usePrintFadeIn();
   if (!texture) {
     return (
       <mesh position={[0, 0, z]}>
@@ -634,7 +655,7 @@ function SunlightTextPrint({ text, font, width, height, z = 0.083 }: { text: str
   return (
     <mesh position={[0, 0, z]}>
       <planeGeometry args={[width, height]} />
-      <meshBasicMaterial map={texture} />
+      <meshBasicMaterial ref={fadeMaterial} map={texture} transparent opacity={0} />
     </mesh>
   );
 }
@@ -1083,6 +1104,10 @@ function ArtworkFrame({
   editable,
   onDragStart,
   onHoverChange,
+  // True for the artwork just added: it fades in instead of popping
+  // onto the wall. Only the new artwork fades — every other artwork
+  // renders exactly as before.
+  appearing,
 }: {
   artwork: Artwork;
   selected: boolean;
@@ -1095,9 +1120,56 @@ function ArtworkFrame({
   editable?: boolean;
   onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
   onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
+  appearing?: boolean;
 }) {
   const [x, y, z] = artwork.position;
   const { width, height } = artworkSize(artwork);
+  // Fade-in for a newly added artwork (appearing): the frame and the
+  // placeholder print are the loading feedback — they dissolve in
+  // over ~0.6 s instead of popping onto the wall, and the photo
+  // dissolves in over the placeholder once its texture loads
+  // (usePrintFadeIn). The snapshot below is taken once, at mount:
+  // only the materials that exist then are faded, each from its own
+  // base opacity back to it — a texture that arrives mid-fade mounts
+  // its own mesh, untouched by this ramp, so the two fades never
+  // fight over one material. Once done the flags are restored, so
+  // the finished work renders exactly as before.
+  type AppearMaterial = { material: { opacity: number; transparent: boolean }; opacity: number; transparent: boolean };
+  const groupRef = useRef<Group>(null);
+  const appearDone = useRef(!appearing);
+  const appearProgress = useRef(0);
+  const appearMaterials = useRef<AppearMaterial[] | null>(null);
+  useEffect(() => {
+    if (!appearing || !groupRef.current) return;
+    const found: AppearMaterial[] = [];
+    groupRef.current.traverse((child) => {
+      const mesh = child as Mesh;
+      const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+      for (const material of materials) {
+        const fadeable = material as unknown as { opacity: number; transparent: boolean };
+        if (typeof fadeable.opacity !== "number") continue;
+        found.push({ material: fadeable, opacity: fadeable.opacity, transparent: fadeable.transparent });
+        fadeable.transparent = true;
+        fadeable.opacity = 0;
+      }
+    });
+    appearMaterials.current = found;
+    appearProgress.current = 0;
+    appearDone.current = false;
+  }, [appearing]);
+  useFrame((_, delta) => {
+    if (!appearing || appearDone.current || !appearMaterials.current) return;
+    appearProgress.current = Math.min(1, appearProgress.current + delta / 0.6);
+    const eased = 1 - Math.pow(1 - appearProgress.current, 3);
+    for (const entry of appearMaterials.current) entry.material.opacity = entry.opacity * eased;
+    if (appearProgress.current >= 1) {
+      for (const entry of appearMaterials.current) {
+        entry.material.opacity = entry.opacity;
+        entry.material.transparent = entry.transparent;
+      }
+      appearDone.current = true;
+    }
+  });
   // Unified mode (the reference file): artworks stay interactive while
   // walking — there is no separate walk mode that turns them off.
   const interactive = editable;
@@ -1119,6 +1191,7 @@ function ArtworkFrame({
   const frameOuter = frameOuterSize(artwork);
   return (
     <group
+      ref={groupRef}
       position={[x, y, z]}
       rotation={[0, artwork.rotation, 0]}
       scale={artwork.scale}
@@ -2688,6 +2761,7 @@ function SunlightRoom({
   showMeasure,
   quality,
   hideCeiling,
+  appearingId,
 }: {
   room: GalleryRoom;
   offsetX: number;
@@ -2718,6 +2792,9 @@ function SunlightRoom({
   // assembly is hidden so the room reads from above. The persistent
   // room.ceilingHidden (the "Hide ceiling" checkbox) does the same.
   hideCeiling?: boolean;
+  // The artwork just added (the editor's appearingId): it fades in
+  // instead of popping onto the wall.
+  appearingId?: string | null;
 }) {
   const textures = useMemo(() => getSunlightTextures(), []);
   // Floor pattern (Claude's fpat): a procedural parquet, herringbone
@@ -3014,6 +3091,7 @@ function SunlightRoom({
           editable={editable}
           onDragStart={onDragStart}
           onHoverChange={onHoverChange}
+          appearing={artwork.id === appearingId}
         />
       ))}
       {/* Placeable 3D elements — the Asset Library, unchanged. */}
@@ -3096,6 +3174,7 @@ function GenericRoom({
   showGrid,
   showMeasure,
   quality,
+  appearingId,
 }: {
   room: GalleryRoom;
   offsetX: number;
@@ -3128,6 +3207,9 @@ function GenericRoom({
   // generic shell is a closed box whose ceiling is part of its fixed
   // geometry, so the view height is clamped under it instead.
   hideCeiling?: boolean;
+  // The artwork just added (the editor's appearingId): it fades in
+  // instead of popping onto the wall.
+  appearingId?: string | null;
 }) {
   const layout = roomLayouts[room.layout];
   const def = galleryDef(room.layout);
@@ -3227,6 +3309,7 @@ function GenericRoom({
           editable={editable}
           onDragStart={onDragStart}
           onHoverChange={onHoverChange}
+          appearing={artwork.id === appearingId}
         />
       ))}
       {/* Placeable 3D elements — the Asset Library, unchanged. */}
@@ -3451,6 +3534,10 @@ function SunlightWalkControls({
       // lastX/lastY are still updated so the look does not jump when
       // the drag ends.
       if (!dragActive?.current) {
+        // A manual look takes over from any gentle turn in progress
+        // (a newly added artwork's look-at): the visitor's pointer
+        // always wins over the automatic turn.
+        if (event.clientX !== lastX || event.clientY !== lastY) lookYaw.current = null;
         yawRef.current -= (event.clientX - lastX) * 0.004;
         pitchRef.current = MathUtils.clamp(pitchRef.current - (event.clientY - lastY) * 0.004, -1.2, 1.2);
       }
@@ -3504,9 +3591,11 @@ function SunlightWalkControls({
     const keys = input.current;
     const fw = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
     const st = Number(keys.has("KeyD")) - Number(keys.has("KeyA"));
-    // Arrow keys turn the view (the source's navigation).
-    if (keys.has("ArrowLeft")) yawRef.current += delta * 1.5;
-    if (keys.has("ArrowRight")) yawRef.current -= delta * 1.5;
+    // Arrow keys turn the view (the source's navigation) — and take
+    // over from any gentle turn in progress (a newly added artwork's
+    // look-at), like the pointer look above.
+    if (keys.has("ArrowLeft")) { lookYaw.current = null; yawRef.current += delta * 1.5; }
+    if (keys.has("ArrowRight")) { lookYaw.current = null; yawRef.current -= delta * 1.5; }
     const roomIndex = currentRoomIndex.current;
     const ox = offsets[roomIndex];
     const oz = zOffsetOf(roomIndex);
@@ -3601,11 +3690,22 @@ function SunlightWalkControls({
         velRef.current.z = 0;
       }
     }
-    if (destActive && lookYaw.current !== null) {
+    // The look target eases in place, not only while walking to a
+    // destination: a newly added artwork's turn has no destination
+    // (the camera stays where it is), and under the old
+    // `destActive &&` guard it never happened at all. Same gentle
+    // speed as the teleport's turn (2.5 rad/s); it clears itself
+    // once reached, and any manual look, walk key or view preset
+    // clears it sooner.
+    if (lookYaw.current !== null) {
       const step = Math.min(delta, 0.05) * 2.5;
       let diff = lookYaw.current - yawRef.current;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      yawRef.current += MathUtils.clamp(diff, -step, step);
+      if (Math.abs(diff) < 0.01) {
+        lookYaw.current = null;
+      } else {
+        yawRef.current += MathUtils.clamp(diff, -step, step);
+      }
     }
     camera.rotation.set(pitchRef.current, yawRef.current, 0, "YXZ");
     // Final guard: the camera can never leave the room, whatever moved
@@ -3996,6 +4096,8 @@ export default function GalleryScene({
   quality: controlledQuality,
   onQualityChange,
   viewRequest,
+  lookAtRequest,
+  appearingId,
   bare,
 }: {
   artworks: Artwork[];
@@ -4061,6 +4163,16 @@ export default function GalleryScene({
   // Editor only: a camera view preset requested by the View buttons
   // (Eye / Wide / High / Plan) — the nonce changes on every click.
   viewRequest?: { nonce: number; view: CameraViewPreset } | null;
+  // Editor only: turn the camera gently toward a newly added artwork
+  // (placeOnCameraWall's turnYaw) — the nonce changes on every
+  // request, so the same yaw can be re-applied. The walk controls
+  // ease the yaw toward it and clear it on any manual look or walk
+  // input, so the visitor stays in charge of the view.
+  lookAtRequest?: { nonce: number; yaw: number } | null;
+  // Editor only: the artwork just added — it fades in (frame +
+  // placeholder first, the photo fading in once its texture loads)
+  // instead of popping onto the wall.
+  appearingId?: string | null;
   // Bare render (the gallery capture page): no quality toggle, no sun
   // slider — just the room, so a screenshot is a clean entrance view.
   bare?: boolean;
@@ -4080,6 +4192,19 @@ export default function GalleryScene({
   const destination = useRef<Vector3 | null>(null);
   const lookYaw = useRef<number | null>(null);
   const dragged = useRef(false);
+  // Gentle turn toward a newly added artwork (the editor's
+  // lookAtRequest): the walk controls ease the yaw toward it in
+  // place, at the teleport's turn speed. The nonce guard keeps a
+  // re-render from replaying the same request; a view preset or any
+  // manual look clears it (the walk controls own that), and this
+  // effect runs after theirs on the same commit, so a look-at that
+  // arrives together with an eye-level request still lands.
+  const lastLookAtNonce = useRef<number | null>(null);
+  useEffect(() => {
+    if (!lookAtRequest || lookAtRequest.nonce === lastLookAtNonce.current) return;
+    lastLookAtNonce.current = lookAtRequest.nonce;
+    lookYaw.current = lookAtRequest.yaw;
+  }, [lookAtRequest]);
   // True while an artwork or element is being dragged (set by the
   // drag handlers, cleared on pointerup): the walk controls skip the
   // look rotation while it is true, so the pointer moves the piece,
@@ -4399,6 +4524,7 @@ export default function GalleryScene({
       showGrid={showGrid}
       showMeasure={showMeasure}
       hideCeiling={hideCeiling}
+      appearingId={appearingId}
       onFloorClick={walkMode ? (point) => {
         // Clamp the walk target to the active room's walkable bounds:
         // a click on a wall (or outside the room) is brought back

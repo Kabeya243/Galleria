@@ -27,11 +27,11 @@ const MAX_ALT = 500;
 const MAX_DESCRIPTION = 2000;
 
 // Same artwork URL shapes the save validator accepts (see
-// lib/validation.ts): same-origin R2 / uploads / portfolio / bundled
-// placeholders. Anything else is refused, so this route cannot be used
-// to fetch an arbitrary URL (no SSRF).
+// lib/validation.ts): same-origin R2 / uploads / portfolio. Anything
+// else is refused, so this route cannot be used to fetch an arbitrary
+// URL (no SSRF).
 const ALLOWED_IMAGE_URL =
-  /^\/(?:api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif))|artworks\/stone-gallery\/[a-z0-9-]+\.(?:jpg|jpeg|webp))$/i;
+  /^\/(?:api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif)))$/i;
 
 export async function GET() {
   return NextResponse.json({ available: Boolean(process.env.GEMINI_API_KEY) });

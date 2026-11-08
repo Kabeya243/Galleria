@@ -41,7 +41,7 @@ export const SUNLIGHT_HOLES: [number, number, number, number, "d" | "s"][] = [
 ];
 
 // Freestanding panels: [x, z, rotation (yaw), length]. 4.4 m high,
-// 0.3 m thick. Artworks hang on them (see seedSunlightArtworks).
+// 0.3 m thick. Artworks hang on them.
 export const SUNLIGHT_PANELS: { x: number; z: number; ry: number; len: number }[] = [
   { x: -3, z: -4, ry: 0.8, len: 7.5 },
   { x: -7.5, z: -9, ry: 0.4, len: 6 },

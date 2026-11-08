@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getCurrentUser, toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createGalleryRoom, ROOM_MODELS, roomModelLayout } from "@/lib/rooms";
-import { seedTemplateArtworks } from "@/lib/template-artworks";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -57,7 +56,7 @@ export async function POST(request: Request) {
   // alternative to fall back to.
   const layout = roomModelLayout(parsed.data.model ?? "sunlight");
 
-  const room = { ...createGalleryRoom(0, layout), templateArtSeeded: true };
+  const room = createGalleryRoom(0, layout);
   const rooms = [room];
   const exhibition = await db.exhibition.create({
     data: {
@@ -65,15 +64,9 @@ export async function POST(request: Request) {
       slug: randomUUID(),
       ownerId: user.id,
       rooms: JSON.stringify(rooms),
-      // Every gallery ships with its template artworks pre-placed as
-      // normal artworks (lib/template-artworks.ts), so the room looks
-      // like the reference on opening — and each one can be edited,
-      // re-imaged, moved, resized or deleted in the editor like any
-      // artwork the owner adds by hand. (Sunlight's four were the
-      // first; the other galleries' paintings used to belong to the
-      // shell, which the editor could not touch.) A layout with no
-      // template artworks seeds none.
-      artworks: { create: seedTemplateArtworks(layout, room.id) },
+      // A new exhibition opens with an empty room: no template or
+      // placeholder artworks are seeded. The owner hangs their own
+      // works (or composes a wall) in the editor.
     },
   });
   return NextResponse.json({ exhibition }, { status: 201 });

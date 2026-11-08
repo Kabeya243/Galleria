@@ -782,11 +782,6 @@ export const galleryRoomSchema = z.object({
   // spotlights). Separate from the Asset Library `elements` above:
   // both systems coexist. Saved with the room, restored on load.
   sunlightElements: z.array(sunlightElementSchema).max(24).default([]),
-  // The room's template artworks have been seeded as real artworks
-  // (lib/template-artworks.ts): the shell then hides its baked
-  // paintings so they never show twice. False for rooms created
-  // before seeding existed — the editor seeds them once on load.
-  templateArtSeeded: z.boolean().default(false),
 });
 
 export type GalleryRoom = z.infer<typeof galleryRoomSchema>;
@@ -868,7 +863,6 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "sunlight"): G
       wallPaint: {},
       elements: [],
       sunlightElements: [],
-      templateArtSeeded: false,
     },
     layout,
   );
@@ -884,82 +878,6 @@ export function createGalleryRoom(index = 0, layout: RoomLayout = "sunlight"): G
   };
 }
 
-// The four placeholder artworks of the Sunlight Gallery demo, pre-placed
-// when an exhibition is created from the sunlight model — as NORMAL
-// artworks (real Artwork rows), so the editor can select each one,
-// change its title, replace its image, move/resize it or delete it.
-// They hang on the three freestanding panels, at the reference room's
-// own positions: P1 (-3,-4, rot .8) takes two works, P2 (-7.5,-9,
-// rot .4) one, P3 (5,-8.5, rot -.65) one. Positions are room-local
-// (x, y, z) with rotation = the panel's yaw; each work sits 0.1 m off
-// its panel face (local z = 0.25) so the wood frame clears the panel,
-// like the Stone Gallery's 0.1 m stand-off. The images are the bundled
-// procedural placeholders (public/artworks/stone-gallery/*.jpg); the
-// editor allows those bundled paths to be saved (see isAllowedImageUrl).
-// The placeholder description says plainly that the work is a
-// placeholder to replace.
-export function seedSunlightArtworks(roomId: string) {
-  const placeholder = "Placeholder artwork from the Sunlight Gallery template — replace it with your own work.";
-  const base = {
-    artist: "",
-    year: "",
-    medium: "Mixed media",
-    description: placeholder,
-    scale: 1,
-    frame: "wood",
-    roomId,
-  };
-  return [
-    {
-      ...base,
-      title: "Sunlight Collage",
-      dimensions: "240 × 240 cm",
-      color: "#cdb78f",
-      accent: "#4a2f22",
-      positionX: -2.612,
-      positionY: 2,
-      positionZ: -4.041,
-      rotation: 0.8,
-      imageUrl: "/artworks/stone-gallery/collage.jpg",
-    },
-    {
-      ...base,
-      title: "Sunlight Field I",
-      dimensions: "150 × 190 cm",
-      color: "#d9a23a",
-      accent: "#b4361f",
-      positionX: -4.632,
-      positionY: 1.9,
-      positionZ: -1.961,
-      rotation: 0.8,
-      imageUrl: "/artworks/stone-gallery/vivid.jpg",
-    },
-    {
-      ...base,
-      title: "Sunlight Field II",
-      dimensions: "160 × 200 cm",
-      color: "#d9a23a",
-      accent: "#b4361f",
-      positionX: -7.403,
-      positionY: 1.9,
-      positionZ: -8.77,
-      rotation: 0.4,
-      imageUrl: "/artworks/stone-gallery/red.jpg",
-    },
-    {
-      ...base,
-      title: "Sunlight Field III",
-      dimensions: "220 × 220 cm",
-      color: "#8b1c14",
-      accent: "#d8581e",
-      positionX: 4.849,
-      positionY: 1.9,
-      positionZ: -8.301,
-      rotation: -0.65,
-      imageUrl: "/artworks/stone-gallery/collage.jpg",
-    },
-  ];
-}
 
 // Layouts retired in November 2026, kept as a migration so exhibitions
 // saved with the old shapes still open instead of failing validation.

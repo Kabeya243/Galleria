@@ -54,7 +54,6 @@ import { composeWall, dominantFamilyOf, wallFaceLabel, type ComposeItem } from "
 import type { ArtworkCaption, CaptionSource, CaptionStatus } from "@/lib/caption";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
-import { seedTemplateArtworks, TEMPLATE_ART_DESCRIPTION, templateArtworkCount, type TemplateArtworkSeed } from "@/lib/template-artworks";
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
 import { useLocale } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
@@ -408,27 +407,13 @@ export default function Editor({
         }
         if (!response.ok) throw new Error(result.error ?? "Could not load this exhibition.");
         if (!active) return;
-        // Rooms created before template seeding: seed their template
-        // artworks once, as real artworks, and mark them seeded — the
-        // shell then stops showing the baked paintings. It lives in
-        // local state until the next save (autosave picks it up); a
-        // room the owner already seeded, or with no template artworks,
-        // is left alone, so deleted seeds never come back.
         const loadedRooms = result.exhibition.rooms as GalleryRoom[];
         const loadedArtworks = result.exhibition.artworks as LayerArtwork[];
-        let seededOnLoad = false;
-        const migratedArtworks = [...loadedArtworks];
-        const migratedRooms = loadedRooms.map((room) => {
-          if (room.templateArtSeeded === true || templateArtworkCount(room.layout) === 0) return room;
-          seededOnLoad = true;
-          migratedArtworks.push(...seedTemplateArtworks(room.layout, room.id).map(templateSeedToArtwork));
-          return { ...room, templateArtSeeded: true };
-        });
-        setArtworks(migratedArtworks);
-        setRooms(migratedRooms);
+        setArtworks(loadedArtworks);
+        setRooms(loadedRooms);
         setActiveRoomId(result.exhibition.rooms[0]?.id ?? "");
         historyRef.current = { past: [], future: [] };
-        setSelectedId(migratedArtworks.find((artwork: Artwork) => artwork.roomId === result.exhibition.rooms[0]?.id)?.id);
+        setSelectedId(loadedArtworks.find((artwork: Artwork) => artwork.roomId === result.exhibition.rooms[0]?.id)?.id);
         setTitle(result.exhibition.title);
         setDescription(result.exhibition.description);
         setSlug(result.exhibition.slug);
@@ -440,7 +425,7 @@ export default function Editor({
         ) {
           setVisibility(result.exhibition.visibility);
         }
-        setSaved(!seededOnLoad);
+        setSaved(true);
         setMultiSelected([]);
         // Artwork layer state (hidden / locked / group) has no columns
         // in the artwork table, so it is not in the main save — it comes
@@ -1895,9 +1880,6 @@ export default function Editor({
     // lib/validation.ts: a URL the server rejects must not pass here,
     // and a URL the server accepts must not be blocked here.
     if (/^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif))$/i.test(url)) return true;
-    // Bundled placeholder artworks (Stone Gallery template): static
-    // images shipped with the app, so they are always there to load.
-    if (/^\/artworks\/stone-gallery\/[a-z0-9-]+\.(?:jpg|jpeg|webp)$/i.test(url)) return true;
     // New R2 uploads: a public URL under the configured R2 base. The base
     // is a public CDN address, so it is exposed to the browser as well.
     const r2Base = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? "").replace(/\/$/, "");
@@ -2651,59 +2633,22 @@ async function compressImage(file: File): Promise<File> {
     }));
   }
 
-  // Template artworks (lib/template-artworks.ts): a seed becomes a
-  // client artwork with a fresh id and a position tuple. The save
-  // replaces the whole artwork list, so the id is what the PUT keeps.
-  function templateSeedToArtwork(seed: TemplateArtworkSeed): LayerArtwork {
-    return {
-      id: crypto.randomUUID(),
-      title: seed.title,
-      artist: seed.artist,
-      year: seed.year,
-      medium: seed.medium,
-      dimensions: seed.dimensions,
-      description: seed.description,
-      color: seed.color,
-      accent: seed.accent,
-      position: [seed.positionX, seed.positionY, seed.positionZ],
-      rotation: seed.rotation,
-      scale: seed.scale,
-      frame: seed.frame,
-      imageUrl: seed.imageUrl,
-      roomId: seed.roomId,
-    };
-  }
-
-  // Swap a seeded room's template artworks for a new layout's: the
-  // old seeds leave with the old layout, the new ones arrive as real
-  // artworks. updateRoom runs first — its layout-change
-  // repositioning moves every artwork to the back wall, and the new
-  // seeds already sit right for the new room, so they are added
-  // after it. An unseeded room keeps showing the new layout's baked
-  // paintings (the shell handles it), so nothing is seeded.
+  // Switching a room's layout keeps the owner's artworks (updateRoom's
+  // layout-change repositioning moves them to the back wall); nothing
+  // is seeded — the new layout opens with bare walls.
   function changeRoomLayout(roomId: string, layout: RoomLayout) {
     const room = rooms.find((item) => item.id === roomId);
     if (!room) return;
     snapshot();
-    const wasSeeded = room.templateArtSeeded === true;
     updateRoom(roomId, (current) => applyLayoutPreset(current, layout));
-    if (wasSeeded) {
-      setArtworks((current) => [
-        ...current.filter((artwork) => !(artwork.roomId === roomId && artwork.description === TEMPLATE_ART_DESCRIPTION)),
-        ...seedTemplateArtworks(layout, roomId).map(templateSeedToArtwork),
-      ]);
-    }
   }
 
   function addRoom() {
     if (rooms.length >= 12) return;
-    const room = { ...createGalleryRoom(rooms.length), templateArtSeeded: true };
+    const room = createGalleryRoom(rooms.length);
     snapshot();
     setRooms((current) => [...current, room]);
-    // The new room's template artworks arrive as real artworks, so
-    // they are editable and deletable from the start.
-    const seeds = seedTemplateArtworks(room.layout, room.id);
-    if (seeds.length > 0) setArtworks((current) => [...current, ...seeds.map(templateSeedToArtwork)]);
+    // A new room opens empty: no template artworks are seeded.
     setActiveRoomId(room.id);
     setSelectedId(undefined);
     setMultiSelected([]);

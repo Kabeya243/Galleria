@@ -1,14 +1,13 @@
 // Creates a DRAFT test exhibition on SANAA:
-// "We Are Enough As We Are" — the Sunlight Gallery with its four
-// seeded demo artworks (the bundled placeholders, NOT Kabeya's real
-// works and NOT the sold works).
+// "We Are Enough As We Are" — one empty Sunlight Gallery room. No
+// artworks are seeded: fictitious/placeholder works were removed from
+// gallery designs (Chantier 6), so a test room opens with bare walls
+// and the owner hangs real works in the editor.
 //
 // WHAT IT CREATES (and nothing else)
 //   - 1 exhibition, status "draft" (never published), slug
 //     we-are-enough-as-we-are-test
-//   - 1 Sunlight room (22 × 26 m, the only template)
-//   - 4 Artwork rows (the Sunlight template's demo works, on the
-//     three freestanding panels, with the bundled placeholder images)
+//   - 1 Sunlight room (22 × 26 m, the only template), no artworks
 //   - Draft URL (owner only): https://galleria-bice.vercel.app/editor/<id>
 //
 // RUN IT (from ~/workspace/galleria, against the PRODUCTION database):
@@ -71,77 +70,6 @@ const rooms = [
   },
 ];
 
-// The Sunlight template's four demo artworks (seedSunlightArtworks in
-// lib/rooms.ts): placeholder images only, on the three freestanding
-// panels. Real Artwork rows, so the editor can select, re-image,
-// move or delete each one.
-const placeholder =
-  "Placeholder artwork from the Sunlight Gallery template — replace it with your own work.";
-const artworks = [
-  {
-    title: "Sunlight Collage",
-    dimensions: "240 × 240 cm",
-    color: "#cdb78f",
-    accent: "#4a2f22",
-    positionX: -2.612,
-    positionY: 2,
-    positionZ: -4.041,
-    rotation: 0.8,
-    imageUrl: "/artworks/stone-gallery/collage.jpg",
-  },
-  {
-    title: "Sunlight Field I",
-    dimensions: "150 × 190 cm",
-    color: "#d9a23a",
-    accent: "#b4361f",
-    positionX: -4.632,
-    positionY: 1.9,
-    positionZ: -1.961,
-    rotation: 0.8,
-    imageUrl: "/artworks/stone-gallery/vivid.jpg",
-  },
-  {
-    title: "Sunlight Field II",
-    dimensions: "160 × 200 cm",
-    color: "#d9a23a",
-    accent: "#b4361f",
-    positionX: -7.403,
-    positionY: 1.9,
-    positionZ: -8.77,
-    rotation: 0.4,
-    imageUrl: "/artworks/stone-gallery/red.jpg",
-  },
-  {
-    title: "Sunlight Field III",
-    dimensions: "220 × 220 cm",
-    color: "#8b1c14",
-    accent: "#d8581e",
-    positionX: 4.849,
-    positionY: 1.9,
-    positionZ: -8.301,
-    rotation: -0.65,
-    imageUrl: "/artworks/stone-gallery/collage.jpg",
-  },
-].map((work) => ({
-  id: randomUUID(),
-  title: work.title,
-  artist: "",
-  year: "",
-  medium: "Mixed media",
-  dimensions: work.dimensions,
-  description: placeholder,
-  color: work.color,
-  accent: work.accent,
-  positionX: work.positionX,
-  positionY: work.positionY,
-  positionZ: work.positionZ,
-  rotation: work.rotation,
-  scale: 1,
-  frame: "wood",
-  imageUrl: work.imageUrl,
-  roomId,
-}));
-
 async function seedSunlightTest() {
   const owner = await db.user.findUnique({ where: { email: ownerEmail } });
   if (!owner) {
@@ -177,18 +105,17 @@ async function seedSunlightTest() {
       title: TITLE,
       slug: SLUG,
       description:
-        "Test exhibition for the Sunlight Gallery — four placeholder artworks on the freestanding panels. Draft only.",
+        "Test exhibition for the Sunlight Gallery — empty room, no artworks. Draft only.",
       status: "draft",
       roomColor: rooms[0].wallColor,
       rooms: JSON.stringify(rooms),
       ownerId: owner.id,
-      artworks: { create: artworks },
     },
     select: { id: true },
   });
 
   console.log(
-    `\nCreated draft test exhibition "${TITLE}" (${exhibition.id}) with 1 Sunlight room and ${artworks.length} placeholder artworks.` +
+    `\nCreated draft test exhibition "${TITLE}" (${exhibition.id}) with 1 empty Sunlight room (no artworks).` +
       `\nDraft URL (owner only): ${SITE_URL}/editor/${exhibition.id}` +
       `\nStatus: draft — nothing was published.`,
   );

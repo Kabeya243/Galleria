@@ -9,7 +9,8 @@
 //       type, blocks and hangable wall faces;
 //   (b) opening an exhibition: a room of that layout round-trips
 //       through parseGalleryRooms (the Exhibition.rooms JSON path) and
-//       its seeded template artworks sit ON a wall;
+//       opens empty — no template artworks are seeded any more
+//       (Chantier 6: fictitious/placeholder works removed);
 //   (c) hanging: the real Compose wall logic (lib/compose-wall.ts) on
 //       the room's back wall (or longest wall) with 3 real-size works
 //       (The Nose Ring 1.30×0.94, The Boy with Gold Jewelry 1.20×0.89,
@@ -39,7 +40,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const STAGING = join(ROOT, "scripts", ".exh-staging");
-const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "template-artworks"];
+const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette"];
 
 const checks = [];
 function check(room, id, name, fn) {
@@ -75,14 +76,12 @@ try {
   const sunEl = await import(pathToFileURL(join(STAGING, "sunlight-elements.ts")).href);
   const compose = await import(pathToFileURL(join(STAGING, "compose-wall.ts")).href);
   const rooms = await import(pathToFileURL(join(STAGING, "rooms.ts")).href);
-  const seeds = await import(pathToFileURL(join(STAGING, "template-artworks.ts")).href);
 
   const { galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, galleryPlaceOnWall, galleryCameraStart } = defs;
   const { SUNLIGHT_BOUNDS, SUNLIGHT_WALK_SPEED, SUNLIGHT_CAMERA_START, SUNLIGHT_BLOCKS, sunlightHitWith } = sun;
   const { sunlightHangWalls, sunlightWallHit, sunlightWallsForPosition, rotationMatches } = sunEl;
   const { composeWall, COMPOSE_EYE_LEVEL_M, COMPOSE_GAP_M } = compose;
   const { roomLayouts, createGalleryRoom, parseGalleryRooms, roomPlanOffsets } = rooms;
-  const { seedTemplateArtworks, templateArtworkCount } = seeds;
 
   const LAYOUTS = Object.keys(roomLayouts);
   const LIGHT_TYPES = new Set(["sunlight", "spot-warm", "spot-cool", "ambient", "stone-warm"]);
@@ -305,33 +304,14 @@ try {
       return `${hangWalls.length} wall faces, ${blocks.length} blocks, ${((bounds.maxX - bounds.minX) * (bounds.maxZ - bounds.minZ)).toFixed(0)} m² walkable, speed ${walkSpeed} m/s, light ${preset.lightType}`;
     });
 
-    check(layout, "exhibition-open", "Exhibition opens: room round-trips via parseGalleryRooms, seeds on walls", () => {
+    check(layout, "exhibition-open", "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded", () => {
       const room = createGalleryRoom(0, layout);
       const parsed = parseGalleryRooms(JSON.stringify([room]));
       assert(parsed.length === 1 && parsed[0].layout === layout, `parseGalleryRooms lost the layout (got ${parsed[0]?.layout})`);
-      const count = templateArtworkCount(layout);
-      const seeded = seedTemplateArtworks(layout, "room-main");
-      assert(seeded.length === count, `seed count ${seeded.length} != templateArtworkCount ${count}`);
-      const failures = [];
-      for (const art of seeded) {
-        const pos = { x: art.positionX, y: art.positionY, z: art.positionZ };
-        const walls = wallsForPosition(layout, pos);
-        const m = /(\d+(?:\.\d+)?) × (\d+(?:\.\d+)?) cm/.exec(art.dimensions);
-        const w = m ? Number(m[1]) / 100 : 0;
-        const onWall = walls.find((wall) => {
-          const face = hangWalls.find((f) => f.id === wall.key);
-          if (!face) return false;
-          const along = (pos.x - face.cx) * face.ax + (pos.z - face.cz) * face.az;
-          return Math.abs(along) + w / 2 <= face.halfLen + 0.05 && rotationMatches(wall.rotation, art.rotation, 0.13);
-        });
-        if (!onWall) {
-          failures.push(`${art.title} at (${art.positionX}, ${art.positionY}, ${art.positionZ}) ry ${art.rotation} — no matching wall (walls near: ${walls.map((x) => x.key).join(", ") || "none"})`);
-        }
-      }
-      assert(failures.length === 0, `seeded artworks NOT on a wall:\n  - ${failures.join("\n  - ")}`);
-      return count === 0
-        ? "no seeded template artworks (by design — fixed photo-wall or no baked paintings)"
-        : `${count} seeded artworks, all on a wall with matching rotation`;
+      assert(!("templateArtSeeded" in parsed[0]), "room still carries the templateArtSeeded flag");
+      assert(!existsSync(join(ROOT, "lib", "template-artworks.ts")), "lib/template-artworks.ts still exists");
+      assert(!readFileSync(join(ROOT, "lib", "rooms.ts"), "utf8").includes("seedSunlightArtworks"), "seedSunlightArtworks still exists in lib/rooms.ts");
+      return "room opens empty — no seeded template artworks (removed Chantier 6)";
     });
 
     check(layout, "compose-3", "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)", () => {

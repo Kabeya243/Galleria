@@ -167,78 +167,8 @@ function jit(geo: BufferGeometry, amount: number): BufferGeometry {
   return geo;
 }
 
-// ---- Procedural paintings (the sources' generators) --------------------
-// Deux galeries: the abstract `paint` generator and its six palettes.
-function deuxPaint(
-  w: number,
-  h: number,
-  o: { base: string; cols: string[]; n: number; r: number; s: number; ink: string; k: number },
-): CanvasTexture {
-  return gTex(w, h, (g) => {
-    g.fillStyle = o.base;
-    g.fillRect(0, 0, w, h);
-    g.lineCap = "round";
-    g.lineJoin = "round";
-    for (const c of o.cols)
-      for (let i = 0; i < o.n; i++) {
-        g.globalAlpha = R(0.2, 0.7);
-        g.fillStyle = c;
-        g.beginPath();
-        g.ellipse(R(0, w), R(0, h), R(15, o.r), R(10, o.r * 0.8), R(0, 3), 0, 7);
-        g.fill();
-      }
-    for (const c of o.cols)
-      for (let i = 0; i < o.s; i++) {
-        g.globalAlpha = R(0.35, 0.9);
-        g.strokeStyle = c;
-        g.lineWidth = R(4, 26);
-        const x = R(0, w);
-        const y = R(0, h);
-        g.beginPath();
-        g.moveTo(x, y);
-        g.quadraticCurveTo(x + R(-140, 140), y + R(-140, 140), x + R(-180, 180), y + R(-180, 180));
-        g.stroke();
-      }
-    g.globalAlpha = 0.9;
-    g.strokeStyle = o.ink;
-    for (let k = 0; k < o.k; k++) {
-      const cx = R(0, w);
-      const cy = R(0, h);
-      g.lineWidth = R(2, 9);
-      g.beginPath();
-      g.moveTo(cx, cy);
-      for (let i = 0; i < 7; i++) g.lineTo(cx + R(-90, 90), cy + R(-90, 90));
-      g.stroke();
-    }
-    g.strokeStyle = "#fff";
-    for (let i = 0; i < 160; i++) {
-      g.globalAlpha = R(0.05, 0.22);
-      g.lineWidth = R(1, 3);
-      const x = R(0, w);
-      const y = R(0, h);
-      g.beginPath();
-      g.moveTo(x, y);
-      g.lineTo(x + R(-60, 60), y + R(-60, 60));
-      g.stroke();
-    }
-    g.globalAlpha = 1;
-  });
-}
 
-// The six Deux_galeries paintings (Vitrine + Loft Béton), exported so
-// the template-art renderer can freeze one variant of each as a file
-// (public/artworks/template/): seeded template artworks hang the
-// frozen image instead of the live procedural texture.
-export const DEUX_ART = {
-  yellow: () => deuxPaint(640, 560, { base: "#e6c765", cols: ["#f1dc92", "#c9a54a", "#9bb8d9", "#e8ddc4"], n: 30, r: 90, s: 18, ink: "#15110f", k: 4 }),
-  tall: () => deuxPaint(420, 680, { base: "#2a3b88", cols: ["#d8321e", "#f2b231", "#2c6fb0", "#7a1f4a", "#f0e4c8"], n: 40, r: 80, s: 42, ink: "#1a0f12", k: 3 }),
-  pink: () => deuxPaint(640, 520, { base: "#cfd6f0", cols: ["#e86aa0", "#2a58b8", "#f4d36a", "#162a6a", "#9ad0c8"], n: 30, r: 100, s: 28, ink: "#1c1a2a", k: 5 }),
-  dark: () => deuxPaint(480, 600, { base: "#2a1638", cols: ["#5a2a6a", "#c8662a", "#e8d4b0", "#1a2a6a"], n: 35, r: 90, s: 22, ink: "#0c0810", k: 3 }),
-  orange: () => deuxPaint(420, 520, { base: "#d85a28", cols: ["#2a3a7a", "#f0b030", "#7a1a2a", "#f4e6c4"], n: 25, r: 70, s: 26, ink: "#140c0c", k: 3 }),
-  blk: () => deuxPaint(640, 520, { base: "#f0d060", cols: ["#f4a8c0", "#d8c890", "#f6efe0", "#a0b8e0"], n: 25, r: 80, s: 20, ink: "#0c0a0a", k: 12 }),
-} as const;
 
-type DeuxArtKind = keyof typeof DEUX_ART;
 
 // Deux galeries: the mottled concrete generator.
 function deuxConcrete(sz: number, base: string, dk: string, rep?: [number, number], seams = false): CanvasTexture {
@@ -292,164 +222,6 @@ function deuxConcrete(sz: number, base: string, dk: string, rep?: [number, numbe
   );
 }
 
-// Trois galeries: the painting generator (sea, view, folk, face,
-// fields, geo, tri, grid, and the dark fallback).
-function troisPaint(kind: string, w = 256, h = 256): CanvasTexture {
-  return gTex(w, h, (g) => {
-    const pick = <T,>(a: T[]): T => a[(Math.random() * a.length) | 0];
-    g.lineCap = "round";
-    if (kind === "sea" || kind === "tiny") {
-      const pa = pick([
-        ["#cfe3f0", "#f6efe0"],
-        ["#d8e6f2", "#fff8ea"],
-        ["#b9d2e8", "#f1e7d4"],
-        ["#e3d6c4", "#9fc0d8"],
-      ]);
-      const gr = g.createLinearGradient(0, 0, 0, h);
-      gr.addColorStop(0, pa[0]);
-      gr.addColorStop(1, pa[1]);
-      g.fillStyle = gr;
-      g.fillRect(0, 0, w, h);
-      for (let i = 0; i < 60; i++) {
-        g.strokeStyle = `rgba(${Math.random() < 0.5 ? "255,255,255" : "120,150,180"},${R(0.1, 0.35)})`;
-        g.lineWidth = R(3, 14);
-        const y = R(0, h);
-        g.beginPath();
-        g.moveTo(R(0, w / 2), y);
-        g.lineTo(R(w / 2, w), y + R(-10, 10));
-        g.stroke();
-      }
-      if (kind === "tiny") {
-        g.fillStyle = pick(["#2a6f9a", "#d9893a", "#7a9a5a"]);
-        g.fillRect(0, h * 0.62, w, h * 0.38);
-      }
-    } else if (kind === "view") {
-      const gr = g.createLinearGradient(0, 0, 0, h * 0.6);
-      gr.addColorStop(0, "#c9dcec");
-      gr.addColorStop(1, "#efe9d9");
-      g.fillStyle = gr;
-      g.fillRect(0, 0, w, h);
-      g.fillStyle = "#8c8a5a";
-      g.beginPath();
-      g.moveTo(0, h * 0.62);
-      g.quadraticCurveTo(w * 0.4, h * 0.5, w, h * 0.68);
-      g.lineTo(w, h);
-      g.lineTo(0, h);
-      g.fill();
-      g.fillStyle = "#6f9a9a";
-      g.fillRect(0, h * 0.78, w, h * 0.22);
-      for (let i = 0; i < 40; i++) {
-        g.fillStyle = `rgba(255,255,255,${R(0.1, 0.3)})`;
-        g.fillRect(R(0, w), R(h * 0.78, h), R(10, 40), 2);
-      }
-    } else if (kind === "folk") {
-      g.fillStyle = "#f0b62a";
-      g.fillRect(0, 0, w, h);
-      const cols = ["#d8321e", "#2a58b0", "#1f8a5a", "#f4e6c0", "#7a2a6a", "#f08a2a", "#222"];
-      const n = 9;
-      const cw = w / n;
-      for (let i = 0; i < n; i++) {
-        for (let y = 0; y < h; y += cw * 0.9) {
-          g.fillStyle = pick(cols);
-          g.fillRect(i * cw, y, cw, cw * 0.9);
-          g.strokeStyle = "#111";
-          g.lineWidth = 3;
-          g.strokeRect(i * cw, y, cw, cw * 0.9);
-          g.fillStyle = pick(cols);
-          g.beginPath();
-          g.ellipse(i * cw + cw / 2, y + cw * 0.45, cw * 0.28, cw * 0.34, 0, 0, 7);
-          g.fill();
-          g.stroke();
-          g.fillStyle = "#111";
-          g.fillRect(i * cw + cw * 0.36, y + cw * 0.38, cw * 0.08, cw * 0.08);
-          g.fillRect(i * cw + cw * 0.56, y + cw * 0.38, cw * 0.08, cw * 0.08);
-        }
-      }
-    } else if (kind === "face") {
-      g.fillStyle = pick(["#e8b020", "#d8421e", "#2a6ab0"]);
-      g.fillRect(0, 0, w, h);
-      g.fillStyle = "#e0a070";
-      g.beginPath();
-      g.ellipse(w / 2, h * 0.55, w * 0.3, h * 0.38, 0, 0, 7);
-      g.fill();
-      g.strokeStyle = "#111";
-      g.lineWidth = 5;
-      g.stroke();
-      g.fillStyle = "#c8321e";
-      g.fillRect(w * 0.15, h * 0.05, w * 0.7, h * 0.2);
-      g.fillStyle = "#fff";
-      g.fillRect(w * 0.35, h * 0.45, w * 0.1, h * 0.06);
-      g.fillRect(w * 0.58, h * 0.45, w * 0.1, h * 0.06);
-      g.fillStyle = "#8a2a1a";
-      g.fillRect(w * 0.4, h * 0.75, w * 0.2, h * 0.05);
-    } else if (kind === "fields") {
-      const cs = ["#1e8a4a", "#f0c820", "#d8321e", "#2a6ab0", "#f4f0e0", "#e0782a"];
-      for (let i = 0; i < 14; i++) {
-        g.fillStyle = cs[i % 6];
-        g.beginPath();
-        const y = (i * h) / 9 - h * 0.2;
-        g.moveTo(0, y + h * 0.3);
-        g.lineTo(w, y);
-        g.lineTo(w, y + h * 0.14);
-        g.lineTo(0, y + h * 0.44);
-        g.fill();
-      }
-    } else if (kind === "geo") {
-      g.fillStyle = "#f0ece0";
-      g.fillRect(0, 0, w, h);
-      for (const [c, x, y, a, b] of [
-        ["#c8321e", 0, 0, 0.5, 0.45],
-        ["#2a4aa0", 0.6, 0.5, 0.4, 0.5],
-        ["#f0c820", 0.1, 0.6, 0.4, 0.3],
-      ] as const) {
-        g.fillStyle = c;
-        g.fillRect(x * w, y * h, a * w, b * h);
-      }
-      g.fillStyle = "#111";
-      for (const x of [0.55, 0.3]) g.fillRect(x * w, 0, 6, h);
-      g.fillRect(0, h * 0.5, w, 6);
-    } else if (kind === "tri") {
-      g.fillStyle = "#e8e4d8";
-      g.fillRect(0, 0, w, h);
-      for (const [c] of [["#c8321e"], ["#2a4aa0"], ["#f0c820"]] as const) {
-        g.fillStyle = c;
-        g.beginPath();
-        g.moveTo(R(0, w), R(0, h));
-        g.lineTo(R(0, w), R(0, h));
-        g.lineTo(R(0, w), R(0, h));
-        g.fill();
-      }
-      g.strokeStyle = "#111";
-      g.lineWidth = 4;
-      g.strokeRect(6, 6, w - 12, h - 12);
-    } else if (kind === "grid") {
-      g.fillStyle = "#e9e5d8";
-      g.fillRect(0, 0, w, h);
-      g.strokeStyle = "#222";
-      g.lineWidth = 3;
-      for (let i = 1; i < 6; i++) {
-        g.beginPath();
-        g.moveTo((i * w) / 6, 0);
-        g.lineTo((i * w) / 6, h);
-        g.moveTo(0, (i * h) / 6);
-        g.lineTo(w, (i * h) / 6);
-        g.stroke();
-      }
-    } else {
-      const gr = g.createLinearGradient(0, 0, w, h);
-      gr.addColorStop(0, pick(["#2a2a30", "#4a3a30", "#3a2a40"]));
-      gr.addColorStop(1, pick(["#a08a6a", "#6a7a8a", "#c0a070"]));
-      g.fillStyle = gr;
-      g.fillRect(0, 0, w, h);
-      for (let i = 0; i < 30; i++) {
-        g.fillStyle = `rgba(${R(0, 255) | 0},${R(0, 255) | 0},${R(0, 255) | 0},.18)`;
-        g.beginPath();
-        g.arc(R(0, w), R(0, h), R(10, 50), 0, 7);
-        g.fill();
-      }
-    }
-  });
-}
 
 // Trois galeries: the herringbone parquet generator.
 function herring(hue: number, sat: number, lig: number, rep?: [number, number]): CanvasTexture {
@@ -515,118 +287,7 @@ function troisWallMat(hex: string, w: number, h: number, side?: Side): MeshStand
   return new MeshStandardMaterial({ map: t, bumpMap: t, bumpScale: 0.3, roughness: 0.92, side: side ?? FrontSide });
 }
 
-// Galerie en pierre: the painting generator (collage / vivid / red).
-function pierreArt(kind: string): CanvasTexture {
-  return gTex(400, 600, (g, w, h) => {
-    const PAL = ["#c8341e", "#e8762c", "#f0b53a", "#2a4d7a", "#7a1f2b", "#1e6f6a", "#f2d9a0"];
-    if (kind === "collage") {
-      g.fillStyle = "#cdb78f";
-      g.fillRect(0, 0, w, h);
-      for (let i = 0; i < 500; i++) {
-        g.fillStyle = `rgba(${Math.random() < 0.5 ? "80,60,40" : "240,225,190"},${R(0.04, 0.14)})`;
-        g.beginPath();
-        g.arc(R(0, w), R(0, h), R(5, 40), 0, 7);
-        g.fill();
-      }
-      g.fillStyle = "#4a2f22";
-      g.beginPath();
-      g.ellipse(w * 0.55, h * 0.62, w * 0.18, h * 0.28, 0, 0, 7);
-      g.fill();
-      g.fillStyle = "#6d8cb0";
-      g.fillRect(w * 0.04, h * 0.36, w * 0.2, h * 0.07);
-      g.fillRect(w * 0.3, h * 0.34, w * 0.2, h * 0.09);
-      g.fillRect(w * 0.72, h * 0.35, w * 0.2, h * 0.08);
-      g.fillStyle = "#3a2a20";
-      g.fillRect(w * 0.9, h * 0.1, w * 0.1, h * 0.8);
-    } else {
-      const base = kind === "red" ? ["#8b1c14", "#d8581e"] : ["#d9a23a", "#b4361f"];
-      const gr = g.createLinearGradient(0, 0, w, h);
-      gr.addColorStop(0, base[0]);
-      gr.addColorStop(1, base[1]);
-      g.fillStyle = gr;
-      g.fillRect(0, 0, w, h);
-      for (let i = 0; i < 70; i++) {
-        g.fillStyle = PAL[(Math.random() * PAL.length) | 0];
-        g.globalAlpha = R(0.4, 0.9);
-        g.beginPath();
-        const x = R(0, w);
-        const y = R(0, h);
-        g.moveTo(x, y);
-        g.lineTo(x + R(-110, 110), y + R(-110, 110));
-        g.lineTo(x + R(-110, 110), y + R(-110, 110));
-        g.closePath();
-        g.fill();
-      }
-      g.globalAlpha = 1;
-      g.strokeStyle = "rgba(30,15,10,.6)";
-      g.lineWidth = 2;
-      for (let i = 0; i < 14; i++) {
-        g.beginPath();
-        g.moveTo(R(0, w), R(0, h));
-        g.lineTo(R(0, w), R(0, h));
-        g.stroke();
-      }
-    }
-  });
-}
 
-// Virtual Gallery: the painting generator (cloud / red / ochre /
-// olive / dark).
-function verriereArt(kind: string): CanvasTexture {
-  return gTex(512, 512, (g, w, h) => {
-    const P: Record<string, [string, string]> = {
-      cloud: ["#8d9a76", "#b7b58a"],
-      red: ["#3a0d0b", "#6a1410"],
-      ochre: ["#7b5a2e", "#a07a3c"],
-      olive: ["#6b6a35", "#8a8548"],
-      dark: ["#1a1517", "#7a1a10"],
-    };
-    const pair = P[kind] ?? P.dark;
-    const gr = g.createLinearGradient(0, 0, w, h);
-    gr.addColorStop(0, pair[0]);
-    gr.addColorStop(1, pair[1]);
-    g.fillStyle = gr;
-    g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 500; i++) {
-      g.fillStyle = `rgba(${R(0, 255) | 0},${R(0, 255) | 0},${R(0, 255) | 0},.025)`;
-      g.beginPath();
-      g.arc(R(0, w), R(0, h), R(8, 50), 0, 7);
-      g.fill();
-    }
-    if (kind === "cloud") {
-      for (let k = 0; k < 3; k++) {
-        const cx = R(150, 380);
-        const cy = R(250, 420);
-        for (let i = 0; i < 60; i++) {
-          g.fillStyle = "rgba(240,222,170,.09)";
-          g.beginPath();
-          g.arc(cx + R(-90, 90), cy + R(-30, 30), R(15, 45), 0, 7);
-          g.fill();
-        }
-      }
-      g.strokeStyle = "rgba(235,230,210,.7)";
-      g.lineWidth = 2;
-      for (let k = 0; k < 4; k++) {
-        let x = R(60, 450);
-        let y = R(100, 300);
-        g.beginPath();
-        g.moveTo(x, y);
-        for (let i = 0; i < 8; i++) {
-          x += R(-8, 8);
-          y += R(15, 40);
-          g.lineTo(x, y);
-        }
-        g.stroke();
-      }
-    }
-    if (kind === "dark") {
-      g.fillStyle = "#d8d4d0";
-      g.fillRect(40, 20, 120, 140);
-      g.fillStyle = "#c03a1c";
-      g.fillRect(300, 420, 180, 92);
-    }
-  });
-}
 
 // Art fair: the photograph generator (five palettes, in order).
 const SERP_PAL: [string, string, string, string][] = [
@@ -884,30 +545,6 @@ function buildSerpentine(group: Group): void {
 // Shared helpers of the file: bx / pl / concrete / paint / hang /
 // jitter / lathe / spot / head. The two worlds are built separately
 // and returned as two builders.
-function deuxHang(
-  parent: Group,
-  x: number,
-  y: number,
-  z: number,
-  ry: number,
-  w: number,
-  h: number,
-  kind: DeuxArtKind,
-  frame?: number,
-) {
-  const g = new Group();
-  g.position.set(x, y, z);
-  g.rotation.y = ry;
-  const fm = gMat(frame ?? 0xf4f2ee, 0.6);
-  const d = frame ? 0.07 : 0.05;
-  const b = new Mesh(new BoxGeometry(w + (frame ? 0.12 : 0), h + (frame ? 0.12 : 0), d), fm);
-  b.castShadow = true;
-  g.add(b);
-  const p = new Mesh(new PlaneGeometry(w, h), new MeshStandardMaterial({ map: DEUX_ART[kind](), roughness: 0.75 }));
-  p.position.z = d / 2 + 0.002;
-  g.add(p);
-  parent.add(g);
-}
 
 function deuxHead(parent: Group, x: number, y: number, z: number) {
   const h = new Mesh(new CylinderGeometry(0.06, 0.08, 0.2, 10), gMat(0x111111, 0.4, 0.5));
@@ -940,7 +577,7 @@ function deuxSpot(
   return l;
 }
 
-function buildVitrine(group: Group, hideTemplateArt = false): void {
+function buildVitrine(group: Group): void {
   group.add(new HemisphereLight(0xffffff, 0xb8b2a8, 0.85));
   const pl = (w: number, h: number, mat: Material, x: number, y: number, z: number, rx = 0, ry = 0) =>
     gPlane(w, h, mat, x, y, z, rx, ry, group);
@@ -1057,11 +694,6 @@ function buildVitrine(group: Group, hideTemplateArt = false): void {
     bx(0.08, 0.08, 13, gMat(0xdddddd, 0.5, 0.4), x, 3.5, -6, false);
     for (let z = -1.5; z > -12; z -= 2.4) deuxHead(group, x, 3.38, z);
   }
-  // Art (hidden once seeded as real artworks — see buildGalleryShell).
-  if (!hideTemplateArt) {
-    deuxHang(group, -5, 1.9, -11.95, 0, 3.2, 2.5, "pink");
-    deuxHang(group, -0.2, 1.95, -11.95, 0, 2.1, 2.8, "dark");
-  }
   // Pedestals + objects.
   const wp = gMat(0xf7f7f5, 0.9);
   bx(1.2, 1.15, 1.2, wp, -1.3, 0.575, -4.4);
@@ -1146,7 +778,7 @@ function buildVitrine(group: Group, hideTemplateArt = false): void {
   deuxSpot(group, 3.8, 3.9, -5, 3.8, 1.2, -9, 1.1);
 }
 
-function buildLoft(group: Group, hideTemplateArt = false): void {
+function buildLoft(group: Group): void {
   group.add(new HemisphereLight(0xfff4e6, 0x6e675c, 0.7));
   const pl = (w: number, h: number, mat: Material, x: number, y: number, z: number, rx = 0, ry = 0) =>
     gPlane(w, h, mat, x, y, z, rx, ry, group);
@@ -1176,14 +808,6 @@ function buildLoft(group: Group, hideTemplateArt = false): void {
   for (let x = -8; x <= 8; x += 2.2) {
     deuxHead(group, x, 3.45, 1.5);
     deuxHead(group, x, 3.45, -6.5);
-  }
-  // Art (hidden once seeded as real artworks — see buildGalleryShell).
-  if (!hideTemplateArt) {
-    deuxHang(group, -8.93, 1.95, -1, Math.PI / 2, 3.3, 2.7, "yellow", 0x0e0e0e);
-    deuxHang(group, -1.5, 1.95, -3.88, 0, 2.1, 3.3, "tall", 0x0e0e0e);
-    deuxHang(group, -1.5, 1.9, -4.12, Math.PI, 1.8, 2.3, "orange", 0x0e0e0e);
-    deuxHang(group, 8.93, 1.9, -6, -Math.PI / 2, 3.1, 2.5, "blk", 0x0e0e0e);
-    deuxHang(group, -4.5, 1.9, -11.93, 0, 2, 2.5, "orange", 0x0e0e0e);
   }
   // Partition + bench.
   bx(3.6, 3.9, 0.2, wm, -1.5, 1.95, -4);
@@ -1691,7 +1315,7 @@ function buildHalle(group: Group): { tick?: (dt: number) => void } {
 // The original Stone Gallery: 20 × 24 m, 6.5 m high, stone/plaster
 // walls, a dividing wall with a round arch, a niche, rubble, timber
 // beams and track lights.
-function buildArche(group: Group, hideTemplateArt = false): void {
+function buildArche(group: Group): void {
   const H = 6.5;
   group.add(new HemisphereLight(0xfff0dc, 0x6a5d4c, 0.75));
   for (const [x, z] of [
@@ -1840,28 +1464,6 @@ function buildArche(group: Group, hideTemplateArt = false): void {
     group.add(l);
   }
 
-  // Paintings.
-  const frameM = new MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.7 });
-  const hang = (x: number, y: number, z: number, ry: number, w: number, h: number, kind: string) => {
-    const g = new Group();
-    g.position.set(x, y, z);
-    g.rotation.y = ry;
-    g.add(new Mesh(new BoxGeometry(w + 0.1, h + 0.1, 0.06), frameM));
-    const p = new Mesh(new PlaneGeometry(w, h), new MeshStandardMaterial({ map: pierreArt(kind), roughness: 0.9 }));
-    p.position.z = 0.04;
-    g.add(p);
-    group.add(g);
-  };
-  // Art (hidden once seeded as real artworks — see buildGalleryShell).
-  if (!hideTemplateArt) {
-    hang(-9.9, 2.3, -2.5, Math.PI / 2, 2.2, 2.6, "collage"); // left wall
-    hang(-6, 2.4, -3.6, 0, 1.4, 2.6, "vivid"); // dividing wall
-    hang(6, 2.3, -3.6, 0, 2.2, 1.7, "red");
-    hang(-3.4, 2.4, -14.9, 0, 1.4, 2.6, "vivid"); // back wall
-    hang(0, 2.6, -14.9, 0, 0.9, 1.5, "red");
-    hang(5, 1.9, -14.85, 0, 2, 1.5, "red");
-    hang(9.9, 2.3, -8, -Math.PI / 2, 1.6, 2.4, "vivid");
-  }
 
   // Concrete plinth with small frames.
   const pl = new Mesh(new BoxGeometry(2.6, 0.5, 1.5), new MeshStandardMaterial({ color: 0x8d8a82, roughness: 1 }));
@@ -1904,34 +1506,6 @@ function troisSunL(
   parent.add(d.target);
 }
 
-function troisArt(
-  parent: Group,
-  x: number,
-  y: number,
-  z: number,
-  ry: number,
-  w: number,
-  h: number,
-  t: Texture,
-  fc?: number | null,
-  fw = 0.07,
-  par?: Group,
-) {
-  const g = new Group();
-  g.position.set(x, y, z);
-  g.rotation.y = ry;
-  const fr = fc !== undefined && fc !== null;
-  const b = new Mesh(
-    new BoxGeometry(w + (fr ? fw * 2 : 0), h + (fr ? fw * 2 : 0), fr ? 0.07 : 0.05),
-    gMat(fr ? (fc as number) : 0xeeeeee, 0.5),
-  );
-  b.castShadow = true;
-  g.add(b);
-  const p = new Mesh(new PlaneGeometry(w, h), new MeshStandardMaterial({ map: t, roughness: 0.7 }));
-  p.position.z = fr ? 0.037 : 0.027;
-  g.add(p);
-  (par ?? parent).add(g);
-}
 
 function troisHead(parent: Group, x: number, y: number, z: number) {
   const h = new Mesh(new CylinderGeometry(0.05, 0.07, 0.18, 8), gMat(0x111111, 0.4, 0.5));
@@ -2000,7 +1574,6 @@ function buildMusee(group: Group): void {
   );
   pb.position.set(0, 0.15, 3);
   group.add(pb);
-  troisArt(group, 0, 2.3, -7.93, 0, 3.2, 2.1, troisPaint("view", 384, 256), 0x0f0f0f, 0.09);
   // Angled panels.
   for (const s of [-1, 1]) {
     const g = new Group();
@@ -2009,17 +1582,7 @@ function buildMusee(group: Group): void {
     group.add(g);
     gBox(6, 4.9, 0.55, troisWallMat("#b7acb0", 6, 4.9), 0, 2.45, 0, 0, g);
     gBox(6.1, 0.1, 0.6, gMat(0x6b6264, 0.8), 0, 4.92, 0, 0, g);
-    troisArt(group, s * 1.1, 2.5, 0.29, 0, 2.1, 2.5, troisPaint("sea", 256, 300), 0x0f0f0f, 0.08, g);
-    troisArt(group, -s * 1.7, 2.7, 0.29, 0, 0.75, 0.65, troisPaint("sea"), 0xa8844a, 0.05, g);
-    troisArt(group, -s * 1.7, 1.6, 0.29, 0, 0.45, 0.55, troisPaint("tiny"), 0x1a1a1a, 0.04, g);
   }
-  // Side-wall small pictures.
-  const pick2 = () => [0x2a2420, 0xa8844a, 0x1a1a1a][(Math.random() * 3) | 0];
-  for (const s of [-1, 1])
-    for (let i = 0; i < 7; i++) {
-      const z = -9 + i * 2.6;
-      troisArt(group, s * 13.95, 2.1 + R(-0.2, 0.3), z, (-s * Math.PI) / 2, R(0.6, 1.1), R(0.5, 0.8), troisPaint("tiny"), pick2(), 0.05);
-    }
   // Wire benches.
   const wire = (x: number, z: number, w: number, d: number, h: number) => {
     const g = new Group();
@@ -2082,47 +1645,6 @@ function buildGalerie(group: Group): void {
   gBox(0.8, 0.45, 19, gMat(0xf4f3ef, 0.7), 4.55, 0.225, -3.5, 0, group);
   gBox(0.8, 0.45, 14, gMat(0xf4f3ef, 0.7), -5.55, 0.225, -6, 0, group);
   gBox(1.4, 0.45, 1.8, gMat(0xf4f3ef, 0.7), -5.2, 0.225, 2.2, 0, group);
-  // Huge folk painting + others.
-  troisArt(group, 4.97, 3.6, -5, -Math.PI / 2, 9, 3.6, troisPaint("folk", 640, 256));
-  troisArt(group, 4.97, 3.3, -11.2, -Math.PI / 2, 1.4, 1.1, troisPaint("face"));
-  troisArt(group, -5.97, 2.7, -1.5, Math.PI / 2, 1.5, 2, troisPaint("face"));
-  troisArt(group, -5.97, 2.9, -4.6, Math.PI / 2, 1.1, 1.5, troisPaint("face"));
-  troisArt(group, -5.97, 2.5, -6.2, Math.PI / 2, 0.9, 1.3, troisPaint("dark"));
-  troisArt(group, -5.97, 4.9, -3, Math.PI / 2, 1.9, 2.6, troisPaint("dark"));
-  troisArt(group, 1.4, 3.2, -12.97, 0, 2.2, 3.0, troisPaint("fields", 256, 340));
-  for (const [x, y, w, h, k] of [
-    [-2.6, 3.6, 0.7, 0.8, "face"],
-    [-1.6, 3.6, 0.7, 0.8, "folk"],
-    [-2.6, 2.5, 0.7, 0.9, "face"],
-    [-1.6, 2.5, 0.7, 0.9, "dark"],
-  ] as const)
-    troisArt(group, x, y, -12.97, 0, w, h, troisPaint(k), 0x2a1a10, 0.05);
-  troisArt(group, -3.2, 6.2, -12.97, 0, 1.5, 2, troisPaint("dark"));
-  // Text vinyl on foreground left wall.
-  const tt = gTex(1024, 1000, (g, w, h) => {
-    g.fillStyle = "#1b1b1d";
-    g.font = "bold 70px Helvetica,Arial,sans-serif";
-    g.fillText("TITRE DE L'EXPOSITION :", 30, 90);
-    g.font = "bold 58px Helvetica,Arial,sans-serif";
-    g.fillText("Rêves et possibilités…", 30, 160);
-    g.font = "italic 25px Georgia,serif";
-    const L =
-      "Réunissant plus de quarante ans de création, cette exposition présente des œuvres où la mémoire, la couleur et l'imaginaire se rencontrent. ";
-    for (let i = 0; i < 20; i++) {
-      g.fillStyle = "#2a2a2c";
-      g.fillText(L.slice((i % 3) * 10, (i % 3) * 10 + 52), 30, 230 + i * 32);
-    }
-    g.fillStyle = "#1e3a8a";
-    g.fillRect(780, 760, 200, 200);
-    g.fillStyle = "#fff";
-    for (let i = 0; i < 8; i++) g.fillRect(795, 780 + i * 20, 170, 6);
-    void w;
-    void h;
-  });
-  const tm = new Mesh(new PlaneGeometry(5.6, 5.5), new MeshBasicMaterial({ map: tt, transparent: true }));
-  tm.position.set(-5.97, 3.6, 4.7);
-  tm.rotation.y = Math.PI / 2;
-  group.add(tm);
   // High clerestory window + mullions.
   const gm = new MeshBasicMaterial({ color: 0xe6eef6 });
   const wg = new Mesh(new PlaneGeometry(6.6, 2.4), gm);
@@ -2181,23 +1703,6 @@ function buildParquet(group: Group): void {
   wall(24, HH, "#f1efea", 0, HH / 2, 12, Math.PI);
   pln(24, 23, gMat(0xf6f4f0, 1), 0, HH, 0.5, Math.PI / 2);
   gBox(24, 0.2, 0.06, gMat(0xb78450, 0.6), 0, 0.1, -9.97, 0, group, false);
-  // Salon hanging on back wall.
-  for (const [x, y, w, h, k] of [
-    [-10.2, 1.8, 0.9, 0.8, "tri"],
-    [-8.7, 2.1, 0.9, 0.9, "geo"],
-    [-7, 2.4, 1.5, 1.3, "grid"],
-    [-5.2, 2.0, 0.8, 0.9, "dark"],
-    [-3.9, 2.3, 0.9, 0.9, "tri"],
-    [-2.2, 3.6, 1.6, 1.5, "geo"],
-    [-10.8, 2.8, 0.6, 0.7, "dark"],
-    [3.4, 2.2, 0.5, 0.7, "dark"],
-    [4.3, 2.2, 0.5, 0.8, "dark"],
-    [5.7, 2.3, 1.1, 0.75, "view"],
-    [9.2, 2.4, 1.5, 1.4, "dark"],
-    [7.6, 1.9, 0.5, 0.6, "tiny"],
-    [-1.4, 2.0, 0.7, 0.7, "grid"],
-  ] as const)
-    troisArt(group, x, y, -9.96, 0, w, h, troisPaint(k), R(0, 1) < 0.5 ? 0x1a1a1a : null, 0.04);
   // V panels with wooden lintel and passage behind.
   for (const s of [-1, 1]) {
     const g = new Group();
@@ -2205,19 +1710,13 @@ function buildParquet(group: Group): void {
     g.rotation.y = -s * 0.75;
     group.add(g);
     gBox(3.2, 3.8, 0.18, troisWallMat("#f4f2ee", 3.2, 3.8), 0, 1.9, 0, 0, g);
-    troisArt(group, -s * 0.55, 2, 0.1, 0, 1.0, 1.3, troisPaint("dark"), 0x1a1a1a, 0.04, g);
-    troisArt(group, s * 0.6, 1.6, 0.1, 0, 0.5, 0.7, troisPaint("tri"), 0x3a2a1a, 0.03, g);
   }
   gBox(2.2, 0.3, 0.3, gMat(0xc89a62, 0.6), 0, 3.9, -6.7, 0, group);
   pln(1.6, 3, troisWallMat("#d8d2c4", 1.6, 3), 0, 1.5, -9.6, 0, 0);
   pln(2.4, 3.2, gMat(0x8a9a8a, 0.5), 0, 0.01, -8.3, -Math.PI / 2);
   // Foreground wall fragments.
   gBox(0.3, 4.6, 6, troisWallMat("#f4f2ee", 6, 4.6), -9.6, 2.3, 1, 0, group);
-  troisArt(group, -9.43, 2.3, 0, Math.PI / 2, 0.9, 1.1, troisPaint("tri"), 0x9a7a4a, 0.06);
-  troisArt(group, -9.43, 1.3, 2.2, Math.PI / 2, 0.8, 0.9, troisPaint("dark"), 0x9a7a4a, 0.06);
   gBox(0.3, 4.6, 7, troisWallMat("#f4f2ee", 7, 4.6), 9, 2.3, -1, 0, group);
-  troisArt(group, 8.83, 2.2, -0.5, -Math.PI / 2, 0.8, 1.2, troisPaint("dark"), 0x9a7a4a, 0.05);
-  troisArt(group, 8.83, 1.3, 1.4, -Math.PI / 2, 1.2, 1.3, troisPaint("dark"), 0x1a1a1a, 0.05);
   // Pedestals + sculptures.
   const wp = gMat(0xf8f7f4, 0.8);
   const ao = gTex(128, 128, (g, w, h) => {
@@ -2285,7 +1784,7 @@ function buildParquet(group: Group): void {
 
 // ---- 9. La Verrière (Virtual_Gallery_1) ----------------------------------
 // 40 × 32 m, 7.5 m high: parquet floor, coffered ceiling with glass
-// skylights, five leaning panels (A–E) with paintings, bench and label.
+// skylights, five leaning panels (A–E), bench and label.
 function buildVerriere(group: Group): void {
   const H = 7.5;
   group.add(new HemisphereLight(0xffffff, 0xb8b0a6, 0.85));
@@ -2383,9 +1882,7 @@ function buildVerriere(group: Group): void {
     { name: "D", x: 6, z: -2, ry: 0.4 },
     { name: "E", x: 12, z: -2, ry: -0.3 },
   ];
-  const kinds = ["cloud", "ochre", "olive", "dark", "red"] as const;
-  const frames = [0x2e4a62, 0xd2a64a, 0x7a7d4f, 0x1a1a1a, 0xb34a34] as const;
-  panels.forEach(({ x, z, ry }, i) => {
+  panels.forEach(({ x, z, ry }) => {
     const g = new Group();
     g.position.set(x, 0, z);
     g.rotation.y = ry;
@@ -2396,12 +1893,6 @@ function buildVerriere(group: Group): void {
     p.castShadow = true;
     p.receiveShadow = true;
     g.add(p);
-    const fr = new Mesh(new BoxGeometry(1.4, 1.4, 0.06), new MeshStandardMaterial({ color: frames[i], roughness: 0.6 }));
-    fr.position.set(0, 1.6, 0.12);
-    g.add(fr);
-    const a = new Mesh(new PlaneGeometry(1.2, 1.2), new MeshStandardMaterial({ map: verriereArt(kinds[i]), roughness: 0.85 }));
-    a.position.set(0, 1.6, 0.16);
-    g.add(a);
     const sh = new Mesh(new BoxGeometry(2.9, 0.1, 0.5), new MeshStandardMaterial({ color: 0x8f8880, roughness: 1 }));
     sh.position.set(0, 0.05, 0.3);
     g.add(sh);
@@ -2443,25 +1934,9 @@ function buildVerriere(group: Group): void {
 //   glass-block wall), instead of gradients or emissive colours.
 // The photos live in public/textures (see ATTRIBUTION.md there) and
 // load through lib/gallery-photos.ts. Everything else — dimensions,
-// walls, floors, ceilings, furniture, demo paintings — is ported
+// walls, floors, ceilings and furniture — is ported
 // exactly as in the source.
 
-// The source's abstract `paint` generator (256 × 320, 30 ellipses).
-// The Galeries_3D hall painting (one random abstract per call),
-// exported for the template-art renderer (see DEUX_ART above).
-export function g11Paint(bg: string, cols: string[]): CanvasTexture {
-  return gTex(256, 320, (g, w, h) => {
-    g.fillStyle = bg;
-    g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 30; i++) {
-      g.globalAlpha = R(0.3, 0.85);
-      g.fillStyle = cols[(Math.random() * cols.length) | 0];
-      g.beginPath();
-      g.ellipse(R(20, w - 20), R(20, h - 20), R(8, 50), R(8, 60), R(0, 3), 0, 7);
-      g.fill();
-    }
-  });
-}
 
 // The source's procedural textures (wood floors, tiles, coffers,
 // speckled stone, marble, herringbone, scales, slats). Only the trees
@@ -2621,25 +2096,7 @@ function g11Slat(a: number, b: number): CanvasTexture {
   );
 }
 
-// The source's `frame` (a framed painting), `hemi` / `pt` / `sun`
-// (lights), and the round-arch shape.
-function g11Frame(parent: Group, w: number, h: number, t: Texture, x: number, y: number, z: number, ry: number, fc: number): void {
-  const g = new Group();
-  g.position.set(x, y, z);
-  g.rotation.y = ry;
-  parent.add(g);
-  const b = new Mesh(new BoxGeometry(w + 0.2, h + 0.2, 0.08), gMat(fc, 0.4, 0.5));
-  // The frame casts a real shadow onto its wall and the floor — the
-  // rooms' shadow-casting lights (hall sun, night rig, shell suns)
-  // need casters, and the floor and walls already receive shadows.
-  b.castShadow = true;
-  b.receiveShadow = true;
-  g.add(b);
-  const p = new Mesh(new PlaneGeometry(w, h), new MeshStandardMaterial({ map: t, roughness: 0.7 }));
-  p.position.z = 0.045;
-  p.receiveShadow = true;
-  g.add(p);
-}
+// The source's `hemi` / `pt` / `sun` (lights), and the round-arch shape.
 
 function g11Hemi(parent: Group, a: number, b: number, i: number): void {
   parent.add(new HemisphereLight(a, b, i));
@@ -2769,7 +2226,7 @@ function g11Tree(parent: Group, x: number, z: number, h: number): void {
   }
 }
 
-function buildPavillon(group: Group, hideTemplateArt = false): void {
+function buildPavillon(group: Group): void {
   const wd = new MeshStandardMaterial({ map: g11Wood(4, 8), roughness: 0.45 });
   // The glass-brick walls and ceiling: the real glass-block
   // photograph, still glowing from within as in the source.
@@ -2781,9 +2238,7 @@ function buildPavillon(group: Group, hideTemplateArt = false): void {
   // The lawn behind the pavilion — a real grass photograph.
   gPlane(90, 90, new MeshStandardMaterial({ map: photoTexture(PHOTO.grass, { repeat: [18, 18] }), roughness: 1 }), 0, -0.05, -55, -Math.PI / 2, 0, group);
   g11Sky(group);
-  const pa = [g11Paint("#2a4fa0", ["#f2c230", "#e0572a", "#111"]), g11Paint("#cfd8c9", ["#4a7a4a", "#8aa6b8", "#c9c2a8"])];
   for (const s of [-1, 1] as const) {
-    const i = s > 0 ? 1 : 0;
     gBox(0.4, 4.2, 6.1, tl, s * 4.2, 2.1, 2.95, 0, group, false);
     gBox(0.4, 4.2, 6.1, tl, s * 4.2, 2.1, -4.95, 0, group, false);
     gBox(0.4, 1.6, 1.8, tl, s * 4.2, 3.4, -1, 0, group, false);
@@ -2794,8 +2249,6 @@ function buildPavillon(group: Group, hideTemplateArt = false): void {
     rm.position.set(s * 6.2, 2.1, -1);
     group.add(rm);
     gPlane(3.6, 4.2, wd, s * 6.2, 0.01, -1, -Math.PI / 2, 0, group);
-    // Art (hidden once seeded as real artworks — see buildGalleryShell).
-    if (!hideTemplateArt) g11Frame(group, 1.1, 1.5, pa[i], s * 7.95, 1.7, -1, (-s * Math.PI) / 2, 0x8a6a3a);
     g11Pt(group, 0xfff6ea, 0.5, s * 6.2, 3.6, -1, 8);
     gBox(0.04, 0.04, 14, g11Emit(0xffffff, 2), s * 3.95, 4.1, -1, 0, group, false);
   }
@@ -2833,7 +2286,7 @@ function buildPavillon(group: Group, hideTemplateArt = false): void {
   g11Pt(group, 0xfff6ea, 0.6, 0, 3.6, -4);
 }
 
-function buildClassique(group: Group, hideTemplateArt = false): void {
+function buildClassique(group: Group): void {
   const L = 40;
   const H = 6.2;
   const Rv = 4;
@@ -2875,11 +2328,6 @@ function buildClassique(group: Group, hideTemplateArt = false): void {
       gBox(1.1, 0.35, 1.1, st, s * 3, H - 0.25, z, 0, group);
       gBox(0.95, 0.3, 0.95, st, s * 3, 0.15, z, 0, group);
     }
-  // Art (hidden once seeded as real artworks — see buildGalleryShell).
-  if (!hideTemplateArt)
-    for (const s of [-1, 1] as const)
-      for (const z of [9.5, 3, -3.5, -10])
-        g11Frame(group, 1.7, 2.5, g11Paint("#2a1c14", ["#8a3a1c", "#c9863a", "#3a4a5a", "#d8c9a8"]), s * 3.92, 3, z, (-s * Math.PI) / 2, 0xb08a3a);
   const lt = g11Emit(0xffffff, 1.6);
   for (const z of [-1, -10]) gPlane(2.6, 3.4, lt, 0, H + Rv - 0.08, z, Math.PI / 2, 0, group);
   const o = new Mesh(new CircleGeometry(1.6, 32), lt);
@@ -2897,7 +2345,7 @@ function buildClassique(group: Group, hideTemplateArt = false): void {
   for (const z of [14, -1, -10]) g11Pt(group, 0xfff0d8, 1.3, 0, 9, z, 24);
 }
 
-function buildAtriumBlanc(group: Group, hideTemplateArt = false): void {
+function buildAtriumBlanc(group: Group): void {
   const rm = new Mesh(new BoxGeometry(26, 18, 27), new MeshStandardMaterial({ color: 0xf7f7f6, roughness: 0.85, side: BackSide }));
   rm.position.set(0, 0, -0.5);
   rm.receiveShadow = true;
@@ -2995,11 +2443,6 @@ function buildAtriumBlanc(group: Group, hideTemplateArt = false): void {
   const mirror = reflGroup.clone();
   mirror.scale.y = -1;
   group.add(mirror);
-  // Art (hidden once seeded as real artworks — see buildGalleryShell).
-  if (!hideTemplateArt) {
-    g11Frame(group, 0.5, 0.7, g11Paint("#3a8a4a", ["#e8d36a", "#2a5a3a"]), -1.8, 2.2, -13.93, 0, 0x111111);
-    g11Frame(group, 0.6, 0.75, g11Paint("#1c1c1c", ["#c8c8c8", "#666"]), -0.8, 2.2, -13.93, 0, 0x111111);
-  }
   g11Hemi(group, 0xffffff, 0xcfd3da, 1.1);
   g11Pt(group, 0xffffff, 0.6, 0, 7.5, -6, 30);
 }
@@ -3094,15 +2537,6 @@ type Hall11Options = {
   vaultEnv?: number;
   flatCeil?: Material;
   pn?: number;
-  fw?: number;
-  fh?: number;
-  fc?: number;
-  // Hide the framed paintings (the room's template artworks were
-  // seeded as real artworks — see buildGalleryShell). Arches,
-  // windows and benches are architecture and always stay.
-  hideArt?: boolean;
-  pc?: string[];
-  pb?: string;
   end?: Material;
   bn?: number;
   ar?: boolean;
@@ -3121,11 +2555,6 @@ function hall11(parent: Group, o: Hall11Options): void {
   const fm = o.fm;
   const v = o.v ?? 0;
   const pn = o.pn ?? 4;
-  const fw = o.fw ?? 1.6;
-  const fh = o.fh ?? 2.1;
-  const fc = o.fc ?? 0xb08a3a;
-  const pc = o.pc ?? ["#8a3a1c", "#c9863a", "#3a4a5a"];
-  const pb = o.pb ?? "#2a1c14";
   const bn = o.bn ?? 0;
   const hw = W / 2;
   gPlane(W, L, fm, 0, 0, 0, -Math.PI / 2, 0, parent);
@@ -3153,7 +2582,6 @@ function hall11(parent: Group, o: Hall11Options): void {
   const st = (L - 10) / pn;
   const zs = Array.from({ length: pn }, (_, i) => L / 2 - 5 - i * st);
   for (const s of [-1, 1] as const) {
-    if (!o.hideArt) for (const z of zs) g11Frame(parent, fw, fh, g11Paint(pb, pc), s * (hw - 0.05), 2.2, z, (-s * Math.PI) / 2, fc);
     if (o.ar)
       for (const z of zs) {
         const a = new Mesh(g11ArchGeo(), gMat(0x1b1815, 1));
@@ -3191,19 +2619,13 @@ function hall11(parent: Group, o: Hall11Options): void {
   for (let z = L / 2 - 4; z > -L / 2; z -= 8) g11Pt(parent, 0xfff0d8, o.pi ?? 1, 0, H - 0.8, z, 22);
 }
 
-function buildEscalier(group: Group, hideTemplateArt = false): void {
+function buildEscalier(group: Group): void {
   const wh = new MeshStandardMaterial({ color: 0xf6f6f4, roughness: 0.9 });
   gPlane(16, 20, gMat(0x6d7078, 0.95), 0, 0, 0, -Math.PI / 2, 0, group);
   gPlane(16, 20, wh, 0, 9, 0, Math.PI / 2, 0, group);
   gPlane(16, 9, wh, 0, 4.5, -10, 0, 0, group);
   gPlane(16, 9, wh, 0, 4.5, 10, 0, Math.PI, group);
   for (const s of [-1, 1] as const) gBox(0.4, 9, 20, wh, s * 8.2, 4.5, 0, 0, group, false);
-  // Art (hidden once seeded as real artworks — see buildGalleryShell).
-  if (!hideTemplateArt) {
-    g11Frame(group, 7, 2.8, g11Paint("#e8e2d0", ["#f2b02a", "#e0572a", "#f4f4f0", "#2f7a4a"]), 7.9, 3.2, -3, -Math.PI / 2, 0xf4f4f0);
-    g11Frame(group, 1.6, 2.1, g11Paint("#caa27a", ["#8a3a1c", "#c9863a", "#5a3a2a"]), -7.9, 2.4, -1, Math.PI / 2, 0x6b4a2a);
-    g11Frame(group, 1.1, 1.4, g11Paint("#c26a2a", ["#e8b04a", "#6a2a1a"]), -7.9, 2.2, -5, Math.PI / 2, 0x6b4a2a);
-  }
   gCyl(0.18, 0.18, 9, wh, 0, 4.5, -1, group, 24);
   gBox(8, 0.4, 5, wh, 2.5, 4.7, -7.5, 0, group);
   gPlane(8, 1.1, g11Glass(), 2.5, 5.5, -5, 0, 0, group);
@@ -3221,7 +2643,7 @@ function buildEscalier(group: Group, hideTemplateArt = false): void {
   g11Pt(group, 0xffffff, 0.6, 5, 4, -5, 20);
 }
 
-function buildSallesVertes(group: Group, hideTemplateArt = false): void {
+function buildSallesVertes(group: Group): void {
   hall11(group, {
     W: 14,
     L: 32,
@@ -3231,23 +2653,20 @@ function buildSallesVertes(group: Group, hideTemplateArt = false): void {
     v: 3,
     vaultTex: g11Coffer(6, 14),
     pn: 3,
-    fw: 2,
-    fh: 2.6,
     bn: 2,
     sk: true,
-    hideArt: hideTemplateArt,
   });
 }
 
 // Elegant Gallery (ex "Couloir sombre") — the night gallery, after
-// Kabeya's reference photo: a dark museum corridor at night, each
-// painting lit by its own warm spot, pools of light on the polished
+// Kabeya's reference photo: a dark museum corridor at night, each wall
+// washed by its own warm spot, pools of light on the polished
 // herringbone parquet, the barrel vault glowing softly above.
-// Architecture unchanged (7 × 46 m, vault, six panels, arches, spot
-// rails) — only light and mood change. The internal layout key stays
+// Architecture unchanged (7 × 46 m, vault, arches, spot rails) —
+// only light and mood change. The internal layout key stays
 // "couloir-sombre" (URLs, thumbnails, plan); only the displayed name
 // changes (see lib/gallery-names.ts).
-function buildElegantGallery(group: Group, hideTemplateArt = false): void {
+function buildElegantGallery(group: Group): void {
   hall11(group, {
     W: 7,
     L: 46,
@@ -3258,10 +2677,6 @@ function buildElegantGallery(group: Group, hideTemplateArt = false): void {
     vaultTex: g11Coffer(5, 14),
     vaultEnv: 0.3,
     pn: 6,
-    fw: 0.9,
-    fh: 1.2,
-    fc: 0x6b4a24,
-    pb: "#1b1410",
     end: new MeshStandardMaterial({ color: 0x24201c, roughness: 1 }),
     ar: true,
     tr: true,
@@ -3269,12 +2684,11 @@ function buildElegantGallery(group: Group, hideTemplateArt = false): void {
     // do the lighting, as in the reference photo.
     hi: 0.05,
     pi: 0.12,
-    hideArt: hideTemplateArt,
   });
   // One warm spot per pair of panels (three per side), aimed at the
-  // paintings — the pools of light on the parquet in the reference
+  // walls — the pools of light on the parquet in the reference
   // photo. No shadow maps here: the single dim directional below
-  // casts the frames' long shadows, so the spots stay cheap.
+  // casts the arches' long shadows, so the spots stay cheap.
   for (const s of [-1, 1] as const) {
     for (const z of [15, 3, -9]) {
       const spot = new SpotLight(0xffd9a0, 22, 12, 0.55, 0.7, 1.2);
@@ -3285,7 +2699,7 @@ function buildElegantGallery(group: Group, hideTemplateArt = false): void {
     }
   }
   // A dim warm directional down the hall's length: it casts the long
-  // soft shadows of frames and arches on the parquet (the vault and
+  // soft shadows of the arches on the parquet (the vault and
   // end walls cast no shadow, so the light reaches the floor).
   const nightSun = new DirectionalLight(0xffe2b8, 0.5);
   nightSun.position.set(0, 16, 18);
@@ -3311,7 +2725,7 @@ function buildElegantGallery(group: Group, hideTemplateArt = false): void {
   group.userData.hasShadowSun = true;
 }
 
-function buildCouloirDore(group: Group, hideTemplateArt = false): void {
+function buildCouloirDore(group: Group): void {
   hall11(group, {
     W: 7,
     L: 46,
@@ -3320,14 +2734,11 @@ function buildCouloirDore(group: Group, hideTemplateArt = false): void {
     fm: new MeshStandardMaterial({ map: g11Herr(58, 6, 24), roughness: 0.3, metalness: 0.05 }),
     flatCeil: new MeshStandardMaterial({ color: 0xf6f2ea, roughness: 0.9 }),
     pn: 4,
-    fw: 1.7,
-    fh: 2.4,
     tr: true,
     win: true,
     end: new MeshStandardMaterial({ color: 0x9b2a24, roughness: 0.85 }),
     hi: 0.9,
     pi: 0.9,
-    hideArt: hideTemplateArt,
   });
   // Sun patches on the floor (transparent, no depth write).
   const sn = new MeshStandardMaterial({ color: 0xfff0b0, roughness: 1, transparent: true, opacity: 0.28, depthWrite: false });
@@ -3340,7 +2751,7 @@ function buildCouloirDore(group: Group, hideTemplateArt = false): void {
   group.add(a);
 }
 
-function buildVoutes(group: Group, hideTemplateArt = false): void {
+function buildVoutes(group: Group): void {
   hall11(group, {
     W: 10,
     L: 30,
@@ -3349,26 +2760,15 @@ function buildVoutes(group: Group, hideTemplateArt = false): void {
     fm: new MeshStandardMaterial({ map: g11Wood(5, 10), roughness: 0.35, metalness: 0.02 }),
     flatCeil: new MeshStandardMaterial({ map: g11Scal(5, 12), roughness: 0.9, emissive: 0xffffff, emissiveIntensity: 0.5 }),
     pn: 2,
-    fw: 1.7,
-    fh: 1.5,
-    fc: 0xf4f4f0,
-    pc: ["#e0572a", "#f2c230", "#2a4fa0", "#ffffff"],
-    pb: "#f4f2ec",
     bn: 2,
     hi: 1,
     pi: 0.7,
-    hideArt: hideTemplateArt,
   });
   for (const x of [-3.3, 3.3]) gBox(0.14, 0.01, 30, gMat(0x3a2a1a, 0.6), x, 0.01, 0, 0, group, false);
   const gold = new Mesh(new SphereGeometry(1.4, 24, 16), new MeshStandardMaterial({ color: 0xe8d9b4, roughness: 0.04, metalness: 1 }));
   gold.position.set(0, 2.6, -14.65);
   gold.scale.set(1, 1, 0.25);
   group.add(gold);
-  // Art (hidden once seeded as real artworks — see buildGalleryShell).
-  if (!hideTemplateArt) {
-    g11Frame(group, 0.9, 1.1, g11Paint("#f4f0e6", ["#e0572a", "#2a4fa0"]), -3.2, 2.4, -14.93, 0, 0xf4f4f0);
-    g11Frame(group, 1.6, 1.4, g11Paint("#f4f0e6", ["#f2c230", "#1a1a1a", "#e0572a"]), 3.4, 2.4, -14.93, 0, 0xf4f4f0);
-  }
 }
 
 function buildCourbes(group: Group): void {
@@ -3489,7 +2889,7 @@ const SHELL_SHADOW_SUN_LAYOUTS: ReadonlySet<RoomLayout> = new Set([
   "atrium-lattes",
 ]);
 
-export function buildGalleryShell(layout: RoomLayout, opts?: { hideTemplateArt?: boolean }): {
+export function buildGalleryShell(layout: RoomLayout): {
   group: Group;
   tick?: (dt: number) => void;
   hasShadowSun: boolean;
@@ -3499,31 +2899,27 @@ export function buildGalleryShell(layout: RoomLayout, opts?: { hideTemplateArt?:
   // Sunlight keeps its own JSX shell in gallery-scene.tsx; this
   // dispatcher only builds the twenty generic rooms.
   if (layout === "sunlight") return { group, hasShadowSun: true };
-  // hideTemplateArt: the room's template artworks were seeded as real
-  // artworks (room.templateArtSeeded), so the shell hides its baked
-  // paintings — the seeded rows hang in their place, and the two never
-  // show at once. The Serpentine keeps its photo wall either way:
-  // those 48 photos are the wall itself, not seedable pieces.
-  const hide = opts?.hideTemplateArt === true;
+  // The Serpentine keeps its photo wall: those 48 photos are the
+  // wall itself, not artworks hung on it.
   const builders: Record<Exclude<RoomLayout, "sunlight">, () => { tick?: (dt: number) => void } | void> = {
     serpentine: () => buildSerpentine(group),
-    vitrine: () => buildVitrine(group, hide),
-    loft: () => buildLoft(group, hide),
+    vitrine: () => buildVitrine(group),
+    loft: () => buildLoft(group),
     halle: () => buildHalle(group),
-    arche: () => buildArche(group, hide),
+    arche: () => buildArche(group),
     musee: () => buildMusee(group),
     "claire-voie": () => buildGalerie(group),
     parquet: () => buildParquet(group),
     verriere: () => buildVerriere(group),
-    pavillon: () => buildPavillon(group, hide),
-    classique: () => buildClassique(group, hide),
-    "atrium-blanc": () => buildAtriumBlanc(group, hide),
+    pavillon: () => buildPavillon(group),
+    classique: () => buildClassique(group),
+    "atrium-blanc": () => buildAtriumBlanc(group),
     patio: () => buildPatio(group),
-    escalier: () => buildEscalier(group, hide),
-    "salles-vertes": () => buildSallesVertes(group, hide),
-    "couloir-sombre": () => buildElegantGallery(group, hide),
-    "couloir-dore": () => buildCouloirDore(group, hide),
-    voutes: () => buildVoutes(group, hide),
+    escalier: () => buildEscalier(group),
+    "salles-vertes": () => buildSallesVertes(group),
+    "couloir-sombre": () => buildElegantGallery(group),
+    "couloir-dore": () => buildCouloirDore(group),
+    voutes: () => buildVoutes(group),
     courbes: () => buildCourbes(group),
     "atrium-lattes": () => buildAtriumLattes(group),
   };

@@ -116,19 +116,15 @@ const artworkSchema = z.object({
   // An artwork image is either a legacy database upload, a portfolio
   // image, a new R2 upload — served same-origin from /api/r2/... (the
   // raw R2 public URL cannot load as a WebGL texture: the bucket has no
-  // CORS policy) — the raw R2 public URL itself, or a bundled Stone
-  // Gallery placeholder (public/artworks/stone-gallery/*.jpg, shipped
-  // with the app). Keep in sync with isAllowedImageUrl in
-  // components/editor.tsx: the editor's pre-save check and this
-  // server-side check must accept exactly the same URLs, or a save the
-  // editor allows is rejected here (the Stone placeholders were allowed
-  // client-side but rejected here, so a Stone draft could never be saved).
+  // CORS policy) — or the raw R2 public URL itself. Keep in sync with
+  // isAllowedImageUrl in components/editor.tsx: the editor's pre-save
+  // check and this server-side check must accept exactly the same
+  // URLs, or a save the editor allows is rejected here.
   imageUrl: z
     .string()
     .refine(
       (url) =>
         /^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif))$/i.test(url) ||
-        /^\/artworks\/stone-gallery\/[a-z0-9-]+\.(?:jpg|jpeg|webp)$/i.test(url) ||
         isR2ImageUrl(url),
       { message: "Invalid image URL." },
     )

@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T03:17:34.697Z",
-  "commit": "e69d56d",
+  "generatedAt": "2026-11-08T03:33:36.457Z",
+  "commit": "877d4de",
   "summary": {
     "total": 44,
-    "passed": 34,
+    "passed": 33,
     "failed": 1,
-    "skipped": 9
+    "skipped": 10
   },
   "checks": [
     {
@@ -208,8 +208,8 @@
       "feature": "Code quality",
       "id": "build",
       "name": "Production build passes (npm run build)",
-      "status": "pass",
-      "detail": "npm run build exit 0"
+      "status": "skip",
+      "detail": "not run — pass --build to include it"
     },
     {
       "feature": "Smoke tests",

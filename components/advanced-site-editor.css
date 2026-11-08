@@ -58,7 +58,7 @@
 .advanced-editor .canvas-toolbar button { border: 0; background: none; color: inherit; }
 .advanced-editor .canvas-outer { flex: 1; overflow: auto; padding: 10px 24px 40px; }
 .advanced-editor .canvas-wrap { margin: 0 auto; min-height: 100%; background: white; box-shadow: 0 8px 30px #28211612; transition: width .2s ease; }
-.advanced-editor .canvas-site-nav { padding: 17px 6%; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #00000010; font-size: 11px; }
+.advanced-editor .canvas-site-nav { padding: 17px 6%; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: space-between; border-bottom: 1px solid #00000010; font-size: 11px; }
 .advanced-editor .canvas-site-nav strong { font: bold 15px Georgia, serif; }
 .advanced-editor .canvas-site-nav span { margin-left: 15px; color: #7d786f; }
 .advanced-editor .canvas-section { position: relative; margin: 0 20px; padding: 48px 6%; min-height: 180px; border: 1px solid transparent; cursor: grab; }
@@ -76,6 +76,12 @@
 .advanced-editor .gallery-tile:nth-child(2) { background: linear-gradient(145deg, #c0a283, #777b70); }
 .advanced-editor .gallery-tile:nth-child(3) { background: linear-gradient(145deg, #9f8f84, #4a5754); }
 .advanced-editor .preview-card { padding: 20px; background: #f6f3ed; margin-top: 18px; border-radius: 2px; }
+.advanced-editor .preview-card svg, .advanced-editor .preview-social span svg { vertical-align: -2px; margin-right: 6px; }
+.advanced-editor .preview-social { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.advanced-editor .preview-social span { display: inline-flex; align-items: center; padding: 7px 11px; border: 1px solid #d8d2c6; border-radius: 999px; font-size: 11px; }
+.advanced-editor .preview-social span svg { margin-right: 0; }
+.advanced-editor .preview-footer { margin-top: 18px; padding: 22px 4px 4px; border-top: 1px solid #d8d2c6; display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; justify-content: space-between; font-size: 11px; color: #6d675e; }
+.advanced-editor .preview-footer strong { font-size: 13px; color: var(--site-text); }
 .advanced-editor .template-card { border: 1px solid var(--adv-line); border-radius: 8px; overflow: hidden; margin: 13px 0; }
 .advanced-editor .template-preview { height: 112px; padding: 13px; display: flex; flex-direction: column; justify-content: flex-end; position: relative; overflow: hidden; }
 .advanced-editor .template-preview span { width: 46%; height: 6px; background: #ffffffbd; margin: 3px 0; }

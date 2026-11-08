@@ -7,7 +7,7 @@
 // public/images/: 8 Unsplash-licensed photos + 3 Leonardo da Vinci
 // works in the public domain (Wikimedia Commons). They are placeholders
 // — the artist replaces them with their own works.
-import type { BlockType, SiteDocument, SitePage, TemplateSection, TemplateSummary, Theme } from "@/lib/advanced-site-types";
+import type { Block, BlockType, SiteDocument, SitePage, TemplateSection, TemplateSummary, Theme } from "@/lib/advanced-site-types";
 
 const palettes = {
   painter: { primary: "#a74731", secondary: "#ead9c5", background: "#f6f1e8", text: "#29241f", accent: "#d9a854" },
@@ -38,7 +38,9 @@ export const templates: RawTemplate[] = [
       { title: "Accueil", type: "hero", heading: "Leonardo da Vinci", body: "Peintre, dessinateur et chercheur de la Renaissance italienne. Un regard qui relie l'art, la nature et la science.", image: "/images/leonardo-self-portrait.jpg" },
       { title: "Œuvres", type: "gallery", heading: "Œuvres et études", body: "Quelques œuvres majeures conservées et documentées à travers le monde.", items: ["La Joconde", "La Cène", "Portrait de Léonard"], images: ["/images/leonardo-mona-lisa.jpg", "/images/leonardo-last-supper.jpg", "/images/leonardo-self-portrait.jpg"], imageCaptions: ["La Joconde · vers 1503–1506", "La Cène · vers 1495–1498", "Portrait à la sanguine · attribution discutée"], categories: ["Peinture", "Peinture", "Dessin"], imageSources: ["https://commons.wikimedia.org/wiki/File:Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg", "https://commons.wikimedia.org/wiki/File:Leonardo_da_Vinci_-_The_Last_Supper_high_res.jpg", "https://commons.wikimedia.org/wiki/File:Leonardo_self.jpg"] },
       { title: "Biographie", type: "text", heading: "Un esprit en mouvement", body: "Né à Vinci en 1452, Léonard de Vinci est peintre, ingénieur et observateur de la nature. Son œuvre traverse les disciplines : peinture, anatomie, architecture, mécanique et dessin. Il meurt à Amboise en 1519." },
-      { title: "Contact", type: "contact", heading: "Explorer les archives", body: "Ressources, études et œuvres issues de collections publiques.", items: ["Œuvres", "Carnets", "Biographie"], image: "/images/leonardo-self-portrait.jpg" }
+      { title: "Contact", type: "contact", heading: "Explorer les archives", body: "Ressources, études et œuvres issues de collections publiques.", items: ["Œuvres", "Carnets", "Biographie"], image: "/images/leonardo-self-portrait.jpg" },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Leonardo da Vinci", body: "Portfolio d'atelier — peintures, carnets et recherches." }
     ],
     pageSections: [
       [
@@ -64,7 +66,9 @@ export const templates: RawTemplate[] = [
       { title: "Œuvres", type: "gallery", heading: "Peintures récentes", body: "Une collection de paysages intérieurs, de lumière et de mémoire." },
       { title: "À propos", type: "text", heading: "Un atelier ouvert sur le monde", body: "Claire Morel explore la matière et les nuances dans son atelier lyonnais depuis 2012." },
       { title: "Expositions", type: "events", heading: "Rencontrons-nous", body: "Exposition « Les heures bleues » — Galerie des Terreaux, Lyon, du 12 au 28 juin." },
-      { title: "Contact", type: "contact", heading: "Parlons de votre projet", body: "Pour une œuvre, une collaboration ou une visite d'atelier, écrivez-moi." }
+      { title: "Contact", type: "contact", heading: "Parlons de votre projet", body: "Pour une œuvre, une collaboration ou une visite d'atelier, écrivez-moi." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Atelier Ambre", body: "Peintures originales de Claire Morel, artiste à Lyon." }
     ]
   },
   {
@@ -75,7 +79,9 @@ export const templates: RawTemplate[] = [
       { title: "Séries", type: "gallery", heading: "Histoires en images", body: "Trois séries récentes entre lumière naturelle, mouvement et paysage." },
       { title: "Prestations", type: "pricing", heading: "Photographie sur mesure", body: "Portraits, reportages et images de marque, pensés ensemble." },
       { title: "Journal", type: "text", heading: "Notes de terrain", body: "Carnets d'images, repérages et histoires derrière les photographies." },
-      { title: "Contact", type: "contact", heading: "Une idée en tête ?", body: "Parlons de votre prochain projet photo." }
+      { title: "Contact", type: "contact", heading: "Une idée en tête ?", body: "Parlons de votre prochain projet photo." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Lumière lente", body: "Photographies de Nora Diallo — portraits, lieux et instants suspendus." }
     ]
   },
   {
@@ -86,7 +92,9 @@ export const templates: RawTemplate[] = [
       { title: "Projets", type: "gallery", heading: "Sélection de projets", body: "Identités, édition et images pour des marques qui ont quelque chose à raconter." },
       { title: "Services", type: "team", heading: "Du premier croquis au dernier détail", body: "Direction artistique · Identité visuelle · Illustration · Édition" },
       { title: "À propos", type: "text", heading: "Petit studio, grandes idées", body: "Lila Bensaïd travaille avec des lieux culturels, des artisans et des maisons indépendantes." },
-      { title: "Contact", type: "contact", heading: "Créons quelque chose de beau", body: "Les projets bien racontés commencent par une conversation." }
+      { title: "Contact", type: "contact", heading: "Créons quelque chose de beau", body: "Les projets bien racontés commencent par une conversation." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Formes vives", body: "Studio Lila — identités visuelles généreuses et singulières." }
     ]
   },
   {
@@ -97,7 +105,9 @@ export const templates: RawTemplate[] = [
       { title: "Œuvres", type: "gallery", heading: "Formes façonnées", body: "Pièces uniques façonnées à la main, entre équilibre et accident." },
       { title: "Démarche", type: "text", heading: "Écouter la matière", body: "Chaque pièce commence par une rencontre avec un matériau et ses résistances." },
       { title: "Expositions", type: "events", heading: "Dates & rencontres", body: "« Terre en mouvement », Maison des métiers d'art, du 3 mai au 16 juin." },
-      { title: "Atelier", type: "cta", heading: "Visiter l'atelier", body: "L'atelier est ouvert sur rendez-vous, au cœur du Vercors." }
+      { title: "Atelier", type: "cta", heading: "Visiter l'atelier", body: "L'atelier est ouvert sur rendez-vous, au cœur du Vercors." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Matière brute", body: "Sculptures de terre et de pierre par Émile Vasseur." }
     ]
   },
   {
@@ -108,7 +118,9 @@ export const templates: RawTemplate[] = [
       { title: "Musique", type: "audio", heading: "Écouter le nouvel EP", body: "« La maison bleue » — cinq chansons enregistrées au bord de l'Atlantique." },
       { title: "Concerts", type: "events", heading: "Sur scène bientôt", body: "14 juin · Le Périscope, Lyon · 20h30" },
       { title: "Vidéos", type: "video", heading: "Sessions en direct", body: "Une session acoustique enregistrée dans le jardin du studio." },
-      { title: "Contact", type: "contact", heading: "Booking & collaborations", body: "Pour les concerts, la presse et les projets musicaux." }
+      { title: "Contact", type: "contact", heading: "Booking & collaborations", body: "Pour les concerts, la presse et les projets musicaux." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Onde claire", body: "Maëlle Rivière — autrice, compositrice et voix nomade." }
     ]
   },
   {
@@ -119,7 +131,9 @@ export const templates: RawTemplate[] = [
       { title: "Livres", type: "gallery", heading: "À lire, à relire", body: "Romans, recueils et éditions choisies." },
       { title: "Textes", type: "text", heading: "Le carnet ouvert", body: "Fragments, notes de lecture et histoires en cours d'écriture." },
       { title: "Agenda", type: "events", heading: "Lectures & rencontres", body: "Lecture musicale à la Librairie des Halles, samedi 22 juin à 18h." },
-      { title: "À propos", type: "text", heading: "Jeanne Aubert", body: "Écrivaine, lectrice et collectionneuse de carnets, installée à Arles." }
+      { title: "À propos", type: "text", heading: "Jeanne Aubert", body: "Écrivaine, lectrice et collectionneuse de carnets, installée à Arles." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Pages sauvages", body: "Les livres et les nouvelles de Jeanne Aubert." }
     ]
   },
   {
@@ -130,7 +144,9 @@ export const templates: RawTemplate[] = [
       { title: "Spectacles", type: "events", heading: "À l'affiche", body: "« Nos lignes » — Théâtre de la Croix-Rousse, 4 et 5 juillet." },
       { title: "Vidéos", type: "video", heading: "Le corps en images", body: "Extraits de spectacles et films chorégraphiques." },
       { title: "Cours", type: "pricing", heading: "Danser ensemble", body: "Ateliers contemporains pour tous les corps, débutants bienvenus." },
-      { title: "Compagnie", type: "team", heading: "Une aventure collective", body: "Six interprètes, une chorégraphe et des rencontres qui déplacent les frontières." }
+      { title: "Compagnie", type: "team", heading: "Une aventure collective", body: "Six interprètes, une chorégraphe et des rencontres qui déplacent les frontières." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Corps en scène", body: "La compagnie Traverse, chorégraphies de Samia Benali." }
     ]
   },
   {
@@ -141,7 +157,9 @@ export const templates: RawTemplate[] = [
       { title: "Films", type: "video", heading: "Voir les films", body: "Un regard documentaire sur les gestes, les lieux et celles et ceux qui les habitent." },
       { title: "Festivals", type: "events", heading: "Projections & sélections", body: "« Les mains du fleuve » — sélection officielle, Festival du réel, 2025." },
       { title: "Services", type: "pricing", heading: "Raconter votre projet", body: "Réalisation, image, montage et films de commande à taille humaine." },
-      { title: "Contact", type: "contact", heading: "Parlons cinéma", body: "Pour une projection, une commande ou une collaboration." }
+      { title: "Contact", type: "contact", heading: "Parlons cinéma", body: "Pour une projection, une commande ou une collaboration." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Hors-champ", body: "Films documentaires et créations de Thomas Girard." }
     ]
   },
   {
@@ -152,7 +170,9 @@ export const templates: RawTemplate[] = [
       { title: "Artistes", type: "team", heading: "Celles et ceux qui font le lieu", body: "Peinture, photographie, céramique, édition et pratiques croisées." },
       { title: "Expositions", type: "gallery", heading: "En ce moment à la galerie", body: "« Jardins possibles », exposition collective jusqu'au 30 juin." },
       { title: "Événements", type: "events", heading: "À venir à la Maison", body: "Vernissage · jeudi 13 juin · 18h30 — entrée libre." },
-      { title: "Visiter", type: "map", heading: "Passez nous voir", body: "18 rue des Olivettes, Nantes · Mer–Sam, 11h–19h" }
+      { title: "Visiter", type: "map", heading: "Passez nous voir", body: "18 rue des Olivettes, Nantes · Mer–Sam, 11h–19h" },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Maison commune", body: "Galerie associative et collectif d'artistes à Nantes." }
     ]
   },
   {
@@ -163,7 +183,9 @@ export const templates: RawTemplate[] = [
       { title: "Boutique", type: "pricing", heading: "Petites séries, grandes histoires", body: "Pièces uniques et séries limitées, fabriquées dans notre atelier." },
       { title: "Atelier", type: "text", heading: "Fabriqué à la main, à Marseille", body: "Des matières locales, des gestes lents et une attention au détail." },
       { title: "Commandes", type: "cta", heading: "Une pièce à imaginer ?", body: "Commandes personnalisées ouvertes pour les événements et les beaux jours." },
-      { title: "Contact", type: "contact", heading: "Écrivons-nous", body: "Pour une question, une commande ou une visite d'atelier." }
+      { title: "Contact", type: "contact", heading: "Écrivons-nous", body: "Pour une question, une commande ou une visite d'atelier." },
+      { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
+      { title: "Pied de page", type: "footer", heading: "Terre & fil", body: "Céramiques de table et bijoux textiles façonnés par Inès Laurent." }
     ]
   }
 ];
@@ -283,6 +305,39 @@ export function createTemplateSite(template: TemplateSummary): SiteDocument {
       }))
     };
   });
+  // Every page ends with the template's social + footer blocks, so the
+  // published view renders a complete footer (site nav, contact,
+  // social links, copyright, back to top) on every page.
+  const socialDefinition = template.sections.find((section) => section.type === "social");
+  const footerDefinition = template.sections.find((section) => section.type === "footer");
+  for (const page of pages) {
+    const footerBlocks: Block[] = [];
+    if (socialDefinition) {
+      footerBlocks.push({
+        id: id(),
+        type: "social",
+        content: {
+          heading: socialDefinition.heading,
+          body: socialDefinition.body,
+          label: template.siteTitle ?? template.name,
+          items: socialDefinition.items ?? ["Instagram", "Vimeo", "Newsletter"]
+        }
+      });
+    }
+    if (footerDefinition) {
+      footerBlocks.push({
+        id: id(),
+        type: "footer",
+        content: {
+          heading: footerDefinition.heading,
+          body: footerDefinition.body,
+          label: template.siteTitle ?? template.name,
+          email: "bonjour@atelier-exemple.fr"
+        }
+      });
+    }
+    if (footerBlocks.length > 0) page.sections.push({ id: id(), title: "Pied de page", blocks: footerBlocks });
+  }
   return {
     id: id(),
     slug: template.id,

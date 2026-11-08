@@ -13,6 +13,7 @@
 "use client";
 
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Globe, Instagram, Mail, Music, Play } from "lucide-react";
 import { blockLibrary, createTemplateSite } from "@/lib/advanced-site-templates";
 import type { Block, BlockType, Section, SiteDocument, SitePage, TemplateSummary, Theme } from "@/lib/advanced-site-types";
 
@@ -570,7 +571,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
               <div className="canvas-site-nav" style={{ color: site.theme.colors.text, fontFamily: site.theme.typography.headingFont }}>
                 <strong>{site.title}</strong>
                 <div className={previewMode ? "canvas-preview-nav" : ""}>{site.pages.map((page) => previewMode
-                  ? <button className={`preview-page-link ${activePage.id === page.id ? "current" : ""}`} key={page.id} onClick={() => { setActivePageId(page.id); setSelectedSectionId(page.sections[0]?.id ?? ""); }}>{page.title}</button>
+                  ? <button className={`preview-page-link ${activePage.id === page.id ? "current" : ""}`} aria-current={activePage.id === page.id ? "page" : undefined} key={page.id} onClick={() => { setActivePageId(page.id); setSelectedSectionId(page.sections[0]?.id ?? ""); }}>{page.title}</button>
                   : <span key={page.id}>{page.title}</span>)}</div>
               </div>
               {activePage.sections.map((section, index) => {
@@ -606,11 +607,13 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
                       return <div key={`${item}-${itemIndex}`} className="gallery-tile">{typeof image === "string" && <img src={image} alt={String(captions[itemIndex] ?? item)} loading="lazy" />}<span>{String(captions[itemIndex] ?? item)}</span></div>;
                     })}</div>}
                     {block.type === "events" && <div className="preview-card"><strong>{String(block.content.body ?? "Prochain rendez-vous")}</strong><p style={{ fontSize: 11, opacity: .7 }}>Entrée libre · Réservation conseillée</p></div>}
-                    {block.type === "audio" && <div className="preview-card">♫　Lecture audio · Écouter un extrait</div>}
-                    {block.type === "video" && <div className="preview-card">▶　Voir le film · Showreel</div>}
-                    {block.type === "contact" && <div className="preview-card">Votre adresse e-mail <span style={{ float: "right" }}>→</span></div>}
+                    {block.type === "audio" && <div className="preview-card"><Music size={13} aria-hidden="true" />Lecture audio · Écouter un extrait</div>}
+                    {block.type === "video" && <div className="preview-card"><Play size={13} aria-hidden="true" />Voir le film · Showreel</div>}
+                    {block.type === "contact" && <div className="preview-card"><Mail size={13} aria-hidden="true" />Votre adresse e-mail</div>}
+                    {block.type === "social" && <div className="preview-social">{(Array.isArray(block.content.items) ? block.content.items : ["Instagram", "Vimeo", "Newsletter"]).map((item) => { const label = String(item); const Icon = /instagram/i.test(label) ? Instagram : /mail|newsletter/i.test(label) ? Mail : Globe; return <span key={label}><Icon size={13} aria-hidden="true" />{label}</span>; })}</div>}
+                    {block.type === "footer" && <div className="preview-footer"><strong>{String(block.content.heading ?? site.title)}</strong><span>© {new Date().getFullYear()} · Navigation · Contact · Réseaux sociaux</span></div>}
                     {["hero", "cta", "pricing"].includes(block.type) && <button className="preview-action" style={{ background: site.theme.buttons.style === "plein" ? site.theme.colors.primary : "transparent", color: site.theme.buttons.style === "plein" ? "#fff" : site.theme.colors.primary, border: `1px solid ${site.theme.colors.primary}`, borderRadius: `${site.theme.buttons.radius}px` }}>{String(block.content.action ?? "Découvrir")}</button>}
-                    {!["hero", "text", "image", "gallery", "events", "audio", "video", "contact", "cta", "pricing", "divider"].includes(block.type) && <div className="preview-card">{String((Array.isArray(block.content.items) ? block.content.items[0] : undefined) ?? block.content.body ?? "")}</div>}
+                    {!["hero", "text", "image", "gallery", "events", "audio", "video", "contact", "cta", "pricing", "divider", "footer", "social"].includes(block.type) && <div className="preview-card">{String((Array.isArray(block.content.items) ? block.content.items[0] : undefined) ?? block.content.body ?? "")}</div>}
                     {block.type === "divider" && <hr style={{ marginTop: 26, border: 0, borderTop: `1px solid ${site.theme.colors.secondary}` }} />}
                     <div className="section-controls" style={{ position: "absolute", right: 7, top: 7, display: selectedSectionId === section.id ? "flex" : "none", gap: 4 }}>
                       <button className="small-button" aria-label="Dupliquer la section" title="Dupliquer" onClick={(event) => { event.stopPropagation(); duplicateSection(section.id); }}>⧉</button>

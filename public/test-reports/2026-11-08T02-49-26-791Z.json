@@ -1,0 +1,257 @@
+{
+  "generatedAt": "2026-11-08T02:49:26.790Z",
+  "commit": "b95433a",
+  "summary": {
+    "total": 35,
+    "passed": 22,
+    "failed": 5,
+    "skipped": 8
+  },
+  "checks": [
+    {
+      "feature": "Profile photos",
+      "id": "profile-files",
+      "name": "Profile files exist",
+      "status": "pass",
+      "detail": "lib/profile.ts, components/avatar.tsx, settings profile API, saved-work API"
+    },
+    {
+      "feature": "Profile photos",
+      "id": "profile-lib",
+      "name": "Profile lib exposes get/upsert + avatar/bio",
+      "status": "pass",
+      "detail": "parseProfileData/getUserProfile/upsertUserProfile present; kind 'profile' registered"
+    },
+    {
+      "feature": "Profile photos",
+      "id": "profile-ui",
+      "name": "Avatar shown on dashboard, sidebar, settings, public creator card",
+      "status": "pass",
+      "detail": "dashboard, sidebar, settings, public exhibition creator card"
+    },
+    {
+      "feature": "Works wall",
+      "id": "works-files",
+      "name": "Works wall files exist",
+      "status": "pass",
+      "detail": "lib/works.ts, /works/[id] page, works-page, /api/work-kinds"
+    },
+    {
+      "feature": "Works wall",
+      "id": "works-kinds",
+      "name": "Kind classification + overrides + API",
+      "status": "pass",
+      "detail": "classify/get/set + POST /api/work-kinds; kind 'work-kinds' registered"
+    },
+    {
+      "feature": "Works wall",
+      "id": "works-links",
+      "name": "Linked from dashboard + settings, i18n works section",
+      "status": "pass",
+      "detail": "dashboard 'Mes travaux', settings public-page link, EN+FR keys"
+    },
+    {
+      "feature": "Website builder",
+      "id": "site-count",
+      "name": "51 site templates, unique ids, 10 families",
+      "status": "pass",
+      "detail": "51 templates, 10 families (gallery, dark, minimal, editorial, earth, botanical, ocean, sunset, bold, pastel)"
+    },
+    {
+      "feature": "Website builder",
+      "id": "site-render",
+      "name": "Preview renders hero styles + radius; builder has family filter",
+      "status": "pass",
+      "detail": "split/banner heroes, image radius, family filter + count in builder"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-files",
+      "name": "Editor, public view, APIs, lib, seed, CSS, demo images exist",
+      "status": "pass",
+      "detail": "editor + view + 5 API routes + lib + seed + CSS + 11 demo images"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-prisma",
+      "name": "Schema has Site/Page/Section/Block/Template/Media, one User, sites fused",
+      "status": "pass",
+      "detail": "6 models + User.sites, single User model"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-templates",
+      "name": "11 original templates, unique ids",
+      "status": "pass",
+      "detail": "11 templates (portfolio-editorial, atelier-ambre, lumiere-lente, formes-vives, matiere-brute, onde-claire, pages-sauvages, corps-en-scene, hors-champ, maison-commune, terre-et-fil)"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-no-local",
+      "name": "Editor persists to DB/R2 only: no localStorage, no local uploads, no mock fetch",
+      "status": "fail",
+      "detail": "editor still uses localStorage"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-auth",
+      "name": "All advanced APIs require sign-in and scope to the owner",
+      "status": "pass",
+      "detail": "getCurrentUser + 401 on all 4 routes, owner-scoped reads/writes"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-routes",
+      "name": "Public route resolves slug first, SavedWork id second; simple builder intact",
+      "status": "pass",
+      "detail": "slug-first /sites/[id], [pageSlug] sub-pages, simple builder + link intact"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-css",
+      "name": "Editor CSS scoped (no Tailwind 3, no global .topbar), published CSS imported once",
+      "status": "fail",
+      "detail": "editor CSS still has Tailwind directives"
+    },
+    {
+      "feature": "Portfolio PDF",
+      "id": "atelier-templates",
+      "name": "8 Atelier templates, unique ids, old 50 deleted",
+      "status": "pass",
+      "detail": "8 templates (a4-poster, community-flyer, creative-resume, garden-invitation, instagram-post, instagram-story, makers-business-card, studio-presentation)"
+    },
+    {
+      "feature": "Portfolio PDF",
+      "id": "atelier-files",
+      "name": "Atelier editor, export function, API routes, tools entry, i18n",
+      "status": "pass",
+      "detail": "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug"
+    },
+    {
+      "feature": "Portfolio PDF",
+      "id": "atelier-transitions",
+      "name": "Smooth open/close transitions, 0.25s max",
+      "status": "pass",
+      "detail": "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + hidden scrollbars"
+    },
+    {
+      "feature": "Gallery walk",
+      "id": "walk-smoothing",
+      "name": "Velocity smoothing: no instant on/off, smooth arrive",
+      "status": "pass",
+      "detail": "velocity eases in/out (accel 10/s, decel 7/s), arrive slows inside 1.5 m, top speed still 4 m/s"
+    },
+    {
+      "feature": "Code quality",
+      "id": "no-alert",
+      "name": "No window.alert in the new code",
+      "status": "pass",
+      "detail": "20 new/changed files checked"
+    },
+    {
+      "feature": "Code quality",
+      "id": "tsc",
+      "name": "TypeScript compiles clean (npx tsc --noEmit)",
+      "status": "pass",
+      "detail": "tsc --noEmit exit 0"
+    },
+    {
+      "feature": "Code quality",
+      "id": "build",
+      "name": "Production build passes (npm run build)",
+      "status": "skip",
+      "detail": "not run — pass --build to include it"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-home",
+      "name": "Home responds (redirects to login without a session)",
+      "status": "skip",
+      "detail": "local DATABASE_URL is a placeholder (not postgres) — DB-backed pages cannot render locally; verified live on Vercel"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-works",
+      "name": "Public works wall renders (200, no auth needed)",
+      "status": "skip",
+      "detail": "local DATABASE_URL is a placeholder (not postgres) — DB-backed pages cannot render locally; verified live on Vercel"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-pdf",
+      "name": "Portfolio PDF tool route exists (redirects to login without a session)",
+      "status": "pass",
+      "detail": "GET /tools/portfolio-pdf → 307 → /login"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-builder",
+      "name": "Website builder route exists (redirects to login without a session)",
+      "status": "pass",
+      "detail": "GET /tools/website-builder → 307 → /login"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-adv-builder",
+      "name": "Advanced website builder route exists (redirects to login without a session)",
+      "status": "fail",
+      "detail": "GET /tools/website-builder/advanced → 404"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-adv-sites",
+      "name": "Advanced sites API responds (401/307 without a session)",
+      "status": "fail",
+      "detail": "GET /api/advanced-sites → 404"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-adv-templates",
+      "name": "Site templates API responds (401/307 without a session)",
+      "status": "fail",
+      "detail": "GET /api/site-templates → 404"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-saved-work",
+      "name": "Saved-work API responds (401/307 without a session)",
+      "status": "pass",
+      "detail": "GET /api/saved-work?kind=portfolio-pdf → 401"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-avatar",
+      "name": "Upload a profile photo, see it on dashboard + public creator card",
+      "status": "skip",
+      "detail": "needs a live browser session (subagent cannot drive the browser)"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-works",
+      "name": "Tag a work's kind on /works/[id] as the owner, filter the wall",
+      "status": "skip",
+      "detail": "needs a live browser session"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-site",
+      "name": "Pick a site template, edit, preview, publish a site",
+      "status": "skip",
+      "detail": "needs a live browser session"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-adv-site",
+      "name": "Advanced editor: pick a template, edit, autosave, publish, open /sites/[slug] + sub-page",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-pdf",
+      "name": "Open an Atelier template, edit, save, export a real PDF",
+      "status": "skip",
+      "detail": "needs a live browser session (subagent cannot drive the browser)"
+    }
+  ]
+}

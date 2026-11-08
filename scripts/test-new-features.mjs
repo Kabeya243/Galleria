@@ -122,6 +122,94 @@ check("Website builder", "site-render", "Preview renders hero styles + radius; b
   return "split/banner heroes, image radius, family filter + count in builder";
 });
 
+
+// ---------- Part 3b — Advanced website builder (Claude editor) ----------
+check("Advanced website builder", "adv-files", "Editor, public view, APIs, lib, seed, CSS, demo images exist", () => {
+  for (const f of [
+    "components/advanced-site-editor.tsx", "components/advanced-site-editor.css",
+    "components/advanced-site-view.tsx", "components/advanced-site-published.css",
+    "components/advanced-site-contact-form.tsx", "components/advanced-site-gallery-lightbox.tsx",
+    "app/tools/website-builder/advanced/page.tsx", "app/sites/[id]/[pageSlug]/page.tsx",
+    "app/api/advanced-sites/route.ts", "app/api/advanced-sites/[id]/route.ts",
+    "app/api/site-templates/route.ts", "app/api/advanced-media/route.ts",
+    "app/api/site-media/[...key]/route.ts",
+    "lib/advanced-site-types.ts", "lib/advanced-site-templates.ts", "lib/advanced-sites.ts",
+    "scripts/seed-site-templates.mjs",
+  ]) {
+    assert(exists(f), `missing ${f}`);
+  }
+  for (const img of ["architecture.jpg", "artist-portrait.jpg", "books-studio.jpg", "gallery-show.jpg",
+    "leonardo-last-supper.jpg", "leonardo-mona-lisa.jpg", "leonardo-self-portrait.jpg", "live-music.jpg",
+    "lookbook-fashion.jpg", "portrait-studio.jpg", "studio-art.jpg"]) {
+    assert(exists(`public/images/${img}`), `missing demo image ${img}`);
+  }
+  return "editor + view + 5 API routes + lib + seed + CSS + 11 demo images";
+});
+check("Advanced website builder", "adv-prisma", "Schema has Site/Page/Section/Block/Template/Media, one User, sites fused", () => {
+  const schema = read("prisma/schema.prisma");
+  for (const m of ["model Site {", "model Page {", "model Section {", "model Block {", "model Template {", "model Media {"]) {
+    assert(schema.includes(m), `schema missing ${m}`);
+  }
+  assert((schema.match(/model User \{/g) ?? []).length === 1, "more than one User model");
+  assert(schema.includes("sites         Site[]"), "User.sites relation missing");
+  return "6 models + User.sites, single User model";
+});
+check("Advanced website builder", "adv-templates", "11 original templates, unique ids", () => {
+  const src = read("lib/advanced-site-templates.ts");
+  const ids = [...src.matchAll(/id: "([a-z-]+)", name: /g)].map((m) => m[1]);
+  assert(ids.length === 11, `expected 11 templates, found ${ids.length}`);
+  assert(new Set(ids).size === 11, "duplicate template ids");
+  return `11 templates (${ids.join(", ")})`;
+});
+check("Advanced website builder", "adv-no-local", "Editor persists to DB/R2 only: no localStorage, no local uploads, no mock fetch", () => {
+  const editor = read("components/advanced-site-editor.tsx");
+  // Header comments name localStorage / public/uploads as the things that
+  // were removed — only real code counts, so strip comments first.
+  const code = editor.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert(!/localStorage\.(get|set|remove)Item/.test(code), "editor still uses localStorage");
+  assert(!code.includes("/api/media"), "editor still calls the local media API");
+  assert(!code.includes("public/uploads"), "editor still references local uploads");
+  assert(editor.includes("/api/advanced-sites"), "editor missing advanced-sites API");
+  assert(editor.includes("/api/advanced-media"), "editor missing advanced-media API");
+  const media = read("app/api/advanced-media/route.ts");
+  assert(media.includes("PutObjectCommand"), "media route does not write to R2");
+  assert(!media.includes("writeFile"), "media route still writes to local disk");
+  return "autosave → /api/advanced-sites, uploads → R2, no localStorage";
+});
+check("Advanced website builder", "adv-auth", "All advanced APIs require sign-in and scope to the owner", () => {
+  for (const f of ["app/api/advanced-sites/route.ts", "app/api/advanced-sites/[id]/route.ts",
+    "app/api/site-templates/route.ts", "app/api/advanced-media/route.ts"]) {
+    const src = read(f);
+    assert(src.includes("getCurrentUser()"), `${f} missing auth`);
+    assert(src.includes("401"), `${f} missing 401 branch`);
+  }
+  const sites = read("app/api/advanced-sites/route.ts");
+  assert(sites.includes("userId: user.id") || sites.includes("user.id"), "sites API not owner-scoped");
+  assert(read("app/api/advanced-sites/[id]/route.ts").includes("userId: user.id"), "site-by-id API not owner-scoped");
+  return "getCurrentUser + 401 on all 4 routes, owner-scoped reads/writes";
+});
+check("Advanced website builder", "adv-routes", "Public route resolves slug first, SavedWork id second; simple builder intact", () => {
+  const pub = read("app/sites/[id]/page.tsx");
+  assert(pub.includes("getPublishedSite(id)"), "public route does not try the advanced site first");
+  assert(pub.includes("findSite(id)"), "public route lost the SavedWork fallback");
+  assert(pub.indexOf("getPublishedSite(id)") < pub.indexOf("findSite(id)"), "slug-first order broken");
+  assert(exists("app/sites/[id]/[pageSlug]/page.tsx"), "advanced sub-page route missing");
+  assert(read("components/website-builder.tsx").includes("SITE_TEMPLATE_COUNT"), "simple builder broken");
+  assert(read("app/tools/website-builder/page.tsx").includes("/tools/website-builder/advanced"), "simple builder page does not link to the advanced editor");
+  return "slug-first /sites/[id], [pageSlug] sub-pages, simple builder + link intact";
+});
+check("Advanced website builder", "adv-css", "Editor CSS scoped (no Tailwind 3, no global .topbar), published CSS imported once", () => {
+  const css = read("components/advanced-site-editor.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert(!/^@tailwind/m.test(css), "editor CSS still has Tailwind directives");
+  assert(!/^\.topbar \{/m.test(css), "editor CSS has an unscoped .topbar rule");
+  assert(css.includes(".advanced-editor .topbar"), "editor CSS not scoped under .advanced-editor");
+  assert(!css.includes("--ink:") || css.includes("--adv-ink:"), "editor CSS still defines SANAA --ink");
+  const layout = read("app/layout.tsx");
+  assert(layout.includes("advanced-site-editor.css"), "layout does not import editor CSS");
+  assert(layout.includes("advanced-site-published.css"), "layout does not import published CSS");
+  return "scoped .advanced-editor, --adv-* vars, both CSS files in layout";
+});
+
 // ---------- Part 4 — Portfolio PDF, 50 templates ----------
 check("Portfolio PDF", "atelier-templates", "8 Atelier templates, unique ids, old 50 deleted", () => {
   const dir = join(ROOT, "lib", "atelier-templates");
@@ -394,6 +482,24 @@ async function smoke() {
       assert([200, 307].includes(builder.status), `GET /tools/website-builder → ${builder.status}`);
       return `GET /tools/website-builder → ${builder.status}${builder.location ? ` → ${builder.location}` : ""}`;
     });
+    const advEditor = await get("/tools/website-builder/advanced");
+    check("Smoke tests", "server-adv-builder", "Advanced website builder route exists (redirects to login without a session)", () => {
+      assert(advEditor.status !== 0, `request failed: ${advEditor.error ?? "unknown"}`);
+      assert([200, 307].includes(advEditor.status), `GET /tools/website-builder/advanced → ${advEditor.status}`);
+      return `GET /tools/website-builder/advanced → ${advEditor.status}${advEditor.location ? ` → ${advEditor.location}` : ""}`;
+    });
+    const advSites = await get("/api/advanced-sites");
+    check("Smoke tests", "server-adv-sites", "Advanced sites API responds (401/307 without a session)", () => {
+      assert(advSites.status !== 0, `request failed: ${advSites.error ?? "unknown"}`);
+      assert([200, 307, 401].includes(advSites.status), `GET /api/advanced-sites → ${advSites.status}`);
+      return `GET /api/advanced-sites → ${advSites.status}`;
+    });
+    const advTemplates = await get("/api/site-templates");
+    check("Smoke tests", "server-adv-templates", "Site templates API responds (401/307 without a session)", () => {
+      assert(advTemplates.status !== 0, `request failed: ${advTemplates.error ?? "unknown"}`);
+      assert([200, 307, 401].includes(advTemplates.status), `GET /api/site-templates → ${advTemplates.status}`);
+      return `GET /api/site-templates → ${advTemplates.status}`;
+    });
     const saved = await get("/api/saved-work?kind=portfolio-pdf");
     check("Smoke tests", "server-saved-work", "Saved-work API responds (401/307 without a session)", () => {
       assert(saved.status !== 0, `request failed: ${saved.error ?? "unknown"}`);
@@ -411,6 +517,7 @@ await smoke();
 skip("Manual (browser)", "manual-avatar", "Upload a profile photo, see it on dashboard + public creator card", "needs a live browser session (subagent cannot drive the browser)");
 skip("Manual (browser)", "manual-works", "Tag a work's kind on /works/[id] as the owner, filter the wall", "needs a live browser session");
 skip("Manual (browser)", "manual-site", "Pick a site template, edit, preview, publish a site", "needs a live browser session");
+skip("Manual (browser)", "manual-adv-site", "Advanced editor: pick a template, edit, autosave, publish, open /sites/[slug] + sub-page", "needs a live browser session with a signed-in user");
 skip("Manual (browser)", "manual-pdf", "Open an Atelier template, edit, save, export a real PDF", "needs a live browser session (subagent cannot drive the browser)");
 
 // ---------- Report ----------

@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T02:14:59.350Z",
-  "commit": "10ae9d8",
+  "generatedAt": "2026-11-08T02:54:26.770Z",
+  "commit": "b95433a",
   "summary": {
-    "total": 24,
-    "passed": 17,
+    "total": 35,
+    "passed": 27,
     "failed": 0,
-    "skipped": 7
+    "skipped": 8
   },
   "checks": [
     {
@@ -63,6 +63,55 @@
       "name": "Preview renders hero styles + radius; builder has family filter",
       "status": "pass",
       "detail": "split/banner heroes, image radius, family filter + count in builder"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-files",
+      "name": "Editor, public view, APIs, lib, seed, CSS, demo images exist",
+      "status": "pass",
+      "detail": "editor + view + 5 API routes + lib + seed + CSS + 11 demo images"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-prisma",
+      "name": "Schema has Site/Page/Section/Block/Template/Media, one User, sites fused",
+      "status": "pass",
+      "detail": "6 models + User.sites, single User model"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-templates",
+      "name": "11 original templates, unique ids",
+      "status": "pass",
+      "detail": "11 templates (portfolio-editorial, atelier-ambre, lumiere-lente, formes-vives, matiere-brute, onde-claire, pages-sauvages, corps-en-scene, hors-champ, maison-commune, terre-et-fil)"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-no-local",
+      "name": "Editor persists to DB/R2 only: no localStorage, no local uploads, no mock fetch",
+      "status": "pass",
+      "detail": "autosave → /api/advanced-sites, uploads → R2, no localStorage"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-auth",
+      "name": "All advanced APIs require sign-in and scope to the owner",
+      "status": "pass",
+      "detail": "getCurrentUser + 401 on all 4 routes, owner-scoped reads/writes"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-routes",
+      "name": "Public route resolves slug first, SavedWork id second; simple builder intact",
+      "status": "pass",
+      "detail": "slug-first /sites/[id], [pageSlug] sub-pages, simple builder + link intact"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-css",
+      "name": "Editor CSS scoped (no Tailwind 3, no global .topbar), published CSS imported once",
+      "status": "pass",
+      "detail": "scoped .advanced-editor, --adv-* vars, both CSS files in layout"
     },
     {
       "feature": "Portfolio PDF",
@@ -143,6 +192,27 @@
     },
     {
       "feature": "Smoke tests",
+      "id": "server-adv-builder",
+      "name": "Advanced website builder route exists (redirects to login without a session)",
+      "status": "pass",
+      "detail": "GET /tools/website-builder/advanced → 307 → /login"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-adv-sites",
+      "name": "Advanced sites API responds (401/307 without a session)",
+      "status": "pass",
+      "detail": "GET /api/advanced-sites → 401"
+    },
+    {
+      "feature": "Smoke tests",
+      "id": "server-adv-templates",
+      "name": "Site templates API responds (401/307 without a session)",
+      "status": "pass",
+      "detail": "GET /api/site-templates → 401"
+    },
+    {
+      "feature": "Smoke tests",
       "id": "server-saved-work",
       "name": "Saved-work API responds (401/307 without a session)",
       "status": "pass",
@@ -168,6 +238,13 @@
       "name": "Pick a site template, edit, preview, publish a site",
       "status": "skip",
       "detail": "needs a live browser session"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-adv-site",
+      "name": "Advanced editor: pick a template, edit, autosave, publish, open /sites/[slug] + sub-page",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user"
     },
     {
       "feature": "Manual (browser)",

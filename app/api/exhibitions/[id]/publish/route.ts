@@ -3,6 +3,7 @@ import { hash } from "bcryptjs";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { absoluteCoverUrl, resolveFeedBaseUrl, syncPublicationFeed } from "@/lib/feed-sync";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -13,9 +14,12 @@ type RouteContext = { params: Promise<{ id: string }> };
 // Without a visibility the route keeps its old toggle: a published show
 // goes back to draft, a draft is published with its current visibility
 // (or "public" when it has none yet).
+// publishToFeed (default true) is the author's choice from the publish
+// dialog: unchecked, a public show stays out of the publication feed.
 const publishSchema = z.object({
   visibility: z.enum(["public", "private-link", "password"]).optional(),
   password: z.string().min(8, "The password needs at least 8 characters.").optional(),
+  publishToFeed: z.boolean().optional(),
 });
 
 export async function POST(request: Request, { params }: RouteContext) {
@@ -42,7 +46,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       { status: 400 },
     );
   }
-  const { visibility, password } = parsed.data;
+  const { visibility, password, publishToFeed = true } = parsed.data;
 
   // A password-protected show needs a password at publish time.
   if (visibility === "password" && !password) {
@@ -52,29 +56,63 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
+  let updated: { status: string; slug: string; visibility: string };
   // No visibility: toggle (the old behaviour).
   if (!visibility) {
     const isPublic = exhibition.status === "public";
-    const updated = await db.exhibition.update({
+    updated = await db.exhibition.update({
       where: { id },
       data: {
         status: isPublic ? "draft" : "public",
         publishedAt: isPublic ? null : new Date(),
       },
     });
-    return NextResponse.json({ status: updated.status, slug: updated.slug });
+  } else {
+    updated = await db.exhibition.update({
+      where: { id },
+      data: {
+        status: "public",
+        visibility,
+        // A password is stored as a bcrypt hash, never in clear text. Any
+        // other visibility clears the previous hash.
+        accessPasswordHash: visibility === "password" ? await hash(password as string, 12) : null,
+        publishedAt: new Date(),
+      },
+    });
   }
 
-  const updated = await db.exhibition.update({
-    where: { id },
-    data: {
-      status: "public",
-      visibility,
-      // A password is stored as a bcrypt hash, never in clear text. Any
-      // other visibility clears the previous hash.
-      accessPasswordHash: visibility === "password" ? await hash(password as string, 12) : null,
-      publishedAt: new Date(),
+  // Publication feed sync (chantier 3/5): tell the FastAPI feed API about
+  // the new state — publish the post (public + public, with a cover), or
+  // remove it (draft, private-link, password, or opted out). Fail-soft:
+  // syncPublicationFeed never throws, so a feed failure can never fail
+  // the publication itself.
+  const origin = new URL(request.url).origin;
+  let coverImageUrl: string | null = null;
+  if (updated.status === "public" && updated.visibility === "public" && publishToFeed) {
+    // The feed cover is the first artwork that has an image, oldest first.
+    const cover = await db.artwork.findFirst({
+      where: { exhibitionId: id, imageUrl: { not: null } },
+      orderBy: { createdAt: "asc" },
+      select: { imageUrl: true },
+    });
+    coverImageUrl = absoluteCoverUrl(cover?.imageUrl ?? null, origin);
+  }
+  await syncPublicationFeed(
+    {
+      exhibitionId: id,
+      authorId: user.id,
+      status: updated.status,
+      visibility: updated.visibility,
+      publishToFeed,
+      coverImageUrl,
+      baseUrl: resolveFeedBaseUrl(request.url),
+      internalKey: process.env.SOCIAL_INTERNAL_API_KEY,
     },
-  });
-  return NextResponse.json({ status: updated.status, slug: updated.slug, visibility: updated.visibility });
+  );
+
+  return NextResponse.json(
+    visibility
+      ? { status: updated.status, slug: updated.slug, visibility: updated.visibility }
+      : { status: updated.status, slug: updated.slug },
+  );
 }

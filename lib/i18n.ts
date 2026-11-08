@@ -608,6 +608,11 @@ export const DICTIONARY = {
     accessPasswordPlaceholder: { fr: "Au moins 8 caractères", en: "At least 8 characters" },
     publish: { fr: "Publier", en: "Publish" },
     unpublish: { fr: "Dépublier", en: "Unpublish" },
+    excludeFromFeed: { fr: "Ne pas publier dans le fil", en: "Don't publish to the feed" },
+    excludeFromFeedDesc: {
+      fr: "L'exposition sera publique mais n'apparaîtra pas dans le fil des publications.",
+      en: "The exhibition will be public but won't appear in the publication feed.",
+    },
     enterPassword: { fr: "Entrer le mot de passe", en: "Enter the password" },
     passwordProtected: { fr: "Exposition protégée", en: "Protected exhibition" },
     passwordProtectedDesc: {

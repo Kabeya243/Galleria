@@ -3137,8 +3137,9 @@ async function compressImage(file: File): Promise<File> {
 
   // Publishing (feature 8): a draft opens the visibility dialog; a
   // published show unpublishes with the old toggle (no body). The dialog
-  // passes the chosen visibility (and password, when protected).
-  async function publishExhibition(nextVisibility?: PublishVisibility, password?: string) {
+  // passes the chosen visibility (and password, when protected) plus
+  // publishToFeed — false when the author unchecked the feed.
+  async function publishExhibition(nextVisibility?: PublishVisibility, password?: string, publishToFeed?: boolean) {
     if (!saved && !(await saveExhibition())) return;
     setBusy(true);
     try {
@@ -3148,11 +3149,11 @@ async function compressImage(file: File): Promise<File> {
         body:
           nextVisibility === undefined
             ? undefined
-            : JSON.stringify(
-                password === undefined
-                  ? { visibility: nextVisibility }
-                  : { visibility: nextVisibility, password },
-              ),
+            : JSON.stringify({
+                visibility: nextVisibility,
+                ...(password === undefined ? {} : { password }),
+                ...(publishToFeed === undefined ? {} : { publishToFeed }),
+              }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not publish this exhibition.");

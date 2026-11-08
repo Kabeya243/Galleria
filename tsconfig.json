@@ -19,5 +19,8 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  // scripts/test-feed-sync.ts runs directly under Node's type stripping,
+  // so it imports lib/feed-sync.ts with its .ts extension — the repo
+  // tsconfig (allowImportingTsExtensions off) must not typecheck it.
+  "exclude": ["node_modules", "scripts/test-feed-sync.ts"]
 }

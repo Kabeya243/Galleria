@@ -16,11 +16,14 @@ export default function ExhibitionPublishDialog({
 }: {
   currentVisibility: PublishVisibility;
   onClose: () => void;
-  onPublish: (visibility: PublishVisibility, password?: string) => Promise<void>;
+  onPublish: (visibility: PublishVisibility, password?: string, publishToFeed?: boolean) => Promise<void>;
 }) {
   const t = useT();
   const [visibility, setVisibility] = useState<PublishVisibility>(currentVisibility);
   const [password, setPassword] = useState("");
+  // "Ne pas publier dans le fil": only meaningful for a public show —
+  // private-link and password shows never reach the feed anyway.
+  const [excludeFromFeed, setExcludeFromFeed] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const needsPassword = visibility === "password";
@@ -38,7 +41,11 @@ export default function ExhibitionPublishDialog({
     setPublishing(true);
     setError(null);
     try {
-      await onPublish(visibility, needsPassword ? password : undefined);
+      await onPublish(
+        visibility,
+        needsPassword ? password : undefined,
+        visibility === "public" ? !excludeFromFeed : undefined,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : t("publish", "publish"));
       setPublishing(false);
@@ -76,6 +83,19 @@ export default function ExhibitionPublishDialog({
               ))}
             </div>
           </fieldset>
+          {visibility === "public" && (
+            <label className="publish-dialog-feed">
+              <input
+                type="checkbox"
+                checked={excludeFromFeed}
+                onChange={(event) => setExcludeFromFeed(event.target.checked)}
+              />
+              <span>
+                <span className="publish-dialog-feed-name">{t("publish", "excludeFromFeed")}</span>
+                <span className="publish-dialog-feed-desc">{t("publish", "excludeFromFeedDesc")}</span>
+              </span>
+            </label>
+          )}
           {needsPassword && (
             <div className="publish-dialog-password">
               <label htmlFor="publish-access-password">{t("publish", "accessPassword")} *</label>

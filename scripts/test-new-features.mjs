@@ -472,7 +472,10 @@ check("Exhibition music", "music-api", "PUT persists the 4 fields; public page p
   }
   const page = read("app/exhibition/[slug]/page.tsx");
   assert(page.includes("music={"), "public page does not pass music to PublicExhibition");
-  assert(page.includes("exhibition.audioUrl"), "public page does not read audioUrl");
+  // The music fields are read in the shared loader (lib/exhibition-public.ts),
+  // used by the public page and the embed page.
+  const loader = read("lib/exhibition-public.ts");
+  assert(loader.includes("exhibition.audioUrl"), "shared loader does not read audioUrl");
   return "PUT writes audio fields when sent; /exhibition/[slug] forwards url/title/loop/volume";
 });
 check("Exhibition music", "music-upload", "Audio upload route: MP3/AAC only, 4.5 MB cap, audio/<userId>/ prefix", () => {

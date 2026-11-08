@@ -269,7 +269,10 @@ try {
     }
     const pub = readFileSync(join(ROOT, "components/public-exhibition.tsx"), "utf8");
     assert(pub.includes("GalleryScene"), "public exhibition does not render GalleryScene");
-    assert(pub.includes("parseGalleryRooms") || readFileSync(join(ROOT, "app/exhibition/[slug]/page.tsx"), "utf8").includes("parseGalleryRooms"), "exhibition page does not parse rooms");
+    // Rooms are parsed in the shared loader (lib/exhibition-public.ts),
+    // used by the public page and the embed page — either location counts.
+    const loader = readFileSync(join(ROOT, "lib", "exhibition-public.ts"), "utf8");
+    assert(pub.includes("parseGalleryRooms") || readFileSync(join(ROOT, "app/exhibition/[slug]/page.tsx"), "utf8").includes("parseGalleryRooms") || loader.includes("parseGalleryRooms"), "exhibition page does not parse rooms");
     return "Exhibition.rooms + Artwork.roomId + /galleries + /exhibition/[slug] + GalleryScene";
   });
 

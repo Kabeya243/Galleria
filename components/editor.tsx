@@ -38,6 +38,7 @@ import {
   Ungroup,
   Unlock,
   Upload,
+  Video,
 } from "lucide-react";
 import ElementThumbnail from "@/components/element-thumbnail";
 import ExhibitionMinimap from "@/components/exhibition-minimap";
@@ -59,6 +60,7 @@ import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
 import { useLocale, useT } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
 import { galleryCameraStart, galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
+import { isVideoServingUrl, VIDEO_MAX_FILE_SIZE } from "@/lib/video";
 import {
   createSunlightElement,
   closestHangWall,
@@ -416,7 +418,8 @@ export default function Editor({
     medium: string;
     dimensions: string;
     description: string;
-    imageUrl: string;
+    imageUrl: string | null;
+    videoUrl: string | null;
     frame: string;
     palette: string[] | null;
     altText: string | null;
@@ -457,6 +460,8 @@ export default function Editor({
   const [confirmDeletePresetId, setConfirmDeletePresetId] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const replaceImageRef = useRef<HTMLInputElement>(null);
+  const videoUploadRef = useRef<HTMLInputElement>(null);
+  const replaceVideoRef = useRef<HTMLInputElement>(null);
   // Undo history: full editor snapshots (artworks + rooms + title +
   // description), so Ctrl+Z covers artworks, elements and room settings
   // alike. One snapshot per discrete action — never per keystroke (see
@@ -1990,6 +1995,9 @@ export default function Editor({
     if (artwork.imageUrl && !isAllowedImageUrl(artwork.imageUrl)) {
       problems.push("a re-uploaded image (this image link cannot be saved)");
     }
+    if (artwork.videoUrl && !isVideoServingUrl(artwork.videoUrl)) {
+      problems.push("a re-uploaded video (this video link cannot be saved)");
+    }
     if (!artwork.roomId) problems.push("a room");
     return problems;
   }
@@ -2464,6 +2472,45 @@ export default function Editor({
     return artwork.id;
   }
 
+  // Add a video artwork: same camera-wall placement as addArtwork, but
+  // a 16:9 frame (128 × 72 cm — the dimensions field drives the wall
+  // size, so a video hangs at 1.28 × 0.72 m, not at the 80 × 100 cm
+  // portrait default). The video itself is the media; there is no
+  // image, no palette to extract and no caption to generate. Compose,
+  // drag and snap treat it exactly like an image artwork afterwards —
+  // they only read position, rotation, scale and dimensions.
+  function addVideoArtwork(videoUrl: string): string | undefined {
+    if (!activeRoom) return undefined;
+    const index = currentArtworks.length;
+    const alongOffset = (index % 5 - 2) * 1.0;
+    const { position, rotation, turnYaw } = placeOnCameraWall(1.28, 0.72, alongOffset);
+    const artwork: Artwork = {
+      id: crypto.randomUUID(),
+      title: `New video artwork ${index + 1}`,
+      artist: defaultArtist(),
+      year: "2025",
+      medium: "Video, MP4",
+      dimensions: "128 × 72 cm",
+      description: "Add a description to tell visitors about this work.",
+      color: ["#8a9b88", "#bb8365", "#8796a9"][index % 3],
+      accent: "#e5c7a0",
+      position,
+      rotation,
+      scale: 1,
+      frame: "wood",
+      imageUrl: null,
+      videoUrl,
+      palette: null,
+      roomId: activeRoom.id,
+    };
+    snapshot();
+    setArtworks((current) => [...current, artwork]);
+    selectArtwork(artwork.id);
+    revealNewArtwork(artwork.id, turnYaw);
+    setSaved(false);
+    return artwork.id;
+  }
+
   async function openLibraryPicker() {
     setShowLibraryPicker((value) => !value);
     if (libraryLoaded || libraryLoading) return;
@@ -2485,7 +2532,10 @@ export default function Editor({
 
   // Add a library work to this room: a COPY — the same imageUrl (the
   // same R2 file, no upload), the library's metadata, a fresh id and
-  // the camera-wall placement addArtwork uses. The copy is
+  // the camera-wall placement addArtwork uses. A video library work
+  // copies its videoUrl the same way (same R2 file, no re-upload) and
+  // keeps its own dimensions — a 16:9 video must not be squeezed into
+  // the 80 × 100 cm image default. The copy is
   // independent afterwards and only persists when the exhibition is
   // saved (the save also re-records it in the library, which is a
   // no-op — the row already exists).
@@ -2509,6 +2559,7 @@ export default function Editor({
       scale: 1,
       frame: work.frame || "wood",
       imageUrl: work.imageUrl,
+      videoUrl: work.videoUrl,
       palette: work.palette,
       altText: work.altText,
       roomId: activeRoom.id,
@@ -2744,6 +2795,102 @@ async function compressImage(file: File): Promise<File> {
     } catch (error) {
       console.error("Could not replace artwork image.", error);
       setUploadError(error instanceof Error ? error.message : "Could not upload this image.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Upload one video file (MP4 H.264, ≤ 4.5 MB) to R2 via the dedicated
+  // video proxy and hang it as a video artwork (addVideoArtwork). The
+  // file name (without extension) becomes the working title only when
+  // the artist renames it — the artwork starts as "New video artwork
+  // N", like an image upload. Errors are inline (setUploadError), never
+  // window.alert. Removing a video later only clears the artwork's
+  // videoUrl — the R2 file stays (no DeleteObject in the code yet; same
+  // policy as music and images).
+  async function uploadVideoFile(file: File): Promise<string> {
+    const body = new FormData();
+    body.set("file", file);
+    let response: Response;
+    try {
+      response = await fetch("/api/uploads/video", { method: "POST", body });
+    } catch {
+      // A network failure (not an HTTP error): never surface the raw
+      // browser "Failed to fetch" — say what happened in plain words.
+      throw new Error(t("video", "videoUploadFailed"));
+    }
+    // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+    // an oversized request) is not JSON and used to throw a cryptic
+    // "Unexpected end of JSON input" instead of a readable error.
+    const text = await response.text();
+    let result: { error?: string; url?: string } = {};
+    try {
+      result = text ? (JSON.parse(text) as typeof result) : {};
+    } catch {
+      result = {};
+    }
+    if (!response.ok) {
+      throw new Error(
+        result.error ??
+          (response.status === 413 ? t("video", "videoTooLarge") : t("video", "videoUploadFailed")),
+      );
+    }
+    if (!result.url) throw new Error(t("video", "videoUploadFailed"));
+    return result.url;
+  }
+
+  async function uploadVideoArtwork(file?: File) {
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    const looksVideo = file.type.toLowerCase() === "video/mp4" || name.endsWith(".mp4");
+    if (!looksVideo) {
+      setUploadError(t("video", "videoInvalidFormat"));
+      return;
+    }
+    if (file.size === 0 || file.size > VIDEO_MAX_FILE_SIZE) {
+      setUploadError(t("video", "videoTooLarge"));
+      return;
+    }
+    setBusy(true);
+    setUploadError(null);
+    try {
+      const url = await uploadVideoFile(file);
+      addVideoArtwork(url);
+      if (videoUploadRef.current) videoUploadRef.current.value = "";
+    } catch (error) {
+      console.error("Could not upload video artwork.", error);
+      setUploadError(error instanceof Error ? error.message : t("video", "videoUploadFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Replace the selected artwork's video with an uploaded one. The
+  // artwork itself — title, position, size, frame — stays put, only
+  // the video changes. Replacing a video with a video keeps it a video
+  // artwork; the imageUrl stays as it was (null, or a poster).
+  async function replaceArtworkVideo(file?: File) {
+    if (!file || !selected) return;
+    const name = file.name.toLowerCase();
+    const looksVideo = file.type.toLowerCase() === "video/mp4" || name.endsWith(".mp4");
+    if (!looksVideo) {
+      setUploadError(t("video", "videoInvalidFormat"));
+      return;
+    }
+    if (file.size === 0 || file.size > VIDEO_MAX_FILE_SIZE) {
+      setUploadError(t("video", "videoTooLarge"));
+      return;
+    }
+    setBusy(true);
+    setUploadError(null);
+    try {
+      const url = await uploadVideoFile(file);
+      snapshot();
+      updateArtwork(selected.id, (artwork) => ({ ...artwork, videoUrl: url }));
+      if (replaceVideoRef.current) replaceVideoRef.current.value = "";
+    } catch (error) {
+      console.error("Could not replace artwork video.", error);
+      setUploadError(error instanceof Error ? error.message : t("video", "videoUploadFailed"));
     } finally {
       setBusy(false);
     }
@@ -3132,13 +3279,17 @@ async function compressImage(file: File): Promise<File> {
               <div className="asset-list">
                 {currentArtworks.map((artwork, index) => (
                   <button className={`asset-row ${selectedId === artwork.id ? "selected" : ""}`} key={artwork.id} onClick={() => selectArtwork(artwork.id)}>
-                    <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.altText ?? artwork.title} /> : <span />}</span>
-                    <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.medium.split(" ")[0]}</small></span>
+                    <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.videoUrl ? <video src={artwork.videoUrl} muted preload="metadata" playsInline /> : artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.altText ?? artwork.title} /> : <span />}</span>
+                    <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.videoUrl ? t("video", "video") : artwork.medium.split(" ")[0]}</small></span>
                     {selectedId === artwork.id && <span className="selected-mark"><Check size={12} /></span>}
                   </button>
                 ))}
               </div>
               <button className="add-to-room" onClick={() => uploadRef.current?.click()} disabled={busy}><Plus size={15} /> Add artwork to room</button>
+              {/* Video artwork: an MP4 on the wall, looped and muted —
+                  the same camera-wall placement as an image, a 16:9
+                  frame, and the same compose / drag / snap afterwards. */}
+              <button className="add-to-room" onClick={() => videoUploadRef.current?.click()} disabled={busy}><Video size={15} /> {t("video", "addVideo")}</button>
               {/* Reuse instead of re-uploading: pick a work already in
                   the artist's library ("Mes œuvres") and hang a copy
                   of it in this room — same image, fresh placement. */}
@@ -3173,8 +3324,8 @@ async function compressImage(file: File): Promise<File> {
                         )
                         .map((work, index) => (
                           <button className="asset-row" key={work.id} onClick={() => addLibraryArtwork(work)}>
-                            <span className={`asset-thumb asset-color-${index % 3}`}><img src={work.imageUrl} alt={work.altText ?? work.title} /></span>
-                            <span className="asset-copy"><strong>{work.title}</strong><small>{work.year} · {work.medium.split(" ")[0]}</small></span>
+                            <span className={`asset-thumb asset-color-${index % 3}`}>{work.videoUrl ? <video src={work.videoUrl} muted preload="metadata" playsInline /> : work.imageUrl ? <img src={work.imageUrl} alt={work.altText ?? work.title} /> : <span />}</span>
+                            <span className="asset-copy"><strong>{work.title}</strong><small>{work.year} · {work.videoUrl ? t("video", "video") : work.medium.split(" ")[0]}</small></span>
                           </button>
                         ))}
                     </div>
@@ -3184,7 +3335,9 @@ async function compressImage(file: File): Promise<File> {
               )}
               {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
               <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
+              <input ref={videoUploadRef} className="visually-hidden" type="file" accept="video/mp4,.mp4" onChange={(event) => void uploadVideoArtwork(event.target.files?.[0])} />
               <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>
+              <div className="asset-upload-hint"><Video size={15} /><span>{t("video", "videoHint")} {t("video", "onlyOwnVideo")}</span></div>
               {/* Curatorial text (the reference room's "Texte curatorial"):
                   a text panel as an artwork, on the wall the camera is
                   looking at — any wall, including a partition just
@@ -3417,11 +3570,19 @@ async function compressImage(file: File): Promise<File> {
           )}
           {selected ? (
             <>
-              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.imageUrl ? <img src={selected.imageUrl} alt={selected.altText ?? selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.medium}</small></div></div>
-              {!selected.text && (
+              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.videoUrl ? <video src={selected.videoUrl} muted loop playsInline preload="metadata" controls /> : selected.imageUrl ? <img src={selected.imageUrl} alt={selected.altText ?? selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.videoUrl ? t("video", "videoArtwork") : selected.medium}</small></div></div>
+              {!selected.text && !selected.videoUrl && (
                 <>
                   <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
                   <input ref={replaceImageRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void replaceArtworkImage(event.target.files?.[0])} />
+                </>
+              )}
+              {!selected.text && selected.videoUrl && (
+                <>
+                  <button type="button" className="add-to-room" onClick={() => replaceVideoRef.current?.click()} disabled={busy}>{t("video", "replaceVideo")}</button>
+                  <input ref={replaceVideoRef} className="visually-hidden" type="file" accept="video/mp4,.mp4" onChange={(event) => void replaceArtworkVideo(event.target.files?.[0])} />
+                  <button type="button" className="add-to-room" onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, videoUrl: null })); }} disabled={busy}>{t("video", "removeVideo")}</button>
+                  <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{t("video", "videoPlaysMuted")}</p>
                 </>
               )}
               {!selected.text && selected.imageUrl && (

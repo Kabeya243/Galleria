@@ -16,6 +16,7 @@ export type WorksPageWork = {
   color: string;
   accent: string;
   imageUrl: string | null;
+  videoUrl: string | null;
   exhibitionTitle: string;
   kind: WorkKind;
 };
@@ -128,7 +129,9 @@ export default function WorksPage({
         <div className="works-grid">
           {shown.map((work) => (
             <article key={work.id} className="works-card">
-              {work.imageUrl ? (
+              {work.videoUrl ? (
+                <video src={work.videoUrl} muted loop playsInline preload="metadata" aria-label={work.title} />
+              ) : work.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={work.imageUrl} alt={work.title} loading="lazy" />
               ) : (

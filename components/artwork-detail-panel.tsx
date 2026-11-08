@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mail, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Mail, Maximize2, Minimize2, Pause, Play, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { Artwork } from "@/lib/demo-data";
 import { extractPalette } from "@/lib/palette";
 import PaletteSwatches from "@/components/palette-swatches";
@@ -29,6 +29,23 @@ export default function ArtworkDetailPanel({
   const closeRef = useRef<HTMLButtonElement>(null);
   const [zoomed, setZoomed] = useState(false);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
+  // Video artwork: the wall texture is muted by default, and so is this
+  // player — browsers block autoplay with sound, and a gallery that
+  // starts talking on open would be hostile. Sound turns on only from
+  // the visitor's own click on the sound button below (a real gesture,
+  // so unmuted play is allowed); turning it off mutes at once. The
+  // video loops, like on the wall.
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
+  const isVideo = Boolean(artwork.videoUrl);
+  // A video opens playing, muted — muted autoplay is always allowed,
+  // and the visitor just clicked the artwork to open this panel. Sound
+  // still waits for the sound button below.
+  useEffect(() => {
+    if (!isVideo) return;
+    videoRef.current?.play().catch(() => undefined);
+  }, [isVideo]);
   const [showForm, setShowForm] = useState(false);
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
@@ -124,7 +141,66 @@ export default function ArtworkDetailPanel({
         {t("artwork", "artwork").toUpperCase()} {String(index).padStart(2, "0")}
       </span>
 
-      {artwork.imageUrl ? (
+      {artwork.videoUrl ? (
+        <figure className="artwork-detail-figure">
+          {/* The video itself: muted + loop, like the wall texture. No
+              native controls — the two buttons below are the controls,
+              so the sound switch is always visible and explicit. */}
+          <video
+            ref={videoRef}
+            src={artwork.videoUrl}
+            muted={!soundOn}
+            loop
+            playsInline
+            preload="metadata"
+            aria-label={alt}
+            onClick={() => {
+              const el = videoRef.current;
+              if (!el) return;
+              if (el.paused) void el.play().catch(() => undefined);
+              else el.pause();
+            }}
+            onPlay={() => setVideoPlaying(true)}
+            onPause={() => setVideoPlaying(false)}
+          />
+          <figcaption style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              type="button"
+              aria-label={videoPlaying ? t("video", "pauseVideo") : t("video", "playVideo")}
+              aria-pressed={videoPlaying}
+              onClick={() => {
+                const el = videoRef.current;
+                if (!el) return;
+                if (el.paused) void el.play().catch(() => undefined);
+                else el.pause();
+              }}
+            >
+              {videoPlaying ? <Pause size={13} /> : <Play size={13} />}
+              {videoPlaying ? t("video", "pauseVideo") : t("video", "playVideo")}
+            </button>
+            <button
+              type="button"
+              aria-label={soundOn ? t("video", "turnSoundOff") : t("video", "turnSoundOn")}
+              aria-pressed={soundOn}
+              onClick={() => {
+                const el = videoRef.current;
+                const next = !soundOn;
+                setSoundOn(next);
+                // A click is a user gesture: unmuting and playing here
+                // is allowed. Sound on starts the video too, so the
+                // visitor hears it at once instead of a silent frame.
+                if (el) {
+                  el.muted = !next;
+                  if (next && el.paused) void el.play().catch(() => undefined);
+                }
+              }}
+            >
+              {soundOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
+              {soundOn ? t("video", "turnSoundOff") : t("video", "turnSoundOn")}
+            </button>
+          </figcaption>
+        </figure>
+      ) : artwork.imageUrl ? (
         <figure
           className={`artwork-detail-figure${zoomed ? " zoomed" : ""}`}
           onClick={(event) => {
@@ -224,9 +300,16 @@ export default function ArtworkDetailPanel({
           <span>{t("artwork", "messageSentDetail")}</span>
         </p>
       )}
-      <span className="artwork-detail-zoom-hint">
-        <ZoomIn size={12} /> {t("artwork", "zoomIn")}
-      </span>
+      {!isVideo && (
+        <span className="artwork-detail-zoom-hint">
+          <ZoomIn size={12} /> {t("artwork", "zoomIn")}
+        </span>
+      )}
+      {isVideo && (
+        <span className="artwork-detail-zoom-hint">
+          <VolumeX size={12} /> {t("video", "soundMutedNote")}
+        </span>
+      )}
     </aside>
   );
 }

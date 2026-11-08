@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isR2ImageUrl } from "@/lib/r2";
+import { isVideoServingUrl } from "@/lib/video";
 import { galleryRoomSchema } from "@/lib/rooms";
 import { FRAME_VARIANTS } from "@/lib/demo-data";
 import type { FrameVariant } from "@/lib/demo-data";
@@ -128,6 +129,17 @@ const artworkSchema = z.object({
         isR2ImageUrl(url),
       { message: "Invalid image URL." },
     )
+    .nullable()
+    .optional(),
+  // Video artwork (Nov 2026): a same-origin serving URL only
+  // (/api/video/videos/<userId>/<uuid>.mp4), so a wall video can never
+  // point at a third-party stream — a foreign mp4 would need CORS
+  // headers to load as a WebGL texture, and most hosts do not send
+  // them. When set, the wall renders a VideoTexture from it and the
+  // imageUrl above, if any, is only the fallback poster.
+  videoUrl: z
+    .string()
+    .refine((url) => isVideoServingUrl(url), { message: "Invalid video URL." })
     .nullable()
     .optional(),
   // Colour palette extracted from the artwork image (ColorThief, in the

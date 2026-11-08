@@ -161,12 +161,23 @@ export default function LibraryPage({
               visibleWorks.map((work) => (
                 <article key={work.id} className={`gallery-card ${styles.card}`}>
                   <span className={styles.coverLink} aria-label={work.title}>
-                    <img
-                      src={work.imageUrl}
-                      alt={work.altText ?? work.title}
-                      className={styles.cover}
-                      loading="lazy"
-                    />
+                    {work.videoUrl ? (
+                      <video
+                        src={work.videoUrl}
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        className={styles.cover}
+                      />
+                    ) : work.imageUrl ? (
+                      <img
+                        src={work.imageUrl}
+                        alt={work.altText ?? work.title}
+                        className={styles.cover}
+                        loading="lazy"
+                      />
+                    ) : null}
                   </span>
                   <div className="gallery-card-body">
                     <h3>{work.title}</h3>

@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
-import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, Group, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VSMShadowMap, type DirectionalLight } from "three";
+import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, Group, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VideoTexture, VSMShadowMap, type DirectionalLight } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
@@ -49,6 +49,7 @@ import { buildGalleryShell, disposeGroup, GalleryEnvironment, GalleryWalkControl
 import { FLOOR_SHINE_DEFAULT, partitionDimsOf, sunlightPartitionDimsOf } from "@/lib/editor-params";
 import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
 import { floorPatternTexture } from "@/lib/floor-patterns";
+import { VIDEO_PLAY_DISTANCE_M, VIDEO_PLAY_FACING_DOT } from "@/lib/video";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
 // The renderer is Three.js in the browser: ACES tone mapping, a locally
@@ -613,6 +614,113 @@ function LoadedArtwork({ imageUrl, width, height, z = 0.083, color, accent, fram
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial ref={fadeMaterial} map={texture} transparent opacity={0} />
     </mesh>
+  );
+}
+
+// A video artwork on the wall: an HTMLVideoElement feeding a three.js
+// VideoTexture on the same plane an image would use, inside the same
+// frame. The element is created imperatively (never via JSX <video> —
+// there is no DOM inside the Canvas) and disposed on unmount, like the
+// image textures above: a failed load keeps the placeholder print and
+// never throws.
+//
+// Sound is muted by default — muted autoplay is the only autoplay
+// browsers allow, and a gallery that started talking on entry would be
+// hostile. The video element itself is always muted; sound is only
+// available from the artwork detail panel, on an explicit visitor
+// gesture (see ArtworkDetailPanel).
+//
+// Performance — the proximity gate (see lib/video.ts): the video plays
+// only when the visitor is near it and facing it (within 7 m, in the
+// camera's forward half-space) or when it is the selected artwork, so
+// the artist can preview it in the editor from any distance and the
+// visitor hears/sees the piece they just opened. Otherwise it stays
+// paused on its first frame — preload="metadata" means a distant video
+// has not even started streaming, so a room full of videos decodes at
+// most the one or two the visitor is standing in front of, never the
+// whole room. A hidden tab pauses everything.
+function VideoArtwork({ videoUrl, width, height, z = 0.083, color, accent, frameless, active }: { videoUrl: string; width: number; height: number; z?: number; color: string; accent: string; frameless: boolean; active: boolean }) {
+  const groupRef = useRef<Group>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const textureRef = useRef<VideoTexture | null>(null);
+  const [ready, setReady] = useState(false);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  // Reused scratch vectors — one allocation, not one per frame per video.
+  const scratch = useMemo(() => ({ world: new Vector3(), toArtwork: new Vector3(), forward: new Vector3() }), []);
+  // play()/pause() are only called on gate transitions, never every
+  // frame: a play() call while the stream is still loading returns a
+  // fresh promise each time and would spam the console on failure.
+  const playingRef = useRef(false);
+
+  useEffect(() => {
+    const video = document.createElement("video");
+    video.src = videoUrl;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.crossOrigin = "anonymous";
+    const texture = new VideoTexture(video);
+    texture.colorSpace = SRGBColorSpace;
+    videoRef.current = video;
+    textureRef.current = texture;
+    setReady(false);
+    playingRef.current = false;
+    const onLoadedData = () => setReady(true);
+    video.addEventListener("loadeddata", onLoadedData);
+    video.load();
+    return () => {
+      video.removeEventListener("loadeddata", onLoadedData);
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+      texture.dispose();
+      videoRef.current = null;
+      textureRef.current = null;
+    };
+  }, [videoUrl]);
+
+  useFrame(({ camera }) => {
+    const video = videoRef.current;
+    const group = groupRef.current;
+    if (!video || !group) return;
+    group.getWorldPosition(scratch.world);
+    const distance = camera.position.distanceTo(scratch.world);
+    scratch.toArtwork.copy(scratch.world).sub(camera.position).normalize();
+    camera.getWorldDirection(scratch.forward);
+    const facing = scratch.toArtwork.dot(scratch.forward) > VIDEO_PLAY_FACING_DOT;
+    const shouldPlay =
+      activeRef.current ||
+      (!document.hidden && distance <= VIDEO_PLAY_DISTANCE_M && facing);
+    if (shouldPlay && !playingRef.current) {
+      playingRef.current = true;
+      video.play().catch(() => {
+        // Autoplay refused (or the file failed): stay paused on the
+        // first frame — the visitor can still play it from the detail
+        // panel, which is a real gesture. Never throw from the frame loop.
+        playingRef.current = false;
+      });
+    } else if (!shouldPlay && playingRef.current) {
+      playingRef.current = false;
+      video.pause();
+    }
+  });
+
+  const fadeMaterial = usePrintFadeIn();
+  const texture = textureRef.current;
+  if (!ready || !texture) {
+    // Still loading, or the video failed to load: the placeholder print,
+    // never a blank frame — and never throw.
+    return <PlaceholderPrint width={width} height={height} z={z} frameless={frameless} color={color} accent={accent} />;
+  }
+  return (
+    <group ref={groupRef}>
+      <mesh position={[0, 0, z]}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial ref={fadeMaterial} map={texture} transparent opacity={0} />
+      </mesh>
+    </group>
   );
 }
 
@@ -1249,10 +1357,13 @@ function ArtworkFrame({
       {frameValue !== "none" && <FrameAssembly width={width} height={height} spec={frame} selected={selected} />}
       {/* Frameless prints sit almost flat on the wall; framed works sit at
           the frame's front face, recessed inside a shadow box. A text
-          artwork renders its canvas text panel; an image artwork its
-          image; anything else the placeholder print. */}
+          artwork renders its canvas text panel; a video artwork its
+          VideoTexture; an image artwork its image; anything else the
+          placeholder print. */}
       {artwork.text ? (
         <SunlightTextPrint text={artwork.text} font={textFont} width={width} height={height} z={printZ} />
+      ) : artwork.videoUrl ? (
+        <VideoArtwork videoUrl={artwork.videoUrl} width={width} height={height} z={printZ} color={artwork.color} accent={artwork.accent} frameless={frameValue === "none"} active={selected} />
       ) : artwork.imageUrl ? (
         <LoadedArtwork imageUrl={artwork.imageUrl} width={width} height={height} z={printZ} color={artwork.color} accent={artwork.accent} frameless={frameValue === "none"} />
       ) : (

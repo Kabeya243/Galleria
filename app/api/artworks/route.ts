@@ -17,6 +17,7 @@ const createSchema = z.object({
   dimensions: z.string().max(100).optional().default(""),
   description: z.string().max(2000).optional().default(""),
   imageUrl: z.string().max(500).optional().nullable(),
+  videoUrl: z.string().max(500).optional().nullable(),
   frame: z.string().max(100).optional().default("wood"),
 });
 
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
       dimensions: input.dimensions,
       description: input.description,
       imageUrl: input.imageUrl ?? null,
+      videoUrl: input.videoUrl ?? null,
       frame: input.frame,
       exhibitionId: input.exhibitionId,
     },
@@ -53,6 +55,6 @@ export async function POST(request: Request) {
   // Every work added to an exhibition joins the reusable library
   // (create-only — a copy never overwrites the canonical row), so
   // "Mes œuvres" stays current without a separate upload step.
-  await upsertLibraryWorks(user.id, [{ ...input, imageUrl: input.imageUrl ?? null }]);
+  await upsertLibraryWorks(user.id, [{ ...input, imageUrl: input.imageUrl ?? null, videoUrl: input.videoUrl ?? null }]);
   return NextResponse.json({ artwork }, { status: 201 });
 }

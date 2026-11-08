@@ -101,6 +101,15 @@ model Artwork {
   scale        Float      @default(1)
   frame        String     @default("wood")
   imageUrl     String?
+  // Video artwork (Nov 2026): when set, this artwork is a video, not
+  // an image — the wall renders a VideoTexture from this same-origin
+  // serving URL (/api/video/videos/<userId>/<uuid>.mp4, MP4 H.264,
+  // 4.5 MB cap, same R2 proxy pattern as images and music). `imageUrl`,
+  // when also set, is only the fallback poster. Null for ordinary
+  // image artworks, text panels and placeholders. Applied by
+  // `prisma db push` on deploy (see vercel.json); no data migration —
+  // existing rows keep videoUrl null and render unchanged.
+  videoUrl     String?
   // Curatorial wall text (the reference room's "Texte curatorial"):
   // when set, the artwork renders as a canvas text panel instead of an
   // image, in the chosen typeface. Null for ordinary artworks.
@@ -165,7 +174,14 @@ model LibraryWork {
   medium      String   @default("")
   dimensions  String   @default("")
   description String   @default("")
-  imageUrl    String
+  // Null for video works: a video library work has no image — its
+  // videoUrl below is the media. Image works keep imageUrl set.
+  imageUrl    String?
+  // Video artwork (Nov 2026): the same-origin serving URL of the
+  // video (/api/video/videos/<userId>/<uuid>.mp4). Null for image
+  // works. Identity of a library work is videoUrl ?? imageUrl (see
+  // lib/library.ts): one row per (owner, media URL), image or video.
+  videoUrl    String?
   frame       String   @default("wood")
   palette     String?
   altText     String?

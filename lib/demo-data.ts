@@ -12,6 +12,11 @@ export type Artwork = {
   rotation: number;
   scale: number;
   imageUrl?: string | null;
+  // Video artwork (Nov 2026): same-origin serving URL
+  // (/api/video/videos/<userId>/<uuid>.mp4). When set, the wall renders
+  // a VideoTexture from it instead of the image; `imageUrl`, when also
+  // set, is only the fallback poster. Null/absent for image artworks.
+  videoUrl?: string | null;
   roomId: string;
   // Colour palette extracted from the artwork image (ColorThief, in the
   // browser, at upload/replace time): up to 8 hex colours, dominant

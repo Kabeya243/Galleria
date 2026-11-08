@@ -244,6 +244,46 @@ export const DICTIONARY = {
       en: "Removing the track takes it out of the exhibition, not out of storage — the file stays kept.",
     },
   },
+  video: {
+    video: { fr: "Vidéo", en: "Video" },
+    videoArtwork: { fr: "Œuvre vidéo", en: "Video artwork" },
+    addVideo: { fr: "Ajouter une vidéo", en: "Add a video" },
+    videoHint: {
+      fr: "MP4 (H.264), 4,5 Mo maximum — un clip court, en boucle. Exportez en 720p pour une vingtaine de secondes.",
+      en: "MP4 (H.264), 4.5 MB maximum — a short clip, on loop. Export at 720p for about twenty seconds.",
+    },
+    onlyOwnVideo: {
+      fr: "Only upload video you own or that is free to share.",
+      en: "Only upload video you own or that is free to share.",
+    },
+    videoTooLarge: {
+      fr: "Cette vidéo est trop lourde (plus de 4,5 Mo). Essayez un clip plus court, ou exportez-le en 720p avec un débit plus bas.",
+      en: "This video is too large (over 4.5 MB). Try a shorter clip, or export it at 720p with a lower bitrate.",
+    },
+    videoInvalidFormat: {
+      fr: "Ajoutez une vidéo MP4 (H.264).",
+      en: "Upload an MP4 (H.264) video file.",
+    },
+    videoUploadFailed: {
+      fr: "La vidéo n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.",
+      en: "Could not upload this video. Check your connection and try again.",
+    },
+    videoUploading: { fr: "Envoi de la vidéo…", en: "Uploading video…" },
+    playVideo: { fr: "Lire la vidéo", en: "Play video" },
+    pauseVideo: { fr: "Mettre la vidéo en pause", en: "Pause video" },
+    turnSoundOn: { fr: "Activer le son", en: "Turn sound on" },
+    turnSoundOff: { fr: "Couper le son", en: "Turn sound off" },
+    soundMutedNote: {
+      fr: "Son coupé par défaut — activez-le si vous voulez entendre la vidéo.",
+      en: "Sound off by default — turn it on if you want to hear the video.",
+    },
+    replaceVideo: { fr: "Remplacer la vidéo", en: "Replace video" },
+    removeVideo: { fr: "Retirer la vidéo", en: "Remove video" },
+    videoPlaysMuted: {
+      fr: "La vidéo se lit en boucle, sans son, quand vous êtes devant elle.",
+      en: "The video loops, muted, when you stand in front of it.",
+    },
+  },
   share: {
     share: { fr: "Partager", en: "Share" },
     copyLink: { fr: "Copier le lien", en: "Copy link" },

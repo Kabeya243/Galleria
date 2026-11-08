@@ -536,6 +536,111 @@ check("Exhibition music", "music-no-delete", "Removing a track never deletes the
   }
   return "no DeleteObject anywhere in the music path — orphaned files are a noted cleanup debt";
 });
+// ---------- Part 7 — Video artworks on gallery walls ----------
+// A video artwork is an Artwork with videoUrl set (MP4 H.264, R2,
+// 4.5 MB cap — the same proxy pattern as images and music). The wall
+// renders a VideoTexture; sound is muted by default and only turns on
+// from an explicit visitor gesture in the detail panel. Playback is
+// proximity-gated, so a room full of videos never decodes them all at
+// once. Real playback (autoplay, seeking, sound on iOS) needs a live
+// browser — recorded as manual checks below.
+check("Video artworks", "video-schema", "Prisma: videoUrl on Artwork + LibraryWork (imageUrl nullable there)", () => {
+  const src = read("prisma/schema.prisma");
+  assert(src.includes("videoUrl     String?"), "Artwork missing videoUrl");
+  assert(src.includes("videoUrl    String?"), "LibraryWork missing videoUrl");
+  assert(src.includes("imageUrl    String?"), "LibraryWork imageUrl not nullable for video works");
+  return "videoUrl nullable on both models; no data migration (existing rows keep null)";
+});
+check("Video artworks", "video-lib", "lib/video.ts: MP4-only allowlist, 4.5 MB cap, serving-URL shape, proximity gate constants", () => {
+  const src = read("lib/video.ts");
+  for (const s of ['"video/mp4"', "VIDEO_MAX_FILE_SIZE = 4_500_000", "VIDEO_PLAY_DISTANCE_M = 7", "VIDEO_PLAY_FACING_DOT = 0.2", "isVideoServingUrl", "isVideoArtwork", "parseVideoServingUrl"]) {
+    assert(src.includes(s), `lib/video.ts missing ${s}`);
+  }
+  assert(src.includes("/api/video/videos/"), "serving URL shape missing");
+  return "MP4 only, 4.5 MB, /api/video/videos/<userId>/<uuid>.mp4, gate 7 m + facing";
+});
+check("Video artworks", "video-validation", "Validation accepts videoUrl (same-origin only); PUT persists it; single-artwork add accepts it", () => {
+  const src = read("lib/validation.ts");
+  assert(src.includes("videoUrl:"), "validation missing videoUrl");
+  assert(src.includes("isVideoServingUrl"), "validation does not use isVideoServingUrl");
+  const route = read("app/api/exhibitions/[id]/route.ts");
+  assert(route.includes("videoUrl: artwork.videoUrl ?? null"), "PUT does not persist videoUrl");
+  assert(route.includes('videoUrl: "video"'), "PUT error labels miss videoUrl");
+  const single = read("app/api/artworks/route.ts");
+  assert(single.includes("videoUrl:"), "POST /api/artworks does not accept videoUrl");
+  return "videoUrl nullable + /api/video/ prefix; PUT + single-add persist it";
+});
+check("Video artworks", "video-upload", "Video upload route: MP4 only, 4.5 MB cap, videos/<userId>/ prefix, same-origin URL", () => {
+  const src = read("app/api/uploads/video/route.ts");
+  for (const s of ["VIDEO_MIME_TYPES", "VIDEO_MAX_FILE_SIZE", "videos/${user.id}/", "/api/video/${key}", "status: 413", "status: 415"]) {
+    assert(src.includes(s), `upload route missing ${s}`);
+  }
+  assert(!src.includes("DeleteObjectCommand"), "upload route deletes R2 objects");
+  return "allowlist video/mp4, 413 over 4.5 MB, 415 otherwise, R2 videos/<userId>/<uuid>.mp4";
+});
+check("Video artworks", "video-serve", "Video serve route: Range (206), Accept-Ranges, same access rule as images", () => {
+  const src = read("app/api/video/[...key]/route.ts");
+  for (const s of ["parseRange", "Content-Range", "Accept-Ranges", "status: 206", "status: 416", "videoUrl: servingUrl", "video/mp4"]) {
+    assert(src.includes(s), `serve route missing ${s}`);
+  }
+  assert(src.includes("Range: `bytes=${range.start}-${range.end}`"), "Range not passed to R2 GetObject");
+  return "bytes= ranges honoured via R2 (206/416), public show open, else owner only";
+});
+check("Video artworks", "video-wall", "Wall render: VideoTexture, muted + loop, proximity gate, placeholder while loading, selected plays", () => {
+  const src = read("components/gallery-scene.tsx");
+  for (const s of ["VideoTexture", "function VideoArtwork", "video.muted = true", "video.loop = true", 'video.preload = "metadata"', "VIDEO_PLAY_DISTANCE_M", "VIDEO_PLAY_FACING_DOT", "document.hidden", "<VideoArtwork", "active={selected}"]) {
+    assert(src.includes(s), `gallery-scene missing ${s}`);
+  }
+  assert(src.includes("playingRef"), "play()/pause() not guarded by a transition ref");
+  assert(src.includes("artwork.videoUrl ? ("), "ArtworkFrame does not branch on videoUrl");
+  return "VideoTexture from a muted looping element; plays near+facing or when selected, pauses otherwise; never throws";
+});
+check("Video artworks", "video-panel", "Detail panel: video player, play/pause, sound OFF by default, sound only on an explicit click", () => {
+  const src = read("components/artwork-detail-panel.tsx");
+  for (const s of ["artwork.videoUrl", 'muted={!soundOn}', "turnSoundOn", "turnSoundOff", "soundMutedNote", "videoPlaying"]) {
+    assert(src.includes(s), `detail panel missing ${s}`);
+  }
+  assert(!src.includes("autoPlay"), "detail panel uses autoPlay — forbidden");
+  return "muted loop player, play/pause + sound buttons, sound starts off";
+});
+check("Video artworks", "video-editor", "Editor: add video (upload), replace/remove, library reuse copies the video, inspector preview", () => {
+  const src = read("components/editor.tsx");
+  for (const s of ["addVideoArtwork", "uploadVideoArtwork", "/api/uploads/video", "replaceArtworkVideo", 't("video", "addVideo")', 't("video", "videoHint")', 't("video", "onlyOwnVideo")', "videoUrl: work.videoUrl", "videoUploadRef", "replaceVideoRef", 't("video", "replaceVideo")', 't("video", "removeVideo")', 'accept="video/mp4,.mp4"']) {
+    assert(src.includes(s), `editor missing ${s}`);
+  }
+  assert(src.includes('dimensions: "128 × 72 cm"'), "video artwork does not hang at 16:9 (128 × 72 cm)");
+  return "Add video + library copy + replace/remove; 16:9 default; errors inline via setUploadError";
+});
+check("Video artworks", "video-library", "Library: video works backfilled, listed and copied by videoUrl; delete removes video copies", () => {
+  const src = read("lib/library.ts");
+  for (const s of ["mediaUrlOf", "ensureLibraryRow", "videoUrl: true", "videoUrl: work.videoUrl", "videoUrl: work.videoUrl"]) {
+    assert(src.includes(s), `lib/library.ts missing ${s}`);
+  }
+  const page = read("components/library-page.tsx");
+  assert(page.includes("work.videoUrl"), "library page does not render video works");
+  return "identity = videoUrl ?? imageUrl; backfill + save + reuse + delete all handle video";
+});
+check("Video artworks", "video-i18n", "FR + EN strings for video, incl. the rights line and the size hint", () => {
+  const src = read("lib/i18n.ts");
+  assert(src.includes("video: {"), "i18n missing video section");
+  for (const s of ["videoArtwork", "addVideo", "videoHint", "videoTooLarge", "videoInvalidFormat", "onlyOwnVideo", "turnSoundOn", "soundMutedNote"]) {
+    assert(src.includes(s), `i18n missing ${s}`);
+  }
+  assert(src.includes("Only upload video you own or that is free to share."), "rights line missing");
+  return "video section FR+EN; rights line in both locales";
+});
+check("Video artworks", "video-views", "List view, library page and public works wall render video works (not a broken image)", () => {
+  for (const [f, needle] of [
+    ["components/exhibition-list-view.tsx", "artwork.videoUrl"],
+    ["components/library-page.tsx", "work.videoUrl"],
+    ["components/works-page.tsx", "work.videoUrl"],
+  ]) {
+    assert(read(f).includes(needle), `${f} missing ${needle}`);
+  }
+  const page = read("app/works/[id]/page.tsx");
+  assert(page.includes("videoUrl: true") && page.includes("videoUrl: a.videoUrl"), "works wall does not select videoUrl");
+  return "list view + Mes œuvres + /works render <video> for video works";
+});
 check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [
     "lib/profile.ts", "lib/works.ts", "lib/site-templates.ts", "lib/atelier-templates.ts",
@@ -550,6 +655,11 @@ check("Code quality", "no-alert", "No window.alert in the new code", () => {
     "components/exhibition-entry-screen.tsx", "components/editor.tsx",
     "app/api/uploads/audio/route.ts", "app/api/audio/[...key]/route.ts",
     "app/api/exhibitions/[id]/route.ts", "app/exhibition/[slug]/page.tsx",
+    "lib/video.ts", "lib/library.ts",
+    "app/api/uploads/video/route.ts", "app/api/video/[...key]/route.ts",
+    "app/api/artworks/route.ts", "components/artwork-detail-panel.tsx",
+    "components/exhibition-list-view.tsx", "components/library-page.tsx",
+    "components/works-page.tsx", "components/layers-panel.tsx",
   ];
   const offenders = files.filter((f) => exists(f) && /window\.alert\s*\(/.test(read(f)));
   assert(offenders.length === 0, `window.alert in: ${offenders.join(", ")}`);
@@ -782,6 +892,9 @@ check("Certificates", "cert-i18n", "Documents description updated FR+EN (10 temp
 });
 
 // Manual (browser-only) checks — recorded as skipped, to be verified live.
+skip("Manual (browser)", "manual-video-wall", "Video artwork: upload an MP4 (≤ 4.5 MB) in the editor, see it hang 16:9 on the wall; walk up to it — it plays muted in loop; walk away — it pauses on its first frame; a second video across the room stays paused; the selected video keeps playing in the editor", "needs a live browser session with a signed-in user + a real MP4");
+skip("Manual (browser)", "manual-video-panel", "Video artwork: click the wall video — detail panel opens with the video playing muted; play/pause button works; sound stays off until the sound button is clicked, then the video plays with sound; sound off mutes at once", "needs a live browser session with a signed-in user + a real MP4");
+skip("Manual (browser)", "manual-video-limits", "Video artwork: file over 4.5 MB shows the clear size error (inline, no alert); a non-MP4 file is refused; a video reused from 'Mes œuvres' hangs in a second exhibition without re-upload; seeking inside the panel video works (Range/206)", "needs a live browser session with a signed-in user + a real MP4");
 skip("Manual (browser)", "manual-music-enter", "Exhibition music: enter with Son ON (music starts) and Son OFF (silent); pause/resume; sound switch mid-visit; volume persisted across visits", "needs a live browser session with a signed-in user + a real MP3");
 skip("Manual (browser)", "manual-music-tts", "Exhibition music: TTS audio guide ducks the music to ~15% while speaking, full volume after; music keeps playing across room changes and in List view", "needs a live browser session");
 skip("Manual (browser)", "manual-music-ios", "Exhibition music: real playback on iOS Safari (play from the Enter gesture, no autoplay block), seek inside the track (Range/206), file > 4.5 MB shows the clear error, show without music shows no control", "needs a real device/browser session");

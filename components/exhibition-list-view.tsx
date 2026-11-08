@@ -77,7 +77,9 @@ export default function ExhibitionListView({
             return (
               <li key={artwork.id}>
                 <article className="list-view-card">
-                  {artwork.imageUrl ? (
+                  {artwork.videoUrl ? (
+                    <video src={artwork.videoUrl} muted loop playsInline preload="metadata" aria-label={alt} />
+                  ) : artwork.imageUrl ? (
                     <img src={artwork.imageUrl} alt={alt} loading="lazy" />
                   ) : (
                     <div

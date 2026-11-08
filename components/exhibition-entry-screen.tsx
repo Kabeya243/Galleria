@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Footprints, Hand, Keyboard, List, MousePointer2, Volume2, VolumeX } from "lucide-react";
+import { Footprints, Hand, Keyboard, List, MousePointer2, Music, Volume2, VolumeX } from "lucide-react";
 import Avatar from "@/components/avatar";
 import type { RenderQuality } from "@/lib/render-quality";
 import { RENDER_QUALITIES, recommendQuality } from "@/lib/render-quality";
@@ -22,6 +22,7 @@ export default function ExhibitionEntryScreen({
   onQualityChange,
   soundOn,
   onSoundChange,
+  musicTitle = null,
   onEnter,
   onOpenListView,
 }: {
@@ -34,6 +35,7 @@ export default function ExhibitionEntryScreen({
   onQualityChange: (quality: RenderQuality) => void;
   soundOn: boolean;
   onSoundChange: (on: boolean) => void;
+  musicTitle?: string | null;
   onEnter: () => void;
   onOpenListView: () => void;
 }) {
@@ -64,6 +66,12 @@ export default function ExhibitionEntryScreen({
         {roomCount > 1 ? "s" : ""} · {t("entry", "estimatedVisit")} : {estimatedMinutes}{" "}
         {estimatedMinutes > 1 ? t("common", "minutes") : t("common", "minute")}
       </p>
+      {musicTitle?.trim() && (
+        <p className="entry-music">
+          <Music size={14} aria-hidden="true" />
+          <span>{t("entry", "music")}: {musicTitle}</span>
+        </p>
+      )}
 
       <div className="entry-controls" aria-label={t("entry", "controls")}>
         <div>

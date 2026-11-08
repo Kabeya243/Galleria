@@ -175,6 +175,16 @@ export default async function PublicExhibitionPage({ params }: RouteProps) {
         artworks: exhibition.artworks.map(toClientArtwork),
       }}
       accessibilityPack={accessibilityPack}
+      music={
+        exhibition.audioUrl
+          ? {
+              url: exhibition.audioUrl,
+              title: exhibition.audioTitle,
+              loop: exhibition.audioLoop,
+              volume: exhibition.audioVolume,
+            }
+          : null
+      }
     />
   );
 }

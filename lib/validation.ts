@@ -160,6 +160,20 @@ export const exhibitionUpdateSchema = z.object({
   description: z.string().max(2000),
   rooms: z.array(galleryRoomSchema).min(1).max(12),
   artworks: z.array(artworkSchema).max(100),
+  // Background music (option A): same-origin serving URL only, so a
+  // track can never point at a third-party stream. Null clears it.
+  audioUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .nullable()
+    .optional()
+    .refine((url) => url === null || url === undefined || url.startsWith("/api/audio/"), {
+      message: "Music must be uploaded to this exhibition.",
+    }),
+  audioTitle: z.string().trim().max(120).nullable().optional(),
+  audioLoop: z.boolean().optional(),
+  audioVolume: z.number().min(0).max(1).optional(),
 }).superRefine((exhibition, context) => {
   const roomIds = new Set(exhibition.rooms.map((room) => room.id));
   if (roomIds.size !== exhibition.rooms.length) {

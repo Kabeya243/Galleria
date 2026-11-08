@@ -55,7 +55,7 @@ import type { ArtworkCaption, CaptionSource, CaptionStatus } from "@/lib/caption
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
-import { useLocale } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
 import { galleryCameraStart, galleryDef, galleryHangWalls, galleryPlaceOnWall, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import {
@@ -206,6 +206,19 @@ export default function Editor({
 }) {
   const hiddenLayoutSet = useMemo(() => new Set(hiddenLayouts), [hiddenLayouts]);
   const { locale } = useLocale();
+  const t = useT();
+  // Background music for the whole visit (option A): one track per
+  // exhibition, stored as Exhibition columns and sent with the normal
+  // save — no separate save path. Null = no music.
+  type ExhibitionMusicState = { url: string; title: string; loop: boolean; volume: number };
+  const [music, setMusic] = useState<ExhibitionMusicState | null>(null);
+  const [musicError, setMusicError] = useState<string | null>(null);
+  const [musicUploading, setMusicUploading] = useState(false);
+  const musicFileRef = useRef<HTMLInputElement>(null);
+  function updateMusic(next: ExhibitionMusicState | null) {
+    setMusic(next);
+    setSaved(false);
+  }
   const nameOverrides = useGalleryNames(galleryNames);
   // Display name of a gallery in the current language (admin renames
   // included) — room list, status bar and the GALLERY selector.
@@ -419,6 +432,16 @@ export default function Editor({
         setSelectedId(loadedArtworks.find((artwork: Artwork) => artwork.roomId === result.exhibition.rooms[0]?.id)?.id);
         setTitle(result.exhibition.title);
         setDescription(result.exhibition.description);
+        setMusic(
+          result.exhibition.audioUrl
+            ? {
+                url: result.exhibition.audioUrl,
+                title: result.exhibition.audioTitle ?? "",
+                loop: result.exhibition.audioLoop ?? true,
+                volume: typeof result.exhibition.audioVolume === "number" ? result.exhibition.audioVolume : 0.5,
+              }
+            : null,
+        );
         setSlug(result.exhibition.slug);
         setStatus(result.exhibition.status);
         if (
@@ -1947,6 +1970,10 @@ export default function Editor({
           description,
           rooms,
           artworks,
+          audioUrl: music?.url ?? null,
+          audioTitle: music?.title.trim() ? music.title.trim() : null,
+          audioLoop: music?.loop ?? true,
+          audioVolume: music?.volume ?? 0.5,
         }),
       });
       // Read as text first: an error page (e.g. Vercel's plain-text 413 for
@@ -2510,6 +2537,67 @@ async function compressImage(file: File): Promise<File> {
       url = result.url;
     }
     return url;
+  }
+
+  // Upload one music track (MP3/AAC, ≤ 4.5 MB) to R2 via the dedicated
+  // audio proxy and keep it as the exhibition's background music. The
+  // file name (without extension) becomes the default title; the
+  // visitor hears it from the "Enter" click, on loop. Removing the
+  // track later only clears the exhibition fields — the R2 file stays
+  // (no DeleteObject in the code yet; see the schema comment).
+  const MUSIC_MAX_SIZE = 4_500_000;
+  const MUSIC_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a"];
+  async function uploadMusicFile(file?: File) {
+    if (!file) return;
+    setMusicError(null);
+    const name = file.name.toLowerCase();
+    const looksAudio =
+      MUSIC_TYPES.includes(file.type.toLowerCase()) || name.endsWith(".mp3") || name.endsWith(".m4a");
+    if (!looksAudio) {
+      setMusicError(t("music", "musicInvalidFormat"));
+      return;
+    }
+    if (file.size === 0 || file.size > MUSIC_MAX_SIZE) {
+      setMusicError(t("music", "musicTooLarge"));
+      return;
+    }
+    setBusy(true);
+    setMusicUploading(true);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      let response: Response;
+      try {
+        response = await fetch("/api/uploads/audio", { method: "POST", body });
+      } catch {
+        throw new Error(t("music", "musicUploadFailed"));
+      }
+      // Read as text first: an error page (e.g. Vercel's plain-text 413
+      // for an oversized request) is not JSON.
+      const text = await response.text();
+      let result: { error?: string; url?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as typeof result) : {};
+      } catch {
+        result = {};
+      }
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413 ? t("music", "musicTooLarge") : t("music", "musicUploadFailed")),
+        );
+      }
+      if (!result.url) throw new Error(t("music", "musicUploadFailed"));
+      const title = file.name.replace(/\.[^.]+$/, "").trim();
+      updateMusic({ url: result.url, title, loop: true, volume: 0.5 });
+      if (musicFileRef.current) musicFileRef.current.value = "";
+    } catch (error) {
+      console.error("Could not upload music.", error);
+      setMusicError(error instanceof Error ? error.message : t("music", "musicUploadFailed"));
+    } finally {
+      setBusy(false);
+      setMusicUploading(false);
+    }
   }
 
   async function uploadArtwork(file?: File) {
@@ -3626,6 +3714,85 @@ async function compressImage(file: File): Promise<File> {
                       <button className={`remove-room-button${confirmingRemoveRoom ? " confirming" : ""}`} onClick={removeRoom} disabled={rooms.length <= 1}><Trash2 size={13} /> {confirmingRemoveRoom ? `Click again to remove "${activeRoom.name}"` : "Remove this room"}</button>
                     </>}
                     <div className="property-section"><label>EXHIBITION DESCRIPTION</label><textarea className="full-input property-textarea" {...editSessionProps} value={description} onChange={(event) => { setDescription(event.target.value); setSaved(false); }} /></div>
+                    <div className="property-section">
+                      <label>{t("music", "music").toUpperCase()} <span>ONE TRACK · PLAYS FROM “ENTER”</span></label>
+                      <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                        {t("music", "musicHint")}
+                      </p>
+                      <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                        {t("music", "onlyOwnMusic")}
+                      </p>
+                      {music ? (
+                        <>
+                          <audio controls src={music.url} preload="none" style={{ width: "100%", marginBottom: "8px" }} aria-label={t("music", "musicPreview")} />
+                          <label style={{ display: "block", marginBottom: "8px" }}>
+                            <span style={{ display: "block", color: "var(--muted)", fontSize: "8px", marginBottom: "4px" }}>{t("music", "musicTitle").toUpperCase()}</span>
+                            <input
+                              className="full-input"
+                              {...editSessionProps}
+                              value={music.title}
+                              maxLength={120}
+                              placeholder={t("music", "musicTitlePlaceholder")}
+                              onChange={(event) => updateMusic({ ...music, title: event.target.value })}
+                            />
+                          </label>
+                          <label style={{ display: "block", marginBottom: "8px" }}>
+                            <span style={{ display: "block", color: "var(--muted)", fontSize: "8px", marginBottom: "4px" }}>{t("music", "musicVolume").toUpperCase()} · {Math.round(music.volume * 100)}%</span>
+                            <div className="range-control">
+                              <input
+                                aria-label={t("music", "musicVolume")}
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                value={music.volume}
+                                {...editSessionProps}
+                                onPointerDown={beginEdit}
+                                onPointerUp={endEdit}
+                                onChange={(event) => updateMusic({ ...music, volume: Number(event.target.value) })}
+                              />
+                              <span>{Math.round(music.volume * 100)}%</span>
+                            </div>
+                          </label>
+                          <label className="room-lighting-toggle" style={{ marginBottom: "8px" }}>
+                            <input
+                              type="checkbox"
+                              checked={music.loop}
+                              onChange={(event) => updateMusic({ ...music, loop: event.target.checked })}
+                            />{" "}
+                            {t("music", "loop")}
+                          </label>
+                          <div className="property-actions">
+                            <button type="button" onClick={() => musicFileRef.current?.click()} disabled={busy}>
+                              {musicUploading ? t("music", "musicUploading") : t("music", "uploadMusic")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { updateMusic(null); setMusicError(null); }}
+                            >
+                              {t("music", "removeMusic")}
+                            </button>
+                          </div>
+                          <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                            {t("music", "musicRemovedNote")}
+                          </p>
+                        </>
+                      ) : (
+                        <div className="property-actions">
+                          <button type="button" onClick={() => musicFileRef.current?.click()} disabled={busy}>
+                            {musicUploading ? t("music", "musicUploading") : t("music", "uploadMusic")}
+                          </button>
+                        </div>
+                      )}
+                      <input
+                        ref={musicFileRef}
+                        className="visually-hidden"
+                        type="file"
+                        accept="audio/mpeg,audio/mp4,.mp3,.m4a"
+                        onChange={(event) => void uploadMusicFile(event.target.files?.[0])}
+                      />
+                      {musicError && <p role="alert" style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>{musicError}</p>}
+                    </div>
                 <div className="room-settings-note"><Sparkles size={15} /><span>Each gallery keeps its own layout, colours, ceiling and artworks.</span></div>
             </div>
           )}

@@ -440,6 +440,94 @@ check("Exhibitions — all galleries", "exhibitions-all", "21 galleries: defs, o
     throw new Error(`exhibition tests failed: ${fails.join(" // ").slice(0, 900) || String(err.message).slice(0, 300)}`);
   }
 });
+// ---------- Part 6 — Exhibition background music (option A) ----------
+// One track per exhibition: 4 Prisma fields, validation, upload +
+// same-origin serving with Range, player wired to the "Enter" gesture,
+// entry-screen line, editor Music section, FR+EN strings. Real
+// playback (autoplay on iOS, TTS ducking, seeking) needs a live
+// browser — recorded as manual checks below.
+check("Exhibition music", "music-schema", "Prisma: audioUrl/audioTitle/audioLoop/audioVolume on Exhibition", () => {
+  const src = read("prisma/schema.prisma");
+  for (const s of ["audioUrl     String?", "audioTitle   String?", "audioLoop    Boolean  @default(true)", "audioVolume  Float    @default(0.5)"]) {
+    assert(src.includes(s), `schema missing ${s}`);
+  }
+  return "4 fields, nullable + defaults (additive migration via db push)";
+});
+check("Exhibition music", "music-validation", "Validation accepts the 4 audio fields, same-origin URL only", () => {
+  const src = read("lib/validation.ts");
+  for (const s of ["audioUrl:", "audioTitle:", "audioLoop:", "audioVolume:", 'startsWith("/api/audio/")']) {
+    assert(src.includes(s), `validation missing ${s}`);
+  }
+  return "audioUrl nullable + /api/audio/ prefix, title ≤120, volume 0..1, loop boolean";
+});
+check("Exhibition music", "music-api", "PUT persists the 4 fields; public page passes music to the viewer", () => {
+  const route = read("app/api/exhibitions/[id]/route.ts");
+  for (const s of ["input.audioUrl", "input.audioTitle", "input.audioLoop", "input.audioVolume"]) {
+    assert(route.includes(s), `PUT missing ${s}`);
+  }
+  const page = read("app/exhibition/[slug]/page.tsx");
+  assert(page.includes("music={"), "public page does not pass music to PublicExhibition");
+  assert(page.includes("exhibition.audioUrl"), "public page does not read audioUrl");
+  return "PUT writes audio fields when sent; /exhibition/[slug] forwards url/title/loop/volume";
+});
+check("Exhibition music", "music-upload", "Audio upload route: MP3/AAC only, 4.5 MB cap, audio/<userId>/ prefix", () => {
+  const src = read("app/api/uploads/audio/route.ts");
+  for (const s of ['"audio/mpeg"', '"audio/mp4"', "MAX_FILE_SIZE = 4_500_000", "audio/${user.id}/", "/api/audio/${key}"]) {
+    assert(src.includes(s), `upload route missing ${s}`);
+  }
+  assert(!src.includes("image/"), "audio upload route still mentions images");
+  return "allowlist audio/mpeg + audio/mp4, 413 over 4.5 MB, R2 audio/<userId>/<uuid>";
+});
+check("Exhibition music", "music-serve", "Audio serve route: Range (206), Accept-Ranges, same access rule as images", () => {
+  const src = read("app/api/audio/[...key]/route.ts");
+  for (const s of ["parseRange", "Content-Range", "Accept-Ranges", "status: 206", "status: 416", "audioUrl: servingUrl", "audio/mpeg", "audio/mp4"]) {
+    assert(src.includes(s), `serve route missing ${s}`);
+  }
+  assert(src.includes("Range: `bytes=${range.start}-${range.end}`"), "Range not passed to R2 GetObject");
+  return "bytes= ranges honoured via R2 (206/416), public show open, else owner only";
+});
+check("Exhibition music", "music-player", "Player: no autoplay on mount, starts on Enter gesture, ducks under TTS, volume persisted", () => {
+  const src = read("components/exhibition-audio-player.tsx");
+  for (const s of ["startSignal", "sanaa-music-volume", "volume * 0.15", 'loop={music.loop ?? true}', "aria-pressed", "pausedByHandRef"]) {
+    assert(src.includes(s), `player missing ${s}`);
+  }
+  assert(!/autoPlay/.test(src), "player uses autoPlay — forbidden");
+  assert(!src.includes("new Audio("), "player uses new Audio() instead of <audio>");
+  const viewer = read("components/public-exhibition.tsx");
+  assert(viewer.includes("setEnterSignal((n) => n + 1)"), "viewer never bumps enterSignal");
+  assert(viewer.includes("ducked={speakingKey !== null}"), "viewer does not duck under TTS");
+  assert(viewer.includes("enabled={soundOn}"), "viewer does not wire the sound switch");
+  return "play() only from startSignal (Enter/teleport), duck 15% while speaking, volume in localStorage";
+});
+check("Exhibition music", "music-entry", "Entry screen shows the track title when the show has music", () => {
+  const src = read("components/exhibition-entry-screen.tsx");
+  assert(src.includes("musicTitle"), "entry screen has no musicTitle prop");
+  assert(src.includes('t("entry", "music")'), "entry screen does not use the music label");
+  return "“Music: <title>” under the visit meta, only when a track exists";
+});
+check("Exhibition music", "music-editor", "Editor Music section: upload, title, volume, loop, remove, preview, saved via Save", () => {
+  const src = read("components/editor.tsx");
+  for (const s of ["uploadMusicFile", "/api/uploads/audio", 't("music", "onlyOwnMusic")', 't("music", "musicTooLarge")', "audioUrl: music?.url ?? null", "audioVolume: music?.volume ?? 0.5"]) {
+    assert(src.includes(s), `editor missing ${s}`);
+  }
+  assert(src.includes("audio/mpeg,audio/mp4,.mp3,.m4a"), "editor file input does not restrict to audio");
+  return "Room settings → Music: upload MP3/AAC, title, volume, loop, remove, <audio> preview; Save sends the 4 fields";
+});
+check("Exhibition music", "music-i18n", "FR + EN strings for music, incl. the rights line", () => {
+  const src = read("lib/i18n.ts");
+  assert(src.includes("music: {"), "i18n missing music section");
+  for (const s of ["playMusic", "pauseMusic", "musicVolume", "musicTooLarge", "musicInvalidFormat", "onlyOwnMusic"]) {
+    assert(src.includes(s), `i18n missing ${s}`);
+  }
+  assert(src.includes("Only upload music you own or that is free to share."), "rights line missing");
+  return "music section FR+EN; rights line in both locales";
+});
+check("Exhibition music", "music-no-delete", "Removing a track never deletes the R2 file (no DeleteObject)", () => {
+  for (const f of ["app/api/audio/[...key]/route.ts", "app/api/uploads/audio/route.ts", "app/api/exhibitions/[id]/route.ts", "components/editor.tsx"]) {
+    assert(!read(f).includes("DeleteObjectCommand"), `${f} deletes R2 objects`);
+  }
+  return "no DeleteObject anywhere in the music path — orphaned files are a noted cleanup debt";
+});
 check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [
     "lib/profile.ts", "lib/works.ts", "lib/site-templates.ts", "lib/atelier-templates.ts",
@@ -450,6 +538,10 @@ check("Code quality", "no-alert", "No window.alert in the new code", () => {
     "app/works/[id]/page.tsx", "app/api/work-kinds/route.ts", "app/tools/portfolio-pdf/page.tsx",
     "app/api/atelier/templates/route.ts", "app/api/atelier/projects/route.ts",
     "app/api/atelier/uploads/route.ts", "app/api/atelier/file/[...key]/route.ts",
+    "components/exhibition-audio-player.tsx", "components/public-exhibition.tsx",
+    "components/exhibition-entry-screen.tsx", "components/editor.tsx",
+    "app/api/uploads/audio/route.ts", "app/api/audio/[...key]/route.ts",
+    "app/api/exhibitions/[id]/route.ts", "app/exhibition/[slug]/page.tsx",
   ];
   const offenders = files.filter((f) => exists(f) && /window\.alert\s*\(/.test(read(f)));
   assert(offenders.length === 0, `window.alert in: ${offenders.join(", ")}`);
@@ -602,6 +694,9 @@ async function smoke() {
 await smoke();
 
 // Manual (browser-only) checks — recorded as skipped, to be verified live.
+skip("Manual (browser)", "manual-music-enter", "Exhibition music: enter with Son ON (music starts) and Son OFF (silent); pause/resume; sound switch mid-visit; volume persisted across visits", "needs a live browser session with a signed-in user + a real MP3");
+skip("Manual (browser)", "manual-music-tts", "Exhibition music: TTS audio guide ducks the music to ~15% while speaking, full volume after; music keeps playing across room changes and in List view", "needs a live browser session");
+skip("Manual (browser)", "manual-music-ios", "Exhibition music: real playback on iOS Safari (play from the Enter gesture, no autoplay block), seek inside the track (Range/206), file > 4.5 MB shows the clear error, show without music shows no control", "needs a real device/browser session");
 skip("Manual (browser)", "manual-avatar", "Upload a profile photo, see it on dashboard + public creator card", "needs a live browser session (subagent cannot drive the browser)");
 skip("Manual (browser)", "manual-works", "Tag a work's kind on /works/[id] as the owner, filter the wall", "needs a live browser session");
 skip("Manual (browser)", "manual-site", "Pick a site template, edit, preview, publish a site", "needs a live browser session");

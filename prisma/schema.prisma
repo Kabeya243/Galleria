@@ -59,6 +59,16 @@ model Exhibition {
   // asked before entering). Drafts ignore this field.
   visibility         String  @default("public")
   accessPasswordHash String?
+  // Background music for the whole visit (option A, one track per
+  // exhibition): the same-origin serving URL (/api/audio/audio/…),
+  // the title visitors see, loop on by default, and the artist's
+  // starting volume (0..1). Null audioUrl = no music. Removing the
+  // track here does NOT delete the file in R2 (no DeleteObject in
+  // the code yet) — orphaned audio files are a known cleanup debt.
+  audioUrl     String?
+  audioTitle   String?
+  audioLoop    Boolean  @default(true)
+  audioVolume  Float    @default(0.5)
   roomColor   String     @default("#f5f2eb")
   rooms       String     @default("[{\"id\":\"room-main\",\"name\":\"Room 1\",\"layout\":\"cube\",\"wallColor\":\"#f5f2eb\",\"sideWallColor\":\"#e2ded6\",\"floorColor\":\"#3f3d3a\",\"ceilingColor\":\"#f5f2eb\",\"wallTexture\":\"plaster\",\"floorTexture\":\"stone\",\"ceilingTexture\":\"plaster\",\"spotlights\":true,\"partitionWalls\":[],\"curatorialText\":\"\"}]")
   views       Int        @default(0)

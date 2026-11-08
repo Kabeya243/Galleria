@@ -748,6 +748,63 @@ button { color: inherit; }
   text-transform: uppercase;
   cursor: pointer;
 }
+/* Background-music control (one track per exhibition): above the
+   "Entrance" button, right side, clear of the walk pad (left) and the
+   room nav (centred). Never covers an artwork: it sits on the HUD
+   strip only. Buttons are 44 px tall on touch. */
+.music-control {
+  position: absolute;
+  z-index: 3;
+  right: 24px;
+  bottom: 112px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: calc(100vw - 48px);
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
+  color: var(--ink);
+  font: 600 11px var(--font-body), "DM Sans", sans-serif;
+}
+.music-control button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.music-control button:hover { background: var(--surface-2); }
+.music-control .music-title {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-control input[type="range"] { width: 80px; accent-color: #141414; cursor: pointer; }
+/* "Music: <title>" line on the entry screen, under the visit meta. */
+.entry-music {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.entry-music span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 620px) {
+  .music-control { right: 12px; bottom: 160px; }
+  .music-control input[type="range"] { width: 56px; }
+  .music-control .music-title { max-width: 90px; }
+}
 
 @media (max-width: 620px) {
   .auth-page { display: block; min-height: 100vh;   }

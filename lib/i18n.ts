@@ -189,6 +189,7 @@ export const DICTIONARY = {
     sound: { fr: "Son", en: "Sound" },
     soundOn: { fr: "Son activé", en: "Sound on" },
     soundOff: { fr: "Son coupé", en: "Sound off" },
+    music: { fr: "Musique", en: "Music" },
     soundNote: {
       fr: "Active les descriptions audio quand elles existent.",
       en: "Turns on audio descriptions when they exist.",
@@ -201,6 +202,45 @@ export const DICTIONARY = {
     qualityNote: {
       fr: "Choisi selon votre appareil — changeable à tout moment.",
       en: "Picked for your device — changeable at any time.",
+    },
+  },
+  music: {
+    music: { fr: "Musique", en: "Music" },
+    playMusic: { fr: "Jouer la musique", en: "Play music" },
+    pauseMusic: { fr: "Mettre la musique en pause", en: "Pause music" },
+    musicVolume: { fr: "Volume de la musique", en: "Music volume" },
+    muteMusic: { fr: "Couper la musique", en: "Mute music" },
+    unmuteMusic: { fr: "Remettre la musique", en: "Unmute music" },
+    uploadMusic: { fr: "Ajouter une musique", en: "Add music" },
+    musicTitle: { fr: "Titre du morceau", en: "Track title" },
+    musicTitlePlaceholder: { fr: "Nom du morceau, tel que les visiteurs le verront", en: "Track name, as visitors will see it" },
+    loop: { fr: "Jouer en boucle", en: "Loop" },
+    removeMusic: { fr: "Retirer la musique", en: "Remove music" },
+    musicHint: {
+      fr: "MP3 ou AAC (.m4a), 4,5 Mo maximum — un morceau court, en boucle. Pensez à 128 kbps pour un morceau de quelques minutes.",
+      en: "MP3 or AAC (.m4a), 4.5 MB maximum — a short track, on loop. Export at 128 kbps for a track a few minutes long.",
+    },
+    onlyOwnMusic: {
+      fr: "Only upload music you own or that is free to share.",
+      en: "Only upload music you own or that is free to share.",
+    },
+    musicTooLarge: {
+      fr: "Ce fichier audio est trop lourd (plus de 4,5 Mo). Essayez un morceau plus court, ou exportez-le à 128 kbps.",
+      en: "This audio file is too large (over 4.5 MB). Try a shorter track, or export it at 128 kbps.",
+    },
+    musicInvalidFormat: {
+      fr: "Ajoutez un fichier audio MP3 ou AAC (.m4a).",
+      en: "Upload an MP3 or AAC (.m4a) audio file.",
+    },
+    musicUploadFailed: {
+      fr: "La musique n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.",
+      en: "Could not upload this music. Check your connection and try again.",
+    },
+    musicUploading: { fr: "Envoi de la musique…", en: "Uploading music…" },
+    musicPreview: { fr: "Écouter avant de publier", en: "Listen before publishing" },
+    musicRemovedNote: {
+      fr: "Retirer le morceau le retire de l'exposition, pas du stockage — le fichier reste conservé.",
+      en: "Removing the track takes it out of the exhibition, not out of storage — the file stays kept.",
     },
   },
   share: {

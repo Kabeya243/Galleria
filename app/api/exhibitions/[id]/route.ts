@@ -99,6 +99,12 @@ export async function PUT(request: Request, { params }: RouteContext) {
           description: input.description,
           roomColor: input.rooms[0].wallColor,
           rooms: JSON.stringify(input.rooms),
+          // Background music: only the fields the editor sent are
+          // written, so older saves that omit them keep the track.
+          ...(input.audioUrl !== undefined ? { audioUrl: input.audioUrl } : {}),
+          ...(input.audioTitle !== undefined ? { audioTitle: input.audioTitle } : {}),
+          ...(input.audioLoop !== undefined ? { audioLoop: input.audioLoop } : {}),
+          ...(input.audioVolume !== undefined ? { audioVolume: input.audioVolume } : {}),
         },
       });
       await transaction.artwork.deleteMany({ where: { exhibitionId: id } });

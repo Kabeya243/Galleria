@@ -7,6 +7,7 @@ import { useProgress } from "@react-three/drei";
 import Avatar from "@/components/avatar";
 import GalleryScene, { artworkStandPoint, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
 import ArtworkDetailPanel from "@/components/artwork-detail-panel";
+import ExhibitionAudioPlayer, { type ExhibitionMusic } from "@/components/exhibition-audio-player";
 import ExhibitionMinimap from "@/components/exhibition-minimap";
 import ExhibitionListView from "@/components/exhibition-list-view";
 import ExhibitionEntryScreen from "@/components/exhibition-entry-screen";
@@ -71,6 +72,7 @@ export type PublicAccessibilityPack = {
 export default function PublicExhibition({
   exhibition,
   accessibilityPack = null,
+  music = null,
 }: {
   exhibition: {
     id: string;
@@ -82,6 +84,7 @@ export default function PublicExhibition({
     artworks: Artwork[];
   };
   accessibilityPack?: PublicAccessibilityPack | null;
+  music?: ExhibitionMusic | null;
 }) {
   const [selected, setSelected] = useState<Artwork | undefined>();
   const [showInfo, setShowInfo] = useState(false);
@@ -97,6 +100,10 @@ export default function PublicExhibition({
   const [quality, setQuality] = useState<RenderQuality>("high");
   const [soundOn, setSoundOn] = useState(true);
   const [showListView, setShowListView] = useState(false);
+  // Background music: incremented only inside a user gesture that enters
+  // the exhibition ("Enter", or a teleport from the list view) — the
+  // player's play() runs under that activation, never on mount.
+  const [enterSignal, setEnterSignal] = useState(0);
   const [teleportTarget, setTeleportTarget] = useState<TeleportTarget | null>(null);
   const [shareUrl, setShareUrl] = useState("");
   const teleportNonce = useRef(0);
@@ -137,7 +144,10 @@ export default function PublicExhibition({
     setSelected(artwork);
     setShowListView(false);
     setTeleportTarget({ roomId: artwork.roomId, ...stand, nonce: teleportNonce.current });
-    if (!walking) setWalking(true);
+    if (!walking) {
+      setWalking(true);
+      setEnterSignal((n) => n + 1);
+    }
   }
 
   // Floor-plan point teleport (minimap): walk to a point clicked on
@@ -342,7 +352,8 @@ export default function PublicExhibition({
           onQualityChange={handleQualityChange}
           soundOn={soundOn}
           onSoundChange={handleSoundChange}
-          onEnter={() => setWalking(true)}
+          musicTitle={music?.title ?? null}
+          onEnter={() => { setWalking(true); setEnterSignal((n) => n + 1); }}
           onOpenListView={() => setShowListView(true)}
         />
       )}
@@ -369,6 +380,14 @@ export default function PublicExhibition({
       )}
       {walking && <div className="public-controls-hint"><span>CLICK THE FLOOR OR USE WASD / ARROWS TO WALK</span><i /> <span>DRAG TO LOOK</span><i /> <span>USE THE FLOOR PLAN TO CHANGE ROOMS</span></div>}
       {walking && <button className="public-reset-view" onClick={() => { walkReset.current += 1; }}>↺ Entrance</button>}
+      {walking && (
+        <ExhibitionAudioPlayer
+          music={music ?? null}
+          enabled={soundOn}
+          ducked={speakingKey !== null}
+          startSignal={enterSignal}
+        />
+      )}
       {walking && <div className="walk-pad" aria-label="Touch movement controls">
         {([
           ["ArrowUp", "Forward", "↑"],

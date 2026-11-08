@@ -502,6 +502,22 @@ button { color: inherit; }
 .artwork-detail-sent { display: grid; gap: 4px; margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 12px; line-height: 1.6; }
 .artwork-detail-zoom-hint { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; color: var(--muted); font-size: 11px; }
 
+/* "Voir sur mon mur" (WebXR AR, public artwork detail panel): same black
+   & white editorial styling as the contact button, but outlined so the
+   two actions read as distinct. The in-session overlay is a fixed
+   full-screen layer over the camera feed (dom-overlay). */
+.artwork-detail-ar { margin-top: 14px; }
+.artwork-detail-ar-button { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: 1px solid #000; border-radius: 999px; background: transparent; color: #000; font: 600 12px var(--font-body), "DM Sans", sans-serif; cursor: pointer; }
+.artwork-detail-ar-button:disabled { opacity: .55; cursor: not-allowed; }
+.artwork-detail-ar-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.artwork-detail-ar-note strong { color: var(--ink); }
+.ar-wall-canvas { position: fixed; inset: 0; z-index: 40; width: 100%; height: 100%; background: transparent; }
+.ar-wall-overlay { position: fixed; inset: 0; z-index: 50; flex-direction: column; justify-content: space-between; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); pointer-events: none; }
+.ar-wall-status { align-self: center; max-width: 560px; margin: 0; padding: 10px 14px; border-radius: 8px; background: rgba(0, 0, 0, .72); color: #fff; font-size: 13px; line-height: 1.6; text-align: center; }
+.ar-wall-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ar-wall-button { display: inline-flex; align-items: center; gap: 7px; padding: 11px 16px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 999px; background: rgba(0, 0, 0, .72); color: #fff; font: 600 13px var(--font-body), "DM Sans", sans-serif; cursor: pointer; pointer-events: auto; }
+.ar-wall-button-primary { border-color: #a67c37; background: #a67c37; }
+
 /* Exhibition minimap (public viewer): floor plan + teleport. Collapsible,
    pure black & white, keyboard access via the button list. */
 .exhibition-minimap { position: absolute; z-index: 4; left: 24px; bottom: 25px; }

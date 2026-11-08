@@ -5,7 +5,7 @@ import { OrbitControls, useTexture } from "@react-three/drei";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import styles from "./tools.module.css";
-import { detectXrSupport, requestVrSession } from "@/lib/webxr";
+import { detectXrSupport, parseArtworkDimensions, requestVrSession } from "@/lib/webxr";
 import { VrDolly, VrRig, type VrDollyRef } from "@/components/vr-rig";
 
 // ---------------------------------------------------------------------------
@@ -125,17 +125,11 @@ function num(value: string, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-/** Parse "120×89 cm" / "120 x 89" into metres { w, h }. Returns null when unparseable. */
-function parseDimensions(dimensions: string): { w: number; h: number } | null {
-  const match = dimensions.match(/([\d.,]+)\s*[×x]\s*([\d.,]+)/);
-  if (!match) return null;
-  const w = Number.parseFloat(match[1].replace(",", "."));
-  const h = Number.parseFloat(match[2].replace(",", "."));
-  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
-  // Dimensions are stored in cm unless they are already small (<= 10 means metres).
-  const scale = w > 10 || h > 10 ? 0.01 : 1;
-  return { w: w * scale, h: h * scale };
-}
+// Dimensions parsing lives in lib/webxr.ts now (parseArtworkDimensions),
+// shared with the public "Voir sur mon mur" AR view so both agree on
+// a work's real size. Kept as a local alias because the Twin calls it
+// in several places.
+const parseDimensions = parseArtworkDimensions;
 
 function artworkSize(artwork: TwinArtwork): { w: number; h: number } {
   return parseDimensions(artwork.dimensions) ?? { w: 0.9, h: 1.2 };

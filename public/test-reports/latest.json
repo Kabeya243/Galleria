@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T10:45:18.420Z",
-  "commit": "3acc9db",
+  "generatedAt": "2026-11-08T10:55:22.182Z",
+  "commit": "9db32cc",
   "summary": {
-    "total": 94,
-    "passed": 75,
+    "total": 106,
+    "passed": 83,
     "failed": 0,
-    "skipped": 19
+    "skipped": 23
   },
   "checks": [
     {
@@ -439,8 +439,8 @@
       "feature": "Code quality",
       "id": "build",
       "name": "Production build passes (npm run build)",
-      "status": "pass",
-      "detail": "npm run build exit 0"
+      "status": "skip",
+      "detail": "not run — pass --build to include it"
     },
     {
       "feature": "Smoke tests",
@@ -546,6 +546,90 @@
       "name": "Documents description updated FR+EN (10 templates, account save, R2 archive, PDF)",
       "status": "pass",
       "detail": "documentsDesc FR+EN: 10 templates, saved in account + DB, R2 archive, one-page PDF"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-files",
+      "name": "AR files exist: shared helpers, AR view component, panel wiring, overlay CSS",
+      "status": "pass",
+      "detail": "lib/webxr.ts, components/ar-wall-view.tsx, panel, test-ar-units.mjs, overlay CSS"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-units",
+      "name": "AR unit checks pass (dimension parsing, wall verticality, error mapping, constants)",
+      "status": "pass",
+      "detail": "18 unit checks pass"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-webxr-helpers",
+      "name": "Shared WebXR helpers: AR session, AR error vocabulary, dimension parsing, wall test, eye height",
+      "status": "pass",
+      "detail": "requestArSession + describeArError (incl. noHitTest) + parseArtworkDimensions + hitPoseIsVertical + AR constants"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-twin-shared",
+      "name": "Digital Twin reuses the shared dimension parser (no second copy of the parsing regex)",
+      "status": "pass",
+      "detail": "Twin imports parseArtworkDimensions from lib/webxr.ts"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-i18n",
+      "name": "i18n ar section: button, Android ARCore + iOS Safari honesty, errors, in-session strings, FR+EN",
+      "status": "pass",
+      "detail": "ar section FR+EN; ARCore + iOS Safari limits stated plainly"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-panel-wiring",
+      "name": "Detail panel offers AR for image artworks only (video + sculpture excluded), with the real-size note",
+      "status": "pass",
+      "detail": "image artworks only; video/sculpture excluded with a comment"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-session-flow",
+      "name": "AR session flow: plane hit-test, wall-vs-floor, tap to anchor, confirm/reposition, exit, fixed-distance fallback",
+      "status": "pass",
+      "detail": "plane hit-test + wall/floor split + tap anchor + confirm/reposition + exit + fixed-distance fallback"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-real-scale",
+      "name": "Artwork rendered at real size: parsed dimensions drive the plane + dark frame, fallback size when unparseable",
+      "status": "pass",
+      "detail": "plane + frame from parsed metres (130×94 cm → 1.30 × 0.94 m); 0.90 × 1.20 m fallback"
+    },
+    {
+      "feature": "AR — Voir sur mon mur",
+      "id": "ar-no-alert",
+      "name": "No window.alert in the AR view or the detail panel (inline messages only)",
+      "status": "pass",
+      "detail": "inline role=status messages only"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-ar-phone",
+      "name": "AR 'Voir sur mon mur' on a real Android phone with ARCore (Chrome): open a published exhibition, tap an artwork, tap 'Voir sur mon mur' — session starts, gold ring appears on a wall, tap hangs the work at real size (measure against a tape: 130×94 cm work spans 130×94 cm), tap again repositions, 'Valider' locks it, 'Repositionner' unlocks, 'Quitter la RA' and the phone system button both end the session cleanly",
+      "status": "skip",
+      "detail": "needs a real ARCore phone; no AR device on this VM"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-ar-floor-fallback",
+      "name": "AR wall/floor split + fixed-distance fallback on a real phone: point at the floor only — the status says it looks like a floor and nothing hangs; wait 10 s without a wall — the 'Placer à distance fixe' button appears and places the work 1.50 m ahead at eye height; on a phone that only detects horizontal planes, the fallback is the only placement",
+      "status": "skip",
+      "detail": "needs a real ARCore phone; no AR device on this VM"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-ar-unsupported",
+      "name": "AR unsupported states: open the detail panel on desktop Chrome and on iPhone Safari — the button is disabled and the inline note explains Android ARCore + the iOS Safari WebXR limit (no alert, no dead button)",
+      "status": "skip",
+      "detail": "needs a real browser session (desktop + iPhone)"
     },
     {
       "feature": "Manual (browser)",

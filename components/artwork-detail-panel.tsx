@@ -5,6 +5,7 @@ import { Mail, Maximize2, Minimize2, Pause, Play, Volume2, VolumeX, X, ZoomIn, Z
 import type { Artwork } from "@/lib/demo-data";
 import { extractPalette } from "@/lib/palette";
 import PaletteSwatches from "@/components/palette-swatches";
+import ArWallView from "@/components/ar-wall-view";
 import { useT } from "@/lib/i18n";
 
 // Artwork detail panel (public exhibition): the side panel that opens
@@ -265,6 +266,21 @@ export default function ArtworkDetailPanel({
         {artist} <i /> {artwork.year} <i /> {artwork.medium} <i /> {artwork.dimensions}
       </p>
       {artwork.description && <p>{artwork.description}</p>}
+
+      {/* "Voir sur mon mur" (WebXR AR): image artworks only. A video
+          work is a moving image and a sculpture is a 3D object — neither
+          hangs on a wall as a framed print, so the AR button is not
+          offered for them. */}
+      {artwork.imageUrl && !artwork.videoUrl && !artwork.sculptureUrl && (
+        <ArWallView
+          artwork={{
+            title: artwork.title,
+            dimensions: artwork.dimensions,
+            imageUrl: artwork.imageUrl,
+            color: artwork.color,
+          }}
+        />
+      )}
 
       {!artwork.text && displayPalette && displayPalette.length > 0 && (
         <div style={{ marginTop: "14px" }}>

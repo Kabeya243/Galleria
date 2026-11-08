@@ -1012,7 +1012,88 @@ check("Certificates", "cert-i18n", "Documents description updated FR+EN (10 temp
   return "documentsDesc FR+EN: 10 templates, saved in account + DB, R2 archive, one-page PDF";
 });
 
+// ---------- AR — "Voir sur mon mur" (public artwork detail) ----------
+// Visitor-side WebXR AR: from the artwork detail panel of a public
+// exhibition, hang the framed work on the visitor's own wall at its
+// real size. Shares lib/webxr.ts with the Digital Twin's AR preview.
+check("AR — Voir sur mon mur", "ar-files", "AR files exist: shared helpers, AR view component, panel wiring, overlay CSS", () => {
+  for (const f of ["lib/webxr.ts", "components/ar-wall-view.tsx", "components/artwork-detail-panel.tsx", "scripts/test-ar-units.mjs"]) {
+    assert(exists(f), `missing ${f}`);
+  }
+  for (const cls of ["artwork-detail-ar-button", "ar-wall-overlay", "ar-wall-status", "ar-wall-actions"]) {
+    assert(read("app/globals.css").includes(cls), `globals.css missing ${cls}`);
+  }
+  return "lib/webxr.ts, components/ar-wall-view.tsx, panel, test-ar-units.mjs, overlay CSS";
+});
+check("AR — Voir sur mon mur", "ar-units", "AR unit checks pass (dimension parsing, wall verticality, error mapping, constants)", () => {
+  const out = execFileSync("node", ["scripts/test-ar-units.mjs"], { cwd: ROOT, encoding: "utf8", timeout: 60000 });
+  const match = out.match(/AR units: (\d+) passed, (\d+) failed/);
+  assert(match, `unexpected test-ar-units output: ${out.slice(-200)}`);
+  assert(match[2] === "0", `${match[2]} AR unit checks failed`);
+  return `${match[1]} unit checks pass`;
+});
+check("AR — Voir sur mon mur", "ar-webxr-helpers", "Shared WebXR helpers: AR session, AR error vocabulary, dimension parsing, wall test, eye height", () => {
+  const src = read("lib/webxr.ts");
+  for (const s of ["requestArSession", "describeArError", "noHitTest", "parseArtworkDimensions", "hitPoseIsVertical", "AR_SESSION_OPTIONS", "AR_EYE_HEIGHT_M", "AR_FIXED_DISTANCE_M", "AR_FRAME_BORDER_M", "AR_NO_WALL_TIMEOUT_MS", "AR_DEFAULT_ARTWORK_SIZE_M"]) {
+    assert(src.includes(s), `lib/webxr.ts missing ${s}`);
+  }
+  assert(src.includes('requiredFeatures: ["hit-test"]'), "AR session options missing required hit-test");
+  assert(src.includes("AR_EYE_HEIGHT_M = 1.5"), "eye height is not 1.50 m");
+  return "requestArSession + describeArError (incl. noHitTest) + parseArtworkDimensions + hitPoseIsVertical + AR constants";
+});
+check("AR — Voir sur mon mur", "ar-twin-shared", "Digital Twin reuses the shared dimension parser (no second copy of the parsing regex)", () => {
+  const twin = read("components/digital-twin.tsx");
+  assert(twin.includes("parseArtworkDimensions"), "Twin does not import parseArtworkDimensions");
+  assert(!twin.includes("[\\d.,]+"), "Twin still carries its own dimension-parsing regex");
+  return "Twin imports parseArtworkDimensions from lib/webxr.ts";
+});
+check("AR — Voir sur mon mur", "ar-i18n", "i18n ar section: button, Android ARCore + iOS Safari honesty, errors, in-session strings, FR+EN", () => {
+  const src = read("lib/i18n.ts");
+  assert(src.includes("  ar: {"), "i18n missing top-level ar section");
+  for (const s of ["viewOnMyWall", "notSupportedHint", "noHitTest", "pointAtWall", "wallFound", "floorFound", "noWallYet", "placeAtFixedDistance", "confirmPlacement", "reposition", "exitAR"]) {
+    assert(src.includes(s), `i18n ar section missing ${s}`);
+  }
+  assert(src.includes("Voir sur mon mur") && src.includes("See it on my wall"), "viewOnMyWall missing FR or EN");
+  assert(src.includes("ARCore"), "notSupportedHint does not mention ARCore");
+  assert(src.includes("Safari ne prend pas en charge"), "notSupportedHint does not explain the iOS Safari limit in FR");
+  assert(src.includes("does not support WebXR AR"), "notSupportedHint does not explain the iOS Safari limit in EN");
+  return "ar section FR+EN; ARCore + iOS Safari limits stated plainly";
+});
+check("AR — Voir sur mon mur", "ar-panel-wiring", "Detail panel offers AR for image artworks only (video + sculpture excluded), with the real-size note", () => {
+  const src = read("components/artwork-detail-panel.tsx");
+  assert(src.includes("ArWallView"), "panel does not import/render ArWallView");
+  assert(src.includes("artwork.imageUrl && !artwork.videoUrl && !artwork.sculptureUrl"), "panel does not gate AR to image artworks");
+  return "image artworks only; video/sculpture excluded with a comment";
+});
+check("AR — Voir sur mon mur", "ar-session-flow", "AR session flow: plane hit-test, wall-vs-floor, tap to anchor, confirm/reposition, exit, fixed-distance fallback", () => {
+  const src = read("components/ar-wall-view.tsx");
+  for (const s of ["requestArSession", 'entityTypes: ["plane"]', "hitPoseIsVertical", "requestReferenceSpace(\"local-floor\")", "requestReferenceSpace(\"local\")", "addEventListener(\"select\"", "confirmPlacement", "reposition", "endAR", "placeAtFixedDistance", "AR_FIXED_DISTANCE_M", "AR_EYE_HEIGHT_M", "detectXrSupport", "describeArError", "setAnimationLoop"]) {
+    assert(src.includes(s), `ar-wall-view.tsx missing ${s}`);
+  }
+  assert(src.includes("dom-overlay") || src.includes("document.body"), "AR session has no dom-overlay root");
+  return "plane hit-test + wall/floor split + tap anchor + confirm/reposition + exit + fixed-distance fallback";
+});
+check("AR — Voir sur mon mur", "ar-real-scale", "Artwork rendered at real size: parsed dimensions drive the plane + dark frame, fallback size when unparseable", () => {
+  const src = read("components/ar-wall-view.tsx");
+  assert(src.includes("parseArtworkDimensions(artwork.dimensions)"), "AR view does not parse the artwork dimensions");
+  assert(src.includes("AR_DEFAULT_ARTWORK_SIZE_M"), "AR view has no fallback size");
+  assert(src.includes("new THREE.PlaneGeometry(artW, artH)"), "image plane is not built from the parsed size");
+  assert(src.includes("AR_FRAME_BORDER_M"), "frame border does not use the shared constant");
+  assert(src.includes("AR_FRAME_COLOR"), "frame does not use the shared frame colour");
+  return "plane + frame from parsed metres (130×94 cm → 1.30 × 0.94 m); 0.90 × 1.20 m fallback";
+});
+check("AR — Voir sur mon mur", "ar-no-alert", "No window.alert in the AR view or the detail panel (inline messages only)", () => {
+  for (const f of ["components/ar-wall-view.tsx", "components/artwork-detail-panel.tsx"]) {
+    assert(!read(f).includes("window.alert"), `${f} uses window.alert`);
+    assert(!read(f).includes("alert("), `${f} uses alert(`);
+  }
+  return "inline role=status messages only";
+});
+
 // Manual (browser-only) checks — recorded as skipped, to be verified live.
+skip("Manual (browser)", "manual-ar-phone", "AR 'Voir sur mon mur' on a real Android phone with ARCore (Chrome): open a published exhibition, tap an artwork, tap 'Voir sur mon mur' — session starts, gold ring appears on a wall, tap hangs the work at real size (measure against a tape: 130×94 cm work spans 130×94 cm), tap again repositions, 'Valider' locks it, 'Repositionner' unlocks, 'Quitter la RA' and the phone system button both end the session cleanly", "needs a real ARCore phone; no AR device on this VM");
+skip("Manual (browser)", "manual-ar-floor-fallback", "AR wall/floor split + fixed-distance fallback on a real phone: point at the floor only — the status says it looks like a floor and nothing hangs; wait 10 s without a wall — the 'Placer à distance fixe' button appears and places the work 1.50 m ahead at eye height; on a phone that only detects horizontal planes, the fallback is the only placement", "needs a real ARCore phone; no AR device on this VM");
+skip("Manual (browser)", "manual-ar-unsupported", "AR unsupported states: open the detail panel on desktop Chrome and on iPhone Safari — the button is disabled and the inline note explains Android ARCore + the iOS Safari WebXR limit (no alert, no dead button)", "needs a real browser session (desktop + iPhone)");
 skip("Manual (browser)", "manual-video-wall", "Video artwork: upload an MP4 (≤ 4.5 MB) in the editor, see it hang 16:9 on the wall; walk up to it — it plays muted in loop; walk away — it pauses on its first frame; a second video across the room stays paused; the selected video keeps playing in the editor", "needs a live browser session with a signed-in user + a real MP4");
 skip("Manual (browser)", "manual-sculpture-room", "Sculpture: upload a .glb (≤ 4.5 MB) in the editor — it stands on a white pedestal on the floor 3 m in front of the camera; walk up to it — it renders with the room's light and shadows; walk into it — the pedestal blocks the camera; click it — the detail panel opens with title/description; drag it in the editor — it slides along the floor, never onto a wall", "needs a live browser session with a signed-in user + a real GLB");
 skip("Manual (browser)", "manual-sculpture-tool", "Sculpture: in the Image-to-3D tool, Import a .glb, save to library — the file is stored (no re-attach needed); add it to an exhibition from the tool; reuse it from 'Mes œuvres' in a second exhibition without re-upload; a file over 4.5 MB shows the clear size error (inline, no alert); a .gltf is refused with the re-export hint", "needs a live browser session with a signed-in user + a real GLB");

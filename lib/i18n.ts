@@ -277,6 +277,75 @@ export const DICTIONARY = {
       en: "The VR session could not start on this device.",
     },
   },
+  ar: {
+  viewOnMyWall: { fr: "Voir sur mon mur", en: "See it on my wall" },
+  checking: { fr: "Vérification de la RA…", en: "Checking AR support…" },
+  notSupported: {
+    fr: "La RA n'est pas disponible sur cet appareil ou navigateur.",
+    en: "AR is not available on this device or browser.",
+  },
+  notSupportedHint: {
+    fr: "Pour voir l'œuvre sur votre mur, ouvrez cette exposition sur un téléphone Android récent avec ARCore, dans Chrome. Sur iPhone, Safari ne prend pas en charge la RA WebXR : aucune prévisualisation RA n'est possible pour l'instant.",
+    en: "To see the work on your wall, open this exhibition on a recent Android phone with ARCore, in Chrome. On iPhone, Safari does not support WebXR AR, so no AR preview is possible for now.",
+  },
+  denied: {
+    fr: "La session RA n'a pas pu démarrer : autorisation refusée ou appareil indisponible.",
+    en: "The AR session could not start: permission denied or device unavailable.",
+  },
+  noHitTest: {
+    fr: "Cet appareil ne propose pas de détection de surface (hit-test) : aucun mur ne peut être détecté.",
+    en: "This device offers no surface detection (hit-test), so no wall can be found.",
+  },
+  failed: {
+    fr: "La session RA n'a pas pu démarrer sur cet appareil.",
+    en: "The AR session could not start on this device.",
+  },
+  requesting: { fr: "Demande de session RA…", en: "Requesting an AR session…" },
+  viewLoading: {
+    fr: "La vue RA charge encore — attendez un instant et réessayez.",
+    en: "The AR view is still loading — wait a moment and try again.",
+  },
+  pointAtWall: {
+    fr: "Pointez votre téléphone vers un mur jusqu'à ce que l'anneau doré apparaisse, puis touchez l'écran pour accrocher l'œuvre à taille réelle, à hauteur d'œil.",
+    en: "Point your phone at a wall until the gold ring appears, then tap the screen to hang the work at its real size, at eye level.",
+  },
+  wallFound: {
+    fr: "Mur détecté — touchez l'écran pour accrocher l'œuvre.",
+    en: "Wall found — tap the screen to hang the work.",
+  },
+  floorFound: {
+    fr: "Ceci ressemble à un sol — visez un mur vertical.",
+    en: "That looks like a floor — aim at a vertical wall.",
+  },
+  noWallYet: {
+    fr: "Aucun mur détecté pour l'instant. Avancez lentement en visant le mur, ou placez l'œuvre à distance fixe.",
+    en: "No wall found yet. Move slowly while aiming at the wall, or place the work at a fixed distance.",
+  },
+  placeAtFixedDistance: { fr: "Placer à distance fixe", en: "Place at a fixed distance" },
+  fixedPlaced: {
+    fr: "Placée à 1,50 m devant vous, à taille réelle — touchez « Valider » ou déplacez-vous pour repositionner.",
+    en: "Placed 1.50 m in front of you, at real size — tap “Confirm” or move to reposition.",
+  },
+  placed: {
+    fr: "Accrochée au mur à taille réelle, centre à 1,50 m du sol.",
+    en: "Hung on the wall at real size, centre 1.50 m from the floor.",
+  },
+  confirmPlacement: { fr: "Valider ce placement", en: "Confirm this placement" },
+  reposition: { fr: "Repositionner", en: "Reposition" },
+  exitAR: { fr: "Quitter la RA", en: "Exit AR" },
+  inSession: {
+    fr: "Vous êtes en RA. Quittez avec le bouton ci-dessous ou le bouton système de votre téléphone.",
+    en: "You are in AR. Exit with the button below or your phone's system button.",
+  },
+  ended: {
+    fr: "Session RA terminée. Vous êtes de retour dans la visite.",
+    en: "AR session ended. You are back in the visit.",
+  },
+  realSizeNote: {
+    fr: "Taille réelle, centre à 1,50 m du sol.",
+    en: "Real size, centre 1.50 m from the floor.",
+  },
+  },
   music: {
     music: { fr: "Musique", en: "Music" },
     playMusic: { fr: "Jouer la musique", en: "Play music" },

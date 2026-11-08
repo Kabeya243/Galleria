@@ -29,6 +29,10 @@ model User {
   teamMemberships TeamMember[]
   teamComments TeamComment[]
   teamActivities TeamActivity[]
+  // Advanced website builder (Claude editor): sites created in
+  // /tools/website-builder/advanced. See models Site/Page/Section/
+  // Block/Template/Media below.
+  sites         Site[]
 }
 
 model PasswordResetToken {
@@ -333,4 +337,99 @@ model GalleryName {
   nameEn    String
   nameFr    String
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Advanced website builder (Claude « atelier-sites », integrated 8 Nov 2026)
+// ---------------------------------------------------------------------------
+// The visual editor at /tools/website-builder/advanced. Adapted from the
+// standalone builder's schema, with two SANAA changes:
+//  - Site.userId is REQUIRED and the relation deletes with the user
+//    (the standalone builder had an optional owner; SANAA sites always
+//    belong to the signed-in user — see the API routes, which scope every
+//    read/write to getCurrentUser()).
+//  - No second User model: the relation above is fused onto the existing
+//    SANAA User (User.sites).
+// Media rows point at R2 objects (key sites/<userId>/<uuid>.<ext>),
+// served same-origin by /api/site-media/[...key] — never local disk.
+// Template rows are the 11 original template definitions, seeded from
+// lib/advanced-site-templates.ts (scripts/seed-site-templates.mjs, and
+// self-seeded by GET /api/site-templates on first call).
+model Site {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  title      String
+  templateId String?
+  design     String?
+  theme      Json
+  published  Boolean  @default(false)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pages      Page[]
+  media      Media[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([slug, published])
+}
+
+model Page {
+  id             String    @id @default(cuid())
+  slug           String
+  title          String
+  seoTitle       String?
+  seoDescription String?
+  order          Int
+  siteId         String
+  site           Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sections       Section[]
+
+  @@unique([siteId, slug])
+  @@index([siteId, order])
+}
+
+model Section {
+  id       String  @id @default(cuid())
+  type     String
+  order    Int
+  settings Json
+  pageId   String
+  page     Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  blocks   Block[]
+
+  @@index([pageId, order])
+}
+
+model Block {
+  id        String  @id @default(cuid())
+  type      String
+  content   Json
+  settings  Json
+  order     Int
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId, order])
+}
+
+model Template {
+  id         String   @id
+  name       String
+  category   String
+  definition Json
+  createdAt  DateTime @default(now())
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  name      String
+  mimeType  String
+  size      Int
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([siteId])
 }

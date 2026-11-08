@@ -519,5 +519,12 @@
    no border/radius, no page scroll — only the inner panels scroll. */
 .atelier-standalone-page { display: flex; height: 100dvh; overflow: hidden; }
 .atelier-standalone-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+@media (min-width: 851px) {
+  /* The overlay rail reserves its 64px strip on desktop; the expanded
+     menu floats above the editor (see .sidebar-collapsible in
+     app/globals.css), so the editor never shifts when the menu opens.
+     Below 851px the sidebar is the slide-over and the main is full width. */
+  .atelier-standalone-main { margin-left: 64px; }
+}
 .atelier-scope.atelier-standalone { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--atelier-panel-2); }
 .atelier-scope.atelier-standalone .editor-shell { height: auto; flex: 1; min-height: 0; border: 0; border-radius: 0; }

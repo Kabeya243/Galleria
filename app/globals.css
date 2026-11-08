@@ -72,6 +72,14 @@ button { color: inherit; }
   .sidebar.collapsed .profile-chip { justify-content: center; padding: 16px 0 3px; gap: 0; }
   .sidebar.collapsed .profile-copy { opacity: 0; max-width: 0; }
   .sidebar.collapsed .sign-out-button { opacity: 0; max-width: 0; padding: 0; border-width: 0; visibility: hidden; transition: opacity .5s ease, max-width .5s ease, padding .5s ease, visibility 0s linear .5s; }
+  /* Collapsible sidebar as an overlay (editor page only): the rail is
+     fixed above the page instead of taking space in the layout, so the
+     editor never shifts when the menu unfolds. The page reserves the
+     64px rail strip (see .atelier-standalone-main in
+     components/atelier-editor.css). Expanded, it floats with a soft
+     shadow; the 0.5s ease width transition is kept. */
+  .sidebar-collapsible { position: fixed; top: 0; left: 0; bottom: 0; z-index: 90; box-shadow: 0 0 40px rgba(20, 20, 20, 0); transition: width .5s ease, min-width .5s ease, padding .5s ease, box-shadow .5s ease; }
+  .sidebar-collapsible:not(.collapsed) { box-shadow: 0 0 40px rgba(20, 20, 20, .25); }
 }
 @media (max-width: 850px) {
   .sidebar-collapse-toggle { display: none; }

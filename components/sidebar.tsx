@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Avatar from "@/components/avatar";
 import { useT, type DictionarySection } from "@/lib/i18n";
@@ -168,14 +168,59 @@ export default function Sidebar({
   active: SidebarActive;
   exhibitionCount: number;
   // Collapsible mode (editor page): a narrow icon-only rail by default,
-  // the full menu when unfolded. Clicking a nav icon while collapsed
-  // unfolds the menu; the toggle button folds it back. Without this
-  // prop the sidebar behaves exactly as before (always full).
+  // the full menu when unfolded — as an overlay floating above the page,
+  // never pushing the content. Hovering the rail unfolds the menu and
+  // moving the mouse away folds it back (short delay so a brief slip
+  // does not flicker it shut); the toggle button stays as the click
+  // fallback, and clicking a nav icon while collapsed unfolds the menu.
+  // Without this prop the sidebar behaves exactly as before (always full).
   collapsible?: boolean;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(collapsible ?? false);
+
+  // Hover open/close (collapsible mode, desktop only): the rail unfolds
+  // while the mouse is over it and folds back shortly after the mouse
+  // leaves. The close is delayed (~180 ms) so a brief slip out of the
+  // area does not flicker the menu shut, and it never folds while
+  // keyboard focus is inside the menu. Touch devices have no hover —
+  // the pointer guard keeps this a desktop-only behaviour and the click
+  // toggle remains the fallback there.
+  const asideRef = useRef<HTMLElement | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  function clearCloseTimer() {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  function hoverCanUse() {
+    return collapsible && typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches;
+  }
+
+  function hoverOpen() {
+    if (!hoverCanUse()) return;
+    clearCloseTimer();
+    setCollapsed(false);
+  }
+
+  function hoverClose() {
+    if (!hoverCanUse()) return;
+    clearCloseTimer();
+    closeTimer.current = setTimeout(() => {
+      if (asideRef.current?.contains(document.activeElement)) return;
+      setCollapsed(true);
+    }, 180);
+  }
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -225,7 +270,13 @@ export default function Sidebar({
         />
       )}
 
-      <aside id="sanaa-sidebar" className={`sidebar${open ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
+      <aside
+        id="sanaa-sidebar"
+        ref={asideRef}
+        className={`sidebar${open ? " open" : ""}${collapsed ? " collapsed" : ""}${collapsible ? " sidebar-collapsible" : ""}`}
+        onMouseEnter={hoverOpen}
+        onMouseLeave={hoverClose}
+      >
         <div className="sidebar-top-row">
           <Link className="brand-lockup" href="/" aria-label={t("nav", "sanaaHome")} onClick={() => setOpen(false)}>
             <span className="brand-mark">s.</span>

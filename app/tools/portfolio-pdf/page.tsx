@@ -7,8 +7,11 @@
 // The page is NOT wrapped in the platform shell: like Canva, the editor owns
 // the screen. The platform menu stays present as a collapsed icon-only
 // rail on the left (Sidebar `collapsible`, icons only by default) —
-// clicking an icon unfolds the full menu, the toggle folds it back.
-// The editor's own top bar (logo SANAA) links back to the dashboard.
+// hovering the rail unfolds the full menu as an overlay floating above
+// the editor (the editor never shifts), moving the mouse away folds it
+// back after a short delay; the toggle button stays as the click
+// fallback (touch devices have no hover). The editor's own top bar
+// (logo SANAA) links back to the dashboard.
 
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/sidebar";

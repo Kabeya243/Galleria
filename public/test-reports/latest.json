@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-08T00:46:36.126Z",
-  "commit": "767909e",
+  "generatedAt": "2026-11-08T01:04:53.288Z",
+  "commit": "0841a73",
   "summary": {
     "total": 23,
     "passed": 16,
@@ -83,7 +83,7 @@
       "id": "atelier-transitions",
       "name": "Smooth open/close transitions, 0.5s max",
       "status": "pass",
-      "detail": "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s"
+      "detail": "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s + hover overlay rail"
     },
     {
       "feature": "Code quality",

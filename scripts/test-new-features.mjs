@@ -211,7 +211,19 @@ check("Portfolio PDF", "atelier-transitions", "Smooth open/close transitions, 0.
   assert(!editorCss.includes(".export-menu.open { display: block; }"), "export menu still snaps via display");
   assert(editorCss.includes("atelier-panel-fade .3s ease"), "panel tab switch missing fade");
   assert(editorJs.includes("panel-swap"), "editor.js does not re-trigger panel fade");
-  return "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s";
+  // Hover + overlay (8 Nov): the collapsible rail unfolds on hover and
+  // floats above the editor instead of pushing it — the editor never
+  // shifts when the menu opens. Close is delayed so a brief slip of
+  // the mouse does not flicker it shut; the click toggle stays.
+  const sidebarTsx = read("components/sidebar.tsx");
+  assert(sidebarTsx.includes("onMouseEnter"), "sidebar missing hover open");
+  assert(sidebarTsx.includes("onMouseLeave"), "sidebar missing hover close");
+  assert(sidebarTsx.includes("sidebar-collapsible"), "sidebar missing overlay class");
+  assert(sidebarTsx.includes("180"), "sidebar missing hover close delay");
+  assert(globals.includes(".sidebar-collapsible { position: fixed;"), "collapsible sidebar not a fixed overlay on desktop");
+  assert(globals.includes(".sidebar-collapsible:not(.collapsed) { box-shadow:"), "expanded overlay menu missing shadow");
+  assert(editorCss.includes(".atelier-standalone-main { margin-left: 64px; }"), "standalone main does not reserve the 64px rail");
+  return "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s + hover overlay rail";
 });
 
 // ---------- Cross-cutting ----------

@@ -1248,6 +1248,16 @@ button { font-weight: 600; }
 /* so no admin style can leak into the public site, editor or tools.  */
 /* Default (no JS / no stored choice) is DARK.                        */
 /* ------------------------------------------------------------------ */
+/* The app shell locks the window (html, body { overflow: hidden }) and
+   scrolls only inside .dashboard-content — but the Admin is standalone,
+   outside .app-shell, with no inner scroll container of its own, so a
+   page taller than the viewport was unreachable: the window could not
+   scroll and nothing inside could either. Restore normal window
+   scrolling whenever the Admin is on screen (:has keeps every other
+   page on the locked-window shell). The sticky sidebar / topbar then
+   work as designed. */
+html:has(.ad-root), html:has(.ad-root) body { overflow-y: auto; }
+
 .ad-root {
   --ad-bg: #0a0a0b;
   --ad-card: #161618;

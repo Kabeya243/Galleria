@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-08T01:04:53.288Z",
-  "commit": "0841a73",
+  "generatedAt": "2026-11-08T01:44:17.588Z",
+  "commit": "30ed886",
   "summary": {
     "total": 23,
     "passed": 16,
@@ -81,9 +81,9 @@
     {
       "feature": "Portfolio PDF",
       "id": "atelier-transitions",
-      "name": "Smooth open/close transitions, 0.5s max",
+      "name": "Smooth open/close transitions, 0.25s max",
       "status": "pass",
-      "detail": "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s + hover overlay rail"
+      "detail": "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + hidden scrollbars"
     },
     {
       "feature": "Code quality",

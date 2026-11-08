@@ -33,23 +33,24 @@ button { color: inherit; }
    (overflow-y: auto on the sidebar) — the page itself never scrolls
    because of the menu. The nav groups keep their own inner scroll, so
    the profile block at the bottom stays reachable. */
-.sidebar { width: 247px; min-width: 247px; height: 100vh; height: 100dvh; min-height: 100vh; min-height: 100dvh; align-self: stretch; flex-shrink: 0; overflow-y: auto; overflow-x: hidden; border-right: 1px solid var(--line); background: var(--surface-3); display: flex; flex-direction: column; padding: 26px 16px 16px; }
-.brand-lockup { display: inline-flex; align-items: center; gap: 9px; width: fit-content; }
+.sidebar { width: 247px; min-width: 247px; height: 100vh; height: 100dvh; min-height: 100vh; min-height: 100dvh; align-self: stretch; flex-shrink: 0; overflow-y: auto; overflow-x: hidden; border-right: 1px solid var(--line); background: var(--surface-3); display: flex; flex-direction: column; padding: 26px 16px 16px; transition: width .5s ease, min-width .5s ease, padding .5s ease; }
+.brand-lockup { display: inline-flex; align-items: center; gap: 9px; width: fit-content; transition: gap .5s ease; }
 .brand-mark { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; background: #2f3932; color: #f5f2eb; font: 700 17px/1 "DM Sans", sans-serif; padding-bottom: 3px; }
-.brand-name { font: 800 14px/1 "DM Sans", sans-serif; letter-spacing: .16em; }
+.brand-name { font: 800 14px/1 "DM Sans", sans-serif; letter-spacing: .16em; max-width: 200px; white-space: nowrap; overflow: hidden; transition: opacity .5s ease, max-width .5s ease; }
 .profile-avatar { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 7px; color: #e8dfd3; background: #777b69; font: 600 12px "DM Sans", sans-serif; }
 .profile-copy span { color: var(--muted); font-size: 10px; }
 .profile-chip > svg { color: var(--muted); }
 .nav-section-label, .panel-kicker { color: var(--muted); font: 600 9px "DM Sans", sans-serif; letter-spacing: .15em; }
-.nav-section-label { margin: 32px 10px 11px; }
+.nav-section-label { margin: 32px 10px 11px; transition: opacity .5s ease, font-size .5s ease, line-height .5s ease, visibility 0s linear 0s; }
 .side-nav { display: grid; gap: 3px; }
-.nav-item { min-height: 38px; display: flex; align-items: center; gap: 11px; padding: 0 11px; color: var(--muted); border-radius: 6px; font-size: 12px; transition: background .16s, color .16s; }
+.nav-item { min-height: 38px; display: flex; align-items: center; gap: 11px; padding: 0 11px; color: var(--muted); border-radius: 6px; font-size: 12px; transition: background .16s, color .16s, gap .5s ease, padding .5s ease; }
 .nav-item:hover { background: var(--surface-2); color: var(--ink); }
 .nav-item.active { background: var(--surface-2); color: var(--ink); font-weight: 600; }
 .nav-item.active svg { color: #8c674d; }
 .nav-count { margin-left: auto; font-size: 10px; color: var(--muted); }
+.nav-item-label, .nav-count { max-width: 200px; white-space: nowrap; overflow: hidden; transition: opacity .5s ease, max-width .5s ease; }
 .sidebar-bottom { display: grid; gap: 3px; }
-.profile-chip { border-top: 1px solid var(--line); margin-top: 13px; padding: 16px 5px 3px; display: flex; align-items: center; gap: 9px; }
+.profile-chip { border-top: 1px solid var(--line); margin-top: 13px; padding: 16px 5px 3px; display: flex; align-items: center; gap: 9px; transition: padding .5s ease, gap .5s ease; }
 
 /* Collapsible sidebar (editor page): a narrow icon-only rail by default,
    the full menu when unfolded. Desktop only — below 851px the sidebar is
@@ -61,21 +62,24 @@ button { color: inherit; }
 @media (min-width: 851px) {
   .sidebar.collapsed { width: 64px; min-width: 64px; padding: 26px 8px 16px; }
   .sidebar.collapsed .sidebar-top-row { flex-direction: column; justify-content: center; gap: 14px; }
-  .sidebar.collapsed .brand-name { display: none; }
-  .sidebar.collapsed .nav-section-label { display: none; }
+  .sidebar.collapsed .brand-lockup { gap: 0; }
+  .sidebar.collapsed .brand-name { opacity: 0; max-width: 0; }
+  .sidebar.collapsed .nav-section-label { opacity: 0; font-size: 0; line-height: 0; visibility: hidden; transition: opacity .5s ease, font-size .5s ease, line-height .5s ease, visibility 0s linear .5s; }
   .sidebar.collapsed .side-nav { justify-items: center; }
-  .sidebar.collapsed .nav-item { justify-content: center; width: 38px; min-height: 38px; padding: 0; background: transparent; border: 0; font: inherit; cursor: pointer; }
-  .sidebar.collapsed .nav-item-label, .sidebar.collapsed .nav-count { display: none; }
-  .sidebar.collapsed .profile-chip { justify-content: center; padding: 16px 0 3px; }
-  .sidebar.collapsed .profile-copy, .sidebar.collapsed .sign-out-button { display: none; }
+  .sidebar.collapsed .nav-item { justify-content: center; width: 38px; min-height: 38px; padding: 0; gap: 0; background: transparent; border: 0; font: inherit; cursor: pointer; }
+  .sidebar.collapsed .nav-item-label, .sidebar.collapsed .nav-count { opacity: 0; max-width: 0; }
+  .sidebar.collapsed .nav-count { margin-left: 0; }
+  .sidebar.collapsed .profile-chip { justify-content: center; padding: 16px 0 3px; gap: 0; }
+  .sidebar.collapsed .profile-copy { opacity: 0; max-width: 0; }
+  .sidebar.collapsed .sign-out-button { opacity: 0; max-width: 0; padding: 0; border-width: 0; visibility: hidden; transition: opacity .5s ease, max-width .5s ease, padding .5s ease, visibility 0s linear .5s; }
 }
 @media (max-width: 850px) {
   .sidebar-collapse-toggle { display: none; }
 }
-.sign-out-button { padding: 5px 7px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--muted); font-size: 9px; cursor: pointer; }
+.sign-out-button { padding: 5px 7px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--muted); font-size: 9px; cursor: pointer; max-width: 120px; white-space: nowrap; overflow: hidden; transition: opacity .5s ease, max-width .5s ease, padding .5s ease, visibility 0s linear 0s; }
 .sign-out-button:hover { background: var(--surface-2); color: var(--ink); }
 .profile-avatar { border-radius: 50%; background: #d6c4ac; color: #4d473e; }
-.profile-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.profile-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; max-width: 300px; white-space: nowrap; overflow: hidden; transition: opacity .5s ease, max-width .5s ease; }
 .profile-copy strong { font-size: 11px; font-weight: 600; }
 
 .dashboard-main { min-width: 0; flex: 1; display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
@@ -635,7 +639,7 @@ button { color: inherit; }
   /* The sidebar is a slide-over opened from the floating button in
      components/sidebar.tsx — it no longer eats the screen as a narrow
      icon rail on tablet and mobile. */
-  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 90; width: min(300px, 84vw); min-width: 0; height: 100vh; height: 100dvh; transform: translateX(-105%); transition: transform .25s ease; box-shadow: 0 0 40px rgba(20, 20, 20, .25); }
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 90; width: min(300px, 84vw); min-width: 0; height: 100vh; height: 100dvh; transform: translateX(-105%); transition: transform .5s ease; box-shadow: 0 0 40px rgba(20, 20, 20, .25); }
   .sidebar.open { transform: translateX(0); }
   .mobile-nav-toggle { display: grid; }
   .sidebar-backdrop { display: block; }

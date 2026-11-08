@@ -149,6 +149,7 @@
   function escapeText(text){return escapeHTML(text).replace(/\n/g," ");}
   function setPanel(tab) {
     state.activeTab = tab;
+    const content=$("#panel-content");content.classList.remove("panel-swap");void content.offsetWidth;content.classList.add("panel-swap");
     const labels = {designs:["MES DESIGNS","Mes designs"],templates:["COMMENCER","Modèles"],elements:["COMPOSER","Éléments"],text:["ÉCRIRE","Texte"],photos:["INSPIRATION","Photos"],uploads:["VOTRE BIBLIOTHÈQUE","Importer"],artworks:["VOS ŒUVRES","Mes œuvres"],background:["PERSONNALISER","Fond"]};
     $("#panel-kicker").textContent=labels[tab][0];$("#panel-title").textContent=labels[tab][1];
     $$(".tool-tab[data-tab]").forEach((button)=>button.classList.toggle("active",button.dataset.tab===tab));
@@ -379,7 +380,7 @@
     if(state.initialized)return;state.initialized=true;
     if(typeof fabric==="undefined"){toast("Fabric.js n’a pas pu être chargé.",true);return;}
     $$(".tool-tab[data-tab]").forEach(button=>button.onclick=()=>setPanel(button.dataset.tab));
-    $("#panel-close").onclick=()=>$("#left-panel").classList.toggle("closed");
+    $("#panel-close").onclick=()=>{const panel=$("#left-panel");const closed=panel.classList.toggle("closed");panel.closest(".editor-layout").classList.toggle("panel-closed",closed);};
     $("#save-project").onclick=saveProject;$("#project-name").oninput=markDirty;$("#undo").onclick=()=>historyMove(-1);$("#redo").onclick=()=>historyMove(1);
     $("#zoom-in").onclick=()=>setZoom(state.zoom*1.12);$("#zoom-out").onclick=()=>setZoom(state.zoom/1.12);$("#zoom-fit").onclick=fitCanvas;
     $("#export-button").onclick=()=>$("#export-menu").classList.toggle("open");$$("[data-format]").forEach(button=>button.onclick=()=>exportProject(button.dataset.format));

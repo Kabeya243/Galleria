@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T00:15:24.104Z",
-  "commit": "390a70b",
+  "generatedAt": "2026-11-08T00:46:36.126Z",
+  "commit": "767909e",
   "summary": {
-    "total": 22,
-    "passed": 15,
+    "total": 23,
+    "passed": 16,
     "failed": 0,
     "skipped": 7
   },
@@ -77,6 +77,13 @@
       "name": "Atelier editor, export function, API routes, tools entry, i18n",
       "status": "pass",
       "detail": "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug"
+    },
+    {
+      "feature": "Portfolio PDF",
+      "id": "atelier-transitions",
+      "name": "Smooth open/close transitions, 0.5s max",
+      "status": "pass",
+      "detail": "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s"
     },
     {
       "feature": "Code quality",

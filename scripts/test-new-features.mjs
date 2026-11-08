@@ -192,6 +192,28 @@ check("Portfolio PDF", "atelier-files", "Atelier editor, export function, API ro
   return "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug";
 });
 
+check("Portfolio PDF", "atelier-transitions", "Smooth open/close transitions, 0.5s max", () => {
+  const globals = read("app/globals.css");
+  const editorCss = read("components/atelier-editor.css");
+  const editorJs = read("public/atelier/editor.js");
+  // Sidebar (big movement): 0.5s ease on width; labels fade and collapse
+  // instead of snapping away with display:none.
+  assert(globals.includes("transition: width .5s ease, min-width .5s ease, padding .5s ease"), "sidebar missing 0.5s width transition");
+  assert(!globals.includes(".sidebar.collapsed .brand-name { display: none; }"), "sidebar labels still snap via display:none");
+  assert(globals.includes("transition: transform .5s ease; box-shadow: 0 0 40px"), "mobile slide-over not 0.5s");
+  // Left panel (0.4s): the grid column shrinks, the panel fades — no display:none.
+  assert(editorCss.includes("transition: grid-template-columns .4s ease"), "editor layout missing grid transition");
+  assert(editorCss.includes(".editor-layout.panel-closed { grid-template-columns: 66px 0 minmax(270px, 1fr) 286px; }"), "editor missing panel-closed grid");
+  assert(!editorCss.includes(".left-panel.closed { display: none; }"), "left panel still snaps via display:none");
+  assert(editorJs.includes("panel-closed"), "editor.js does not toggle panel-closed");
+  // Export menu + rail tab switch (0.3s): fade/slide, no display toggle.
+  assert(editorCss.includes("transition: opacity .3s ease, transform .3s ease, visibility 0s linear .3s"), "export menu missing 0.3s fade");
+  assert(!editorCss.includes(".export-menu.open { display: block; }"), "export menu still snaps via display");
+  assert(editorCss.includes("atelier-panel-fade .3s ease"), "panel tab switch missing fade");
+  assert(editorJs.includes("panel-swap"), "editor.js does not re-trigger panel fade");
+  return "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s";
+});
+
 // ---------- Cross-cutting ----------
 check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [

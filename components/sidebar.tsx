@@ -160,20 +160,21 @@ export default function Sidebar({
   user,
   active,
   exhibitionCount,
-  collapsible,
+  collapsible = true,
 }: {
   // isAdmin is carried on the user object by getCurrentUser (lib/auth.ts);
   // the Admin links only render when it is true.
   user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   active: SidebarActive;
   exhibitionCount: number;
-  // Collapsible mode (editor page): a narrow icon-only rail by default,
-  // the full menu when unfolded — as an overlay floating above the page,
-  // never pushing the content. Hovering the rail unfolds the menu and
-  // moving the mouse away folds it back (short delay so a brief slip
-  // does not flicker it shut); the toggle button stays as the click
-  // fallback, and clicking a nav icon while collapsed unfolds the menu.
-  // Without this prop the sidebar behaves exactly as before (always full).
+  // Collapsible mode is the platform-wide default: a narrow icon-only
+  // rail, the full menu when unfolded — as an overlay floating above
+  // the page, never pushing the content. Hovering the rail unfolds the
+  // menu and moving the mouse away folds it back (short delay so a
+  // brief slip does not flicker it shut); the toggle button stays as
+  // the click fallback, and clicking a nav icon while collapsed
+  // unfolds the menu. Pass collapsible={false} for the rare page that
+  // needs the full-width sidebar as a fixed layout element instead.
   collapsible?: boolean;
 }) {
   const t = useT();

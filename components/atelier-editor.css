@@ -175,14 +175,14 @@
   opacity: 0;
   visibility: hidden;
   transform: translateY(-6px);
-  transition: opacity .3s ease, transform .3s ease, visibility 0s linear .3s;
+  transition: opacity .25s ease, transform .25s ease, visibility 0s linear .25s;
   pointer-events: none;
 }
 .atelier-scope .export-menu.open {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-  transition: opacity .3s ease, transform .3s ease, visibility 0s linear 0s;
+  transition: opacity .25s ease, transform .25s ease, visibility 0s linear 0s;
   pointer-events: auto;
 }
 .atelier-scope .export-menu button {
@@ -201,9 +201,9 @@
 .atelier-scope .export-menu small { display: block; color: var(--muted); margin-top: 4px; font-size: 10px; }
 
 /* Layout: rail | panel | workspace | properties — the panel column
-   animates (0.4s) when the left panel opens/closes, instead of the
+   animates (0.25s) when the left panel opens/closes, instead of the
    panel snapping away with display:none. */
-.atelier-scope .editor-layout { min-height: 0; flex: 1; display: grid; grid-template-columns: 66px 258px minmax(270px, 1fr) 286px; transition: grid-template-columns .4s ease; }
+.atelier-scope .editor-layout { min-height: 0; flex: 1; display: grid; grid-template-columns: 66px 258px minmax(270px, 1fr) 286px; transition: grid-template-columns .25s ease; }
 .atelier-scope .editor-layout.panel-closed { grid-template-columns: 66px 0 minmax(270px, 1fr) 286px; }
 .atelier-scope .left-rail {
   background: var(--atelier-panel);
@@ -242,13 +242,13 @@
   overflow-y: auto;
   padding: 17px 15px;
   z-index: 2;
-  transition: opacity .4s ease, transform .4s ease, max-height .4s ease, padding .4s ease, visibility 0s linear 0s;
+  transition: opacity .25s ease, transform .25s ease, max-height .25s ease, padding .25s ease, visibility 0s linear 0s;
 }
 .atelier-scope .left-panel.closed {
   opacity: 0;
   visibility: hidden;
   border-right: 0;
-  transition: opacity .4s ease, transform .4s ease, max-height .4s ease, padding .4s ease, visibility 0s linear .4s;
+  transition: opacity .25s ease, transform .25s ease, max-height .25s ease, padding .25s ease, visibility 0s linear .25s;
 }
 .atelier-scope .panel-heading,
 .atelier-scope .properties-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -257,10 +257,10 @@
 .atelier-scope .panel-heading .eyebrow,
 .atelier-scope .properties-heading .eyebrow { font-size: 9px; margin: 0 0 5px; letter-spacing: 0.15em; color: var(--muted); font-weight: 700; }
 .atelier-scope .panel-content { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-/* Rail tab switch: the panel content fades in gently (0.3s). The class
+/* Rail tab switch: the panel content fades in gently (0.25s). The class
    is re-triggered from editor.js on every tab change. */
 @keyframes atelier-panel-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-.atelier-scope .panel-content.panel-swap { animation: atelier-panel-fade .3s ease; }
+.atelier-scope .panel-content.panel-swap { animation: atelier-panel-fade .25s ease; }
 .atelier-scope .panel-search {
   grid-column: 1/-1;
   width: 100%;

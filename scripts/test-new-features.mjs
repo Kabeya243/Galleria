@@ -192,25 +192,31 @@ check("Portfolio PDF", "atelier-files", "Atelier editor, export function, API ro
   return "editor + local Fabric.js + Python export (api/index.py + rewrite) + R2 API routes + tools entry + EN/FR keys + tool slug";
 });
 
-check("Portfolio PDF", "atelier-transitions", "Smooth open/close transitions, 0.5s max", () => {
+check("Portfolio PDF", "atelier-transitions", "Smooth open/close transitions, 0.25s max", () => {
   const globals = read("app/globals.css");
   const editorCss = read("components/atelier-editor.css");
   const editorJs = read("public/atelier/editor.js");
-  // Sidebar (big movement): 0.5s ease on width; labels fade and collapse
+  // Sidebar (big movement): 0.25s ease on width; labels fade and collapse
   // instead of snapping away with display:none.
-  assert(globals.includes("transition: width .5s ease, min-width .5s ease, padding .5s ease"), "sidebar missing 0.5s width transition");
+  assert(globals.includes("transition: width .25s ease, min-width .25s ease, padding .25s ease"), "sidebar missing 0.25s width transition");
   assert(!globals.includes(".sidebar.collapsed .brand-name { display: none; }"), "sidebar labels still snap via display:none");
-  assert(globals.includes("transition: transform .5s ease; box-shadow: 0 0 40px"), "mobile slide-over not 0.5s");
-  // Left panel (0.4s): the grid column shrinks, the panel fades — no display:none.
-  assert(editorCss.includes("transition: grid-template-columns .4s ease"), "editor layout missing grid transition");
+  assert(globals.includes("transition: transform .25s ease; box-shadow: 0 0 40px"), "mobile slide-over not 0.25s");
+  // Left panel (0.25s): the grid column shrinks, the panel fades — no display:none.
+  assert(editorCss.includes("transition: grid-template-columns .25s ease"), "editor layout missing grid transition");
   assert(editorCss.includes(".editor-layout.panel-closed { grid-template-columns: 66px 0 minmax(270px, 1fr) 286px; }"), "editor missing panel-closed grid");
   assert(!editorCss.includes(".left-panel.closed { display: none; }"), "left panel still snaps via display:none");
   assert(editorJs.includes("panel-closed"), "editor.js does not toggle panel-closed");
-  // Export menu + rail tab switch (0.3s): fade/slide, no display toggle.
-  assert(editorCss.includes("transition: opacity .3s ease, transform .3s ease, visibility 0s linear .3s"), "export menu missing 0.3s fade");
+  // Export menu + rail tab switch (0.25s): fade/slide, no display toggle.
+  assert(editorCss.includes("transition: opacity .25s ease, transform .25s ease, visibility 0s linear .25s"), "export menu missing 0.25s fade");
   assert(!editorCss.includes(".export-menu.open { display: block; }"), "export menu still snaps via display");
-  assert(editorCss.includes("atelier-panel-fade .3s ease"), "panel tab switch missing fade");
+  assert(editorCss.includes("atelier-panel-fade .25s ease"), "panel tab switch missing fade");
   assert(editorJs.includes("panel-swap"), "editor.js does not re-trigger panel fade");
+  // Nothing over 0.25s: sweep every transition/animation declaration in
+  // both stylesheets for a duration above 0.25s.
+  for (const [name, css] of [["globals", globals], ["editor", editorCss]]) {
+    const slow = css.match(/transition:[^;]*\.[345]s|animation:[^;]*\.[345]s/g);
+    assert(!slow, `${name} still has >0.25s transitions: ${slow?.join(" | ")}`);
+  }
   // Hover + overlay (8 Nov): the collapsible rail unfolds on hover and
   // floats above the editor instead of pushing it — the editor never
   // shifts when the menu opens. Close is delayed so a brief slip of
@@ -223,7 +229,15 @@ check("Portfolio PDF", "atelier-transitions", "Smooth open/close transitions, 0.
   assert(globals.includes(".sidebar-collapsible { position: fixed;"), "collapsible sidebar not a fixed overlay on desktop");
   assert(globals.includes(".sidebar-collapsible:not(.collapsed) { box-shadow:"), "expanded overlay menu missing shadow");
   assert(editorCss.includes(".atelier-standalone-main { margin-left: 64px; }"), "standalone main does not reserve the 64px rail");
-  return "sidebar 0.5s + panel 0.4s + menus/tabs 0.3s, nothing over 0.5s + hover overlay rail";
+  // Platform-wide rail (8 Nov): the collapsible sidebar is the default
+  // everywhere, and every .app-shell page reserves the 64px icon strip
+  // next to the fixed overlay sidebar.
+  assert(sidebarTsx.includes("collapsible = true"), "sidebar not collapsible by default");
+  assert(globals.includes(".app-shell > .sidebar-collapsible ~ * { margin-left: 64px; }"), "app-shell does not reserve the 64px rail");
+  // Hidden scrollbars (8 Nov): invisible everywhere, scrolling intact.
+  assert(globals.includes("scrollbar-width: none"), "scrollbars not hidden (Firefox)");
+  assert(globals.includes("*::-webkit-scrollbar { display: none;"), "scrollbars not hidden (Chromium/Safari)");
+  return "all open/close 0.25s, nothing over 0.25s + hover overlay rail platform-wide + hidden scrollbars";
 });
 
 // ---------- Cross-cutting ----------

@@ -73,18 +73,27 @@ export default function PublicExhibition({
   exhibition,
   accessibilityPack = null,
   music = null,
+  // Embedded (iframe) mode: the same visit, without SANAA platform
+  // chrome — no back link, no share panel, no platform navigation.
+  // The 3D visit itself (entry screen, minimap, list view, fullscreen,
+  // artwork panels) is unchanged; the rooms and their layouts are
+  // never touched by this flag.
+  embedded = false,
 }: {
   exhibition: {
     id: string;
+    slug: string;
     title: string;
     description: string;
     ownerName: string;
     ownerAvatarUrl?: string | null;
+    visibility: string;
     rooms: GalleryRoom[];
     artworks: Artwork[];
   };
   accessibilityPack?: PublicAccessibilityPack | null;
   music?: ExhibitionMusic | null;
+  embedded?: boolean;
 }) {
   const [selected, setSelected] = useState<Artwork | undefined>();
   const [showInfo, setShowInfo] = useState(false);
@@ -316,12 +325,23 @@ export default function PublicExhibition({
         cameraStateRef={cameraStateRef}
       />}
       <header className="public-topbar">
-        <Link href="/" className="public-back"><ArrowLeft size={16} /> SANAA</Link>
+        {embedded ? (
+          <span className="public-back" aria-hidden="true">SANAA</span>
+        ) : (
+          <Link href="/" className="public-back"><ArrowLeft size={16} /> SANAA</Link>
+        )}
         <div className="public-title"><Avatar name={exhibition.ownerName} avatarUrl={exhibition.ownerAvatarUrl} className="public-creator-avatar" /><span>{exhibition.ownerName.toUpperCase()} PRESENTS</span><strong>{exhibition.title}</strong></div>
         <div className="public-topbar-actions">
           <LanguageSwitcher />
           <button className="public-info-button" aria-label={t("listView", "listView")} aria-pressed={showListView} onClick={() => setShowListView((value) => !value)}><List size={16} /></button>
-          <ExhibitionShare title={exhibition.title} url={shareUrl || (typeof window !== "undefined" ? window.location.href : "")} />
+          {!embedded && (
+            <ExhibitionShare
+              title={exhibition.title}
+              url={shareUrl || (typeof window !== "undefined" ? window.location.href : "")}
+              slug={exhibition.slug}
+              embeddable={exhibition.visibility === "public"}
+            />
+          )}
           <button className="public-info-button" aria-label="Exhibition information" onClick={() => setShowInfo((value) => !value)}><Info size={17} /></button>
           {accessibilityPack && (
             <button

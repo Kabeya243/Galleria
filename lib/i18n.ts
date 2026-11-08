@@ -251,6 +251,29 @@ export const DICTIONARY = {
     scanToOpen: { fr: "Scanner pour ouvrir", en: "Scan to open" },
     shareExhibition: { fr: "Partager cette exposition", en: "Share this exhibition" },
   },
+  embed: {
+    embedOnYourSite: { fr: "Intégrer sur votre site", en: "Embed on your site" },
+    embedHint: {
+      fr: "Collez ce code sur votre site ou un site tiers : l'exposition s'y affiche en visite 3D.",
+      en: "Paste this code on your site or a third-party site: the exhibition shows there as a 3D visit.",
+    },
+    embedUrl: { fr: "Adresse d'intégration", en: "Embed address" },
+    copyEmbedCode: { fr: "Copier le code", en: "Copy the code" },
+    embedCodeCopied: { fr: "Code copié", en: "Code copied" },
+    copyEmbedUrl: { fr: "Copier l'adresse", en: "Copy the address" },
+    embedUrlCopied: { fr: "Adresse copiée", en: "Address copied" },
+    embedWidth: { fr: "Largeur", en: "Width" },
+    embedHeight: { fr: "Hauteur (px)", en: "Height (px)" },
+    embedCopyFailed: {
+      fr: "La copie n'a pas fonctionné — sélectionnez le code et copiez-le.",
+      en: "Copy did not work — select the code and copy it.",
+    },
+    notAvailable: { fr: "Exposition non disponible", en: "Exhibition not available" },
+    notAvailableHint: {
+      fr: "Cette exposition n'est pas publique, elle ne peut pas être intégrée sur un autre site.",
+      en: "This exhibition is not public, so it cannot be embedded on another site.",
+    },
+  },
   stats: {
     visitorStats: { fr: "Statistiques des visiteurs", en: "Visitor statistics" },
     visits: { fr: "Visites", en: "Visits" },

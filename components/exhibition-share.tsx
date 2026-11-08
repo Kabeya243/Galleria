@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Link2, QrCode, Share2, X } from "lucide-react";
 import QRCode from "qrcode";
+import { buildEmbedSnippet, buildEmbedUrl, DEFAULT_EMBED_HEIGHT, DEFAULT_EMBED_WIDTH } from "@/lib/embed";
 import { useT } from "@/lib/i18n";
 
 // Share (public exhibition): direct link (copy), QR code to open the
@@ -10,12 +11,21 @@ import { useT } from "@/lib/i18n";
 // offers one. The Open Graph tags for this exhibition live in
 // generateMetadata (app/exhibition/[slug]/page.tsx), so a shared link
 // unfurls with the exhibition's own title, description and image.
+//
+// Embed: when the show is public (embeddable), the panel also offers
+// the iframe code to paste on the artist's own site or a third-party
+// site — same-origin src, no third-party JavaScript. Private-link and
+// password-protected shows never offer it (embeddable is false).
 export default function ExhibitionShare({
   title,
   url,
+  slug,
+  embeddable = false,
 }: {
   title: string;
   url: string;
+  slug?: string;
+  embeddable?: boolean;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -23,6 +33,19 @@ export default function ExhibitionShare({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState(false);
   const canNativeShare = typeof navigator !== "undefined" && "share" in navigator;
+  const [embedWidth, setEmbedWidth] = useState(DEFAULT_EMBED_WIDTH);
+  const [embedHeight, setEmbedHeight] = useState(DEFAULT_EMBED_HEIGHT);
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const [embedUrlCopied, setEmbedUrlCopied] = useState(false);
+  const [embedCopyError, setEmbedCopyError] = useState<string | null>(null);
+
+  const showEmbed = embeddable && Boolean(slug);
+  const embedUrl = showEmbed
+    ? buildEmbedUrl(typeof window !== "undefined" ? window.location.origin : "", slug as string)
+    : "";
+  const embedSnippet = showEmbed
+    ? buildEmbedSnippet(embedUrl, { width: embedWidth, height: embedHeight }, title)
+    : "";
 
   useEffect(() => {
     if (!open) return;
@@ -47,6 +70,23 @@ export default function ExhibitionShare({
     } catch {
       // Clipboard unavailable — the input below stays selectable.
       setCopied(false);
+    }
+  }
+
+  async function copyEmbed(what: "code" | "url") {
+    setEmbedCopyError(null);
+    try {
+      await navigator.clipboard.writeText(what === "code" ? embedSnippet : embedUrl);
+      if (what === "code") {
+        setEmbedCopied(true);
+        setTimeout(() => setEmbedCopied(false), 2000);
+      } else {
+        setEmbedUrlCopied(true);
+        setTimeout(() => setEmbedUrlCopied(false), 2000);
+      }
+    } catch {
+      // Clipboard unavailable — the code below stays selectable.
+      setEmbedCopyError(t("embed", "embedCopyFailed"));
     }
   }
 
@@ -103,6 +143,51 @@ export default function ExhibitionShare({
               !qrError && <span>{t("common", "loading")}</span>
             )}
           </div>
+          {showEmbed && (
+            <div className="share-embed">
+              <span className="panel-kicker">{t("embed", "embedOnYourSite").toUpperCase()}</span>
+              <p className="share-embed-hint">{t("embed", "embedHint")}</p>
+              <label className="share-link-row">
+                <Link2 size={14} aria-hidden="true" />
+                <div className="share-link-text" title={embedUrl} role="textbox" aria-readonly="true" aria-label={t("embed", "embedUrl")} tabIndex={0}>
+                  {embedUrl}
+                </div>
+                <button type="button" onClick={() => void copyEmbed("url")}>
+                  {embedUrlCopied ? <Check size={14} /> : <Copy size={14} />}
+                  {embedUrlCopied ? t("embed", "embedUrlCopied") : t("embed", "copyEmbedUrl")}
+                </button>
+              </label>
+              <div className="share-embed-size">
+                <label>
+                  {t("embed", "embedWidth")}
+                  <input
+                    type="text"
+                    value={embedWidth}
+                    onChange={(event) => setEmbedWidth(event.target.value)}
+                    aria-label={t("embed", "embedWidth")}
+                  />
+                </label>
+                <label>
+                  {t("embed", "embedHeight")}
+                  <input
+                    type="number"
+                    min={200}
+                    value={embedHeight}
+                    onChange={(event) => setEmbedHeight(Number(event.target.value) || DEFAULT_EMBED_HEIGHT)}
+                    aria-label={t("embed", "embedHeight")}
+                  />
+                </label>
+              </div>
+              <label className="share-embed-code">
+                <textarea value={embedSnippet} readOnly rows={4} aria-label={t("embed", "embedOnYourSite")} />
+              </label>
+              <button type="button" className="share-embed-copy" onClick={() => void copyEmbed("code")}>
+                {embedCopied ? <Check size={14} /> : <Copy size={14} />}
+                {embedCopied ? t("embed", "embedCodeCopied") : t("embed", "copyEmbedCode")}
+              </button>
+              {embedCopyError && <p className="share-embed-error" role="alert">{embedCopyError}</p>}
+            </div>
+          )}
         </div>
       )}
     </div>

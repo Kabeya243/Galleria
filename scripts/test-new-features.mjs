@@ -210,6 +210,76 @@ check("Advanced website builder", "adv-css", "Editor CSS scoped (no Tailwind 3, 
   return "scoped .advanced-editor, --adv-* vars, both CSS files in layout";
 });
 
+// ---------- Part 3c — Site templates UI/UX (burger, footer, icons, a11y) ----------
+check("Advanced website builder", "adv-nav-burger", "Published nav: burger ≤768px, Escape + close on link, aria-expanded", () => {
+  assert(exists("components/advanced-site-nav.tsx"), "missing components/advanced-site-nav.tsx");
+  const nav = read("components/advanced-site-nav.tsx");
+  for (const s of ["Menu", "X", "aria-expanded", "aria-controls", "aria-label", "Escape", "setOpen(false)", "aria-current"]) {
+    assert(nav.includes(s), `published nav missing ${s}`);
+  }
+  const view = read("components/advanced-site-view.tsx");
+  assert(view.includes("PublishedSiteNav"), "published view does not use PublishedSiteNav");
+  return "burger nav with Escape, aria-expanded/controls/label, aria-current";
+});
+check("Advanced website builder", "adv-footer", "Full footer on every page: nav, contact, socials, copyright, back to top", () => {
+  const view = read("components/advanced-site-view.tsx");
+  for (const s of ["PublishedSiteFooter", "published-site-footer", "Navigation du pied de page", "mailto:", "Retour en haut", "hasFooterBlock"]) {
+    assert(view.includes(s), `published view footer missing ${s}`);
+  }
+  const src = read("lib/advanced-site-templates.ts");
+  assert((src.match(/type: "footer"/g) ?? []).length === 13, "footer block not declared in all 11 templates + library + site builder");
+  assert((src.match(/type: "social"/g) ?? []).length === 13, "social block not declared in all 11 templates + library + site builder");
+  assert(src.includes('page.sections.push({ id: id(), title: "Pied de page"'), "createTemplateSite does not append the footer section");
+  const css = read("components/advanced-site-published.css");
+  assert(css.includes(".published-site-footer"), "published CSS missing footer styles");
+  return "footer block in 11 templates, appended to every page, fallback for older sites";
+});
+check("Advanced website builder", "adv-icons", "Lucide icons, no text glyphs as icons (♫ ▶ ⌖ →)", () => {
+  for (const f of ["components/advanced-site-view.tsx", "components/advanced-site-gallery-lightbox.tsx",
+    "components/advanced-site-contact-form.tsx", "components/advanced-site-editor.tsx"]) {
+    const code = read(f).replace(/\/\/.*$/gm, "");
+    for (const glyph of ["♫", "▶", "⌖"]) assert(!code.includes(glyph), `${f} still uses ${glyph} as an icon`);
+  }
+  assert(read("components/advanced-site-view.tsx").includes("lucide-react"), "published view missing lucide icons");
+  const lightbox = read("components/advanced-site-gallery-lightbox.tsx");
+  for (const s of ["ChevronLeft", "ChevronRight", "X", "closeRef", "triggerRef"]) {
+    assert(lightbox.includes(s), `lightbox missing ${s}`);
+  }
+  return "lucide icons in view, lightbox, form, editor; no ♫ ▶ ⌖ glyphs";
+});
+check("Advanced website builder", "adv-a11y", "Skip link, single h1, focus-visible, alt text, lightbox focus", () => {
+  const view = read("components/advanced-site-view.tsx");
+  for (const s of ["published-skip-link", "Aller au contenu", "firstBlockId", 'id={type === "contact"']) {
+    assert(view.includes(s), `published view missing ${s}`);
+  }
+  assert(read("components/advanced-site-nav.tsx").includes("aria-current"), "published nav missing aria-current");
+  assert(!/<h1[^>]*>/.test(view.replace(/HeadingTag/g, "H")), "published view still hardcodes <h1> per block");
+  const css = read("components/advanced-site-published.css");
+  assert(css.includes(":focus-visible"), "published CSS missing :focus-visible");
+  assert(css.includes("overflow-x: clip"), "published CSS missing overflow-x guard");
+  assert(!css.includes("padding: 18px 5%;     .gallery-lightbox"), "broken nested 680px media query still present");
+  assert(css.includes("@media (max-width: 768px)"), "published CSS missing 768px burger breakpoint");
+  assert(css.includes(".published-burger"), "published CSS missing burger styles");
+  return "skip link, one h1, focus-visible, 768px breakpoint, CSS nesting bug fixed";
+});
+check("Advanced website builder", "adv-editor-preview", "Editor preview: wrapping nav at 390px, footer/social blocks", () => {
+  const css = read("components/advanced-site-editor.css");
+  assert(css.includes(".canvas-site-nav { padding: 17px 6%; display: flex; flex-wrap: wrap;"), "editor canvas nav does not wrap");
+  assert(css.includes(".preview-footer"), "editor CSS missing footer preview");
+  assert(css.includes(".preview-social"), "editor CSS missing social preview");
+  const editor = read("components/advanced-site-editor.tsx");
+  assert(editor.includes('block.type === "footer"'), "editor preview does not render footer blocks");
+  assert(editor.includes('block.type === "social"'), "editor preview does not render social blocks");
+  return "canvas nav wraps, footer/social preview blocks, aria-current on page links";
+});
+check("Website builder", "simple-footer-burger", "Simple builder: burger, full footer, icons, responsive grids", () => {
+  const preview = read("components/site-preview.tsx");
+  for (const s of ["Menu", "aria-expanded", "Escape", "Back to top", "Mail", "Instagram", "galleryCols", "compact ? \"1fr\" : \"1fr 1fr\"", "id=\"works\"", "id=\"about\"", "id=\"contact\""]) {
+    assert(preview.includes(s), `site-preview missing ${s}`);
+  }
+  return "burger + footer + lucide icons + collapsing hero/gallery grids";
+});
+
 // ---------- Part 4 — Portfolio PDF, 50 templates ----------
 check("Portfolio PDF", "atelier-templates", "8 Atelier templates, unique ids, old 50 deleted", () => {
   const dir = join(ROOT, "lib", "atelier-templates");
@@ -518,6 +588,7 @@ skip("Manual (browser)", "manual-avatar", "Upload a profile photo, see it on das
 skip("Manual (browser)", "manual-works", "Tag a work's kind on /works/[id] as the owner, filter the wall", "needs a live browser session");
 skip("Manual (browser)", "manual-site", "Pick a site template, edit, preview, publish a site", "needs a live browser session");
 skip("Manual (browser)", "manual-adv-site", "Advanced editor: pick a template, edit, autosave, publish, open /sites/[slug] + sub-page", "needs a live browser session with a signed-in user");
+skip("Manual (browser)", "manual-adv-site-ux", "Published site UX in a real browser: burger opens/closes at 390px, full footer on all 11 designs, lightbox keyboard nav, no horizontal overflow at 390/768/1280px", "needs a live browser session with a signed-in user");
 skip("Manual (browser)", "manual-pdf", "Open an Atelier template, edit, save, export a real PDF", "needs a live browser session (subagent cannot drive the browser)");
 
 // ---------- Report ----------

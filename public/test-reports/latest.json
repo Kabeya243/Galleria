@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T02:54:26.770Z",
-  "commit": "b95433a",
+  "generatedAt": "2026-11-08T03:08:23.999Z",
+  "commit": "dbbee06",
   "summary": {
-    "total": 35,
-    "passed": 27,
+    "total": 42,
+    "passed": 33,
     "failed": 0,
-    "skipped": 8
+    "skipped": 9
   },
   "checks": [
     {
@@ -112,6 +112,48 @@
       "name": "Editor CSS scoped (no Tailwind 3, no global .topbar), published CSS imported once",
       "status": "pass",
       "detail": "scoped .advanced-editor, --adv-* vars, both CSS files in layout"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-nav-burger",
+      "name": "Published nav: burger ≤768px, Escape + close on link, aria-expanded",
+      "status": "pass",
+      "detail": "burger nav with Escape, aria-expanded/controls/label, aria-current"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-footer",
+      "name": "Full footer on every page: nav, contact, socials, copyright, back to top",
+      "status": "pass",
+      "detail": "footer block in 11 templates, appended to every page, fallback for older sites"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-icons",
+      "name": "Lucide icons, no text glyphs as icons (♫ ▶ ⌖ →)",
+      "status": "pass",
+      "detail": "lucide icons in view, lightbox, form, editor; no ♫ ▶ ⌖ glyphs"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-a11y",
+      "name": "Skip link, single h1, focus-visible, alt text, lightbox focus",
+      "status": "pass",
+      "detail": "skip link, one h1, focus-visible, 768px breakpoint, CSS nesting bug fixed"
+    },
+    {
+      "feature": "Advanced website builder",
+      "id": "adv-editor-preview",
+      "name": "Editor preview: wrapping nav at 390px, footer/social blocks",
+      "status": "pass",
+      "detail": "canvas nav wraps, footer/social preview blocks, aria-current on page links"
+    },
+    {
+      "feature": "Website builder",
+      "id": "simple-footer-burger",
+      "name": "Simple builder: burger, full footer, icons, responsive grids",
+      "status": "pass",
+      "detail": "burger + footer + lucide icons + collapsing hero/gallery grids"
     },
     {
       "feature": "Portfolio PDF",
@@ -243,6 +285,13 @@
       "feature": "Manual (browser)",
       "id": "manual-adv-site",
       "name": "Advanced editor: pick a template, edit, autosave, publish, open /sites/[slug] + sub-page",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-adv-site-ux",
+      "name": "Published site UX in a real browser: burger opens/closes at 390px, full footer on all 11 designs, lightbox keyboard nav, no horizontal overflow at 390/768/1280px",
       "status": "skip",
       "detail": "needs a live browser session with a signed-in user"
     },

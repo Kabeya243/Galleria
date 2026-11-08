@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, List, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Info, List, Maximize2, Minimize2, Route } from "lucide-react";
 import { useProgress } from "@react-three/drei";
 import Avatar from "@/components/avatar";
 import GalleryScene, { artworkStandPoint, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
@@ -14,6 +14,7 @@ import ExhibitionEntryScreen from "@/components/exhibition-entry-screen";
 import ExhibitionShare from "@/components/exhibition-share";
 import LanguageSwitcher from "@/components/language-switcher";
 import { loadRenderQuality, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
+import { hasUsableTour, tourStopToTeleportTarget, type GuidedTour } from "@/lib/tour";
 import { useT } from "@/lib/i18n";
 import type { Artwork } from "@/lib/demo-data";
 import type { GalleryRoom } from "@/lib/rooms";
@@ -90,6 +91,9 @@ export default function PublicExhibition({
     visibility: string;
     rooms: GalleryRoom[];
     artworks: Artwork[];
+    // The exhibition's guided tour, if any (null when none). The
+    // public loader prunes stops whose room no longer exists.
+    tour?: GuidedTour | null;
   };
   accessibilityPack?: PublicAccessibilityPack | null;
   music?: ExhibitionMusic | null;
@@ -116,6 +120,38 @@ export default function PublicExhibition({
   const [teleportTarget, setTeleportTarget] = useState<TeleportTarget | null>(null);
   const [shareUrl, setShareUrl] = useState("");
   const teleportNonce = useRef(0);
+  // Guided tour: the index of the stop the visitor is on, null when
+  // no tour is running. The tour only exists when the exhibition has
+  // an enabled tour with at least one stop (see hasUsableTour).
+  const [tourIndex, setTourIndex] = useState<number | null>(null);
+  const tourAvailable = hasUsableTour(exhibition.tour);
+  const tourActive = tourAvailable && tourIndex !== null;
+  const tourStop = tourActive ? exhibition.tour!.stops[tourIndex!] : null;
+  // Walk to a stop: the same teleport the minimap already uses — the
+  // scene switches rooms when needed, then walks to the point and
+  // turns gently toward the stop's yaw (never a blind jump). Entering
+  // walk mode first when the visitor is still on the entry screen.
+  function goToTourStop(index: number) {
+    const tour = exhibition.tour;
+    if (!tour || index < 0 || index >= tour.stops.length) return;
+    const stop = tour.stops[index];
+    teleportNonce.current += 1;
+    setSelected(undefined);
+    setTourIndex(index);
+    setTeleportTarget(tourStopToTeleportTarget(stop, teleportNonce.current));
+    if (!walking) {
+      setWalking(true);
+      setEnterSignal((n) => n + 1);
+    }
+  }
+  function startTour() {
+    goToTourStop(0);
+  }
+  // Leaving the tour never moves the visitor: they stay exactly where
+  // they are and walk freely from there.
+  function exitTour() {
+    setTourIndex(null);
+  }
   // Live camera state for the minimap: GalleryScene writes the
   // camera's world position and yaw here every frame; the minimap
   // draws the camera dot and its direction line from it.
@@ -152,6 +188,7 @@ export default function PublicExhibition({
     teleportNonce.current += 1;
     setSelected(artwork);
     setShowListView(false);
+    exitTour();
     setTeleportTarget({ roomId: artwork.roomId, ...stand, nonce: teleportNonce.current });
     if (!walking) {
       setWalking(true);
@@ -165,6 +202,7 @@ export default function PublicExhibition({
   // current direction.
   function handleTeleportPoint(roomId: string, x: number, z: number) {
     teleportNonce.current += 1;
+    exitTour();
     setTeleportTarget({ roomId, x, z, yaw: null, nonce: teleportNonce.current });
     if (!walking) setWalking(true);
   }
@@ -240,6 +278,19 @@ export default function PublicExhibition({
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
+  // Taking the walk controls ends the tour: WASD / arrows / the touch
+  // pad all write into movementKeys (the scene's input ref), so a
+  // visitor who starts walking has taken over — the tour stops
+  // following them and they walk free from where they are. Dragging
+  // to look around does not end the tour: looking is not leaving.
+  useEffect(() => {
+    if (tourIndex === null) return;
+    const timer = window.setInterval(() => {
+      if (movementKeys.current.size > 0) setTourIndex(null);
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [tourIndex]);
+
   async function toggleFullscreen() {
     setFullscreenError(null);
     try {
@@ -300,6 +351,7 @@ export default function PublicExhibition({
   function changeRoom(index: number) {
     const room = exhibition.rooms[index];
     if (!room) return;
+    exitTour();
     setActiveRoomId(room.id);
     setSelected(undefined);
   }
@@ -323,6 +375,9 @@ export default function PublicExhibition({
         onQualityChange={handleQualityChange}
         teleportTarget={teleportTarget}
         cameraStateRef={cameraStateRef}
+        // A floor tap is the visitor walking somewhere of their own
+        // choosing — it ends the tour, like any other manual move.
+        onFloorClick={() => exitTour()}
       />}
       <header className="public-topbar">
         {embedded ? (
@@ -333,6 +388,9 @@ export default function PublicExhibition({
         <div className="public-title"><Avatar name={exhibition.ownerName} avatarUrl={exhibition.ownerAvatarUrl} className="public-creator-avatar" /><span>{exhibition.ownerName.toUpperCase()} PRESENTS</span><strong>{exhibition.title}</strong></div>
         <div className="public-topbar-actions">
           <LanguageSwitcher />
+          {tourAvailable && (
+            <button className="public-info-button" aria-label={t("tour", "guidedTour")} aria-pressed={tourActive} title={t("tour", "guidedTour")} onClick={() => { if (tourActive) exitTour(); else startTour(); }}><Route size={16} /></button>
+          )}
           <button className="public-info-button" aria-label={t("listView", "listView")} aria-pressed={showListView} onClick={() => setShowListView((value) => !value)}><List size={16} /></button>
           {!embedded && (
             <ExhibitionShare
@@ -375,6 +433,8 @@ export default function PublicExhibition({
           musicTitle={music?.title ?? null}
           onEnter={() => { setWalking(true); setEnterSignal((n) => n + 1); }}
           onOpenListView={() => setShowListView(true)}
+          tourAvailable={tourAvailable}
+          onStartTour={startTour}
         />
       )}
       {walking && !showListView && (
@@ -399,7 +459,7 @@ export default function PublicExhibition({
         />
       )}
       {walking && <div className="public-controls-hint"><span>CLICK THE FLOOR OR USE WASD / ARROWS TO WALK</span><i /> <span>DRAG TO LOOK</span><i /> <span>USE THE FLOOR PLAN TO CHANGE ROOMS</span></div>}
-      {walking && <button className="public-reset-view" onClick={() => { walkReset.current += 1; }}>↺ Entrance</button>}
+      {walking && <button className="public-reset-view" onClick={() => { exitTour(); walkReset.current += 1; }}>↺ Entrance</button>}
       {walking && (
         <ExhibitionAudioPlayer
           music={music ?? null}
@@ -435,6 +495,23 @@ export default function PublicExhibition({
           index={roomArtworks.indexOf(selected) + 1}
           onClose={() => setSelected(undefined)}
         />
+      )}
+      {tourActive && tourStop && !selected && !showListView && (
+        <aside className="tour-panel" aria-label={t("tour", "guidedTour")}>
+          <button className="tour-close" onClick={exitTour} aria-label={t("tour", "exitTour")}>×</button>
+          <span className="panel-kicker">{t("tour", "guidedTour").toUpperCase()} · {tourIndex! + 1} / {exhibition.tour!.stops.length}</span>
+          <h2>{tourStop.title.trim() || `${t("tour", "stop")} ${tourIndex! + 1}`}</h2>
+          <p className="tour-room">{exhibition.rooms.find((room) => room.id === tourStop.roomId)?.name}</p>
+          {tourStop.text.trim() && <p>{tourStop.text}</p>}
+          <div className="tour-nav">
+            <button type="button" disabled={tourIndex === 0} onClick={() => goToTourStop(tourIndex! - 1)}>← {t("tour", "previousStop")}</button>
+            {tourIndex! < exhibition.tour!.stops.length - 1 ? (
+              <button type="button" onClick={() => goToTourStop(tourIndex! + 1)}>{t("tour", "nextStop")} →</button>
+            ) : (
+              <button type="button" onClick={exitTour}>{t("tour", "finishTour")}</button>
+            )}
+          </div>
+        </aside>
       )}
       {showInfo && !selected && (
         <aside className="artwork-info-card">

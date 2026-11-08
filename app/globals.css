@@ -837,6 +837,19 @@ button { color: inherit; }
   white-space: nowrap;
 }
 .music-control input[type="range"] { width: 80px; accent-color: #141414; cursor: pointer; }
+/* Guided tour panel (public viewer): right side, above the music
+   control (bottom 112 px) and the Entrance / fullscreen buttons, so it
+   never covers them. Hidden while an artwork sheet is open — the sheet
+   takes the same side of the screen. */
+.tour-panel { position: absolute; z-index: 3; right: 24px; bottom: 170px; width: min(320px, calc(100vw - 48px)); max-height: 46vh; overflow-y: auto; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 12px 35px rgba(36, 30, 22, .14); }
+.tour-panel h2 { margin: 8px 0 4px; font: 600 17px var(--font-display), Georgia, serif; letter-spacing: -.02em; }
+.tour-panel > p { margin: 8px 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.tour-panel .tour-room { margin: 0; color: #9e7856; font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.tour-close { position: absolute; top: 8px; right: 10px; border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.tour-nav { display: flex; gap: 8px; margin-top: 14px; }
+.tour-nav button { flex: 1; min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-3); color: var(--ink); font: 600 11px var(--font-body), "DM Sans", sans-serif; cursor: pointer; }
+.tour-nav button:last-child { background: #141414; border-color: #141414; color: #fdfdfc; }
+.tour-nav button:disabled { opacity: .4; cursor: default; }
 /* "Music: <title>" line on the entry screen, under the visit meta. */
 .entry-music {
   display: flex;

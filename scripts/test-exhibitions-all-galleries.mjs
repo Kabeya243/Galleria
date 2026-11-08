@@ -23,6 +23,11 @@
 //   (d) navigation: camera start inside the bounds and out of every
 //       collision block, a walkable step exists, plan lines inside the
 //       room, teleport offsets distinct between two rooms.
+//   (e) guided tour (global, not per room): the tour model round-trips
+//       (object + JSON string, order kept, bad data → null), a stop
+//       from the camera keeps room/point/yaw, stops in deleted rooms
+//       are pruned, and the column + save/load + editor + visitor are
+//       wired end to end (start, follow in order, exit on takeover).
 //
 // Code-level only: this script executes the repo's own TypeScript
 // (imported via Node 24 type-stripping from staged copies with the
@@ -40,7 +45,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const STAGING = join(ROOT, "scripts", ".exh-staging");
-const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "snap-to-wall", "place-in-view"];
+const STAGED = ["gallery-defs", "sunlight", "sunlight-elements", "compose-wall", "rooms", "editor-params", "elements", "palette", "snap-to-wall", "place-in-view", "tour"];
 
 const checks = [];
 function check(room, id, name, fn) {
@@ -79,6 +84,7 @@ try {
   const elementsLib = await import(pathToFileURL(join(STAGING, "elements.ts")).href);
   const rooms = await import(pathToFileURL(join(STAGING, "rooms.ts")).href);
   const placeInView = await import(pathToFileURL(join(STAGING, "place-in-view.ts")).href);
+  const tourLib = await import(pathToFileURL(join(STAGING, "tour.ts")).href);
 
   const { galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, galleryPlaceOnWall, galleryCameraStart } = defs;
   const { SUNLIGHT_BOUNDS, SUNLIGHT_WALK_SPEED, SUNLIGHT_CAMERA_START, SUNLIGHT_BLOCKS, sunlightHitWith } = sun;
@@ -322,6 +328,75 @@ try {
     // A hidden partition blocks nothing (it is not rendered).
     assert(elementsLib.roomElementCollisionBlocks([{ ...partition, hidden: true }]).length === 0, "hidden partition still blocks the walk");
     return "partition 4 m × 0.15 m blocks the walk at its centre only";
+  });
+
+  // ---------- Guided tour (Nov 2026) ----------
+  // One narrative walk per exhibition, stored as JSON in the
+  // Exhibition.tour column (lib/tour.ts) — a stop is a room + a stand
+  // point + the yaw to face + a title and text. The visitor follows
+  // the stops in order through the minimap teleport the walk already
+  // uses (room switch, then walk, then the gentle turn), and leaves
+  // the tour the moment they take the controls themselves.
+  check("—", "tour-model", "Guided tour: parse round-trip (object + JSON string), order kept, bad data → null", () => {
+    const { parseGuidedTour, hasUsableTour } = tourLib;
+    const tour = {
+      enabled: true,
+      stops: [
+        { id: "s1", roomId: "room-main", x: 3.5, z: 10.5, yaw: 0.3, title: "Entrance", text: "Welcome." },
+        { id: "s2", roomId: "room-main", x: -2, z: -4, yaw: 2.1, title: "The Nose Ring", text: "Look closely." },
+      ],
+    };
+    const fromObject = parseGuidedTour(tour);
+    assert(fromObject && fromObject.stops.length === 2, "object tour did not parse");
+    assert(fromObject.stops[0].id === "s1" && fromObject.stops[1].id === "s2", "stop order changed by parsing");
+    const fromJson = parseGuidedTour(JSON.stringify(tour));
+    assert(fromJson && JSON.stringify(fromJson.stops) === JSON.stringify(tour.stops), "JSON-string tour did not round-trip");
+    assert(parseGuidedTour(null) === null, "null tour did not stay null");
+    assert(parseGuidedTour("{not json") === null, "malformed tour JSON did not return null");
+    assert(parseGuidedTour({ enabled: true, stops: [{ id: "x" }] }) === null, "stop missing room/position/yaw was accepted");
+    assert(!hasUsableTour(null) && !hasUsableTour({ enabled: true, stops: [] }), "empty tour counted as usable");
+    assert(!hasUsableTour({ enabled: false, stops: tour.stops }), "disabled tour counted as usable");
+    assert(hasUsableTour(tour), "enabled tour with stops not counted as usable");
+    return "2 stops round-trip in order; malformed/empty/disabled tours rejected";
+  });
+  check("—", "tour-stops", "Guided tour: stop from the camera, ≤ 12 stops, dead-room stops pruned, teleport keeps room/point/yaw", () => {
+    const { createTourStop, pruneTourStops, tourStopToTeleportTarget, MAX_TOUR_STOPS } = tourLib;
+    assert(MAX_TOUR_STOPS === 12, `MAX_TOUR_STOPS ${MAX_TOUR_STOPS} != 12`);
+    const stop = createTourStop("room-main", 3.5123, 10.4871, 0.31234);
+    assert(stop.roomId === "room-main" && approx(stop.x, 3.51, 0.001) && approx(stop.z, 10.49, 0.001) && approx(stop.yaw, 0.312, 0.001), `stop from camera kept raw coords: ${JSON.stringify(stop)}`);
+    assert(stop.title === "" && stop.text === "", "new stop did not start with an empty title/text for the artist");
+    const tour = { enabled: true, stops: [stop, { ...createTourStop("room-gone", 0, 0, 0), id: "dead" }] };
+    const pruned = pruneTourStops(tour, ["room-main"]);
+    assert(pruned.stops.length === 1 && pruned.stops[0].id === stop.id, "stop in a deleted room was not pruned");
+    const target = tourStopToTeleportTarget(stop, 7);
+    assert(target.roomId === "room-main" && target.x === stop.x && target.z === stop.z && target.yaw === stop.yaw && target.nonce === 7, `teleport target lost the stop: ${JSON.stringify(target)}`);
+    return "camera stop rounded, dead room pruned, teleport target = stop + nonce";
+  });
+  check("—", "tour-wiring", "Guided tour: column + save/load + editor + visitor wired end to end", () => {
+    const schema = readFileSync(join(ROOT, "prisma", "schema.prisma"), "utf8");
+    assert(schema.includes("tour        String?"), "Exhibition has no tour column");
+    const validation = readFileSync(join(ROOT, "lib", "validation.ts"), "utf8");
+    assert(validation.includes("tour: guidedTourSchema"), "exhibitionUpdateSchema does not validate the tour");
+    const route = readFileSync(join(ROOT, "app", "api", "exhibitions", "[id]", "route.ts"), "utf8");
+    assert(route.includes("pruneTourStops(input.tour"), "PUT does not persist (and prune) the tour");
+    assert(route.includes("tour: parseGuidedTour(exhibition.tour)"), "GET/PUT do not return the parsed tour");
+    const loader = readFileSync(join(ROOT, "lib", "exhibition-public.ts"), "utf8");
+    assert(loader.includes("tour: pruneTourStops(parseGuidedTour(exhibition.tour)"), "public loader does not serve the pruned tour");
+    const editor = readFileSync(join(ROOT, "components", "editor.tsx"), "utf8");
+    for (const s of ["addTourStop", "moveTourStop", "removeTourStop", "updateTourStop", "parseGuidedTour(result.exhibition.tour)", "tour,"]) {
+      assert(editor.includes(s), `editor missing ${s}`);
+    }
+    const pub = readFileSync(join(ROOT, "components", "public-exhibition.tsx"), "utf8");
+    for (const s of ["startTour", "goToTourStop", "exitTour", "tourStopToTeleportTarget", "onFloorClick={() => exitTour()}", "movementKeys.current.size > 0"]) {
+      assert(pub.includes(s), `public viewer missing ${s}`);
+    }
+    const entry = readFileSync(join(ROOT, "components", "exhibition-entry-screen.tsx"), "utf8");
+    assert(entry.includes("onStartTour") && entry.includes("tourAvailable"), "entry screen has no guided-tour start");
+    const i18n = readFileSync(join(ROOT, "lib", "i18n.ts"), "utf8");
+    for (const key of ["guidedTour", "startTour", "exitTour", "previousStop", "nextStop", "finishTour", "enableTour", "addStop"]) {
+      assert(i18n.includes(`${key}: { fr:`), `i18n missing tour key ${key}`);
+    }
+    return "column + validation + PUT/GET + public loader + editor (add/reorder/delete) + visitor (start/next/prev/exit) + FR/EN";
   });
 
   // ---------- Per room ----------

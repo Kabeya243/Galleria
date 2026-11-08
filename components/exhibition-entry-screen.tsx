@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Footprints, Hand, Keyboard, List, MousePointer2, Music, Volume2, VolumeX } from "lucide-react";
+import { Footprints, Hand, Keyboard, List, MousePointer2, Music, Route, Volume2, VolumeX } from "lucide-react";
 import Avatar from "@/components/avatar";
 import type { RenderQuality } from "@/lib/render-quality";
 import { RENDER_QUALITIES, recommendQuality } from "@/lib/render-quality";
@@ -25,6 +25,8 @@ export default function ExhibitionEntryScreen({
   musicTitle = null,
   onEnter,
   onOpenListView,
+  tourAvailable = false,
+  onStartTour,
 }: {
   title: string;
   ownerName: string;
@@ -38,6 +40,10 @@ export default function ExhibitionEntryScreen({
   musicTitle?: string | null;
   onEnter: () => void;
   onOpenListView: () => void;
+  // Guided tour: when the exhibition has an enabled tour, a third
+  // entry button starts it at the first stop instead of free walking.
+  tourAvailable?: boolean;
+  onStartTour?: () => void;
 }) {
   const t = useT();
   const [recommended, setRecommended] = useState<RenderQuality>("high");
@@ -134,6 +140,11 @@ export default function ExhibitionEntryScreen({
         <button type="button" className="entry-enter" onClick={onEnter}>
           <Footprints size={16} /> {t("entry", "enterRoom")}
         </button>
+        {tourAvailable && onStartTour && (
+          <button type="button" className="entry-list" onClick={onStartTour}>
+            <Route size={15} /> {t("tour", "guidedTour")}
+          </button>
+        )}
         <button type="button" className="entry-list" onClick={onOpenListView}>
           <List size={15} /> {t("listView", "listView")}
         </button>

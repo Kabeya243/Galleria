@@ -8,6 +8,7 @@ import { toClientArtwork } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getUserProfile } from "@/lib/profile";
 import { parseGalleryRooms } from "@/lib/rooms";
+import { parseGuidedTour, pruneTourStops, type GuidedTour } from "@/lib/tour";
 import type { ExhibitionMusic } from "@/components/exhibition-audio-player";
 import type { PublicAccessibilityPack } from "@/components/public-exhibition";
 
@@ -110,12 +111,17 @@ export async function loadPublicExhibition(slug: string): Promise<{
     visibility: string;
     rooms: ReturnType<typeof parseGalleryRooms>;
     artworks: ReturnType<typeof toClientArtwork>[];
+    // The exhibition's guided tour, if any — stops whose room no
+    // longer exists are pruned, so the visitor is never walked to a
+    // room that is gone. Null when the exhibition has no tour.
+    tour: GuidedTour | null;
   };
   accessibilityPack: PublicAccessibilityPack | null;
   music: ExhibitionMusic | null;
 } | null> {
   const exhibition = await findPublishedExhibition(slug);
   if (!exhibition) return null;
+  const rooms = parseGalleryRooms(exhibition.rooms);
   return {
     exhibition: {
       id: exhibition.id,
@@ -125,7 +131,8 @@ export async function loadPublicExhibition(slug: string): Promise<{
       ownerName: exhibition.owner.name,
       ownerAvatarUrl: (await getUserProfile(exhibition.ownerId)).avatarUrl,
       visibility: exhibition.visibility,
-      rooms: parseGalleryRooms(exhibition.rooms),
+      rooms,
+      tour: pruneTourStops(parseGuidedTour(exhibition.tour), rooms.map((room) => room.id)),
       artworks: exhibition.artworks.map(toClientArtwork),
     },
     accessibilityPack: await loadAccessibilityPack(exhibition.ownerId, exhibition.id),

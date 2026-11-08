@@ -96,6 +96,7 @@ import {
   type FloorPatternKey,
 } from "@/lib/editor-params";
 import { snapArtworkToWall } from "@/lib/snap-to-wall";
+import { createTourStop, MAX_TOUR_STOPS, parseGuidedTour, pruneTourStops, type GuidedTour, type TourStop } from "@/lib/tour";
 import { placeArtworkInView, PLACE_IN_VIEW_EYE_Y } from "@/lib/place-in-view";
 import { SUNLIGHT_BLOCKS } from "@/lib/sunlight";
 import {
@@ -220,6 +221,15 @@ export default function Editor({
   const musicFileRef = useRef<HTMLInputElement>(null);
   function updateMusic(next: ExhibitionMusicState | null) {
     setMusic(next);
+    setSaved(false);
+  }
+  // Guided tour (one per exhibition, saved with it — see lib/tour.ts):
+  // the artist's stops in order, each from the camera's current stand
+  // point and gaze. Null = no tour yet.
+  const [tour, setTour] = useState<GuidedTour | null>(null);
+  const [tourError, setTourError] = useState<string | null>(null);
+  function updateTour(next: GuidedTour | null) {
+    setTour(next);
     setSaved(false);
   }
   const nameOverrides = useGalleryNames(galleryNames);
@@ -388,7 +398,7 @@ export default function Editor({
   // Version history: the last 10 saves, via /api/saved-work
   // (kind "exhibition-version"). Restoring replaces the editor state
   // and marks the exhibition unsaved.
-  type SavedVersion = { id: string; title: string; createdAt: string; data: { exhibitionId?: string; title?: string; description?: string; rooms?: GalleryRoom[]; artworks?: LayerArtwork[]; savedAt?: string } };
+  type SavedVersion = { id: string; title: string; createdAt: string; data: { exhibitionId?: string; title?: string; description?: string; rooms?: GalleryRoom[]; artworks?: LayerArtwork[]; tour?: GuidedTour | null; savedAt?: string } };
   const [history, setHistory] = useState<SavedVersion[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [confirmingRestoreId, setConfirmingRestoreId] = useState<string | null>(null);
@@ -466,12 +476,12 @@ export default function Editor({
   // description), so Ctrl+Z covers artworks, elements and room settings
   // alike. One snapshot per discrete action — never per keystroke (see
   // beginEdit/endEdit below).
-  type EditorSnapshot = { artworks: LayerArtwork[]; rooms: GalleryRoom[]; title: string; description: string };
+  type EditorSnapshot = { artworks: LayerArtwork[]; rooms: GalleryRoom[]; title: string; description: string; tour: GuidedTour | null };
   const historyRef = useRef<{ past: EditorSnapshot[]; future: EditorSnapshot[] }>({ past: [], future: [] });
   const [, setHistoryTick] = useState(0);
-  const latestRef = useRef({ artworks, rooms, title, description });
+  const latestRef = useRef({ artworks, rooms, title, description, tour });
   useEffect(() => {
-    latestRef.current = { artworks, rooms, title, description };
+    latestRef.current = { artworks, rooms, title, description, tour };
   });
 
   useEffect(() => {
@@ -495,6 +505,7 @@ export default function Editor({
         setSelectedId(loadedArtworks.find((artwork: Artwork) => artwork.roomId === result.exhibition.rooms[0]?.id)?.id);
         setTitle(result.exhibition.title);
         setDescription(result.exhibition.description);
+        setTour(parseGuidedTour(result.exhibition.tour));
         setMusic(
           result.exhibition.audioUrl
             ? {
@@ -797,7 +808,7 @@ export default function Editor({
   function snapshot() {
     const current = latestRef.current;
     historyRef.current = {
-      past: [...historyRef.current.past, { artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description }].slice(-50),
+      past: [...historyRef.current.past, { artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description, tour: current.tour }].slice(-50),
       future: [],
     };
     setHistoryTick((tick) => tick + 1);
@@ -808,6 +819,7 @@ export default function Editor({
     setRooms(next.rooms);
     setTitle(next.title);
     setDescription(next.description);
+    setTour(next.tour);
     setSaved(false);
   }
 
@@ -818,7 +830,7 @@ export default function Editor({
     const current = latestRef.current;
     historyRef.current = {
       past: history.past.slice(0, -1),
-      future: [{ artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description }, ...history.future],
+      future: [{ artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description, tour: current.tour }, ...history.future],
     };
     applySnapshot(previous);
     setHistoryTick((tick) => tick + 1);
@@ -830,7 +842,7 @@ export default function Editor({
     if (!next) return;
     const current = latestRef.current;
     historyRef.current = {
-      past: [...history.past, { artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description }],
+      past: [...history.past, { artworks: current.artworks, rooms: current.rooms, title: current.title, description: current.description, tour: current.tour }],
       future: history.future.slice(1),
     };
     applySnapshot(next);
@@ -1131,6 +1143,58 @@ export default function Editor({
     const start = galleryCameraStart(room.layout);
     teleportNonce.current += 1;
     setTeleportTarget({ roomId, x: start.x, z: start.z, yaw: start.yaw, nonce: teleportNonce.current });
+  }
+
+  // Guided tour: add a stop from the camera's current stand point and
+  // gaze. The camera state the scene reports every frame is in world
+  // coordinates, so the room-plan offsets come off to store the stop
+  // room-local, like every teleport target. The first stop switches
+  // the tour on — the artist can switch it off again below.
+  function addTourStop() {
+    setTourError(null);
+    const camera = cameraStateRef.current;
+    if (!camera || !activeRoom) {
+      setTourError(t("tour", "noCamera"));
+      return;
+    }
+    const current = tour ?? { enabled: true, stops: [] };
+    if (current.stops.length >= MAX_TOUR_STOPS) return;
+    const planOffsets = roomPlanOffsets(sceneRooms);
+    const roomIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
+    snapshot();
+    updateTour({
+      ...current,
+      stops: [
+        ...current.stops,
+        createTourStop(
+          activeRoom.id,
+          camera.x - (planOffsets.x[roomIndex] ?? 0),
+          camera.z - (planOffsets.z[roomIndex] ?? 0),
+          camera.yaw,
+        ),
+      ],
+    });
+  }
+
+  function updateTourStop(id: string, patch: Partial<TourStop>) {
+    if (!tour) return;
+    updateTour({ ...tour, stops: tour.stops.map((stop) => (stop.id === id ? { ...stop, ...patch } : stop)) });
+  }
+
+  function moveTourStop(index: number, direction: -1 | 1) {
+    if (!tour) return;
+    const target = index + direction;
+    if (target < 0 || target >= tour.stops.length) return;
+    snapshot();
+    const stops = [...tour.stops];
+    [stops[index], stops[target]] = [stops[target], stops[index]];
+    updateTour({ ...tour, stops });
+  }
+
+  function removeTourStop(id: string) {
+    if (!tour) return;
+    snapshot();
+    updateTour({ ...tour, stops: tour.stops.filter((stop) => stop.id !== id) });
   }
 
   // The Layers panel selects by ref and switches to the item's room.
@@ -2036,6 +2100,7 @@ export default function Editor({
           description,
           rooms,
           artworks,
+          tour,
           audioUrl: music?.url ?? null,
           audioTitle: music?.title.trim() ? music.title.trim() : null,
           audioLoop: music?.loop ?? true,
@@ -2092,7 +2157,7 @@ export default function Editor({
     return () => {
       if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
     };
-  }, [artworks, rooms, title, description, saved, loading, loadFailed]);
+  }, [artworks, rooms, title, description, tour, saved, loading, loadFailed]);
 
   async function runAutosave() {
     if (saveInFlightRef.current || savedRef.current || loading || loadFailed) return;
@@ -2125,6 +2190,7 @@ export default function Editor({
             description: current.description,
             rooms: current.rooms,
             artworks: current.artworks,
+            tour: current.tour ?? null,
             savedAt: when.toISOString(),
           },
         }),
@@ -2163,6 +2229,9 @@ export default function Editor({
       setRooms(data.rooms);
     }
     setArtworks(data.artworks);
+    // Only snapshots that actually carry a tour restore one — an older
+    // snapshot (before tours existed) never clears the current tour.
+    if (data.tour !== undefined) setTour(parseGuidedTour(data.tour));
     setSaved(false);
     setShowHistory(false);
     setConfirmingRestoreId(null);
@@ -3179,6 +3248,9 @@ async function compressImage(file: File): Promise<File> {
     const nextRoom = nextRooms[0];
     snapshot();
     setRooms(nextRooms);
+    // Stops in the deleted room go with it — a stop must never point
+    // at a room that no longer exists.
+    setTour((current) => (current ? pruneTourStops(current, nextRooms.map((room) => room.id)) : current));
     setArtworks((current) => current.filter((artwork) => artwork.roomId !== activeRoom.id));
     setActiveRoomId(nextRoom.id);
     setSelectedId(artworks.find((artwork) => artwork.roomId === nextRoom.id)?.id);
@@ -4093,6 +4165,68 @@ async function compressImage(file: File): Promise<File> {
                         onChange={(event) => void uploadMusicFile(event.target.files?.[0])}
                       />
                       {musicError && <p role="alert" style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>{musicError}</p>}
+                    </div>
+                    <div className="property-section">
+                      <label>{t("tour", "guidedTour").toUpperCase()} <span>{tour?.stops.length ?? 0}/{MAX_TOUR_STOPS}</span></label>
+                      <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                        {t("tour", "tourHint")}
+                      </p>
+                      <label className="room-lighting-toggle" style={{ marginBottom: "8px" }}>
+                        <input
+                          type="checkbox"
+                          checked={tour?.enabled ?? false}
+                          onChange={(event) => updateTour({ enabled: event.target.checked, stops: tour?.stops ?? [] })}
+                        />{" "}
+                        {t("tour", "enableTour")}
+                      </label>
+                      <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                        {t("tour", "addStopHint")}
+                      </p>
+                      <div className="property-actions">
+                        <button type="button" onClick={addTourStop} disabled={(tour?.stops.length ?? 0) >= MAX_TOUR_STOPS}>
+                          <Plus size={12} /> {t("tour", "addStop")}
+                        </button>
+                      </div>
+                      {tourError && <p role="alert" style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>{tourError}</p>}
+                      {tour && tour.stops.length === 0 && (
+                        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{t("tour", "noStops")}</p>
+                      )}
+                      {(tour?.stops ?? []).map((stop, index) => {
+                        const stopRoomName = rooms.find((room) => room.id === stop.roomId)?.name ?? t("tour", "roomRemoved");
+                        return (
+                          <div key={stop.id} style={{ borderTop: "1px solid var(--border)", padding: "10px 0 2px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "6px" }}>
+                              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink)", fontSize: "9px", fontWeight: 700 }}>{t("tour", "stop")} {index + 1} · {stopRoomName}</span>
+                              <button type="button" className="tiny-icon-button" aria-label={t("tour", "moveUp")} disabled={index === 0} onClick={() => moveTourStop(index, -1)}><ArrowUp size={12} /></button>
+                              <button type="button" className="tiny-icon-button" aria-label={t("tour", "moveDown")} disabled={index === (tour?.stops.length ?? 0) - 1} onClick={() => moveTourStop(index, 1)}><ArrowDown size={12} /></button>
+                              <button type="button" className="tiny-icon-button" aria-label={t("tour", "removeStop")} onClick={() => removeTourStop(stop.id)}><Trash2 size={12} /></button>
+                            </div>
+                            <input
+                              className="full-input"
+                              {...editSessionProps}
+                              value={stop.title}
+                              maxLength={120}
+                              placeholder={t("tour", "stopTitlePlaceholder")}
+                              aria-label={`${t("tour", "stopTitle")} ${index + 1}`}
+                              onChange={(event) => updateTourStop(stop.id, { title: event.target.value })}
+                              style={{ marginBottom: "6px" }}
+                            />
+                            <textarea
+                              className="full-input property-textarea"
+                              {...editSessionProps}
+                              value={stop.text}
+                              maxLength={2000}
+                              placeholder={t("tour", "stopTextPlaceholder")}
+                              aria-label={`${t("tour", "stopText")} ${index + 1}`}
+                              onChange={(event) => updateTourStop(stop.id, { text: event.target.value })}
+                            />
+                            <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{stopRoomName} · x {stop.x.toFixed(1)}, z {stop.z.toFixed(1)}</p>
+                          </div>
+                        );
+                      })}
+                      <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
+                        {t("tour", "tourSavedNote")}
+                      </p>
                     </div>
                 <div className="room-settings-note"><Sparkles size={15} /><span>Each gallery keeps its own layout, colours, ceiling and artworks.</span></div>
             </div>

@@ -72,6 +72,12 @@ model Exhibition {
   audioVolume  Float    @default(0.5)
   roomColor   String     @default("#f5f2eb")
   rooms       String     @default("[{\"id\":\"room-main\",\"name\":\"Room 1\",\"layout\":\"cube\",\"wallColor\":\"#f5f2eb\",\"sideWallColor\":\"#e2ded6\",\"floorColor\":\"#3f3d3a\",\"ceilingColor\":\"#f5f2eb\",\"wallTexture\":\"plaster\",\"floorTexture\":\"stone\",\"ceilingTexture\":\"plaster\",\"spotlights\":true,\"partitionWalls\":[],\"curatorialText\":\"\"}]")
+  // Guided tour (Nov 2026): one narrative walk per exhibition, stored
+  // as a JSON string (like rooms) — see lib/tour.ts for the shape and
+  // for why there is no separate Tour/Stop model. Null = no tour yet.
+  // Applied by `prisma db push` on deploy (see vercel.json); no data
+  // migration — existing rows keep tour null and behave as before.
+  tour        String?
   views       Int        @default(0)
   publishedAt DateTime?
   createdAt   DateTime   @default(now())

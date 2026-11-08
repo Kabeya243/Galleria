@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isR2ImageUrl } from "@/lib/r2";
 import { isVideoServingUrl } from "@/lib/video";
 import { galleryRoomSchema } from "@/lib/rooms";
+import { guidedTourSchema } from "@/lib/tour";
 import { FRAME_VARIANTS } from "@/lib/demo-data";
 import type { FrameVariant } from "@/lib/demo-data";
 
@@ -186,6 +187,12 @@ export const exhibitionUpdateSchema = z.object({
   audioTitle: z.string().trim().max(120).nullable().optional(),
   audioLoop: z.boolean().optional(),
   audioVolume: z.number().min(0).max(1).optional(),
+  // Guided tour (one per exhibition, JSON in the Exhibition.tour
+  // column — see lib/tour.ts): null clears it, omitted keeps the
+  // stored tour (older saves that do not send it). Stops that point
+  // at a room the exhibition no longer has are pruned on save, not
+  // rejected — deleting a room must never block saving.
+  tour: guidedTourSchema.nullable().optional(),
 }).superRefine((exhibition, context) => {
   const roomIds = new Set(exhibition.rooms.map((room) => room.id));
   if (roomIds.size !== exhibition.rooms.length) {

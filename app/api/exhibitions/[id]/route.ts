@@ -4,6 +4,7 @@ import { getCurrentUser, toClientArtwork, withoutExhibitionPasswordHash } from "
 import { db } from "@/lib/db";
 import { upsertLibraryWorks } from "@/lib/library";
 import { parseGalleryRooms } from "@/lib/rooms";
+import { parseGuidedTour, pruneTourStops } from "@/lib/tour";
 import { exhibitionUpdateSchema } from "@/lib/validation";
 import { canEditExhibition } from "@/lib/teams";
 
@@ -47,6 +48,7 @@ function readableExhibitionError(error: ZodError): string {
   }
   if (path[0] === "title") return `Exhibition title ${detail}.`;
   if (path[0] === "rooms") return `A room ${detail}.`;
+  if (path[0] === "tour") return `The guided tour ${detail}.`;
   return issue.message;
 }
 
@@ -72,6 +74,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     exhibition: {
       ...exhibitionWithoutHash,
       rooms: parseGalleryRooms(exhibition.rooms),
+      tour: parseGuidedTour(exhibition.tour),
       artworks: exhibition.artworks.map(toClientArtwork),
     },
   });
@@ -101,6 +104,12 @@ export async function PUT(request: Request, { params }: RouteContext) {
           description: input.description,
           roomColor: input.rooms[0].wallColor,
           rooms: JSON.stringify(input.rooms),
+          // Guided tour: only the field the editor sent is written, so
+          // older saves that omit it keep the tour. Stops pointing at
+          // a room that no longer exists are pruned here, not rejected.
+          ...(input.tour !== undefined
+            ? { tour: input.tour ? JSON.stringify(pruneTourStops(input.tour, input.rooms.map((room) => room.id))) : null }
+            : {}),
           // Background music: only the fields the editor sent are
           // written, so older saves that omit them keep the track.
           ...(input.audioUrl !== undefined ? { audioUrl: input.audioUrl } : {}),
@@ -173,6 +182,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
       exhibition: {
         ...withoutExhibitionPasswordHash(exhibition),
         rooms: parseGalleryRooms(exhibition.rooms),
+        tour: parseGuidedTour(exhibition.tour),
         artworks: exhibition.artworks.map(toClientArtwork),
       },
     });

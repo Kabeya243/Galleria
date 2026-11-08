@@ -114,6 +114,7 @@ export function toClientArtwork(artwork: {
   frame?: string;
   imageUrl: string | null;
   videoUrl?: string | null;
+  sculptureUrl?: string | null;
   text?: string | null;
   textFont?: string | null;
   palette?: string | null;
@@ -140,6 +141,7 @@ export function toClientArtwork(artwork: {
     frame: (artwork.frame as "none" | "wood" | "metal" | "gold" | "black" | "white" | undefined) ?? "wood",
     imageUrl: artwork.imageUrl,
     videoUrl: artwork.videoUrl ?? null,
+    sculptureUrl: artwork.sculptureUrl ?? null,
     text: artwork.text ?? null,
     textFont: artwork.textFont ?? null,
     palette: parsePalette(artwork.palette ?? null),

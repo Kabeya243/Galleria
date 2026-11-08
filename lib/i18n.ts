@@ -356,6 +356,38 @@ export const DICTIONARY = {
       en: "The video loops, muted, when you stand in front of it.",
     },
   },
+  sculpture: {
+    sculpture: { fr: "Sculpture", en: "Sculpture" },
+    sculptureArtwork: { fr: "Sculpture 3D", en: "3D sculpture" },
+    addSculpture: { fr: "Ajouter une sculpture", en: "Add a sculpture" },
+    sculptureHint: {
+      fr: "Fichier .glb uniquement, 4,5 Mo maximum — la sculpture est posée sur un socle blanc automatique, au sol. Exportez en .glb depuis Blender (un .gltf ne peut pas être conservé seul).",
+      en: "GLB file only, 4.5 MB maximum — the sculpture stands on an automatic white pedestal, on the floor. Export as .glb from Blender (a .gltf cannot be stored on its own).",
+    },
+    onlyOwnSculpture: {
+      fr: "Only upload sculpture you own or that is free to share.",
+      en: "Only upload sculpture you own or that is free to share.",
+    },
+    sculptureTooLarge: {
+      fr: "Cette sculpture est trop lourde (plus de 4,5 Mo). Essayez de la compresser (Draco ou meshopt dans Blender, ou gltfpack) ou un modèle plus simple.",
+      en: "This sculpture is too large (over 4.5 MB). Try compressing it (Draco or meshopt in Blender, or gltfpack) or a simpler model.",
+    },
+    sculptureInvalidFormat: {
+      fr: "Ajoutez un fichier .glb. Un .gltf ne peut pas être conservé seul — réexportez-le en .glb dans Blender.",
+      en: "Upload a .glb file. A .gltf cannot be stored on its own — re-export it as .glb in Blender.",
+    },
+    sculptureUploadFailed: {
+      fr: "La sculpture n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.",
+      en: "Could not upload this sculpture. Check your connection and try again.",
+    },
+    sculptureUploading: { fr: "Envoi de la sculpture…", en: "Uploading sculpture…" },
+    replaceSculpture: { fr: "Remplacer la sculpture", en: "Replace sculpture" },
+    removeSculpture: { fr: "Retirer la sculpture", en: "Remove sculpture" },
+    sculptureOnPedestal: {
+      fr: "Sculpture 3D — posée sur un socle blanc dans la salle. Marchez jusqu'à elle pour la voir sous tous les angles.",
+      en: "3D sculpture — standing on a white pedestal in the room. Walk up to it to see it from every angle.",
+    },
+  },
   share: {
     share: { fr: "Partager", en: "Share" },
     copyLink: { fr: "Copier le lien", en: "Copy link" },

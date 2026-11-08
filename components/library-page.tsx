@@ -177,6 +177,15 @@ export default function LibraryPage({
                         className={styles.cover}
                         loading="lazy"
                       />
+                    ) : work.sculptureUrl ? (
+                      <span
+                        className={styles.cover}
+                        style={{ background: `linear-gradient(135deg, #b8a184, #343e36)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, letterSpacing: "0.2em" }}
+                        role="img"
+                        aria-label={work.title}
+                      >
+                        3D
+                      </span>
                     ) : null}
                   </span>
                   <div className="gallery-card-body">

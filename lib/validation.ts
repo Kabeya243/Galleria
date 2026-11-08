@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isR2ImageUrl } from "@/lib/r2";
 import { isVideoServingUrl } from "@/lib/video";
+import { isSculptureServingUrl } from "@/lib/sculpture";
 import { galleryRoomSchema } from "@/lib/rooms";
 import { guidedTourSchema } from "@/lib/tour";
 import { FRAME_VARIANTS } from "@/lib/demo-data";
@@ -141,6 +142,18 @@ const artworkSchema = z.object({
   videoUrl: z
     .string()
     .refine((url) => isVideoServingUrl(url), { message: "Invalid video URL." })
+    .nullable()
+    .optional(),
+  // Sculpture artwork (Nov 2026): a same-origin serving URL only
+  // (/api/sculpture/sculptures/<userId>/<uuid>.glb), so a sculpture
+  // can never point at a third-party file — a foreign .glb would
+  // need CORS headers for GLTFLoader's fetch, and most hosts do not
+  // send them. When set, the room renders the GLB on an automatic
+  // pedestal on the floor and the imageUrl above, if any, is only
+  // a poster for list views.
+  sculptureUrl: z
+    .string()
+    .refine((url) => isSculptureServingUrl(url), { message: "Invalid sculpture URL." })
     .nullable()
     .optional(),
   // Colour palette extracted from the artwork image (ColorThief, in the

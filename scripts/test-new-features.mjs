@@ -641,6 +641,123 @@ check("Video artworks", "video-views", "List view, library page and public works
   assert(page.includes("videoUrl: true") && page.includes("videoUrl: a.videoUrl"), "works wall does not select videoUrl");
   return "list view + Mes œuvres + /works render <video> for video works";
 });
+// A sculpture artwork is an Artwork with sculptureUrl set (GLB, R2,
+// 4.5 MB cap — the same proxy pattern as images, music and video).
+// The room renders the GLB on an automatic white pedestal (~1 m high)
+// standing on the floor; the editor drags it along the floor, never
+// onto a wall; the visitor cannot walk through the pedestal. The
+// Image-to-3D tool has NO connected external provider — its local
+// modes are a 2D texture and a depth relief, neither of which makes a
+// GLB — so the GLB comes from the tool's Import tab (now stored
+// server-side) or a direct .glb upload in the editor. Real 3D
+// rendering needs a live browser — recorded as manual checks below.
+check("Sculptures 3D", "sculpture-schema", "Prisma: sculptureUrl on Artwork + LibraryWork (imageUrl nullable there)", () => {
+  const src = read("prisma/schema.prisma");
+  assert(src.includes("sculptureUrl String?"), "Artwork missing sculptureUrl");
+  assert(src.includes("sculptureUrl String?"), "LibraryWork missing sculptureUrl");
+  return "sculptureUrl nullable on both models; no data migration (existing rows keep null)";
+});
+check("Sculptures 3D", "sculpture-lib", "lib/sculpture.ts: GLB-only allowlist, 4.5 MB cap, serving-URL shape, pedestal + normalisation constants", () => {
+  const src = read("lib/sculpture.ts");
+  for (const s of ['"model/gltf-binary"', "SCULPTURE_MAX_FILE_SIZE = 4_500_000", "SCULPTURE_PEDESTAL_HEIGHT_M = 1.0", "SCULPTURE_PEDESTAL_WIDTH_M = 0.6", "SCULPTURE_MAX_MODEL_SIZE_M = 0.9", "SCULPTURE_COLLISION_HALF_M = 0.35", "isSculptureServingUrl", "isSculptureArtwork", "parseSculptureServingUrl"]) {
+    assert(src.includes(s), `lib/sculpture.ts missing ${s}`);
+  }
+  assert(src.includes("/api/sculpture/sculptures/"), "serving URL shape missing");
+  return "GLB only, 4.5 MB, /api/sculpture/sculptures/<userId>/<uuid>.glb, pedestal 0.6 × 1.0 m, model ≤ 0.9 m";
+});
+check("Sculptures 3D", "sculpture-validation", "Validation accepts sculptureUrl (same-origin only); PUT persists it; single-artwork add accepts it + floor placement", () => {
+  const src = read("lib/validation.ts");
+  assert(src.includes("sculptureUrl:"), "validation missing sculptureUrl");
+  assert(src.includes("isSculptureServingUrl"), "validation does not use isSculptureServingUrl");
+  const route = read("app/api/exhibitions/[id]/route.ts");
+  assert(route.includes("sculptureUrl: artwork.sculptureUrl ?? null"), "PUT does not persist sculptureUrl");
+  assert(route.includes('sculptureUrl: "sculpture"'), "PUT error labels miss sculptureUrl");
+  const single = read("app/api/artworks/route.ts");
+  assert(single.includes("sculptureUrl:"), "POST /api/artworks does not accept sculptureUrl");
+  assert(single.includes("positionY"), "POST /api/artworks does not accept a floor position");
+  return "sculptureUrl nullable + /api/sculpture/ prefix; PUT + single-add persist it";
+});
+check("Sculptures 3D", "sculpture-upload", "Sculpture upload route: GLB only, 4.5 MB cap, sculptures/<userId>/ prefix, glTF magic check, same-origin URL", () => {
+  const src = read("app/api/uploads/sculpture/route.ts");
+  for (const s of ["SCULPTURE_MIME_TYPES", "SCULPTURE_MAX_FILE_SIZE", "sculptures/${user.id}/", "/api/sculpture/${key}", "status: 413", "status: 415", "0x67"]) {
+    assert(src.includes(s), `upload route missing ${s}`);
+  }
+  assert(src.includes('.glb'), "upload route does not check the .glb extension");
+  assert(!src.includes("DeleteObjectCommand"), "upload route deletes R2 objects");
+  return "allowlist model/gltf-binary, 413 over 4.5 MB, 415 otherwise, R2 sculptures/<userId>/<uuid>.glb, magic-byte check";
+});
+check("Sculptures 3D", "sculpture-serve", "Sculpture serve route: model/gltf-binary, same access rule as images (public show open, else owner only)", () => {
+  const src = read("app/api/sculpture/[...key]/route.ts");
+  for (const s of ["sculptures\\/([A-Za-z0-9_-]+)\\/([a-f0-9-]{36})\\.glb", "model/gltf-binary", "sculptureUrl: servingUrl"]) {
+    assert(src.includes(s), `serve route missing ${s}`);
+  }
+  assert(src.includes("Content-Type"), "serve route sets no Content-Type");
+  return "key shape sculptures/<userId>/<uuid>.glb, public show open, else owner only";
+});
+check("Sculptures 3D", "sculpture-glb", "Real GLB fixture parses with the gallery's GLTFLoader (Blender export, 2 meshes, base at y = 0)", () => {
+  assert(exists("scripts/fixtures/sample-sculpture.glb"), "missing scripts/fixtures/sample-sculpture.glb");
+  const out = execFileSync("node", ["scripts/parse-glb-check.mjs"], { cwd: ROOT, encoding: "utf8", timeout: 60000 });
+  assert(out.includes("parsed OK, meshes: 2"), `GLB did not parse: ${out.slice(0, 200)}`);
+  assert(out.includes("min.y 0.000"), `GLB base is not at y = 0: ${out.slice(0, 200)}`);
+  return "152 KB Blender GLB, 2 meshes, bbox max 1.27 m → normalises to 0.9 m";
+});
+check("Sculptures 3D", "sculpture-render", "Room render: pedestal + normalised GLB (imperative GLTFLoader, no useGLTF), floor drag, pedestal collision in both walk controls", () => {
+  const src = read("components/gallery-scene.tsx");
+  for (const s of ["function SculptureArtworkFrame", "function SculptureModel", "loadSculptureModel", "SCULPTURE_PEDESTAL_HEIGHT_M", "SCULPTURE_MAX_MODEL_SIZE_M", "artwork.sculptureUrl", "sculpture: true", "new Plane(new Vector3(0, 1, 0), 0)"]) {
+    assert(src.includes(s), `gallery-scene missing ${s}`);
+  }
+  assert(!src.includes("useGLTF("), "gallery-scene calls useGLTF — it suspends and would unmount the room");
+  assert(src.includes("SCULPTURE_COLLISION_HALF_M"), "no sculpture collision block in the walk controls");
+  const rooms = read("components/gallery-rooms.tsx");
+  assert(rooms.includes("SCULPTURE_COLLISION_HALF_M"), "generic rooms have no sculpture collision block");
+  assert(rooms.includes("artworks?:"), "GalleryWalkControls does not accept artworks for sculpture collision");
+  return "pedestal 0.6 × 1.0 m + GLB normalised to 0.9 m; floor-plane drag (wall snap skipped); collision in Sunlight + generic walk controls";
+});
+check("Sculptures 3D", "sculpture-editor", "Editor: add sculpture (upload, floor placement), replace/remove, library reuse stands it on the floor, wall tools never take it", () => {
+  const src = read("components/editor.tsx");
+  for (const s of ["addSculptureArtwork", "uploadSculptureArtwork", "/api/uploads/sculpture", "replaceArtworkSculpture", "placeSculptureOnFloor", 't("sculpture", "addSculpture")', 't("sculpture", "sculptureHint")', "sculptureUrl: work.sculptureUrl", "sculptureUploadRef", "replaceSculptureRef", 't("sculpture", "replaceSculpture")', 't("sculpture", "removeSculpture")', 'accept=".glb"']) {
+    assert(src.includes(s), `editor missing ${s}`);
+  }
+  assert(src.includes('dimensions: "60 × 190 cm"'), "sculpture artwork does not carry the pedestal envelope dimensions");
+  assert(src.includes("!artwork.sculptureUrl"), "compose candidates do not exclude sculptures");
+  assert(src.includes("if (selected.sculptureUrl) return;"), "fit-to-wall does not refuse sculptures");
+  return "Add sculpture + library copy (floor) + replace/remove; compose / fit-to-wall / partition-carry exclude sculptures";
+});
+check("Sculptures 3D", "sculpture-panel", "Detail panel: sculpture branch (3D note, no broken image/video), metadata + contact form unchanged", () => {
+  const src = read("components/artwork-detail-panel.tsx");
+  assert(src.includes("artwork.sculptureUrl"), "detail panel does not branch on sculptureUrl");
+  assert(src.includes('t("sculpture", "sculptureOnPedestal")'), "detail panel does not explain the pedestal");
+  return "3D placeholder + pedestal note; title / artist / year / medium / dimensions / contact form as before";
+});
+check("Sculptures 3D", "sculpture-library", "Library: sculpture works backfilled, listed and copied by sculptureUrl (floor copy); delete removes sculpture copies", () => {
+  const src = read("lib/library.ts");
+  for (const s of ["sculptureUrl ?? artwork.videoUrl", "sculptureUrl: true", "sculptureUrl: work.sculptureUrl", "positionY: work.sculptureUrl ? 0 : 2.5"]) {
+    assert(src.includes(s), `lib/library.ts missing ${s}`);
+  }
+  const page = read("components/library-page.tsx");
+  assert(page.includes("work.sculptureUrl"), "library page does not render sculpture works");
+  return "identity = sculptureUrl ?? videoUrl ?? imageUrl; backfill + save + reuse + delete all handle sculpture";
+});
+check("Sculptures 3D", "sculpture-tool", "Image-to-3D tool: imported GLB is uploaded to R2 + recorded with its serving URL, add-to-exhibition wired; image modes honestly cannot make a GLB", () => {
+  const src = read("components/image-to-3d.tsx");
+  for (const s of ["/api/uploads/sculpture", "sculptureUrl: result.url", "addSavedSculptureToExhibition", "/api/artworks", "positionY: 0"]) {
+    assert(src.includes(s), `image-to-3d missing ${s}`);
+  }
+  assert(src.includes("It is not a GLB sculpture"), "image-to-3D tab does not say its results are not GLB sculptures");
+  assert(!src.includes("not stored server-side"), "import tab still claims the GLB is not stored server-side");
+  const lib = read("lib/asset-library.ts");
+  assert(lib.includes("sculptureUrl?: string"), "Asset3DRecord has no sculptureUrl");
+  return "Import tab uploads the GLB (4.5 MB) + saves the record + adds to an exhibition; image modes stay textures/reliefs";
+});
+check("Sculptures 3D", "sculpture-i18n", "FR + EN strings for sculpture, incl. the rights line and the size hint", () => {
+  const src = read("lib/i18n.ts");
+  assert(src.includes("sculpture: {"), "i18n missing sculpture section");
+  for (const s of ["sculptureArtwork", "addSculpture", "sculptureHint", "sculptureTooLarge", "sculptureInvalidFormat", "onlyOwnSculpture", "sculptureOnPedestal"]) {
+    assert(src.includes(s), `i18n missing ${s}`);
+  }
+  assert(src.includes("Only upload sculpture you own or that is free to share."), "rights line missing");
+  return "sculpture section FR+EN; rights line in both locales";
+});
 check("Code quality", "no-alert", "No window.alert in the new code", () => {
   const files = [
     "lib/profile.ts", "lib/works.ts", "lib/site-templates.ts", "lib/atelier-templates.ts",
@@ -660,6 +777,10 @@ check("Code quality", "no-alert", "No window.alert in the new code", () => {
     "app/api/artworks/route.ts", "components/artwork-detail-panel.tsx",
     "components/exhibition-list-view.tsx", "components/library-page.tsx",
     "components/works-page.tsx", "components/layers-panel.tsx",
+    "lib/sculpture.ts", "lib/partition-carry.ts",
+    "app/api/uploads/sculpture/route.ts", "app/api/sculpture/[...key]/route.ts",
+    "components/image-to-3d.tsx", "components/gallery-rooms.tsx",
+    "app/works/[id]/page.tsx",
   ];
   const offenders = files.filter((f) => exists(f) && /window\.alert\s*\(/.test(read(f)));
   assert(offenders.length === 0, `window.alert in: ${offenders.join(", ")}`);
@@ -893,6 +1014,9 @@ check("Certificates", "cert-i18n", "Documents description updated FR+EN (10 temp
 
 // Manual (browser-only) checks — recorded as skipped, to be verified live.
 skip("Manual (browser)", "manual-video-wall", "Video artwork: upload an MP4 (≤ 4.5 MB) in the editor, see it hang 16:9 on the wall; walk up to it — it plays muted in loop; walk away — it pauses on its first frame; a second video across the room stays paused; the selected video keeps playing in the editor", "needs a live browser session with a signed-in user + a real MP4");
+skip("Manual (browser)", "manual-sculpture-room", "Sculpture: upload a .glb (≤ 4.5 MB) in the editor — it stands on a white pedestal on the floor 3 m in front of the camera; walk up to it — it renders with the room's light and shadows; walk into it — the pedestal blocks the camera; click it — the detail panel opens with title/description; drag it in the editor — it slides along the floor, never onto a wall", "needs a live browser session with a signed-in user + a real GLB");
+skip("Manual (browser)", "manual-sculpture-tool", "Sculpture: in the Image-to-3D tool, Import a .glb, save to library — the file is stored (no re-attach needed); add it to an exhibition from the tool; reuse it from 'Mes œuvres' in a second exhibition without re-upload; a file over 4.5 MB shows the clear size error (inline, no alert); a .gltf is refused with the re-export hint", "needs a live browser session with a signed-in user + a real GLB");
+skip("Manual (browser)", "manual-sculpture-public", "Sculpture: publish the exhibition, open it as a visitor — the sculpture is visible on its pedestal with collision; the mini-plan dot walks to it; the detail panel shows the 3D note", "needs a live browser session + a published exhibition with a sculpture");
 skip("Manual (browser)", "manual-video-panel", "Video artwork: click the wall video — detail panel opens with the video playing muted; play/pause button works; sound stays off until the sound button is clicked, then the video plays with sound; sound off mutes at once", "needs a live browser session with a signed-in user + a real MP4");
 skip("Manual (browser)", "manual-video-limits", "Video artwork: file over 4.5 MB shows the clear size error (inline, no alert); a non-MP4 file is refused; a video reused from 'Mes œuvres' hangs in a second exhibition without re-upload; seeking inside the panel video works (Range/206)", "needs a live browser session with a signed-in user + a real MP4");
 skip("Manual (browser)", "manual-music-enter", "Exhibition music: enter with Son ON (music starts) and Son OFF (silent); pause/resume; sound switch mid-visit; volume persisted across visits", "needs a live browser session with a signed-in user + a real MP3");

@@ -71,6 +71,8 @@ import {
   type Texture,
 } from "three";
 import { roomLayouts, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
+import type { Artwork } from "@/lib/demo-data";
+import { SCULPTURE_COLLISION_HALF_M } from "@/lib/sculpture";
 import { roomElementCollisionBlocks } from "@/lib/elements";
 import { galleryDef } from "@/lib/gallery-defs";
 import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
@@ -3028,8 +3030,12 @@ export function GalleryWalkControls(props: {
   // Wide / High / Plan): the nonce changes on every click, so the
   // same view can be re-applied.
   viewRequest?: { nonce: number; view: CameraViewPreset } | null;
+  // The exhibition's artworks, for sculpture collision: a sculpture's
+  // pedestal is a block the visitor cannot walk through. Optional so
+  // older callers keep working; absent means no sculpture blocks.
+  artworks?: Artwork[];
 }) {
-  const { rooms, activeRoomId, offsets, zOffsets, input, destination, lookYaw, dragged, dragActive, enabled, onRoomChange, resetSignal, viewRequest } = props;
+  const { rooms, activeRoomId, offsets, zOffsets, input, destination, lookYaw, dragged, dragActive, enabled, onRoomChange, resetSignal, viewRequest, artworks } = props;
   const { camera, gl } = useThree();
   const defOf = (index: number) => galleryDef(rooms[index]?.layout ?? "sunlight");
   const startIndex = Math.max(0, rooms.findIndex((room) => room.id === activeRoomId));
@@ -3269,8 +3275,21 @@ export function GalleryWalkControls(props: {
     // walls the owner added to this room. Without them the visitor
     // walked straight through a user-added partition (Sunlight's walk
     // controls already included its elements' blocks; the generic
-    // rooms did not).
-    const blocks = [...(def?.blocks ?? []), ...roomElementCollisionBlocks(rooms[roomIndex]?.elements ?? [])];
+    // rooms did not). Sculptures add their own block (the pedestal),
+    // rebuilt every frame so a dragged pedestal's block follows it.
+    const blocks = [
+      ...(def?.blocks ?? []),
+      ...roomElementCollisionBlocks(rooms[roomIndex]?.elements ?? []),
+      ...(artworks ?? [])
+        .filter((item) => item.sculptureUrl && item.roomId === rooms[roomIndex]?.id)
+        .map((item) => ({
+          x: item.position[0],
+          z: item.position[2],
+          ry: item.rotation,
+          hl: SCULPTURE_COLLISION_HALF_M,
+          hw: SCULPTURE_COLLISION_HALF_M,
+        })),
+    ];
     const bounds = def?.bounds ?? { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
     // Walk-velocity smoothing: the velocity eases toward its target
     // (exponential damping, frame-rate independent) instead of jumping

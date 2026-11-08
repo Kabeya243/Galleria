@@ -51,6 +51,7 @@ export default async function WorksRoute({ params }: RouteProps) {
             accent: true,
             imageUrl: true,
             videoUrl: true,
+            sculptureUrl: true,
           },
           orderBy: { createdAt: "asc" },
         },
@@ -72,6 +73,7 @@ export default async function WorksRoute({ params }: RouteProps) {
           accent: a.accent,
           imageUrl: a.imageUrl,
           videoUrl: a.videoUrl,
+          sculptureUrl: a.sculptureUrl,
           exhibitionTitle: ex.title,
           kind: classifyWorkKind(a, overrides, a.id) as WorkKind,
         }))

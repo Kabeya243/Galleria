@@ -57,9 +57,11 @@ export const ASSET_KINDS = ["model", "texture", "image", "reference"] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
 /** One asset in the personal library. `fileDataUrl` is only ever kept for
- *  small image-to-3D textures; GLB files are NOT stored server-side — the
- *  record keeps their metadata and transform so the file can be re-attached
- *  from disk. Never claim an asset is free to use without its license. */
+ *  small image-to-3D textures; an imported GLB IS stored server-side
+ *  (R2, sculptures/<userId>/<uuid>.glb — see lib/sculpture.ts) and the
+ *  record keeps its same-origin serving URL in `sculptureUrl`, so the
+ *  model can be added to an exhibition from here. Never claim an asset
+ *  is free to use without its license. */
 export interface Asset3DRecord {
   kind: AssetKind;
   source: AssetSource;
@@ -73,6 +75,9 @@ export interface Asset3DRecord {
   fileType?: string;
   /** 2D-texture / depth-approximation payloads only (data URLs). */
   fileDataUrl?: string;
+  /** Imported GLB: the same-origin serving URL (/api/sculpture/…),
+   *  set once the file is stored in R2. */
+  sculptureUrl?: string;
   mode?: "2d-texture" | "depth-approximation" | "imported-glb" | "reference";
   /** Transform applied in the preview viewer. */
   transform?: { scale: number; rotationY: number; tint: string };

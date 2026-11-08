@@ -6,8 +6,12 @@ import { upsertLibraryWorks } from "@/lib/library";
 
 // Create one artwork inside one of the signed-in user's exhibitions.
 // Used by Art in Context (step 1 upload, step 7 "add a copy to this
-// exhibition"): the editor's whole-exhibition PUT is the wrong shape for
-// adding a single work, so this route creates the single Artwork row.
+// exhibition") and by the Image-to-3D tool's "add to an exhibition"
+// (a sculpture): the editor's whole-exhibition PUT is the wrong shape
+// for adding a single work, so this route creates the single Artwork
+// row. A sculpture add passes sculptureUrl + roomId + a floor
+// position (positionY 0); a wall work passes nothing and keeps the
+// old wall default.
 const createSchema = z.object({
   exhibitionId: z.string().min(1),
   title: z.string().trim().min(1).max(200),
@@ -18,6 +22,12 @@ const createSchema = z.object({
   description: z.string().max(2000).optional().default(""),
   imageUrl: z.string().max(500).optional().nullable(),
   videoUrl: z.string().max(500).optional().nullable(),
+  sculptureUrl: z.string().max(500).optional().nullable(),
+  roomId: z.string().max(64).optional(),
+  positionX: z.number().finite().min(-100).max(100).optional(),
+  positionY: z.number().finite().min(-10).max(30).optional(),
+  positionZ: z.number().finite().min(-100).max(100).optional(),
+  rotation: z.number().finite().min(-Math.PI * 8).max(Math.PI * 8).optional(),
   frame: z.string().max(100).optional().default("wood"),
 });
 
@@ -48,6 +58,12 @@ export async function POST(request: Request) {
       description: input.description,
       imageUrl: input.imageUrl ?? null,
       videoUrl: input.videoUrl ?? null,
+      sculptureUrl: input.sculptureUrl ?? null,
+      positionX: input.positionX ?? 0,
+      positionY: input.positionY ?? 2.5,
+      positionZ: input.positionZ ?? -5.72,
+      rotation: input.rotation ?? 0,
+      roomId: input.roomId ?? "room-main",
       frame: input.frame,
       exhibitionId: input.exhibitionId,
     },
@@ -55,6 +71,6 @@ export async function POST(request: Request) {
   // Every work added to an exhibition joins the reusable library
   // (create-only — a copy never overwrites the canonical row), so
   // "Mes œuvres" stays current without a separate upload step.
-  await upsertLibraryWorks(user.id, [{ ...input, imageUrl: input.imageUrl ?? null, videoUrl: input.videoUrl ?? null }]);
+  await upsertLibraryWorks(user.id, [{ ...input, imageUrl: input.imageUrl ?? null, videoUrl: input.videoUrl ?? null, sculptureUrl: input.sculptureUrl ?? null }]);
   return NextResponse.json({ artwork }, { status: 201 });
 }

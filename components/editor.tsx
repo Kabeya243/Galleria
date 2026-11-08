@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  Box,
   Check,
   ChevronDown,
   CircleHelp,
@@ -61,6 +62,7 @@ import { useLocale, useT } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
 import { galleryCameraStart, galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import { isVideoServingUrl, VIDEO_MAX_FILE_SIZE } from "@/lib/video";
+import { isSculptureServingUrl, SCULPTURE_MAX_FILE_SIZE } from "@/lib/sculpture";
 import {
   createSunlightElement,
   closestHangWall,
@@ -430,6 +432,7 @@ export default function Editor({
     description: string;
     imageUrl: string | null;
     videoUrl: string | null;
+    sculptureUrl: string | null;
     frame: string;
     palette: string[] | null;
     altText: string | null;
@@ -470,6 +473,8 @@ export default function Editor({
   const [confirmDeletePresetId, setConfirmDeletePresetId] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const replaceImageRef = useRef<HTMLInputElement>(null);
+  const sculptureUploadRef = useRef<HTMLInputElement>(null);
+  const replaceSculptureRef = useRef<HTMLInputElement>(null);
   const videoUploadRef = useRef<HTMLInputElement>(null);
   const replaceVideoRef = useRef<HTMLInputElement>(null);
   // Undo history: full editor snapshots (artworks + rooms + title +
@@ -964,7 +969,7 @@ export default function Editor({
   const composeCandidates = useMemo(() => {
     if (!activeRoom) return [];
     const selectedIds = new Set(selectionRefs.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
-    return artworks.filter((artwork) => selectedIds.has(artwork.id) && artwork.roomId === activeRoom.id && !artwork.text);
+    return artworks.filter((artwork) => selectedIds.has(artwork.id) && artwork.roomId === activeRoom.id && !artwork.text && !artwork.sculptureUrl);
   }, [selectionRefs, artworks, activeRoom]);
   // Every hangable face of the active room (room walls, Sunlight
   // panels, added cloisons/suspendus), for the wall picker.
@@ -1814,6 +1819,7 @@ export default function Editor({
     const targets = artworks.filter(
       (item) =>
         item.roomId === activeRoom.id &&
+        !item.sculptureUrl &&
         (item.id === id ||
           selectedIds.has(item.id) ||
           (artwork.groupId !== undefined && item.groupId === artwork.groupId)),
@@ -2061,6 +2067,9 @@ export default function Editor({
     }
     if (artwork.videoUrl && !isVideoServingUrl(artwork.videoUrl)) {
       problems.push("a re-uploaded video (this video link cannot be saved)");
+    }
+    if (artwork.sculptureUrl && !isSculptureServingUrl(artwork.sculptureUrl)) {
+      problems.push("a re-uploaded sculpture (this sculpture link cannot be saved)");
     }
     if (!artwork.roomId) problems.push("a room");
     return problems;
@@ -2580,6 +2589,68 @@ export default function Editor({
     return artwork.id;
   }
 
+  // Place a sculpture on the floor, 3 m in front of the camera (room
+  // coordinates), facing the camera — the pedestal needs open floor,
+  // not a wall. Before the scene reports a camera, fall back to the
+  // room's centre. Clamped inside the room so the pedestal never
+  // lands in a wall.
+  function placeSculptureOnFloor(): { position: [number, number, number]; rotation: number } {
+    if (!activeRoom) return { position: [0, 0, 2], rotation: 0 };
+    const layout = roomLayouts[activeRoom.layout];
+    const zCenter = roomFloorCenterZ(activeRoom.layout);
+    const activeIndex = Math.max(0, sceneRooms.findIndex((room) => room.id === activeRoom.id));
+    const offsetX = roomPlanOffsets(sceneRooms).x[activeIndex] ?? 0;
+    const camera = cameraStateRef.current;
+    const localCamera = camera
+      ? { x: camera.x - offsetX, y: camera.y, z: camera.z, yaw: camera.yaw }
+      : galleryCameraStart(activeRoom.layout);
+    const fx = -Math.sin(localCamera.yaw);
+    const fz = -Math.cos(localCamera.yaw);
+    const x = Math.max(-layout.width / 2 + 0.6, Math.min(layout.width / 2 - 0.6, localCamera.x + fx * 3));
+    const z = Math.max(zCenter - layout.depth / 2 + 0.6, Math.min(zCenter + layout.depth / 2 - 0.6, localCamera.z + fz * 3));
+    // Face the camera: the pedestal's front (+Z after rotation) looks
+    // back along the direction the visitor came from.
+    const rotation = Math.atan2(localCamera.x - x, localCamera.z - z);
+    return { position: [x, 0, z], rotation };
+  }
+
+  // Add a sculpture artwork: same flow as addVideoArtwork, but on the
+  // floor on its automatic pedestal (placeSculptureOnFloor) instead
+  // of on a wall. The GLB is the media; there is no image, no palette
+  // to extract and no caption to generate. Dimensions are the
+  // pedestal + model envelope (60 cm wide, up to ~190 cm tall).
+  function addSculptureArtwork(sculptureUrl: string): string | undefined {
+    if (!activeRoom) return undefined;
+    const index = currentArtworks.length;
+    const { position, rotation } = placeSculptureOnFloor();
+    const artwork: Artwork = {
+      id: crypto.randomUUID(),
+      title: `New sculpture ${index + 1}`,
+      artist: defaultArtist(),
+      year: "2025",
+      medium: "Sculpture, GLB",
+      dimensions: "60 × 190 cm",
+      description: "Add a description to tell visitors about this work.",
+      color: ["#8a9b88", "#bb8365", "#8796a9"][index % 3],
+      accent: "#e5c7a0",
+      position,
+      rotation,
+      scale: 1,
+      frame: "wood",
+      imageUrl: null,
+      videoUrl: null,
+      sculptureUrl,
+      palette: null,
+      roomId: activeRoom.id,
+    };
+    snapshot();
+    setArtworks((current) => [...current, artwork]);
+    selectArtwork(artwork.id);
+    revealNewArtwork(artwork.id, null);
+    setSaved(false);
+    return artwork.id;
+  }
+
   async function openLibraryPicker() {
     setShowLibraryPicker((value) => !value);
     if (libraryLoaded || libraryLoading) return;
@@ -2612,14 +2683,20 @@ export default function Editor({
     if (!activeRoom) return undefined;
     const index = currentArtworks.length;
     const alongOffset = (index % 5 - 2) * 1.0;
-    const { position, rotation, turnYaw } = placeOnCameraWall(0.8, 1.0, alongOffset);
+    // A sculpture library work stands on the floor (its pedestal),
+    // never on the camera wall — same placement addSculptureArtwork
+    // uses. Every other work keeps the camera-wall placement.
+    const sculpturePlacement = work.sculptureUrl ? placeSculptureOnFloor() : null;
+    const { position, rotation, turnYaw } = sculpturePlacement
+      ? { position: sculpturePlacement.position, rotation: sculpturePlacement.rotation, turnYaw: null }
+      : placeOnCameraWall(0.8, 1.0, alongOffset);
     const artwork: Artwork = {
       id: crypto.randomUUID(),
       title: work.title,
       artist: work.artist || defaultArtist(),
       year: work.year || "2025",
-      medium: work.medium || "Mixed media",
-      dimensions: work.dimensions || "80 × 100 cm",
+      medium: work.medium || (work.sculptureUrl ? "Sculpture, GLB" : "Mixed media"),
+      dimensions: work.dimensions || (work.sculptureUrl ? "60 × 190 cm" : "80 × 100 cm"),
       description: work.description || "Add a description to tell visitors about this work.",
       color: ["#8a9b88", "#bb8365", "#8796a9"][index % 3],
       accent: "#e5c7a0",
@@ -2629,6 +2706,7 @@ export default function Editor({
       frame: work.frame || "wood",
       imageUrl: work.imageUrl,
       videoUrl: work.videoUrl,
+      sculptureUrl: work.sculptureUrl ?? null,
       palette: work.palette,
       altText: work.altText,
       roomId: activeRoom.id,
@@ -2965,6 +3043,98 @@ async function compressImage(file: File): Promise<File> {
     }
   }
 
+  // Upload one sculpture file (GLB, ≤ 4.5 MB) to R2 via the dedicated
+  // sculpture proxy and stand it on its pedestal (addSculptureArtwork).
+  // The artwork starts as "New sculpture N", like an image upload.
+  // Errors are inline (setUploadError), never window.alert. Removing a
+  // sculpture later only clears the artwork's sculptureUrl — the R2
+  // file stays (no DeleteObject in the code yet; same policy as music,
+  // images and video).
+  async function uploadSculptureFile(file: File): Promise<string> {
+    const body = new FormData();
+    body.set("file", file);
+    let response: Response;
+    try {
+      response = await fetch("/api/uploads/sculpture", { method: "POST", body });
+    } catch {
+      // A network failure (not an HTTP error): never surface the raw
+      // browser "Failed to fetch" — say what happened in plain words.
+      throw new Error(t("sculpture", "sculptureUploadFailed"));
+    }
+    // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+    // an oversized request) is not JSON and used to throw a cryptic
+    // "Unexpected end of JSON input" instead of a readable error.
+    const text = await response.text();
+    let result: { error?: string; url?: string } = {};
+    try {
+      result = text ? (JSON.parse(text) as typeof result) : {};
+    } catch {
+      result = {};
+    }
+    if (!response.ok) {
+      throw new Error(
+        result.error ??
+          (response.status === 413 ? t("sculpture", "sculptureTooLarge") : t("sculpture", "sculptureUploadFailed")),
+      );
+    }
+    if (!result.url) throw new Error(t("sculpture", "sculptureUploadFailed"));
+    return result.url;
+  }
+
+  async function uploadSculptureArtwork(file?: File) {
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".glb")) {
+      setUploadError(t("sculpture", "sculptureInvalidFormat"));
+      return;
+    }
+    if (file.size === 0 || file.size > SCULPTURE_MAX_FILE_SIZE) {
+      setUploadError(t("sculpture", "sculptureTooLarge"));
+      return;
+    }
+    setBusy(true);
+    setUploadError(null);
+    try {
+      const url = await uploadSculptureFile(file);
+      addSculptureArtwork(url);
+      if (sculptureUploadRef.current) sculptureUploadRef.current.value = "";
+    } catch (error) {
+      console.error("Could not upload sculpture artwork.", error);
+      setUploadError(error instanceof Error ? error.message : t("sculpture", "sculptureUploadFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Replace the selected sculpture with an uploaded one. The artwork
+  // itself — title, pedestal position, scale — stays put, only the
+  // GLB changes.
+  async function replaceArtworkSculpture(file?: File) {
+    if (!file || !selected) return;
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".glb")) {
+      setUploadError(t("sculpture", "sculptureInvalidFormat"));
+      return;
+    }
+    if (file.size === 0 || file.size > SCULPTURE_MAX_FILE_SIZE) {
+      setUploadError(t("sculpture", "sculptureTooLarge"));
+      return;
+    }
+    setBusy(true);
+    setUploadError(null);
+    try {
+      const url = await uploadSculptureFile(file);
+      snapshot();
+      updateArtwork(selected.id, (artwork) => ({ ...artwork, sculptureUrl: url }));
+      if (replaceSculptureRef.current) replaceSculptureRef.current.value = "";
+    } catch (error) {
+      console.error("Could not replace artwork sculpture.", error);
+      setUploadError(error instanceof Error ? error.message : t("sculpture", "sculptureUploadFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // Publishing (feature 8): a draft opens the visibility dialog; a
   // published show unpublishes with the old toggle (no body). The dialog
   // passes the chosen visibility (and password, when protected).
@@ -3049,6 +3219,16 @@ async function compressImage(file: File): Promise<File> {
       groupId: undefined,
     };
     const parsed = parseArtworkDimensions(copy.dimensions ?? "");
+    // A sculpture copy stays on the floor, 1.5 m along the floor from
+    // the original — never snapped onto a wall.
+    if (selected.sculptureUrl) {
+      copy.position = [selected.position[0] + axis.x * 1.5, 0, selected.position[2] + axis.z * 1.5];
+      snapshot();
+      setArtworks((current) => [...current, copy]);
+      selectArtwork(copy.id);
+      setSaved(false);
+      return;
+    }
     const snapped = snapArtworkToWall(
       {
         position: copy.position,
@@ -3075,6 +3255,8 @@ async function compressImage(file: File): Promise<File> {
   // floating mid-room or inside a wall.
   function fitArtworkToWall() {
     if (!selected || !activeRoom) return;
+    // A sculpture stands on the floor — "fit to wall" does not apply.
+    if (selected.sculptureUrl) return;
     const parsed = parseArtworkDimensions(selected.dimensions ?? "");
     const snapped = snapArtworkToWall(
       {
@@ -3128,8 +3310,8 @@ async function compressImage(file: File): Promise<File> {
       // nearest wall instead of being left where it fell.
       const newRoom = normalizedRoom;
       setArtworks((current) => {
-        const roomArtworks = current.filter((artwork) => artwork.roomId === id);
-        if (roomArtworks.length === 0) return current;
+        const roomArtworks = current.filter((artwork) => artwork.roomId === id && !artwork.sculptureUrl);
+        if (roomArtworks.length === 0 && !current.some((artwork) => artwork.roomId === id && artwork.sculptureUrl)) return current;
         const faces =
           newRoom.layout === "sunlight"
             ? sunlightHangWalls(newRoom.sunlightElements ?? [])
@@ -3155,6 +3337,19 @@ async function compressImage(file: File): Promise<File> {
         }
         return current.map((artwork) => {
           if (artwork.roomId !== id) return artwork;
+          // A sculpture stands on the floor: never re-hung on a wall
+          // by a layout change — only keep its pedestal inside the
+          // resized room (y stays 0).
+          if (artwork.sculptureUrl) {
+            return {
+              ...artwork,
+              position: [
+                Math.max(-width / 2 + 0.6, Math.min(width / 2 - 0.6, artwork.position[0])),
+                0,
+                Math.max(-depth / 2 + 0.6, Math.min(depth / 2 - 0.6, artwork.position[2])),
+              ] as [number, number, number],
+            };
+          }
           const placed = byId.get(artwork.id);
           if (placed) return { ...artwork, position: placed.position, rotation: placed.rotation };
           const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
@@ -3351,8 +3546,8 @@ async function compressImage(file: File): Promise<File> {
               <div className="asset-list">
                 {currentArtworks.map((artwork, index) => (
                   <button className={`asset-row ${selectedId === artwork.id ? "selected" : ""}`} key={artwork.id} onClick={() => selectArtwork(artwork.id)}>
-                    <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.videoUrl ? <video src={artwork.videoUrl} muted preload="metadata" playsInline /> : artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.altText ?? artwork.title} /> : <span />}</span>
-                    <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.videoUrl ? t("video", "video") : artwork.medium.split(" ")[0]}</small></span>
+                    <span className={`asset-thumb asset-color-${index % 3}`}>{artwork.sculptureUrl ? <span>3D</span> : artwork.videoUrl ? <video src={artwork.videoUrl} muted preload="metadata" playsInline /> : artwork.imageUrl ? <img src={artwork.imageUrl} alt={artwork.altText ?? artwork.title} /> : <span />}</span>
+                    <span className="asset-copy"><strong>{artwork.title}</strong><small>{artwork.year} · {artwork.sculptureUrl ? t("sculpture", "sculpture") : artwork.videoUrl ? t("video", "video") : artwork.medium.split(" ")[0]}</small></span>
                     {selectedId === artwork.id && <span className="selected-mark"><Check size={12} /></span>}
                   </button>
                 ))}
@@ -3362,6 +3557,10 @@ async function compressImage(file: File): Promise<File> {
                   the same camera-wall placement as an image, a 16:9
                   frame, and the same compose / drag / snap afterwards. */}
               <button className="add-to-room" onClick={() => videoUploadRef.current?.click()} disabled={busy}><Video size={15} /> {t("video", "addVideo")}</button>
+              {/* Sculpture artwork: a GLB on an automatic pedestal on
+                  the floor — same upload flow as a video, floor
+                  placement instead of a wall. */}
+              <button className="add-to-room" onClick={() => sculptureUploadRef.current?.click()} disabled={busy}><Box size={15} /> {t("sculpture", "addSculpture")}</button>
               {/* Reuse instead of re-uploading: pick a work already in
                   the artist's library ("Mes œuvres") and hang a copy
                   of it in this room — same image, fresh placement. */}
@@ -3396,8 +3595,8 @@ async function compressImage(file: File): Promise<File> {
                         )
                         .map((work, index) => (
                           <button className="asset-row" key={work.id} onClick={() => addLibraryArtwork(work)}>
-                            <span className={`asset-thumb asset-color-${index % 3}`}>{work.videoUrl ? <video src={work.videoUrl} muted preload="metadata" playsInline /> : work.imageUrl ? <img src={work.imageUrl} alt={work.altText ?? work.title} /> : <span />}</span>
-                            <span className="asset-copy"><strong>{work.title}</strong><small>{work.year} · {work.videoUrl ? t("video", "video") : work.medium.split(" ")[0]}</small></span>
+                            <span className={`asset-thumb asset-color-${index % 3}`}>{work.sculptureUrl ? <span>3D</span> : work.videoUrl ? <video src={work.videoUrl} muted preload="metadata" playsInline /> : work.imageUrl ? <img src={work.imageUrl} alt={work.altText ?? work.title} /> : <span />}</span>
+                            <span className="asset-copy"><strong>{work.title}</strong><small>{work.year} · {work.sculptureUrl ? t("sculpture", "sculpture") : work.videoUrl ? t("video", "video") : work.medium.split(" ")[0]}</small></span>
                           </button>
                         ))}
                     </div>
@@ -3408,8 +3607,10 @@ async function compressImage(file: File): Promise<File> {
               {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
               <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
               <input ref={videoUploadRef} className="visually-hidden" type="file" accept="video/mp4,.mp4" onChange={(event) => void uploadVideoArtwork(event.target.files?.[0])} />
+              <input ref={sculptureUploadRef} className="visually-hidden" type="file" accept=".glb" onChange={(event) => void uploadSculptureArtwork(event.target.files?.[0])} />
               <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>
               <div className="asset-upload-hint"><Video size={15} /><span>{t("video", "videoHint")} {t("video", "onlyOwnVideo")}</span></div>
+              <div className="asset-upload-hint"><Box size={15} /><span>{t("sculpture", "sculptureHint")} {t("sculpture", "onlyOwnSculpture")}</span></div>
               {/* Curatorial text (the reference room's "Texte curatorial"):
                   a text panel as an artwork, on the wall the camera is
                   looking at — any wall, including a partition just
@@ -3642,8 +3843,8 @@ async function compressImage(file: File): Promise<File> {
           )}
           {selected ? (
             <>
-              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.videoUrl ? <video src={selected.videoUrl} muted loop playsInline preload="metadata" controls /> : selected.imageUrl ? <img src={selected.imageUrl} alt={selected.altText ?? selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.videoUrl ? t("video", "videoArtwork") : selected.medium}</small></div></div>
-              {!selected.text && !selected.videoUrl && (
+              <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.sculptureUrl ? <span>3D</span> : selected.videoUrl ? <video src={selected.videoUrl} muted loop playsInline preload="metadata" controls /> : selected.imageUrl ? <img src={selected.imageUrl} alt={selected.altText ?? selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.sculptureUrl ? t("sculpture", "sculptureArtwork") : selected.videoUrl ? t("video", "videoArtwork") : selected.medium}</small></div></div>
+              {!selected.text && !selected.videoUrl && !selected.sculptureUrl && (
                 <>
                   <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
                   <input ref={replaceImageRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void replaceArtworkImage(event.target.files?.[0])} />
@@ -3655,6 +3856,14 @@ async function compressImage(file: File): Promise<File> {
                   <input ref={replaceVideoRef} className="visually-hidden" type="file" accept="video/mp4,.mp4" onChange={(event) => void replaceArtworkVideo(event.target.files?.[0])} />
                   <button type="button" className="add-to-room" onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, videoUrl: null })); }} disabled={busy}>{t("video", "removeVideo")}</button>
                   <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{t("video", "videoPlaysMuted")}</p>
+                </>
+              )}
+              {!selected.text && selected.sculptureUrl && (
+                <>
+                  <button type="button" className="add-to-room" onClick={() => replaceSculptureRef.current?.click()} disabled={busy}>{t("sculpture", "replaceSculpture")}</button>
+                  <input ref={replaceSculptureRef} className="visually-hidden" type="file" accept=".glb" onChange={(event) => void replaceArtworkSculpture(event.target.files?.[0])} />
+                  <button type="button" className="add-to-room" onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, sculptureUrl: null })); }} disabled={busy}>{t("sculpture", "removeSculpture")}</button>
+                  <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{t("sculpture", "sculptureOnPedestal")}</p>
                 </>
               )}
               {!selected.text && selected.imageUrl && (

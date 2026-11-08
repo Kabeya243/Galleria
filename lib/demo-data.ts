@@ -17,6 +17,13 @@ export type Artwork = {
   // a VideoTexture from it instead of the image; `imageUrl`, when also
   // set, is only the fallback poster. Null/absent for image artworks.
   videoUrl?: string | null;
+  // Sculpture artwork (Nov 2026): same-origin serving URL
+  // (/api/sculpture/sculptures/<userId>/<uuid>.glb). When set, the
+  // work stands on an automatic pedestal on the floor instead of
+  // hanging on a wall; `imageUrl`, when also set, is only a poster
+  // for list views. Null/absent for image and video artworks.
+  // position[1] is ignored for sculptures — they stand on the floor.
+  sculptureUrl?: string | null;
   roomId: string;
   // Colour palette extracted from the artwork image (ColorThief, in the
   // browser, at upload/replace time): up to 8 hex colours, dominant

@@ -141,7 +141,25 @@ export default function ArtworkDetailPanel({
         {t("artwork", "artwork").toUpperCase()} {String(index).padStart(2, "0")}
       </span>
 
-      {artwork.videoUrl ? (
+      {artwork.sculptureUrl ? (
+        <figure className="artwork-detail-figure">
+          {/* A sculpture has no flat image to show: the work is the 3D
+              model standing on its pedestal in the room behind this
+              panel. The panel carries the metadata and the contact
+              form; the sculpture itself is inspected by walking up to
+              it (click its dot on the mini-plan). A poster image, when
+              the artist set one, shows below the note instead. */}
+          <div
+            className="artwork-detail-placeholder"
+            style={{ background: `linear-gradient(135deg, ${artwork.color}, ${artwork.accent})`, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 180 }}
+            role="img"
+            aria-label={alt}
+          >
+            <span style={{ color: "#fff", fontWeight: 700, letterSpacing: "0.2em", fontSize: 13 }}>3D</span>
+          </div>
+          <figcaption>{t("sculpture", "sculptureOnPedestal")}</figcaption>
+        </figure>
+      ) : artwork.videoUrl ? (
         <figure className="artwork-detail-figure">
           {/* The video itself: muted + loop, like the wall texture. No
               native controls — the two buttons below are the controls,

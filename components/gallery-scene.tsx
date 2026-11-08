@@ -6,6 +6,7 @@ import { OrbitControls, useTexture } from "@react-three/drei";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from "react";
 import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, Group, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VideoTexture, VSMShadowMap, type DirectionalLight, type WebGLRenderer } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import * as THREE from "three";
 import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
 import { resolveFrameSpec } from "@/lib/demo-data";
@@ -50,6 +51,13 @@ import { FLOOR_SHINE_DEFAULT, partitionDimsOf, sunlightPartitionDimsOf } from "@
 import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
 import { floorPatternTexture } from "@/lib/floor-patterns";
 import { VIDEO_PLAY_DISTANCE_M, VIDEO_PLAY_FACING_DOT } from "@/lib/video";
+import {
+  SCULPTURE_COLLISION_HALF_M,
+  SCULPTURE_MAX_MODEL_SIZE_M,
+  SCULPTURE_PEDESTAL_COLOR,
+  SCULPTURE_PEDESTAL_HEIGHT_M,
+  SCULPTURE_PEDESTAL_WIDTH_M,
+} from "@/lib/sculpture";
 import { VrDolly, VrRig } from "@/components/vr-rig";
 
 // --- Sunlight Gallery (Nov 2026) -----------------------------------------
@@ -1205,6 +1213,202 @@ function FrameAssembly({ width, height, spec, selected }: { width: number; heigh
   );
 }
 
+// --- Sculptures (GLB on a pedestal) -------------------------------------
+// A sculpture artwork is an Artwork with sculptureUrl set. It stands on
+// the floor on an automatic white pedestal (the room's own language:
+// the fixed Sunlight pedestals are white boxes, #f8f8f6 — see
+// lib/sunlight.ts), never on a wall, and the GLB is normalised to fit
+// on top of it. Loaded imperatively with GLTFLoader — deliberately NOT
+// drei's useGLTF, which suspends: ArtworkFrame sits outside every
+// <Suspense> boundary, and a suspending child would unmount the whole
+// room (the troika failure of Nov 6). While the file loads only the
+// pedestal renders; a failed load leaves the pedestal plus a small
+// neutral placeholder form, never a broken room. The promise is shared
+// per URL, so any number of copies of one sculpture costs one download;
+// each instance clones the scene so R3F never has one object under
+// two parents.
+const sculptureModelPromises = new Map<string, Promise<{ scene: Object3D }>>();
+function loadSculptureModel(url: string): Promise<{ scene: Object3D }> {
+  const cached = sculptureModelPromises.get(url);
+  if (cached) return cached;
+  const promise = new Promise<{ scene: Object3D }>((resolve, reject) => {
+    new GLTFLoader().load(
+      url,
+      (gltf) => resolve(gltf),
+      undefined,
+      (error) => reject(error instanceof Error ? error : new Error("Could not load this sculpture.")),
+    );
+  });
+  sculptureModelPromises.set(url, promise);
+  // A failed load must not poison every later sculpture: allow a retry.
+  promise.catch(() => {
+    sculptureModelPromises.delete(url);
+  });
+  return promise;
+}
+
+/** A GLB normalised to fit in a SCULPTURE_MAX_MODEL_SIZE_M box, base at
+ *  y = 0, centred on x/z. `scale` is the artwork's own scale on top. */
+function SculptureModel({ url, scale }: { url: string; scale: number }) {
+  const [scene, setScene] = useState<Object3D | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setScene(null);
+    setFailed(false);
+    loadSculptureModel(url)
+      .then((gltf) => {
+        if (!alive) return;
+        const clone = gltf.scene.clone(true);
+        const box = new THREE.Box3().setFromObject(clone);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z, 0.001);
+        const k = SCULPTURE_MAX_MODEL_SIZE_M / maxDim;
+        const center = box.getCenter(new THREE.Vector3());
+        clone.scale.setScalar(k);
+        clone.position.set(-center.x * k, -box.min.y * k, -center.z * k);
+        clone.traverse((child) => {
+          const mesh = child as Object3D & { isMesh?: boolean; castShadow?: boolean; receiveShadow?: boolean };
+          if (mesh.isMesh) {
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+          }
+        });
+        setScene(clone);
+      })
+      .catch(() => {
+        if (alive) setFailed(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+  if (failed) {
+    // The GLB could not be read (deleted file, corrupt export): a small
+    // neutral form on the pedestal says "something stands here" instead
+    // of leaving an empty plinth or breaking the room.
+    return (
+      <group>
+        <mesh position={[0, 0.18, 0]} castShadow>
+          <cylinderGeometry args={[0.09, 0.13, 0.36, 24]} />
+          <meshStandardMaterial color="#b8a184" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 0.44, 0]} castShadow>
+          <sphereGeometry args={[0.1, 24, 18]} />
+          <meshStandardMaterial color="#b8a184" roughness={0.8} />
+        </mesh>
+      </group>
+    );
+  }
+  if (!scene) return null;
+  return (
+    <group scale={scale}>
+      <primitive object={scene} />
+    </group>
+  );
+}
+
+// A sculpture artwork in the room: pedestal + GLB, selectable like a
+// wall work (click selects / opens the detail panel), draggable along
+// the FLOOR in the editor (never onto a wall). The wall frame, the
+// print and the resize handle's wall geometry do not apply here — the
+// pedestal stays 0.6 × 1.0 m whatever the artwork's scale; only the
+// model grows.
+function SculptureArtworkFrame({
+  artwork,
+  selected,
+  onSelect,
+  dragged,
+  editable,
+  onDragStart,
+  onHoverChange,
+}: {
+  artwork: Artwork;
+  selected: boolean;
+  onSelect?: (id: string, additive?: boolean) => void;
+  dragged?: React.RefObject<boolean>;
+  editable?: boolean;
+  onDragStart?: (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => void;
+  onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
+}) {
+  const [x, , z] = artwork.position;
+  const interactive = editable;
+  const modelHeight = SCULPTURE_MAX_MODEL_SIZE_M * artwork.scale;
+  const totalHeight = SCULPTURE_PEDESTAL_HEIGHT_M + modelHeight;
+  return (
+    <group
+      position={[x, 0, z]}
+      rotation={[0, artwork.rotation, 0]}
+      onClick={(event) => {
+        if (dragged?.current) return;
+        // Same contract as a wall work: a click selects it — and ONLY
+        // selects it. It stops here, so it never reaches the floor
+        // plane behind the pedestal and never sets a walk destination.
+        event.stopPropagation();
+        onSelect?.(artwork.id, event.shiftKey || event.ctrlKey || event.metaKey);
+      }}
+      onPointerOver={(event) => {
+        if (!interactive) return;
+        event.stopPropagation();
+        onHoverChange?.({ id: artwork.id, cursor: selected ? "grab" : "pointer" });
+      }}
+      onPointerOut={() => {
+        if (!interactive) return;
+        onHoverChange?.(null);
+      }}
+      onPointerDown={(event) => {
+        // Same gesture as a wall work: a drag starts only from an
+        // already-selected piece (or with Shift/Ctrl/Cmd held, which
+        // adds it to the selection first, then drags the whole
+        // selection together).
+        if (!interactive) return;
+        event.stopPropagation();
+        if (!selected) {
+          if (!(event.shiftKey || event.ctrlKey || event.metaKey)) return;
+          onSelect?.(artwork.id, true);
+        }
+        onDragStart?.(artwork.id, "move", event);
+      }}
+    >
+      {/* Pedestal: white box, 0.6 m square, 1.0 m high — the Sunlight
+          room's own plinth language. Casts and receives shadows like
+          the room's fixed pedestals. */}
+      <mesh position={[0, SCULPTURE_PEDESTAL_HEIGHT_M / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[SCULPTURE_PEDESTAL_WIDTH_M, SCULPTURE_PEDESTAL_HEIGHT_M, SCULPTURE_PEDESTAL_WIDTH_M]} />
+        <meshStandardMaterial color={SCULPTURE_PEDESTAL_COLOR} roughness={0.85} />
+      </mesh>
+      <group position={[0, SCULPTURE_PEDESTAL_HEIGHT_M, 0]}>
+        <SculptureModel url={artwork.sculptureUrl ?? ""} scale={artwork.scale} />
+      </group>
+      {selected && (
+        <mesh position={[0, totalHeight / 2, 0]}>
+          <boxGeometry args={[SCULPTURE_PEDESTAL_WIDTH_M + 0.15, totalHeight + 0.15, SCULPTURE_PEDESTAL_WIDTH_M + 0.15]} />
+          <meshBasicMaterial color="#bc8056" wireframe />
+        </mesh>
+      )}
+      {interactive && selected && (
+        <mesh
+          position={[SCULPTURE_PEDESTAL_WIDTH_M / 2 + 0.18, SCULPTURE_PEDESTAL_HEIGHT_M + 0.1, SCULPTURE_PEDESTAL_WIDTH_M / 2 + 0.18]}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            onDragStart?.(artwork.id, "resize", event);
+          }}
+          onPointerOver={(event) => {
+            event.stopPropagation();
+            onHoverChange?.({ id: artwork.id, cursor: "nwse-resize" });
+          }}
+          onPointerOut={() => {
+            onHoverChange?.({ id: artwork.id, cursor: "grab" });
+          }}
+        >
+          <boxGeometry args={[0.26, 0.26, 0.26]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.4} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
 function ArtworkFrame({
   artwork,
   selected,
@@ -1231,6 +1435,22 @@ function ArtworkFrame({
   onHoverChange?: (hover: { id: string; cursor: string } | null) => void;
   appearing?: boolean;
 }) {
+  // A sculpture never hangs on a wall: it stands on its pedestal on
+  // the floor (SculptureArtworkFrame above). The wall frame, the print
+  // and the wall drag below do not apply to it.
+  if (artwork.sculptureUrl) {
+    return (
+      <SculptureArtworkFrame
+        artwork={artwork}
+        selected={selected}
+        onSelect={onSelect}
+        dragged={dragged}
+        editable={editable}
+        onDragStart={onDragStart}
+        onHoverChange={onHoverChange}
+      />
+    );
+  }
   const [x, y, z] = artwork.position;
   const { width, height } = artworkSize(artwork);
   // Fade-in for a newly added artwork (appearing): the frame and the
@@ -3489,6 +3709,7 @@ function SunlightWalkControls({
   onRoomChange,
   resetSignal,
   viewRequest,
+  artworks,
 }: {
   rooms: GalleryRoom[];
   activeRoomId: string;
@@ -3509,6 +3730,10 @@ function SunlightWalkControls({
   // Wide / High / Plan): the nonce changes on every click, so the
   // same view can be re-applied.
   viewRequest?: { nonce: number; view: CameraViewPreset } | null;
+  // The exhibition's artworks, for sculpture collision: a sculpture's
+  // pedestal is a block the visitor cannot walk through. Optional so
+  // older callers keep working; absent means no sculpture blocks.
+  artworks?: Artwork[];
 }) {
   const { camera, gl } = useThree();
   const yawRef = useRef(SUNLIGHT_CAMERA_START.yaw);
@@ -3718,11 +3943,22 @@ function SunlightWalkControls({
     // socle, vitrine, banc, fauteuils…), rebuilt every frame so a moved
     // element's block follows it — plus the blocks of any Asset Library
     // partition added to this room, so the visitor cannot walk through
-    // that wall either. The spotlight contributes no block.
+    // that wall either. Sculptures add their own block (the pedestal),
+    // rebuilt the same way so a dragged pedestal's block follows it.
+    // The spotlight contributes no block.
     const blocks = [
       ...SUNLIGHT_BLOCKS,
       ...sunlightElementCollisionBlocks(rooms[roomIndex]?.sunlightElements ?? []),
       ...roomElementCollisionBlocks(rooms[roomIndex]?.elements ?? []),
+      ...(artworks ?? [])
+        .filter((item) => item.sculptureUrl && item.roomId === rooms[roomIndex]?.id)
+        .map((item) => ({
+          x: item.position[0],
+          z: item.position[2],
+          ry: item.rotation,
+          hl: SCULPTURE_COLLISION_HALF_M,
+          hw: SCULPTURE_COLLISION_HALF_M,
+        })),
     ];
     // Walk-velocity smoothing: the velocity eases toward its target
     // (exponential damping, frame-rate independent) instead of jumping
@@ -3936,6 +4172,10 @@ type ArtworkDragState = {
   // half off a panel or past the ceiling.
   halfW: number;
   halfH: number;
+  // True for a sculpture: the drag runs on the FLOOR plane (never a
+  // wall plane) and the wall snap below is skipped, so a pedestal
+  // can never be dragged onto a wall.
+  sculpture?: boolean;
 };
 
 // Editor drag: while an artwork drag is active, pointer moves on the canvas
@@ -3981,7 +4221,7 @@ function DragHandler({
       const rect = gl.domElement.getBoundingClientRect();
       ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
-      if (drag.mode === "move") {
+      if (drag.mode === "move" && !drag.sculpture) {
         const wallFaces = wallsRef.current;
         if (wallFaces && wallFaces.length > 0) {
           const wallHit = raycastHangWalls(
@@ -4470,6 +4710,43 @@ export default function GalleryScene({
     destination.current = null;
     lookYaw.current = null;
     onEditStart?.();
+    // A sculpture drags on the FLOOR (y = 0), never onto a wall: the
+    // drag plane is horizontal, the clamp keeps the pedestal inside
+    // the room, and DragHandler skips the wall snap for it.
+    if (artwork.sculptureUrl) {
+      const half = SCULPTURE_COLLISION_HALF_M;
+      const layout = roomLayouts[room.layout];
+      const zCenter = roomFloorCenterZ(room.layout);
+      const position = new Vector3(artwork.position[0], 0, artwork.position[2]);
+      const plane = new Plane(new Vector3(0, 1, 0), 0);
+      const grabOffset = event.point.clone().sub(position);
+      grabOffset.addScaledVector(plane.normal, -grabOffset.dot(plane.normal));
+      const hitOnPlane = event.point.clone().addScaledVector(plane.normal, -event.point.clone().sub(position).dot(plane.normal));
+      const startDist = Math.max(0.1, hitOnPlane.distanceTo(position));
+      dragRef.current = {
+        id,
+        mode,
+        plane,
+        grabOffset,
+        center: position,
+        startScale: artwork.scale,
+        startDist,
+        clamp: {
+          minX: -layout.width / 2 + half,
+          maxX: layout.width / 2 - half,
+          minY: 0,
+          maxY: 0,
+          minZ: zCenter - layout.depth / 2 + half,
+          maxZ: zCenter + layout.depth / 2 - half,
+        },
+        halfW: half,
+        halfH: half,
+        sculpture: true,
+      };
+      setIsDragging(true);
+      setDragCursor(mode === "resize" ? "nwse-resize" : "grabbing");
+      return;
+    }
     const { width, height } = artworkSize(artwork);
     const layout = roomLayouts[room.layout];
     // The full framed size: a wide museum frame or a shadow box must
@@ -4802,9 +5079,9 @@ export default function GalleryScene({
         )}
         {walkMode && input ? (
           activeIsSunlight ? (
-            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={(walking ?? false) && !vrEnabled} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
+            <SunlightWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={(walking ?? false) && !vrEnabled} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} artworks={artworks} />
           ) : (
-            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={(walking ?? false) && !vrEnabled} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} />
+            <GalleryWalkControls rooms={sceneRooms} activeRoomId={activeRoomId ?? room.id} offsets={offsets} zOffsets={zOffsets} input={input} destination={destination} lookYaw={lookYaw} dragged={dragged} dragActive={dragActiveRef} enabled={(walking ?? false) && !vrEnabled} onRoomChange={onRoomChange} resetSignal={resetSignal} viewRequest={viewRequest} artworks={artworks} />
           )
         ) : (
           <OrbitControls

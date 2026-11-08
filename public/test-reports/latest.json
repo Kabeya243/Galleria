@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T10:24:52.788Z",
-  "commit": "d994afe",
+  "generatedAt": "2026-11-08T10:45:18.420Z",
+  "commit": "3acc9db",
   "summary": {
-    "total": 79,
-    "passed": 62,
+    "total": 94,
+    "passed": 75,
     "failed": 0,
-    "skipped": 17
+    "skipped": 19
   },
   "checks": [
     {
@@ -338,11 +338,95 @@
       "detail": "list view + Mes œuvres + /works render <video> for video works"
     },
     {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-schema",
+      "name": "Prisma: sculptureUrl on Artwork + LibraryWork (imageUrl nullable there)",
+      "status": "pass",
+      "detail": "sculptureUrl nullable on both models; no data migration (existing rows keep null)"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-lib",
+      "name": "lib/sculpture.ts: GLB-only allowlist, 4.5 MB cap, serving-URL shape, pedestal + normalisation constants",
+      "status": "pass",
+      "detail": "GLB only, 4.5 MB, /api/sculpture/sculptures/<userId>/<uuid>.glb, pedestal 0.6 × 1.0 m, model ≤ 0.9 m"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-validation",
+      "name": "Validation accepts sculptureUrl (same-origin only); PUT persists it; single-artwork add accepts it + floor placement",
+      "status": "pass",
+      "detail": "sculptureUrl nullable + /api/sculpture/ prefix; PUT + single-add persist it"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-upload",
+      "name": "Sculpture upload route: GLB only, 4.5 MB cap, sculptures/<userId>/ prefix, glTF magic check, same-origin URL",
+      "status": "pass",
+      "detail": "allowlist model/gltf-binary, 413 over 4.5 MB, 415 otherwise, R2 sculptures/<userId>/<uuid>.glb, magic-byte check"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-serve",
+      "name": "Sculpture serve route: model/gltf-binary, same access rule as images (public show open, else owner only)",
+      "status": "pass",
+      "detail": "key shape sculptures/<userId>/<uuid>.glb, public show open, else owner only"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-glb",
+      "name": "Real GLB fixture parses with the gallery's GLTFLoader (Blender export, 2 meshes, base at y = 0)",
+      "status": "pass",
+      "detail": "152 KB Blender GLB, 2 meshes, bbox max 1.27 m → normalises to 0.9 m"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-render",
+      "name": "Room render: pedestal + normalised GLB (imperative GLTFLoader, no useGLTF), floor drag, pedestal collision in both walk controls",
+      "status": "pass",
+      "detail": "pedestal 0.6 × 1.0 m + GLB normalised to 0.9 m; floor-plane drag (wall snap skipped); collision in Sunlight + generic walk controls"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-editor",
+      "name": "Editor: add sculpture (upload, floor placement), replace/remove, library reuse stands it on the floor, wall tools never take it",
+      "status": "pass",
+      "detail": "Add sculpture + library copy (floor) + replace/remove; compose / fit-to-wall / partition-carry exclude sculptures"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-panel",
+      "name": "Detail panel: sculpture branch (3D note, no broken image/video), metadata + contact form unchanged",
+      "status": "pass",
+      "detail": "3D placeholder + pedestal note; title / artist / year / medium / dimensions / contact form as before"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-library",
+      "name": "Library: sculpture works backfilled, listed and copied by sculptureUrl (floor copy); delete removes sculpture copies",
+      "status": "pass",
+      "detail": "identity = sculptureUrl ?? videoUrl ?? imageUrl; backfill + save + reuse + delete all handle sculpture"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-tool",
+      "name": "Image-to-3D tool: imported GLB is uploaded to R2 + recorded with its serving URL, add-to-exhibition wired; image modes honestly cannot make a GLB",
+      "status": "pass",
+      "detail": "Import tab uploads the GLB (4.5 MB) + saves the record + adds to an exhibition; image modes stay textures/reliefs"
+    },
+    {
+      "feature": "Sculptures 3D",
+      "id": "sculpture-i18n",
+      "name": "FR + EN strings for sculpture, incl. the rights line and the size hint",
+      "status": "pass",
+      "detail": "sculpture section FR+EN; rights line in both locales"
+    },
+    {
       "feature": "Code quality",
       "id": "no-alert",
       "name": "No window.alert in the new code",
       "status": "pass",
-      "detail": "37 new/changed files checked"
+      "detail": "44 new/changed files checked"
     },
     {
       "feature": "Code quality",
@@ -355,8 +439,8 @@
       "feature": "Code quality",
       "id": "build",
       "name": "Production build passes (npm run build)",
-      "status": "skip",
-      "detail": "not run — pass --build to include it"
+      "status": "pass",
+      "detail": "npm run build exit 0"
     },
     {
       "feature": "Smoke tests",
@@ -469,6 +553,27 @@
       "name": "Video artwork: upload an MP4 (≤ 4.5 MB) in the editor, see it hang 16:9 on the wall; walk up to it — it plays muted in loop; walk away — it pauses on its first frame; a second video across the room stays paused; the selected video keeps playing in the editor",
       "status": "skip",
       "detail": "needs a live browser session with a signed-in user + a real MP4"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-sculpture-room",
+      "name": "Sculpture: upload a .glb (≤ 4.5 MB) in the editor — it stands on a white pedestal on the floor 3 m in front of the camera; walk up to it — it renders with the room's light and shadows; walk into it — the pedestal blocks the camera; click it — the detail panel opens with title/description; drag it in the editor — it slides along the floor, never onto a wall",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user + a real GLB"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-sculpture-tool",
+      "name": "Sculpture: in the Image-to-3D tool, Import a .glb, save to library — the file is stored (no re-attach needed); add it to an exhibition from the tool; reuse it from 'Mes œuvres' in a second exhibition without re-upload; a file over 4.5 MB shows the clear size error (inline, no alert); a .gltf is refused with the re-export hint",
+      "status": "skip",
+      "detail": "needs a live browser session with a signed-in user + a real GLB"
+    },
+    {
+      "feature": "Manual (browser)",
+      "id": "manual-sculpture-public",
+      "name": "Sculpture: publish the exhibition, open it as a visitor — the sculpture is visible on its pedestal with collision; the mini-plan dot walks to it; the detail panel shows the 3D note",
+      "status": "skip",
+      "detail": "needs a live browser session + a published exhibition with a sculpture"
     },
     {
       "feature": "Manual (browser)",

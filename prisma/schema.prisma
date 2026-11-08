@@ -116,6 +116,17 @@ model Artwork {
   // `prisma db push` on deploy (see vercel.json); no data migration —
   // existing rows keep videoUrl null and render unchanged.
   videoUrl     String?
+  // Sculpture artwork (Nov 2026): when set, this artwork is a 3D
+  // sculpture, not an image or a video — the room renders the GLB
+  // from this same-origin serving URL
+  // (/api/sculpture/sculptures/<userId>/<uuid>.glb, GLB only, 4.5 MB
+  // cap, same R2 proxy pattern as images, music and video) on an
+  // automatic white pedestal (~1 m high) standing on the floor.
+  // `imageUrl`, when also set, is only a poster for list views.
+  // Null for ordinary image/video artworks. Applied by
+  // `prisma db push` on deploy (see vercel.json); no data migration —
+  // existing rows keep sculptureUrl null and render unchanged.
+  sculptureUrl String?
   // Curatorial wall text (the reference room's "Texte curatorial"):
   // when set, the artwork renders as a canvas text panel instead of an
   // image, in the chosen typeface. Null for ordinary artworks.
@@ -188,6 +199,12 @@ model LibraryWork {
   // works. Identity of a library work is videoUrl ?? imageUrl (see
   // lib/library.ts): one row per (owner, media URL), image or video.
   videoUrl    String?
+  // Sculpture artwork (Nov 2026): the same-origin serving URL of the
+  // GLB (/api/sculpture/sculptures/<userId>/<uuid>.glb). Null for
+  // image and video works. Identity of a library work is
+  // sculptureUrl ?? videoUrl ?? imageUrl (see lib/library.ts): one
+  // row per (owner, media URL), image, video or sculpture.
+  sculptureUrl String?
   frame       String   @default("wood")
   palette     String?
   altText     String?

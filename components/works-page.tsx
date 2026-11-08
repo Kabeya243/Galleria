@@ -17,6 +17,7 @@ export type WorksPageWork = {
   accent: string;
   imageUrl: string | null;
   videoUrl: string | null;
+  sculptureUrl: string | null;
   exhibitionTitle: string;
   kind: WorkKind;
 };

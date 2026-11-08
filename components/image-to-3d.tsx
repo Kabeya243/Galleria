@@ -239,6 +239,15 @@ export default function ImageTo3D() {
   const [modelTint, setModelTint] = useState("#ffffff");
   const modelInputRef = useRef<HTMLInputElement | null>(null);
 
+  // The GLB just saved to R2 (its serving URL + name), for "add to an
+  // exhibition" below. Cleared when a different model is loaded.
+  const [savedSculptureUrl, setSavedSculptureUrl] = useState<string | null>(null);
+  const [savedSculptureName, setSavedSculptureName] = useState("");
+  const [exhibitions, setExhibitions] = useState<{ id: string; title: string }[]>([]);
+  const [selectedExhibitionId, setSelectedExhibitionId] = useState("");
+  const [exhibitionsLoading, setExhibitionsLoading] = useState(false);
+  const [exhibitionsError, setExhibitionsError] = useState<string | null>(null);
+
   // Image-to-3D state
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -396,6 +405,8 @@ export default function ImageTo3D() {
     setModelError(null);
     setModelLoading(true);
     setModelFile(file);
+    setSavedSculptureUrl(null);
+    setSavedSculptureName("");
     setModelName(file.name.replace(/\.(glb|gltf)$/i, ""));
     try {
       const buffer = await file.arrayBuffer();
@@ -413,22 +424,117 @@ export default function ImageTo3D() {
 
   async function saveImportedModel() {
     if (!modelFile) return;
-    const record: Asset3DRecord = {
-      kind: "model",
-      source: "upload",
-      name: modelName.trim() || modelFile.name,
-      creator: "You",
-      license: "All rights reserved",
-      attribution: "",
-      downloadDate: new Date().toISOString().slice(0, 10),
-      fileName: modelFile.name,
-      fileSizeBytes: modelFile.size,
-      fileType: modelFile.name.toLowerCase().endsWith(".gltf") ? "model/gltf+json" : "model/gltf-binary",
-      mode: "imported-glb",
-      transform: { scale: modelScale, rotationY: modelRotation, tint: modelTint },
-      notes: "GLB file itself is not stored server-side — keep the original file on disk and re-attach it to preview again.",
-    };
-    await saveAsset(record, record.name);
+    // The GLB itself is stored server-side now (R2, sculptures/…):
+    // upload first, then save the record with its serving URL, so the
+    // model can be added to an exhibition from the library without
+    // re-attaching the file. A failed upload is an inline error, and
+    // nothing is saved without its file.
+    setBusy(true);
+    setMessage(null);
+    try {
+      const body = new FormData();
+      body.set("file", modelFile);
+      let response: Response;
+      try {
+        response = await fetch("/api/uploads/sculpture", { method: "POST", body });
+      } catch {
+        throw new Error("Could not upload this model. Check your connection and try again.");
+      }
+      const text = await response.text();
+      let result: { error?: string; url?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as typeof result) : {};
+      } catch {
+        result = {};
+      }
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413
+              ? "This model is too large (over 4.5 MB). Try compressing it (Draco or meshopt in Blender, or gltfpack) or a simpler model."
+              : "Could not upload this model."),
+        );
+      }
+      if (!result.url) throw new Error("Could not upload this model.");
+      const record: Asset3DRecord = {
+        kind: "model",
+        source: "upload",
+        name: modelName.trim() || modelFile.name,
+        creator: "You",
+        license: "All rights reserved",
+        attribution: "",
+        downloadDate: new Date().toISOString().slice(0, 10),
+        fileName: modelFile.name,
+        fileSizeBytes: modelFile.size,
+        fileType: modelFile.name.toLowerCase().endsWith(".gltf") ? "model/gltf+json" : "model/gltf-binary",
+        mode: "imported-glb",
+        sculptureUrl: result.url,
+        transform: { scale: modelScale, rotationY: modelRotation, tint: modelTint },
+        notes: "Stored in R2 — add it to an exhibition from here or from the editor's library picker.",
+      };
+      await saveAsset(record, record.name);
+      setSavedSculptureUrl(result.url);
+      setSavedSculptureName(record.name);
+    } catch (error) {
+      setModelError(error instanceof Error ? error.message : "Could not save this model.");
+      setBusy(false);
+    }
+  }
+
+  // --- Add a saved sculpture to an exhibition ---------------------------
+  // The model is already in R2 (sculptureUrl): adding it is one
+  // Artwork row (POST /api/artworks) in the exhibition's first room,
+  // standing on the floor at the room's centre — the editor moves it
+  // from there. Errors are inline, never window.alert.
+
+  async function loadExhibitionsForSculpture() {
+    setExhibitionsLoading(true);
+    setExhibitionsError(null);
+    try {
+      const response = await fetch("/api/exhibitions");
+      const result = (await response.json().catch(() => ({}))) as { exhibitions?: { id: string; title: string }[]; error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Could not load your exhibitions.");
+      setExhibitions(result.exhibitions ?? []);
+      if ((result.exhibitions ?? []).length > 0) setSelectedExhibitionId(result.exhibitions![0].id);
+    } catch (error) {
+      setExhibitionsError(error instanceof Error ? error.message : "Could not load your exhibitions.");
+    } finally {
+      setExhibitionsLoading(false);
+    }
+  }
+
+  async function addSavedSculptureToExhibition() {
+    if (!savedSculptureUrl || !selectedExhibitionId) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const detailResponse = await fetch(`/api/exhibitions/${encodeURIComponent(selectedExhibitionId)}`);
+      const detail = (await detailResponse.json().catch(() => ({}))) as { exhibition?: { rooms?: { id: string }[] }; error?: string };
+      if (!detailResponse.ok) throw new Error(detail.error ?? "Could not open that exhibition.");
+      const roomId = detail.exhibition?.rooms?.[0]?.id ?? "room-main";
+      const response = await fetch("/api/artworks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exhibitionId: selectedExhibitionId,
+          title: savedSculptureName || "Sculpture",
+          medium: "Sculpture, GLB",
+          dimensions: "60 × 190 cm",
+          sculptureUrl: savedSculptureUrl,
+          roomId,
+          positionX: 0,
+          positionY: 0,
+          positionZ: 2,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Could not add this sculpture to the exhibition.");
+      setMessage(`Added “${savedSculptureName || "Sculpture"}” to the exhibition — open the editor to move its pedestal.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not add this sculpture to the exhibition.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   // --- Image-to-3D ---------------------------------------------------------
@@ -612,6 +718,11 @@ export default function ImageTo3D() {
                     <br />
                     Saved {asset.data.downloadDate}
                   </p>
+                  {asset.data.sculptureUrl && (
+                    <p style={{ margin: "0 0 8px", fontSize: 11, color: "var(--ink)" }}>
+                      GLB stored — ready to add to an exhibition (editor&apos;s library picker, or the Import tab).
+                    </p>
+                  )}
                   {asset.data.attribution && <p style={{ margin: "0 0 8px", fontSize: 11 }}>Attribution: {asset.data.attribution}</p>}
                   {asset.data.notes && <p style={{ margin: "0 0 8px", fontSize: 11, color: "var(--muted)" }}>{asset.data.notes}</p>}
                   {asset.data.sourceUrl && (
@@ -855,16 +966,64 @@ export default function ImageTo3D() {
                   </button>
                 </div>
                 <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-                  Only the name, file details and transform are saved. The .glb file itself is not stored server-side — keep the original file and re-attach it to preview again.
+                  Saving uploads the .glb itself to your storage (4.5 MB maximum — compress it with Draco or meshopt in Blender if it is
+                  larger) and records it in your library, so it can be added to an exhibition without re-attaching the file. A .gltf previews
+                  here but cannot be stored — re-export it as .glb first.
                 </p>
               </div>
+
+              {savedSculptureUrl && (
+                <div className="property-section">
+                  <label>ADD TO AN EXHIBITION</label>
+                  <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
+                    “{savedSculptureName}” is saved. Add it to an exhibition — it stands on its pedestal at the first room&apos;s centre, and
+                    you move the pedestal in the editor.
+                  </p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {exhibitions.length === 0 ? (
+                      <button className="galleries-open-button" disabled={busy || exhibitionsLoading} onClick={() => void loadExhibitionsForSculpture()}>
+                        {exhibitionsLoading ? "Loading…" : "Load my exhibitions"}
+                      </button>
+                    ) : (
+                      <>
+                        <select
+                          className="full-input"
+                          style={{ flex: "1 1 220px", height: 36 }}
+                          value={selectedExhibitionId}
+                          onChange={(event) => setSelectedExhibitionId(event.target.value)}
+                          aria-label="Exhibition"
+                        >
+                          {exhibitions.map((exhibition) => (
+                            <option key={exhibition.id} value={exhibition.id}>
+                              {exhibition.title}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="galleries-open-button" disabled={busy || !selectedExhibitionId} onClick={() => void addSavedSculptureToExhibition()}>
+                          {busy ? "Adding…" : "Add to this exhibition"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {exhibitionsError && (
+                    <p role="alert" style={{ margin: "8px 0 0", color: "#a33", fontSize: 12 }}>
+                      {exhibitionsError}
+                    </p>
+                  )}
+                  {exhibitions.length === 0 && !exhibitionsLoading && !exhibitionsError && (
+                    <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11 }}>
+                      No exhibitions yet — create one from the dashboard first, or add the sculpture later from the editor&apos;s library picker.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {!modelScene && !modelLoading && (
             <div className={styles.emptyBox}>
               <strong>No model loaded yet.</strong>
-              <p>Upload a .glb or .gltf file (up to 50 MB) to preview it here with orbit controls, adjust its scale, rotation and tint, then save it to your library.</p>
+              <p>Upload a .glb or .gltf file (up to 50 MB) to preview it here with orbit controls, adjust its scale, rotation and tint, then save it to your library. Saving stores a .glb up to 4.5 MB server-side.</p>
             </div>
           )}
         </div>
@@ -1004,6 +1163,10 @@ export default function ImageTo3D() {
                   {resultNote}
                 </p>
               )}
+              <p style={{ margin: "10px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
+                Saving keeps the image/texture in your library. It is not a GLB sculpture — for a 3D model in an exhibition, use the Import
+                tab with a .glb file (Blender export, RealityScan, or a downloaded model).
+              </p>
             </div>
           )}
 

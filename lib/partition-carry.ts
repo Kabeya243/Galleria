@@ -28,6 +28,9 @@ export type PartitionPose = {
 // (y0 … y0 + height). An artwork hangs 0.1 m off the face, so
 // |lz| ≈ thickness / 2 + 0.1.
 export function artworkOnPartition(artwork: Artwork, partition: PartitionPose, y0 = 0): boolean {
+  // A sculpture stands on the floor — it is never "hung on" a
+  // partition, so moving or deleting one never carries or deletes it.
+  if (artwork.sculptureUrl) return false;
   const dx = artwork.position[0] - partition.x;
   const dz = artwork.position[2] - partition.z;
   const lx = dx * Math.cos(partition.rotation) - dz * Math.sin(partition.rotation);

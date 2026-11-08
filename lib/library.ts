@@ -8,10 +8,12 @@ import { db } from "@/lib/db";
 // (owner, media URL) — the media URL is the work's identity, because a
 // reused work is a COPY of the same R2 file, never a re-upload. For an
 // image work the identity is imageUrl; for a video work (Nov 2026) it
-// is videoUrl and imageUrl is null. An Artwork row belongs to exactly
-// one exhibition and carries that exhibition's own position / room /
-// frame, so copies are independent rows: editing or moving a copy never
-// touches the library row or the copies in other exhibitions.
+// is videoUrl and imageUrl is null; for a sculpture work it is
+// sculptureUrl and imageUrl is null (a poster, when one was set, is
+// not the identity). An Artwork row belongs to exactly one exhibition
+// and carries that exhibition's own position / room / frame, so copies
+// are independent rows: editing or moving a copy never touches the
+// library row or the copies in other exhibitions.
 
 export type LibraryWorkItem = {
   id: string;
@@ -25,6 +27,8 @@ export type LibraryWorkItem = {
   imageUrl: string | null;
   // Null for image works. A video work's serving URL.
   videoUrl: string | null;
+  // Null for image and video works. A sculpture work's GLB serving URL.
+  sculptureUrl: string | null;
   frame: string;
   palette: string[] | null;
   altText: string | null;
@@ -42,17 +46,18 @@ export type LibraryArtworkFields = {
   description: string;
   imageUrl: string | null;
   videoUrl?: string | null;
+  sculptureUrl?: string | null;
   frame: string;
   palette?: string[] | string | null;
   altText?: string | null;
 };
 
-// The identity of a work in the library: its media URL — the video URL
-// for a video work, the image URL for an image work. Null only for a
-// work with no media at all (a text panel), which is never a library
-// work.
-function mediaUrlOf(artwork: { imageUrl?: string | null; videoUrl?: string | null }): string | null {
-  return artwork.videoUrl ?? artwork.imageUrl ?? null;
+// The identity of a work in the library: its media URL — the sculpture
+// URL for a sculpture work, the video URL for a video work, the image
+// URL for an image work. Null only for a work with no media at all (a
+// text panel), which is never a library work.
+function mediaUrlOf(artwork: { imageUrl?: string | null; videoUrl?: string | null; sculptureUrl?: string | null }): string | null {
+  return artwork.sculptureUrl ?? artwork.videoUrl ?? artwork.imageUrl ?? null;
 }
 
 function parsePalette(value: string | null | undefined): string[] | null {
@@ -76,6 +81,7 @@ function toItem(
     description: string;
     imageUrl: string | null;
     videoUrl: string | null;
+    sculptureUrl: string | null;
     frame: string;
     palette: string | null;
     altText: string | null;
@@ -93,6 +99,7 @@ function toItem(
     description: row.description,
     imageUrl: row.imageUrl,
     videoUrl: row.videoUrl,
+    sculptureUrl: row.sculptureUrl,
     frame: row.frame,
     palette: parsePalette(row.palette),
     altText: row.altText,
@@ -104,10 +111,10 @@ function toItem(
 // Create the library row for one artwork when it does not exist yet
 // (create-only — a copy's title or frame may have been edited for one
 // show, so an existing row is never overwritten from a copy). Image
-// works upsert on the @@unique([ownerId, imageUrl]); video works have
-// imageUrl null, which Postgres treats as distinct in a unique index,
-// so they go through findFirst + create on videoUrl instead — the same
-// create-only rule, just a different lookup.
+// works upsert on the @@unique([ownerId, imageUrl]); video and
+// sculpture works have imageUrl null, which Postgres treats as distinct
+// in a unique index, so they go through findFirst + create on their
+// own URL instead — the same create-only rule, just a different lookup.
 async function ensureLibraryRow(
   ownerId: string,
   artwork: {
@@ -119,14 +126,19 @@ async function ensureLibraryRow(
     description: string;
     imageUrl: string | null;
     videoUrl?: string | null;
+    sculptureUrl?: string | null;
     frame: string;
     palette?: string | string[] | null;
     altText?: string | null;
   },
 ): Promise<void> {
-  const videoUrl = artwork.videoUrl ?? null;
-  const imageUrl = videoUrl ? null : artwork.imageUrl;
-  if (videoUrl) {
+  const sculptureUrl = artwork.sculptureUrl ?? null;
+  const videoUrl = sculptureUrl ? null : (artwork.videoUrl ?? null);
+  const imageUrl = sculptureUrl || videoUrl ? null : artwork.imageUrl;
+  if (sculptureUrl) {
+    const existing = await db.libraryWork.findFirst({ where: { ownerId, sculptureUrl }, select: { id: true } });
+    if (existing) return;
+  } else if (videoUrl) {
     const existing = await db.libraryWork.findFirst({ where: { ownerId, videoUrl }, select: { id: true } });
     if (existing) return;
   }
@@ -140,11 +152,12 @@ async function ensureLibraryRow(
     description: artwork.description,
     imageUrl,
     videoUrl,
+    sculptureUrl,
     frame: artwork.frame,
     palette: typeof artwork.palette === "string" ? artwork.palette : artwork.palette ? JSON.stringify(artwork.palette) : null,
     altText: artwork.altText ?? null,
   };
-  if (videoUrl) {
+  if (sculptureUrl || videoUrl) {
     await db.libraryWork.create({ data });
   } else if (imageUrl) {
     await db.libraryWork.upsert({
@@ -164,7 +177,7 @@ async function ensureLibraryRow(
 // against production and no database access needed from the deploy.
 export async function ensureLibraryWorks(ownerId: string): Promise<void> {
   const artworks = await db.artwork.findMany({
-    where: { exhibition: { ownerId }, OR: [{ imageUrl: { not: null } }, { videoUrl: { not: null } }] },
+    where: { exhibition: { ownerId }, OR: [{ imageUrl: { not: null } }, { videoUrl: { not: null } }, { sculptureUrl: { not: null } }] },
     select: {
       title: true,
       artist: true,
@@ -174,6 +187,7 @@ export async function ensureLibraryWorks(ownerId: string): Promise<void> {
       description: true,
       imageUrl: true,
       videoUrl: true,
+      sculptureUrl: true,
       frame: true,
       palette: true,
       altText: true,
@@ -213,8 +227,8 @@ export async function listLibraryWorks(ownerId: string): Promise<LibraryWorkItem
       orderBy: { createdAt: "desc" },
     }),
     db.artwork.findMany({
-      where: { exhibition: { ownerId }, OR: [{ imageUrl: { not: null } }, { videoUrl: { not: null } }] },
-      select: { imageUrl: true, videoUrl: true, exhibitionId: true },
+      where: { exhibition: { ownerId }, OR: [{ imageUrl: { not: null } }, { videoUrl: { not: null } }, { sculptureUrl: { not: null } }] },
+      select: { imageUrl: true, videoUrl: true, sculptureUrl: true, exhibitionId: true },
     }),
   ]);
   const byMedia = new Map<string, Set<string>>();
@@ -255,12 +269,15 @@ export async function copyLibraryWorkToExhibition(
       description: work.description,
       imageUrl: work.imageUrl,
       videoUrl: work.videoUrl,
+      sculptureUrl: work.sculptureUrl,
       frame: work.frame,
       palette: work.palette,
       altText: work.altText,
+      // A sculpture copy stands on the floor at the room's centre,
+      // not on the wall at eye level — the editor moves it from there.
       positionX: 0,
-      positionY: 2.5,
-      positionZ: -5.72,
+      positionY: work.sculptureUrl ? 0 : 2.5,
+      positionZ: work.sculptureUrl ? 2 : -5.72,
       rotation: 0,
       scale: 1,
       roomId,
@@ -282,7 +299,11 @@ export async function deleteLibraryWorkAndCopies(ownerId: string, libraryWorkId:
   const deleted = await db.artwork.deleteMany({
     where: {
       exhibition: { ownerId },
-      ...(work.videoUrl ? { videoUrl: work.videoUrl } : { imageUrl: mediaUrl }),
+      ...(work.sculptureUrl
+        ? { sculptureUrl: work.sculptureUrl }
+        : work.videoUrl
+          ? { videoUrl: work.videoUrl }
+          : { imageUrl: mediaUrl }),
     },
   });
   await db.libraryWork.delete({ where: { id: work.id } });

@@ -300,6 +300,21 @@ button { color: inherit; }
 .asset-upload-hint { display: flex; align-items: flex-start; gap: 8px; padding: 12px 4px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 8px; line-height: 1.5; }
 .asset-upload-error { padding: 10px 12px; margin-top: 8px; border: 1px solid var(--danger); border-radius: 8px; background: rgba(255, 122, 107, 0.12); color: var(--danger); font-size: 12px; line-height: 1.5; }
 .asset-upload-hint svg { min-width: 15px; }
+/* Reusable library ("Mes œuvres"): the editor picker and the /artworks
+   page. The picker reuses the asset-list rows; the library page reuses
+   the gallery cards and adds a search field, a per-card exhibition
+   picker and a short confirmation note. */
+.library-picker { margin-top: 10px; padding: 10px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-2); }
+.library-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink); font-size: 9px; }
+.library-picker-head button { border: none; background: transparent; color: var(--muted); font-size: 14px; cursor: pointer; }
+.library-picker-search { width: 100%; margin-top: 8px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-3); color: var(--ink); font-size: 9px; }
+.library-picker-empty { margin: 10px 0 0; color: var(--muted); font-size: 9px; }
+.library-picker .asset-upload-hint { border-bottom: none; padding-bottom: 0; }
+.library-search { display: flex; align-items: center; gap: 8px; min-width: 220px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--muted); }
+.library-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--ink); font-size: 13px; }
+.library-card-actions { flex-wrap: wrap; }
+.library-exhibition-select { flex: 1 1 160px; min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-3); color: var(--ink); font-size: 12px; }
+.library-added-note { display: flex; align-items: center; gap: 6px; color: var(--accent); font-size: 12px; }
 .left-panel-bottom { margin-top: auto; }
 .tip-card { padding: 10px; border-radius: 4px; background: var(--surface-2); }
 .tip-heading { display: flex; align-items: center; gap: 6px; color: var(--muted); font: 600 8px "DM Sans", sans-serif; letter-spacing: .1em; }

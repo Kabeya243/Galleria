@@ -17,6 +17,7 @@ import {
   Grid2X2,
   Group,
   History,
+  Image,
   Info,
   Layers,
   LayoutGrid,
@@ -401,6 +402,31 @@ export default function Editor({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Reusable library ("Mes œuvres"): pick a work already uploaded
+  // instead of uploading again. The picker loads GET /api/library on
+  // first open; choosing a work adds a COPY to this room (same image
+  // URL, fresh placement on the wall the camera is looking at — the
+  // same placement addArtwork uses), saved with the next exhibition
+  // save. Nothing is re-uploaded.
+  type LibraryPickerWork = {
+    id: string;
+    title: string;
+    artist: string;
+    year: string;
+    medium: string;
+    dimensions: string;
+    description: string;
+    imageUrl: string;
+    frame: string;
+    palette: string[] | null;
+    altText: string | null;
+  };
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [libraryWorks, setLibraryWorks] = useState<LibraryPickerWork[]>([]);
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryError, setLibraryError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   // The exhibition failed to load (bad id, deleted, or server error): the
   // workspace below stays hidden and the banner above explains, with a
@@ -2438,6 +2464,64 @@ export default function Editor({
     return artwork.id;
   }
 
+  async function openLibraryPicker() {
+    setShowLibraryPicker((value) => !value);
+    if (libraryLoaded || libraryLoading) return;
+    setLibraryLoading(true);
+    setLibraryError(null);
+    try {
+      const response = await fetch("/api/library");
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? t("library", "couldNotLoad"));
+      setLibraryWorks(result.works ?? []);
+      setLibraryLoaded(true);
+    } catch (error) {
+      console.error("Could not load library.", error);
+      setLibraryError(error instanceof Error ? error.message : t("library", "couldNotLoad"));
+    } finally {
+      setLibraryLoading(false);
+    }
+  }
+
+  // Add a library work to this room: a COPY — the same imageUrl (the
+  // same R2 file, no upload), the library's metadata, a fresh id and
+  // the camera-wall placement addArtwork uses. The copy is
+  // independent afterwards and only persists when the exhibition is
+  // saved (the save also re-records it in the library, which is a
+  // no-op — the row already exists).
+  function addLibraryArtwork(work: LibraryPickerWork): string | undefined {
+    if (!activeRoom) return undefined;
+    const index = currentArtworks.length;
+    const alongOffset = (index % 5 - 2) * 1.0;
+    const { position, rotation, turnYaw } = placeOnCameraWall(0.8, 1.0, alongOffset);
+    const artwork: Artwork = {
+      id: crypto.randomUUID(),
+      title: work.title,
+      artist: work.artist || defaultArtist(),
+      year: work.year || "2025",
+      medium: work.medium || "Mixed media",
+      dimensions: work.dimensions || "80 × 100 cm",
+      description: work.description || "Add a description to tell visitors about this work.",
+      color: ["#8a9b88", "#bb8365", "#8796a9"][index % 3],
+      accent: "#e5c7a0",
+      position,
+      rotation,
+      scale: 1,
+      frame: work.frame || "wood",
+      imageUrl: work.imageUrl,
+      palette: work.palette,
+      altText: work.altText,
+      roomId: activeRoom.id,
+    };
+    snapshot();
+    setArtworks((current) => [...current, artwork]);
+    selectArtwork(artwork.id);
+    revealNewArtwork(artwork.id, turnYaw);
+    setShowLibraryPicker(false);
+    setSaved(false);
+    return artwork.id;
+  }
+
 // Photos from a phone are often over Vercel's 4.5 MB request limit, which
 // rejects the upload before it reaches the server (HTTP 413, plain text).
 // Shrink big files in the browser first so they always fit. On any failure
@@ -3055,6 +3139,49 @@ async function compressImage(file: File): Promise<File> {
                 ))}
               </div>
               <button className="add-to-room" onClick={() => uploadRef.current?.click()} disabled={busy}><Plus size={15} /> Add artwork to room</button>
+              {/* Reuse instead of re-uploading: pick a work already in
+                  the artist's library ("Mes œuvres") and hang a copy
+                  of it in this room — same image, fresh placement. */}
+              <button className="add-to-room" onClick={() => void openLibraryPicker()} disabled={busy}><Image size={15} /> {t("library", "fromLibrary")}</button>
+              {showLibraryPicker && (
+                <div className="library-picker">
+                  <div className="library-picker-head">
+                    <strong>{t("library", "chooseFromLibrary")}</strong>
+                    <button type="button" aria-label={t("common", "dismiss")} onClick={() => setShowLibraryPicker(false)}>×</button>
+                  </div>
+                  <input
+                    type="search"
+                    className="library-picker-search"
+                    value={libraryQuery}
+                    onChange={(event) => setLibraryQuery(event.target.value)}
+                    placeholder={t("library", "searchPlaceholder")}
+                    aria-label={t("library", "searchAria")}
+                  />
+                  {libraryLoading && <p className="library-picker-empty">{t("common", "loading")}</p>}
+                  {libraryError && <div className="asset-upload-error" role="alert">{libraryError}</div>}
+                  {!libraryLoading && !libraryError && libraryWorks.length === 0 && (
+                    <p className="library-picker-empty">{t("library", "libraryEmpty")}</p>
+                  )}
+                  {!libraryLoading && !libraryError && libraryWorks.length > 0 && (
+                    <div className="asset-list">
+                      {libraryWorks
+                        .filter((work) =>
+                          !libraryQuery.trim() ||
+                          [work.title, work.artist, work.year, work.medium].some((field) =>
+                            field.toLowerCase().includes(libraryQuery.trim().toLowerCase()),
+                          ),
+                        )
+                        .map((work, index) => (
+                          <button className="asset-row" key={work.id} onClick={() => addLibraryArtwork(work)}>
+                            <span className={`asset-thumb asset-color-${index % 3}`}><img src={work.imageUrl} alt={work.altText ?? work.title} /></span>
+                            <span className="asset-copy"><strong>{work.title}</strong><small>{work.year} · {work.medium.split(" ")[0]}</small></span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  <p className="asset-upload-hint"><Image size={15} /><span>{t("library", "reuseHint")}</span></p>
+                </div>
+              )}
               {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
               <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
               <div className="asset-upload-hint"><Upload size={15} /><span>Upload a PNG, JPEG, WebP, AVIF, HEIC or HEIF image. Large photos are compressed automatically.</span></div>

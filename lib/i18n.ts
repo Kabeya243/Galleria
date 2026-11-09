@@ -949,6 +949,50 @@ export const DICTIONARY = {
     },
     backHome: { fr: "Retour à l'accueil", en: "Back to home" },
   },
+  // Legal pages (/terms, /privacy) — chrome only; the legal body itself
+  // is English (the language of Lakisa's legal documents) and lives in
+  // the page components. Original Lakisa copy.
+  legal: {
+    backHome: { fr: "Retour à l'accueil", en: "Back to home" },
+    lastUpdated: { fr: "Dernière mise à jour : 9 novembre 2026", en: "Last updated: 9 November 2026" },
+    translationNote: {
+      fr: "Ce document est rédigé en anglais, la langue des documents juridiques de Lakisa. Une traduction française est prévue.",
+      en: "This document is written in English, the language of Lakisa's legal documents. A French translation is planned.",
+    },
+    termsEyebrow: { fr: "Documents juridiques", en: "Legal" },
+    termsTitle: { fr: "Conditions d'utilisation", en: "Terms of Use" },
+    termsIntro: {
+      fr: "Les règles qui régissent l'utilisation de Lakisa.",
+      en: "The rules that govern using Lakisa.",
+    },
+    privacyEyebrow: { fr: "Documents juridiques", en: "Legal" },
+    privacyTitle: { fr: "Politique de confidentialité", en: "Privacy Policy" },
+    privacyIntro: {
+      fr: "Quelles données Lakisa collecte, pourquoi, et ce que vous pouvez en faire.",
+      en: "What data Lakisa collects, why, and what you can do about it.",
+    },
+    contactLine: {
+      fr: "Pour toute question sur ce document, écrivez à contact@kabeyailunga.com.",
+      en: "For any question about this document, write to contact@kabeyailunga.com.",
+    },
+  },
+  // User guide (/guide) — chrome only; the guide body is fully
+  // bilingual (EN/FR) and lives in the guide component.
+  guide: {
+    eyebrow: { fr: "Guide d'utilisation", en: "User guide" },
+    title: { fr: "Comment utiliser Lakisa", en: "How to use Lakisa" },
+    intro: {
+      fr: "De la création de votre compte à votre première exposition partagée : chaque étape, dans l'ordre.",
+      en: "From creating your account to sharing your first exhibition: every step, in order.",
+    },
+    backHome: { fr: "Retour à l'accueil", en: "Back to home" },
+    onThisPage: { fr: "Dans ce guide", en: "In this guide" },
+    needHelp: { fr: "Besoin d'aide ?", en: "Need help?" },
+    needHelpText: {
+      fr: "Écrivez-nous à contact@kabeyailunga.com — nous lisons chaque message.",
+      en: "Write to us at contact@kabeyailunga.com — we read every message.",
+    },
+  },
   // Galleries catalogue page (/galleries).
   galleries: {
     title: { fr: "Lakisa Galerie", en: "Lakisa Galerie" },

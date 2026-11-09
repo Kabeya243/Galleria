@@ -1,0 +1,66 @@
+/* Cookie notice (components/cookie-banner.tsx): information bar fixed
+   at the bottom of the screen. Dark bar with white text, readable on
+   both themes, like the app toast. Never blocks the page: it sits above
+   the content and can be closed. */
+.cookie-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: #111111;
+  color: #ffffff;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.cookie-banner-text {
+  margin: 0;
+  max-width: 720px;
+}
+.cookie-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+}
+.cookie-banner-link {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.cookie-banner-link:hover {
+  opacity: 0.8;
+}
+.cookie-banner-close {
+  flex: none;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cookie-banner-close:hover {
+  opacity: 0.85;
+}
+@media (max-width: 640px) {
+  .cookie-banner {
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .cookie-banner-text {
+    max-width: none;
+  }
+}

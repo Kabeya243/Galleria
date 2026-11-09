@@ -94,6 +94,29 @@ function EmptyBox({ title, body }: { title: string; body: string }) {
   );
 }
 
+// Ranked share bars (same look as "Users by country"): the top entries
+// with their share of the largest one.
+function ShareBars({ items, max }: { items: Array<{ name: string; count: number }>; max: number }) {
+  return (
+    <ul className="ad-share ad-scroll">
+      {items.map((item) => (
+        <li key={item.name}>
+          <div className="ad-share-row">
+            <span className="ad-share-name">{item.name}</span>
+            <span className="ad-share-count">{item.count}</span>
+          </div>
+          <div className="ad-share-track">
+            <div
+              className="ad-share-fill"
+              style={{ width: `${Math.max((item.count / max) * 100, 2)}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // Feature-test report (parts 1–5 of the SANAA extension mission), written
 // by scripts/test-new-features.mjs to public/test-reports/latest.json.
 // Read from disk on each admin visit; missing or unreadable file = empty
@@ -157,6 +180,13 @@ export default async function AdminRoute({
     toolUseLast30Days,
     recentToolUses,
     visitLogDays,
+    recentVisits,
+    browserGroups,
+    osGroups,
+    deviceGroups,
+    cityGroups,
+    uniqueVisitors30Rows,
+    returningVisitors30Rows,
     hiddenRoomLayouts,
     galleryNames,
     testReport,
@@ -272,6 +302,66 @@ export default async function AdminRoute({
       where: { day: { gte: thirtyDaysAgo } },
       select: { day: true },
     }),
+    // Latest individual visits with their details (city, device, OS,
+    // browser, duration, what was viewed). Old rows have nulls and show
+    // as "Not specified" in the table.
+    db.visitLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 60,
+      select: {
+        id: true,
+        exhibitionId: true,
+        artworkId: true,
+        country: true,
+        city: true,
+        region: true,
+        latitude: true,
+        longitude: true,
+        device: true,
+        os: true,
+        browser: true,
+        durationSeconds: true,
+        createdAt: true,
+      },
+    }),
+    // Visitor breakdowns for the last 30 days (only rows that have the
+    // field; the rest are grouped under "Not specified" in code).
+    db.visitLog.groupBy({
+      by: ["browser"],
+      where: { day: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+    }),
+    db.visitLog.groupBy({
+      by: ["os"],
+      where: { day: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+    }),
+    db.visitLog.groupBy({
+      by: ["device"],
+      where: { day: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+    }),
+    db.visitLog.groupBy({
+      by: ["city"],
+      where: { day: { gte: thirtyDaysAgo } },
+      _count: { _all: true },
+    }),
+    // Unique visitors in the last 30 days (distinct anonymous visitor
+    // keys) and how many of them had already visited before the window
+    // (returning). The rest are new. See the note under the Recent
+    // visits table: a first-time visitor's very first view is logged
+    // before the anonymous cookie is set, so "new" can read slightly
+    // high; "returning" is exact.
+    db.$queryRaw<{ total: bigint }[]>`
+      SELECT COUNT(DISTINCT "visitorKey") AS total
+      FROM "VisitLog" WHERE day >= ${thirtyDaysAgo}`,
+    db.$queryRaw<{ total: bigint }[]>`
+      SELECT COUNT(DISTINCT "visitorKey") AS total FROM "VisitLog" v
+      WHERE v.day >= ${thirtyDaysAgo}
+      AND EXISTS (
+        SELECT 1 FROM "VisitLog" v2
+        WHERE v2."visitorKey" = v."visitorKey" AND v2.day < ${thirtyDaysAgo}
+      )`,
     // Room templates the owner hid in the admin (see the Galleries
     // section below): the list lives in code, this only masks ids.
     getHiddenRoomLayouts(),
@@ -287,6 +377,87 @@ export default async function AdminRoute({
   const artworkCount = artworkDates.length;
   const storageBytes = Number(storage[0]?.total ?? 0);
   const views = totalViews._sum.views ?? 0;
+
+  // Titles for the Recent visits table (exhibitions and artworks the
+  // visits point at). Removed ones show as "Removed exhibition" /
+  // "Removed artwork" instead of a bare id.
+  const visitExhibitionIds = [...new Set(recentVisits.map((v) => v.exhibitionId))];
+  const visitArtworkIds = [
+    ...new Set(recentVisits.map((v) => v.artworkId).filter((id): id is string => id !== null)),
+  ];
+  const [visitExhibitions, visitArtworks] = await Promise.all([
+    visitExhibitionIds.length
+      ? db.exhibition.findMany({
+          where: { id: { in: visitExhibitionIds } },
+          select: { id: true, title: true, slug: true, status: true },
+        })
+      : Promise.resolve([]),
+    visitArtworkIds.length
+      ? db.artwork.findMany({
+          where: { id: { in: visitArtworkIds } },
+          select: { id: true, title: true },
+        })
+      : Promise.resolve([]),
+  ]);
+  const visitExhibitionById = new Map(visitExhibitions.map((e) => [e.id, e]));
+  const visitArtworkById = new Map(visitArtworks.map((a) => [a.id, a]));
+
+  // Unique visitors in the last 30 days: distinct anonymous keys, split
+  // into new (first seen inside the window) and returning (seen before).
+  const uniqueVisitors30 = Number(uniqueVisitors30Rows[0]?.total ?? 0);
+  const returningVisitors30 = Number(returningVisitors30Rows[0]?.total ?? 0);
+  const newVisitors30 = Math.max(uniqueVisitors30 - returningVisitors30, 0);
+
+  // Country codes (Vercel sends "UG", "KE", ...) shown as names.
+  const countryName = new Intl.DisplayNames(["en"], { type: "region" });
+  function visitCountry(code: string | null): string {
+    if (!code) return "";
+    try {
+      return countryName.of(code) ?? code;
+    } catch {
+      return code;
+    }
+  }
+  function visitLocation(v: {
+    city: string | null;
+    region: string | null;
+    country: string | null;
+  }): string {
+    const parts = [v.city, v.region, visitCountry(v.country)].filter(
+      (p): p is string => Boolean(p && p.trim()),
+    );
+    return parts.length > 0 ? parts.join(", ") : "Not specified";
+  }
+  function formatDuration(seconds: number | null): string {
+    if (seconds == null) return "Not recorded";
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return rest === 0 ? `${minutes}m` : `${minutes}m ${rest}s`;
+  }
+  function breakdown(
+    groups: Array<{ _count: { _all: number }; [key: string]: unknown }>,
+    key: string,
+  ): Array<{ name: string; count: number }> {
+    return groups
+      .map((g) => {
+        const value = g[key];
+        return {
+          name: (typeof value === "string" ? value : "").trim() || "Not specified",
+          count: g._count._all,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }
+  const browserStats = breakdown(browserGroups, "browser");
+  const osStats = breakdown(osGroups, "os");
+  const deviceStats = breakdown(deviceGroups, "device");
+  const cityStats = breakdown(cityGroups, "city");
+  const browserMax = Math.max(...browserStats.map((b) => b.count), 1);
+  const osMax = Math.max(...osStats.map((b) => b.count), 1);
+  const deviceMax = Math.max(...deviceStats.map((b) => b.count), 1);
+  const cityMax = Math.max(...cityStats.map((b) => b.count), 1);
 
   const inRange = (dates: Date[], from: Date, to?: Date) =>
     dates.filter((d) => d >= from && (to === undefined || d < to)).length;
@@ -498,7 +669,7 @@ export default async function AdminRoute({
                 body="Activity appears here as soon as someone signs up or builds something."
               />
             ) : (
-              <ul className="ad-feed">
+              <ul className="ad-feed ad-scroll">
                 {activity.map((item) => (
                   <li key={item.key}>
                     <span className={`ad-feed-dot ad-feed-${item.kind}`} aria-hidden="true" />
@@ -561,6 +732,150 @@ export default async function AdminRoute({
           )}
         </section>
 
+        {/* Visitor details: who the visitors are and what each visit
+            looked like. Location comes from the visitor's IP address
+            (city level, from Vercel's headers); the site never asks for
+            GPS, so this is the city, not an exact position. Visitors stay
+            anonymous: no names, emails or IP addresses are stored. */}
+        <div className="ad-layout-half">
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Visitors by browser</h2>
+                <p className="ad-card-sub">Last 30 days, from VisitLog</p>
+              </div>
+            </div>
+            {browserStats.length === 0 ? (
+              <EmptyBox title="No visits yet." body="Browsers appear here once a public exhibition is opened." />
+            ) : (
+              <ShareBars items={browserStats} max={browserMax} />
+            )}
+          </section>
+
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Visitors by operating system</h2>
+                <p className="ad-card-sub">Last 30 days, from VisitLog</p>
+              </div>
+            </div>
+            {osStats.length === 0 ? (
+              <EmptyBox title="No visits yet." body="Systems appear here once a public exhibition is opened." />
+            ) : (
+              <ShareBars items={osStats} max={osMax} />
+            )}
+          </section>
+        </div>
+
+        <div className="ad-layout-half">
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Visitors by device</h2>
+                <p className="ad-card-sub">Last 30 days, from VisitLog</p>
+              </div>
+            </div>
+            {deviceStats.length === 0 ? (
+              <EmptyBox title="No visits yet." body="Devices appear here once a public exhibition is opened." />
+            ) : (
+              <ShareBars items={deviceStats} max={deviceMax} />
+            )}
+          </section>
+
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Visitors by city</h2>
+                <p className="ad-card-sub">Last 30 days, IP-based, city level</p>
+              </div>
+            </div>
+            {cityStats.length === 0 ? (
+              <EmptyBox title="No visits yet." body="Cities appear here once a public exhibition is opened." />
+            ) : (
+              <ShareBars items={cityStats} max={cityMax} />
+            )}
+          </section>
+        </div>
+
+        <section className="ad-card ad-table-card">
+          <div className="ad-card-head">
+            <div>
+              <h2>Recent visits</h2>
+              <p className="ad-card-sub">
+                The latest visits, with location, device, browser and what was viewed.{" "}
+                {uniqueVisitors30} unique visitors in the last 30 days · {newVisitors30} new ·{" "}
+                {returningVisitors30} returning.
+              </p>
+            </div>
+            <strong className="ad-card-total">
+              {visitsTotal30} <span>visits in 30 days</span>
+            </strong>
+          </div>
+          <p className="ad-card-sub" style={{ marginBottom: 12 }}>
+            Location is IP-based (city level, never GPS). A first-time visitor&apos;s very first view is
+            logged before the anonymous cookie is set, so the new-visitor count can read slightly high;
+            the returning count is exact.
+          </p>
+          {recentVisits.length === 0 ? (
+            <EmptyBox title="No visits yet." body="Visits appear here once a public exhibition is opened." />
+          ) : (
+            <div className="ad-table-wrap">
+              <table className="ad-table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Location</th>
+                    <th>Device</th>
+                    <th>OS</th>
+                    <th>Browser</th>
+                    <th>Viewed</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentVisits.map((visit) => {
+                    const exhibition = visitExhibitionById.get(visit.exhibitionId);
+                    const artwork = visit.artworkId ? visitArtworkById.get(visit.artworkId) : undefined;
+                    const coords =
+                      visit.latitude != null && visit.longitude != null
+                        ? `${visit.latitude}, ${visit.longitude}`
+                        : null;
+                    return (
+                      <tr key={visit.id}>
+                        <td>
+                          {visit.createdAt.toLocaleString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                        <td title={coords ?? undefined}>{visitLocation(visit)}</td>
+                        <td>{visit.device ?? "Not specified"}</td>
+                        <td>{visit.os ?? "Not specified"}</td>
+                        <td>{visit.browser ?? "Not specified"}</td>
+                        <td>
+                          {exhibition ? (
+                            exhibition.status === "public" ? (
+                              <Link href={`/exhibition/${exhibition.slug}`}>{exhibition.title}</Link>
+                            ) : (
+                              exhibition.title
+                            )
+                          ) : (
+                            "Removed exhibition"
+                          )}
+                          {artwork ? ` · ${artwork.title}` : visit.artworkId ? " · Removed artwork" : ""}
+                        </td>
+                        <td>{formatDuration(visit.durationSeconds)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         {/* Countries + roles */}
         <div className="ad-layout-half">
           <section className="ad-card">
@@ -573,7 +888,7 @@ export default async function AdminRoute({
             {countries.length === 0 ? (
               <EmptyBox title="No users yet." body="Countries appear here once accounts sign up." />
             ) : (
-              <ul className="ad-share">
+              <ul className="ad-share ad-scroll">
                 {countries.map((c) => (
                   <li key={c.name}>
                     <div className="ad-share-row">
@@ -604,7 +919,7 @@ export default async function AdminRoute({
             {roles.length === 0 ? (
               <EmptyBox title="No users yet." body="Roles appear here once accounts sign up." />
             ) : (
-              <ul className="ad-share">
+              <ul className="ad-share ad-scroll">
                 {roles.map((r) => (
                   <li key={r.name}>
                     <div className="ad-share-row">
@@ -739,7 +1054,7 @@ export default async function AdminRoute({
                 {totalToolUses} <span>total</span>
               </strong>
             </div>
-            <ul className="ad-share">
+            <ul className="ad-share ad-scroll">
               {toolStats.map((t) => (
                 <li key={t.slug}>
                   <div className="ad-share-row">
@@ -772,7 +1087,7 @@ export default async function AdminRoute({
                 body="Tracking started with this version, uses appear here as soon as someone opens a tool."
               />
             ) : (
-              <ul className="ad-feed">
+              <ul className="ad-feed ad-scroll">
                 {recentToolUses.map((use) => {
                   const who = use.userId ? recentToolUsers.get(use.userId) : undefined;
                   return (

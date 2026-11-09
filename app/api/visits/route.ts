@@ -2,18 +2,18 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
-  deviceFromUserAgent,
   getOrCreateVisitorKey,
   logVisit,
+  visitContextFromHeaders,
 } from "@/lib/visits";
 
 // Logs one artwork-detail open on a public exhibition (the exhibition
 // view itself is logged server-side in app/exhibition/[slug]/page.tsx).
 // No sign-in: visitors are anonymous. The body carries only ids — the
-// visitorKey lives in an httpOnly cookie, country comes from the
-// x-vercel-ip-country header when Vercel supplies it, device from the
-// user-agent. Nothing personal is stored; a failed log still returns
-// 200 so the gallery never breaks for the visitor.
+// visitorKey lives in an httpOnly cookie, city/region/country come from
+// the x-vercel-ip-* headers when Vercel supplies them, device/OS/browser
+// from the user-agent. Nothing personal is stored; a failed log still
+// returns 200 so the gallery never breaks for the visitor.
 //
 // A body of { identifyOnly: true } only ensures the visitor cookie
 // exists (set by the public exhibition client on first load, so the
@@ -79,15 +79,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 404 });
   }
 
-  const country = request.headers.get("x-vercel-ip-country");
-  const referrer = request.headers.get("referer");
+  const ctx = visitContextFromHeaders(request.headers, visitorKey);
   await logVisit({
     exhibitionId: parsed.data.exhibitionId,
     artworkId: parsed.data.artworkId ?? null,
     visitorKey,
-    country,
-    device: deviceFromUserAgent(request.headers.get("user-agent")),
-    referrer: referrer && referrer.length <= 2048 ? referrer : null,
+    country: ctx.country,
+    city: ctx.city,
+    region: ctx.region,
+    latitude: ctx.latitude,
+    longitude: ctx.longitude,
+    device: ctx.device,
+    os: ctx.os,
+    browser: ctx.browser,
+    referrer: ctx.referrer,
   });
   return NextResponse.json({ ok: true });
 }

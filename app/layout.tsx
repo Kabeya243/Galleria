@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import LakisaToast from "@/components/lakisa-toast";
+import CookieBanner from "@/components/cookie-banner";
 import "@/components/advanced-site-editor.css";
 import "@/components/advanced-site-published.css";
 
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
     "Create, curate and share your own immersive virtual art exhibitions.",
 };
 
-const themeScript = `(function(){try{var c=localStorage.getItem('sanaa-theme')||'system';var d=c==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):c;document.documentElement.dataset.theme=d;}catch(e){}})();`;
+const themeScript = `(function(){try{var c=localStorage.getItem('sanaa-theme');if(!c){var m=document.cookie.match(/(?:^|; )sanaa-theme=(light|dark|system)/);c=m?m[1]:'system';}var d=c==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):c;document.documentElement.dataset.theme=d;}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -48,6 +49,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
         <LakisaToast />
+        <CookieBanner />
       </body>
     </html>
   );

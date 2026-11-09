@@ -11,19 +11,20 @@
 //   import { useT, useLocale, setLocale } from "@/lib/i18n";
 //   const t = useT();            // t("entry.enterRoom") -> "Enter the room"
 //   const { locale } = useLocale();
-// Locale is stored in localStorage ("sanaa-locale") and defaults to
-// English; the visitor switches language in Settings, in the footer,
-// or with the language switch on the public exhibition page. The hook is
-// provider-free: a module-level store + useSyncExternalStore, so any
-// client component can use it without wrapping the tree.
+// Locale is stored in localStorage ("sanaa-locale") and mirrored into a
+// cookie of the same name, and defaults to English; the visitor switches
+// language in Settings, in the footer, or with the language switch on
+// the public exhibition page. The hook is provider-free: a module-level
+// store + useSyncExternalStore, so any client component can use it
+// without wrapping the tree.
 //
-// Languages (November 2026): the Artsy languages — English, French,
+// Languages (November 2026): the Artsy languages, English, French,
 // German, Italian, Spanish, Portuguese, Chinese (simplified), Japanese,
-// Korean — plus Swahili and Lingala. English is the fallback: any entry
+// Korean, plus Swahili and Lingala. English is the fallback: any entry
 // that has no translation for the current locale shows its English
 // string (see translate). To add a language later, extend `Locale`,
 // `LOCALES`, `LOCALE_NAMES`, `LOCALE_TAGS`, the dictionary entries and
-// the switcher — every string goes through this file.
+// the switcher, every string goes through this file.
 //
 // Proper names are NEVER translated: gallery and exhibition names come
 // from the database (see lib/gallery-names.ts) and stay identical in
@@ -74,6 +75,29 @@ export function isLocale(value: unknown): value is Locale {
 
 const STORAGE_KEY = "sanaa-locale";
 
+// The locale is stored in local storage and mirrored into a cookie of
+// the same name, so the choice survives local storage being cleared and
+// can be read on the next visit. Anonymous, no personal data.
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCookie(name: string, value: string): void {
+  try {
+    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; samesite=lax`;
+  } catch {
+    // cookies unavailable, local storage still holds the choice
+  }
+}
+
 const listeners = new Set<() => void>();
 let currentLocale: Locale = "en";
 
@@ -83,8 +107,10 @@ function detectLocale(): Locale {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (isLocale(stored)) return stored;
   } catch {
-    // Storage unavailable — fall through to English.
+    // Storage unavailable, fall through to the cookie.
   }
+  const fromCookie = readCookie(STORAGE_KEY);
+  if (isLocale(fromCookie)) return fromCookie;
   // English is the default for every visitor; other languages are opt-in.
   return "en";
 }
@@ -96,16 +122,21 @@ export function getLocale(): Locale {
 export function setLocale(locale: Locale): void {
   if (!isLocale(locale)) return;
   currentLocale = locale;
+  // The choice is remembered (local storage + cookie mirror) so the
+  // visitor finds their language again on the next visit. Language and
+  // theme cookies are essential to the platform, so they are always
+  // active; the cookie notice only informs the visitor.
   try {
     window.localStorage.setItem(STORAGE_KEY, locale);
   } catch {
-    // Storage unavailable — the choice simply does not persist.
+    // Storage unavailable, the choice simply does not persist.
   }
+  writeCookie(STORAGE_KEY, locale);
   // Keep the document language in sync for screen readers.
   try {
     document.documentElement.lang = LOCALE_TAGS[locale];
   } catch {
-    // Not in a DOM context — nothing to sync.
+    // Not in a DOM context, nothing to sync.
   }
   listeners.forEach((listener) => listener());
 }
@@ -301,7 +332,7 @@ export const DICTIONARY = {
     },
     yourWorkspace: { fr: "VOTRE ESPACE DE TRAVAIL", en: "YOUR WORKSPACE" },
   },
-  // Sidebar navigation — group headings and items.
+  // Sidebar navigation, group headings and items.
   nav: {
     discover: { fr: "Découvrir", en: "Discover",
       de: "Entdecken",
@@ -2028,7 +2059,7 @@ export const DICTIONARY = {
       ln: "misala",
     },
   },
-  // Site footer (public homepage and /about) — original Lakisa copy.
+  // Site footer (public homepage and /about), original Lakisa copy.
   footer: {
     about: { fr: "À propos", en: "About",
       de: "Über uns",
@@ -2261,7 +2292,19 @@ export const DICTIONARY = {
       ln: "Compte ekozala: lien ya kobongola",
     },
   },
-  // About page (/about) — original Lakisa copy.
+  // Cookie notice (information only). Every cookie on Lakisa is
+  // essential to the platform, so there is no choice to make: the
+  // notice only informs the visitor and can be closed. English is the
+  // fallback for locales without a translation here.
+  cookies: {
+    notice: {
+      fr: "Lakisa utilise des cookies essentiels pour fonctionner : vous garder connecté, mémoriser votre langue et votre thème, et compter les visites anonymes pour voir comment le site est utilisé. Aucun cookie publicitaire, aucune donnée personnelle.",
+      en: "Lakisa uses essential cookies to work: keeping you signed in, remembering your language and theme, and counting anonymous visits so we can see how the site is used. No advertising cookies, no personal data.",
+    },
+    learnMore: { fr: "Politique de confidentialité", en: "Privacy Policy" },
+    close: { fr: "Compris", en: "Got it" },
+  },
+  // About page (/about), original Lakisa copy.
   about: {
     eyebrow: { fr: "À propos", en: "About",
       de: "Über uns",
@@ -2460,7 +2503,7 @@ export const DICTIONARY = {
       ln: "Zonga na ebandeli",
     },
   },
-  // Legal pages (/terms, /privacy) — chrome only; the legal body itself
+  // Legal pages (/terms, /privacy), chrome only; the legal body itself
   // is English (the language of Lakisa's legal documents) and lives in
   // the page components. Original Lakisa copy.
   legal: {
@@ -2583,7 +2626,7 @@ export const DICTIONARY = {
       ln: "Mpo na motuna nyonso na tina na mokanda oyo, koma na contact@kabeyailunga.com.",
     },
   },
-  // User guide (/guide) — chrome only; the guide body is fully
+  // User guide (/guide), chrome only; the guide body is fully
   // bilingual (EN/FR) and lives in the guide component.
   guide: {
     eyebrow: { fr: "Guide d'utilisation", en: "User guide",
@@ -2756,7 +2799,7 @@ export const DICTIONARY = {
     couldNotCreate: { fr: "Impossible de créer une exposition.", en: "Could not create an exhibition." },
     couldNotDelete: { fr: "Impossible de supprimer cette exposition.", en: "Could not delete this exhibition." },
   },
-  // Reusable artwork library (/artworks) — "Mes œuvres".
+  // Reusable artwork library (/artworks), "Mes œuvres".
   library: {
     library: { fr: "Mes œuvres", en: "My artworks" },
     yourLibrary: { fr: "VOS ŒUVRES ·", en: "YOUR ARTWORKS ·" },
@@ -2802,7 +2845,7 @@ export const DICTIONARY = {
       en: "The same image is reused, no new upload.",
     },
   },
-  // Public creator wall (/works/[id]) — "Mes travaux / designs / créations".
+  // Public creator wall (/works/[id]), "Mes travaux / designs / créations".
   works: {
     eyebrow: { fr: "MES TRAVAUX · DESIGNS · CRÉATIONS", en: "MY WORKS · DESIGNS · CREATIONS" },
     filterByType: { fr: "Filtrer par type", en: "Filter by type" },
@@ -2829,7 +2872,7 @@ export const DICTIONARY = {
     myWorks: { fr: "Mes travaux", en: "My works" },
     viewPublicPage: { fr: "Voir ma page publique", en: "View my public page" },
   },
-  // Explore page (/explore) — other artists' public exhibitions.
+  // Explore page (/explore), other artists' public exhibitions.
   explore: {
     explore: { fr: "Explorer", en: "Explore",
       de: "Entdecken",
@@ -2983,7 +3026,7 @@ export const DICTIONARY = {
       ln: "Kokɔtɔ",
     },
   },
-  // Publication feed (/feed) — published exhibitions, newest first.
+  // Publication feed (/feed), published exhibitions, newest first.
   feed: {
     feed: { fr: "Fil", en: "Feed",
       de: "Feed",
@@ -3170,7 +3213,7 @@ export const DICTIONARY = {
       ln: "Meka lisusu",
     },
   },
-  // Tools hub (/tools) — tool titles and descriptions.
+  // Tools hub (/tools), tool titles and descriptions.
   tools: {
     title: { fr: "Outils", en: "Tools" },
     eyebrow: {
@@ -3350,7 +3393,7 @@ export const DICTIONARY = {
     },
   },
   // Hub pages (Discover, Create, Spatial Lab, Manage, Publish,
-  // Intelligence, My Studio) — hub descriptions and card copy.
+  // Intelligence, My Studio), hub descriptions and card copy.
   hubs: {
     discoverDesc: {
       fr: "Trouvez des expositions à parcourir, des salles de galerie où construire, et l'accueil public de la plateforme.",
@@ -3594,7 +3637,7 @@ export const DICTIONARY = {
       en: "Guides and answers for building, publishing and selling on Lakisa.",
     },
   },
-  // Tool detail pages (app/tools/*) — page title, eyebrow and header
+  // Tool detail pages (app/tools/*), page title, eyebrow and header
   // description for each tool, plus the four audience pages and their
   // points. ToolsShell renders these from keys; the four pages with a
   // live count in the eyebrow (inventory, marketplace, present-sell,

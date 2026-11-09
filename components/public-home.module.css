@@ -682,8 +682,9 @@
     flex-direction: column;
     /* The full menu (links + 10 Resources entries) is taller than a
        small phone screen: scroll inside the menu instead of pushing
-       past the viewport. */
-    max-height: calc(100dvh - 76px);
+       past the viewport. 120px is the mobile header height (20px
+       padding + 80px logo + 20px padding). */
+    max-height: calc(100dvh - 120px);
     overflow-y: auto;
     padding: 8px 18px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);

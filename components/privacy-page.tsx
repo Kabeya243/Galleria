@@ -7,17 +7,20 @@ import SiteFooter from "@/components/site-footer";
 import { useT } from "@/lib/i18n";
 import styles from "./legal-page.module.css";
 
-// /privacy — Privacy Policy. Original Lakisa text, written for this
+// /privacy, Privacy Policy. Original Lakisa text, written for this
 // platform. The body is in English: English is the language of
 // Lakisa's legal documents, and the French translation is planned
 // (see the note at the top of the page). The facts stated here are
 // grounded in the code: accounts (email + password hash, or Google
 // sign-in), profile fields, artworks and exhibitions stored in the
 // Cloudflare R2 bucket "sanaa", hosting on Vercel, transactional mail
-// sent with nodemailer, a session cookie, the language choice in
-// localStorage, and server-side visit counts. Lakisa runs no
+// sent with nodemailer, a session cookie, an anonymous visitor cookie,
+// the language and theme choices in localStorage and in cookies, and
+// server-side visit records (city from the network address, device,
+// operating system, browser). All cookies are essential to the
+// platform; the cookie notice only informs visitors. Lakisa runs no
 // third-party advertising tracker. Contact is the founder's published
-// studio address, contact@kabeyailunga.com — TODO: replace with a
+// studio address, contact@kabeyailunga.com, TODO: replace with a
 // Lakisa address once one exists. No fake address invented.
 //
 // Nothing here is copied from any other platform's privacy policy.
@@ -35,7 +38,7 @@ const SECTIONS: Section[] = [
       "Account data: your email address and, if you register with a password, a one-way hash of that password (we never store your password itself). If you sign in with Google, Google gives us your email address and your name; we do not receive your Google password.",
       "Profile data: the display name, biography and profile photo you choose to add in Settings.",
       "Your work: the artworks you upload (images, and where supported, video or 3D files), their titles, descriptions and dimensions, and the exhibitions you build: their titles, descriptions, room choices, wall colours, artwork placement and visibility settings.",
-      "Usage data: how the Service is used: which public exhibitions are visited and how often, so that artists can see how many people visited their work. A visit is counted per exhibition, per day; we do not build a browsing profile of individual visitors.",
+      "Usage data: how the Service is used: which public exhibitions are visited and how often, so that artists can see how many people visited their work. A visit is counted per exhibition, per day; we do not build a browsing profile of individual visitors. For each visit we also record the city (from the network address, never your exact position), the type of device, the operating system and the browser, so artists can see how their work is viewed. These details are anonymous: they are never linked to a name, an email address or an account.",
       "Messages you send us: the content of emails you write to Lakisa, for example when you report a problem or ask a question.",
     ],
   },
@@ -56,8 +59,10 @@ const SECTIONS: Section[] = [
     id: "cookies",
     title: "3. Cookies and local storage",
     body: [
+      "Every cookie Lakisa sets is essential to the platform. There are no optional cookies and no advertising cookies, so there is nothing to accept or refuse. The cookie notice at the bottom of the screen only informs you that these cookies are in use; you can close it and keep browsing.",
       "Lakisa uses one session cookie to keep you signed in. It contains a session token, it is set when you sign in, and it is removed when you sign out. Without it, the Service cannot tell that it is you.",
-      "Your language choice (English or French) is stored in your browser's local storage, on your device, so the site opens in the language you picked. Your saved favourite rooms are stored the same way, in your browser only, and not synced to your account.",
+      "Lakisa also sets one anonymous visitor cookie (sanaa_visitor). It holds a random identifier and nothing that names you, and it lasts one year. It lets the platform count how many different people visit, instead of only counting raw visits, and tell new visitors apart from returning ones. It never stores your name, your email address, your IP address or your exact position.",
+      "Your language and theme choices are remembered in your browser, in local storage and in two small cookies (sanaa-locale and sanaa-theme), so the site opens the way you left it on your next visit. Your saved favourite rooms are stored the same way, in your browser only, and not synced to your account.",
       "Lakisa runs no third-party advertising cookies and no advertising trackers.",
     ],
   },

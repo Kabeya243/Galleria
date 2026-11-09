@@ -363,7 +363,19 @@ model VisitLog {
   day          DateTime
   visitorKey   String
   country      String?
+  // IP geolocation from Vercel headers (city level, never GPS): city and
+  // region as sent by x-vercel-ip-city / x-vercel-ip-country-region, plus
+  // the coordinates Vercel provides (x-vercel-ip-latitude/longitude).
+  // All null for visits logged before these fields shipped.
+  city         String?
+  region       String?
+  latitude     Float?
+  longitude    Float?
   device       String?
+  // Operating system and browser, parsed from the user-agent (for
+  // example "Windows 10/11" and "Chrome 131"). Null when unknown.
+  os           String?
+  browser      String?
   referrer     String?
   // Seconds the visitor spent in the exhibition, sent by the client
   // when the visit ends (pagehide). Null when the browser never

@@ -1674,7 +1674,14 @@ html[data-admin-collapsed="true"] .ad-nav-item { justify-content: center; paddin
 .ad-share-fill { height: 100%; border-radius: 999px; background: var(--ad-fill); }
 .ad-share-fill-alt { background: var(--ad-fill-alt); }
 
-.ad-table-wrap { overflow-x: auto; }
+/* Scrollable admin lists and tables: every list gets a max height with
+   internal scrolling, so a long list never makes the page endless.
+   The scrollbar follows the site convention (thin gold on desktop,
+   hidden below 1024 px). */
+.ad-scroll { max-height: 420px; overflow-y: auto; padding-right: 6px; }
+
+.ad-table-wrap { overflow-x: auto; max-height: 560px; overflow-y: auto; }
+.ad-table-wrap thead th { position: sticky; top: 0; background: var(--ad-card); z-index: 1; }
 .ad-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .ad-table th,
 .ad-table td { padding: 10px 12px; border-bottom: 1px solid var(--ad-border); text-align: left; vertical-align: top; color: var(--ad-ink); }

@@ -68,7 +68,7 @@ export const SITE_THEMES: SiteTheme[] = [
   // ---- Gallery (white-gallery luxury) ----
   {
     id: "gallery-white", label: "Gallery White", family: "gallery",
-    blurb: "The SANAA white-gallery look — warm paper, near-black ink, gold accent.",
+    blurb: "The Lakisa white-gallery look — warm paper, near-black ink, gold accent.",
     bg: "#fdfdfc", surface: "#ffffff", ink: "#141414", muted: "#6f6a61", line: "#e6e1d8",
     accent: "#a68b4b", headingFont: F_SERIF, bodyFont: F_SANS,
     heroAlign: "center", heroStyle: "classic", galleryCols: 3, imageRadius: 0, uppercaseHeadings: false,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import BrandLogo from "@/components/brand-logo";
 import { USER_ROLES, passwordChecks } from "@/lib/validation";
 
 // "Continue with Google" (feature 9): a plain link to the OAuth start —
@@ -101,12 +102,12 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     <main className="auth-noir">
       <section className="auth-noir-left">
         <Link className="auth-noir-brand" href="/">
-          SANAA<sup>®</sup>
+          <BrandLogo variant="horizontal" theme="dark" height={44} />
         </Link>
         <div className="auth-noir-star">
           <AsteriskMark />
         </div>
-        <p className="auth-noir-copy">© 2026 SANAA Studio. All rights reserved.</p>
+        <p className="auth-noir-copy">© 2026 Lakisa Studio. All rights reserved.</p>
       </section>
 
       <section className="auth-noir-panel">
@@ -145,7 +146,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                     id="auth-role"
                     value={role}
                     onChange={(event) => setRole(event.target.value)}
-                    aria-label="Your role on SANAA"
+                    aria-label="Your role on Lakisa"
                   >
                     <option value="">Choose your role (optional)</option>
                     {USER_ROLES.map((item) => (
@@ -278,13 +279,13 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
             </button>
           </form>
           <p className="auth-noir-switch">
-            {isRegister ? "Already have an account?" : "New to SANAA?"}{" "}
+            {isRegister ? "Already have an account?" : "New to Lakisa?"}{" "}
             <Link href={isRegister ? "/login" : "/register"}>
               {isRegister ? "Sign in" : "Create an account"}
             </Link>
           </p>
           <p className="auth-noir-terms">
-            By continuing, you agree to use SANAA respectfully and only share work you have
+            By continuing, you agree to use Lakisa respectfully and only share work you have
             permission to publish.
           </p>
         </div>

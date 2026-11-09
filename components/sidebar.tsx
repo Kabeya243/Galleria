@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Avatar from "@/components/avatar";
+import BrandLogo from "@/components/brand-logo";
 import { useT, type DictionarySection } from "@/lib/i18n";
 import {
   Archive,
@@ -291,8 +292,8 @@ export default function Sidebar({
       >
         <div className="sidebar-top-row">
           <Link className="brand-lockup" href="/" aria-label={t("nav", "sanaaHome")} onClick={() => setOpen(false)}>
-            <span className="brand-mark">s.</span>
-            <span className="brand-name">SANAA</span>
+            <BrandLogo variant="horizontal" height={36} />
+            <BrandLogo variant="icon" height={30} />
           </Link>
           {collapsible ? (
             <button

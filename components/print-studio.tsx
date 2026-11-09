@@ -382,7 +382,7 @@ export default function PrintStudio({
         <section className="pr-card">
           <h2>Colour profile</h2>
           <p className="pr-note">
-            Everything in this studio is <strong>sRGB</strong> — the colour space of screens and of the image files SANAA stores.
+            Everything in this studio is <strong>sRGB</strong> — the colour space of screens and of the image files Lakisa stores.
             There is <strong>no true CMYK conversion in the browser</strong>: the PDF you print from here is still sRGB, and a print shop
             converts it with its own profile. If your printer asks for CMYK, convert the file in Photoshop, Affinity or with the
             printer's own ICC profile — this tool does not pretend to do it. Printer requirements (paper, ICC profile, finishing)

@@ -5,7 +5,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "For Collectors — SANAA Tools",
+  title: "For Collectors — Lakisa Tools",
   description: "Keep track of what you own, what it is worth, and where it came from.",
 };
 

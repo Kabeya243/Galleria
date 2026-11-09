@@ -153,7 +153,7 @@ export default function ExhibitionsPage({
                         loading="lazy"
                       />
                     ) : (
-                      <span className={styles.coverFallback}>SANAA</span>
+                      <span className={styles.coverFallback}>LAKISA</span>
                     )}
                   </Link>
                   <div className="gallery-card-body">

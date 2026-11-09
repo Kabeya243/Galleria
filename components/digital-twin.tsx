@@ -1432,7 +1432,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
           <section style={cardStyle} aria-label="Unreal Engine Pixel Streaming — paid, not part of the free stack">
             <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>8 · Unreal Engine — Pixel Streaming</h2>
             <p style={{ fontSize: 12, lineHeight: 1.6, background: "#fbe9e7", border: "1px solid #d98a7a", borderRadius: 6, padding: 10 }}>
-              <strong>PAID — not part of the free stack.</strong> Pixel Streaming is NOT the path SANAA uses. It
+              <strong>PAID — not part of the free stack.</strong> Pixel Streaming is NOT the path Lakisa uses. It
               requires a paid GPU cloud server running while visitors watch — an ongoing cost, not a free tool. Nothing
               on this page streams Unreal, and no stream URL is wired in. This section exists only as a labelled
               integration point, for completeness.
@@ -1453,7 +1453,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
             </ul>
             <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>The primary path — free, offline, no streaming</h3>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
-              This is the path SANAA actually uses, and it needs no server at all: scan real spaces and objects with
+              This is the path Lakisa actually uses, and it needs no server at all: scan real spaces and objects with
               RealityCapture / RealityScan (free under $1M annual revenue), dress the scene with Fab&apos;s free assets,
               build the exact room from the JSON manifest above (section 7), and produce photorealistic renders and
               models in Twinmotion / Unreal Engine <strong>offline</strong> — then feed those renders and .glb models

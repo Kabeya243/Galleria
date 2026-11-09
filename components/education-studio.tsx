@@ -1237,7 +1237,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
       {/* Printable resource sheet — visible only when printing. */}
       <div className={styles.printOnly} aria-hidden>
         <h1>{exhibition.title} — Learning resources</h1>
-        <p>Education pack · {pack.audience} · SANAA</p>
+        <p>Education pack · {pack.audience} · Lakisa</p>
         {artworks.map((a) => {
           const label = pack.labels[a.id];
           const qs = pack.questions[a.id] ?? [];

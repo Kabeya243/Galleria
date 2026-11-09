@@ -485,7 +485,7 @@ const SCENES: SceneDef[] = [
       // Logo wall text
       ctx.fillStyle = "#a67c37";
       ctx.font = `600 ${Math.round(H * 0.045)}px Georgia, serif`;
-      ctx.fillText("SANAA", W * 0.6, H * 0.1);
+      ctx.fillText("LAKISA", W * 0.6, H * 0.1);
     },
   },
 ];
@@ -1619,7 +1619,7 @@ export default function MockupStudio({
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.92));
       if (!blob) throw new Error("The export came back empty — try PNG instead.");
       const first = selectedArts[0];
-      const name = `sanaa-mockup-${(first?.title ?? "artwork").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${cfg.scene}-${cfg.resolution}.${cfg.format === "jpeg" ? "jpg" : cfg.format}`;
+      const name = `lakisa-mockup-${(first?.title ?? "artwork").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${cfg.scene}-${cfg.resolution}.${cfg.format === "jpeg" ? "jpg" : cfg.format}`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

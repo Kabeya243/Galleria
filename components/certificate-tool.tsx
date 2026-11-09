@@ -514,7 +514,7 @@ export default function CertificateTool({
       {/* -- Topbar (Atelier language: brand, title, save status, actions) -- */}
       <header className="cert-topbar">
         <span className="cert-brand">
-          <span className="cert-brand-mark">S.</span>SANAA
+          <span className="cert-brand-mark">S.</span>LAKISA
         </span>
         <span className="cert-top-divider" />
         <div className="cert-title-wrap">

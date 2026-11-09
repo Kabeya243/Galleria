@@ -6,7 +6,7 @@ import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
 import { roomLayouts, HIDDEN_LAYOUT_KEYS, type RoomLayout } from "@/lib/rooms";
 
 export const metadata = {
-  title: "Galleries — SANAA",
+  title: "Lakisa Galerie",
   description: "Twenty-one galleries — the Sunlight Gallery, nine more from six reference files, and eleven from Galeries_3D.html: Pavilion of Light, The Classical Gallery, The White Atrium, The Oval Patio, The Stair Hall, The Green Rooms, Elegant Gallery, The Golden Corridor, The Vaulted Ceiling, White Curves and The Slatted Atrium. Preview each in 3D and open it in the editor.",
 };
 

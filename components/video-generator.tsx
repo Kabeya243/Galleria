@@ -332,7 +332,7 @@ function buildDefaultShots(exhibition: VideoExhibition): Shot[] {
       to: [0, 1.6, depth / 2 - 1.5],
       lookAt: [0, 1.6, -depth / 2],
       title: exhibition.title,
-      body: "A SANAA virtual exhibition",
+      body: "A Lakisa virtual exhibition",
     },
     {
       id: uid(),
@@ -511,7 +511,7 @@ export default function VideoGenerator({
     };
     if (type === "title") {
       base.title = exhibition.title;
-      base.body = "A SANAA virtual exhibition";
+      base.body = "A Lakisa virtual exhibition";
     }
     if (type === "statement") {
       base.title = "Artist statement";

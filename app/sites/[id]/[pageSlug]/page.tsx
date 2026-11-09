@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
   const { id, pageSlug } = await params;
   const site = await getPublishedSite(id);
   const page = site?.pages.find((item) => item.slug === pageSlug);
-  if (!site || !page) return { title: "Page introuvable — SANAA" };
+  if (!site || !page) return { title: "Page introuvable — Lakisa" };
   return { title: page.seoTitle || `${page.title} — ${site.title}`, description: page.seoDescription || undefined };
 }
 

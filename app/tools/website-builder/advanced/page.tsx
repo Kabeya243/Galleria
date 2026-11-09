@@ -9,7 +9,7 @@ import { templates as bundledTemplates } from "@/lib/advanced-site-templates";
 import type { SiteDocument, TemplateSummary } from "@/lib/advanced-site-types";
 
 export const metadata = {
-  title: "Advanced Website Builder — SANAA Tools",
+  title: "Advanced Website Builder — Lakisa Tools",
   description:
     "Visual drag-and-drop website editor: 11 original templates, multi-page sites, 18 block types, theme and SEO controls, responsive preview, publish to /sites/[slug]. Drafts are saved in PostgreSQL; media goes to R2.",
 };

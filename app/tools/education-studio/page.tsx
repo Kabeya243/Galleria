@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Art Education Studio — SANAA Tools",
+  title: "Art Education Studio — Lakisa Tools",
   description:
     "Build educational packs for your exhibitions: learner labels, learning guides, curatorial questions, interactive quizzes, analysis prompts and guided learning paths — printable and exportable.",
 };

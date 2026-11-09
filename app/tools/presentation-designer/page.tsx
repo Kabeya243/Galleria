@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Presentation Designer — SANAA Tools",
+  title: "Presentation Designer — Lakisa Tools",
   description:
     "Build a professional art presentation — portfolio, gallery proposal or art-fair application — from your own artworks, then export it as a PDF.",
 };

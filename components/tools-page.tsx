@@ -281,7 +281,7 @@ export default function ToolsPage({
               <Link
                 href={audience.href}
                 className={styles.toolCardLink}
-                aria-label={`SANAA — ${t("tools", audience.title)}`}
+                aria-label={`Lakisa — ${t("tools", audience.title)}`}
               >
                 <span className={styles.toolIcon}>
                   <audience.icon size={22} />

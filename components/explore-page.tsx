@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import Sidebar from "@/components/sidebar";
+import BrandLogo from "@/components/brand-logo";
 import ThemeToggle from "@/components/theme-toggle";
 import styles from "./public-home.module.css";
 import { useT } from "@/lib/i18n";
@@ -49,7 +50,7 @@ function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
                   loading="lazy"
                 />
               ) : (
-                <span className={styles.coverFallback}>SANAA</span>
+                <span className={styles.coverFallback}>LAKISA</span>
               )}
             </Link>
             <div className="gallery-card-body">
@@ -90,8 +91,7 @@ export default function ExplorePage({
       <main className="galleries-page">
         <header className="galleries-header">
           <Link className="brand-lockup" href="/">
-            <span className="brand-mark">s.</span>
-            <span className="brand-name">SANAA</span>
+            <BrandLogo variant="horizontal" height={36} />
           </Link>
           <nav className="galleries-nav">
             <Link href="/galleries">{t("explore", "galleries")}</Link>

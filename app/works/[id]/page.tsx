@@ -18,8 +18,8 @@ type RouteProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: RouteProps): Promise<Metadata> {
   const { id } = await params;
   const creator = await db.user.findUnique({ where: { id }, select: { name: true } });
-  if (!creator) return { title: "Creator not found — SANAA" };
-  return { title: `${creator.name} — Works, designs & creations — SANAA` };
+  if (!creator) return { title: "Creator not found — Lakisa" };
+  return { title: `${creator.name} — Works, designs & creations — Lakisa` };
 }
 
 export default async function WorksRoute({ params }: RouteProps) {

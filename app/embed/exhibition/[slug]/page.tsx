@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
   const exhibition = await findPublishedExhibition(slug);
   const embeddable = exhibition !== null && isEmbeddableExhibition(exhibition);
   return {
-    title: embeddable ? `${exhibition.title} — SANAA` : "Exhibition not available — SANAA",
+    title: embeddable ? `${exhibition.title} — Lakisa VR` : "Exhibition not available — Lakisa VR",
     robots: { index: false, follow: false },
   };
 }

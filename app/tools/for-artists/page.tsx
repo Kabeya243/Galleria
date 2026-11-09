@@ -5,7 +5,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "For Artists — SANAA Tools",
+  title: "For Artists — Lakisa Tools",
   description: "Run your studio from one place: inventory, pricing, sales and documents.",
 };
 

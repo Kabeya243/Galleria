@@ -642,7 +642,7 @@ export default function ColorIntelligence({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#000000";
     ctx.font = "700 22px 'DM Sans', sans-serif";
-    ctx.fillText("SANAA · COLOR INTELLIGENCE", pad, pad + 10);
+    ctx.fillText("LAKISA · COLOR INTELLIGENCE", pad, pad + 10);
     ctx.fillStyle = "#141414";
     ctx.font = "600 54px Georgia, serif";
     ctx.fillText(sourceLabel ?? "Palette", pad, pad + 80, width - pad * 2);

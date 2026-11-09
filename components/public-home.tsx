@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Clock, Images } from "lucide-react";
+import BrandLogo from "@/components/brand-logo";
 import HeroGalleryPreview, { type HeroPreviewArtwork } from "@/components/hero-gallery-preview";
 import { useT } from "@/lib/i18n";
 import styles from "./public-home.module.css";
@@ -62,8 +63,7 @@ export default function PublicHome({
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/">
-          <span className={styles.brandMark} aria-hidden="true" />
-          <span className={styles.brandName}>SANAA</span>
+          <BrandLogo variant="horizontal" theme="dark" height={34} />
         </Link>
         <nav className={styles.nav} aria-label="Main">
           <Link href="/explore">{t("home", "explore")}</Link>
@@ -160,7 +160,7 @@ export default function PublicHome({
                     loading="lazy"
                   />
                 ) : (
-                  <span className={styles.coverFallback}>SANAA</span>
+                  <span className={styles.coverFallback}>LAKISA</span>
                 )}
                 <span className={styles.cardBody}>
                   <span className={styles.cardTitle}>{exhibition.title}</span>
@@ -187,6 +187,7 @@ export default function PublicHome({
       </section>
 
       <footer className={styles.footer}>
+        <BrandLogo variant="horizontal" theme="dark" height={40} />
         <span>{t("common", "footerRights")}</span>
         <span>{t("common", "footerTagline")}</span>
       </footer>

@@ -3,11 +3,12 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import CurrencySelector, { RatesNote } from "@/components/currency-selector";
+import BrandLogo from "@/components/brand-logo";
 import ListingPrice from "@/components/listing-price";
 
 export const metadata: Metadata = {
-  title: "Marketplace — SANAA",
-  description: "Originals, editions, prints and digital works for sale by artists on SANAA.",
+  title: "Marketplace — Lakisa",
+  description: "Originals, editions, prints and digital works for sale by artists on Lakisa.",
 };
 
 const KINDS = ["original", "edition", "print", "digital"] as const;
@@ -72,8 +73,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
     <main className="galleries-page">
       <header className="galleries-header">
         <Link className="brand-lockup" href="/">
-          <span className="brand-mark">s.</span>
-          <span className="brand-name">SANAA</span>
+          <BrandLogo variant="horizontal" height={36} />
         </Link>
         <nav className="galleries-nav">
           <Link href="/marketplace">Marketplace</Link>

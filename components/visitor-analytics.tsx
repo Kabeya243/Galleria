@@ -88,7 +88,7 @@ export default function VisitorAnalytics({
     setDownloading(true);
     try {
       const lines: (string | number)[][] = [
-        ["Visitor Analytics — SANAA"],
+        ["Visitor Analytics — Lakisa"],
         ["Exhibition", selectedTitle],
         ["Exported", new Date().toISOString().slice(0, 10)],
         [],

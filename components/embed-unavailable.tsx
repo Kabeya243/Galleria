@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/brand-logo";
 import { translate, useT } from "@/lib/i18n";
 
 // Generic embed error: the exhibition is not public (or does not
@@ -12,7 +13,9 @@ export default function EmbedUnavailable() {
   const t = useT();
   return (
     <main className="embed-unavailable">
-      <p className="embed-unavailable-brand">SANAA</p>
+      <p className="embed-unavailable-brand">
+        <BrandLogo variant="horizontal" height={40} />
+      </p>
       <h1>{t("embed", "notAvailable")}</h1>
       <p>{translate("embed", "notAvailableHint", "en")}</p>
       <p lang="fr">{translate("embed", "notAvailableHint", "fr")}</p>

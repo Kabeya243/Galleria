@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Print Production Studio — SANAA Tools",
+  title: "Print Production Studio — Lakisa Tools",
   description:
     "Production-ready print materials from your own artworks — posters, wall labels, catalogue pages and certificates, with real dimensions, bleed, a DPI check from the image's actual pixel size, and a production PDF with crop marks.",
 };

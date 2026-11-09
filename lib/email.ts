@@ -26,13 +26,13 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
     );
     return false;
   }
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "noreply@sanaa.example";
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "noreply@lakisa.example";
   await transporter.sendMail({
-    from: `SANAA <${from}>`,
+    from: `Lakisa <${from}>`,
     to,
-    subject: "Reset your SANAA password",
-    text: `Hello,\n\nYou asked to reset your SANAA password. Use this link (it expires in 1 hour):\n\n${resetUrl}\n\nIf you didn't ask for this, you can ignore this email.\n\n— SANAA`,
-    html: `<p>Hello,</p><p>You asked to reset your SANAA password. Use this link (it expires in 1 hour):</p><p><a href="${resetUrl}">Reset your password</a></p><p>If you didn't ask for this, you can ignore this email.</p><p>— SANAA</p>`,
+    subject: "Reset your Lakisa password",
+    text: `Hello,\n\nYou asked to reset your Lakisa password. Use this link (it expires in 1 hour):\n\n${resetUrl}\n\nIf you didn't ask for this, you can ignore this email.\n\n— Lakisa`,
+    html: `<p>Hello,</p><p>You asked to reset your Lakisa password. Use this link (it expires in 1 hour):</p><p><a href="${resetUrl}">Reset your password</a></p><p>If you didn't ask for this, you can ignore this email.</p><p>— Lakisa</p>`,
   });
   return true;
 }

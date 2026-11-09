@@ -10,7 +10,7 @@ import { HIDDEN_LAYOUT_KEYS, ROOM_MODELS, roomLayouts, type RoomLayout } from "@
 import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
 
 export const metadata = {
-  title: "Admin — SANAA",
+  title: "Admin — Lakisa",
   description:
     "The platform overview for the owner: users, exhibitions, artworks, visits and tool use — everything on one page.",
 };
@@ -412,7 +412,7 @@ export default async function AdminRoute({
       user={user}
       title="Hello, Kabeya"
       eyebrow="ADMIN · FOR THE OWNER ONLY"
-      description={`${todayLabel} — a look at who joined, what was built, and what visitors viewed on SANAA.`}
+      description={`${todayLabel} — a look at who joined, what was built, and what visitors viewed on Lakisa.`}
       counts={{ users: userCount, exhibitions: exhibitionCount, artworks: artworkCount, tools: totalToolUses }}
     >
       <div id="overview" className="ad-section">
@@ -598,7 +598,7 @@ export default async function AdminRoute({
             <div className="ad-card-head">
               <div>
                 <h2>Users by role</h2>
-                <p className="ad-card-sub">What accounts do on SANAA</p>
+                <p className="ad-card-sub">What accounts do on Lakisa</p>
               </div>
             </div>
             {roles.length === 0 ? (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import BrandLogo from "@/components/brand-logo";
 import { AsteriskMark } from "@/components/auth-form";
 
 export default function ForgotPasswordForm() {
@@ -34,12 +35,12 @@ export default function ForgotPasswordForm() {
     <main className="auth-noir">
       <section className="auth-noir-left">
         <Link className="auth-noir-brand" href="/">
-          SANAA<sup>®</sup>
+          <BrandLogo variant="horizontal" theme="dark" height={44} />
         </Link>
         <div className="auth-noir-star">
           <AsteriskMark />
         </div>
-        <p className="auth-noir-copy">© 2026 SANAA Studio. All rights reserved.</p>
+        <p className="auth-noir-copy">© 2026 Lakisa Studio. All rights reserved.</p>
       </section>
 
       <section className="auth-noir-panel">

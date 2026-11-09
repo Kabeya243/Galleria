@@ -41,6 +41,7 @@ import {
   Upload,
   Video,
 } from "lucide-react";
+import BrandLogo from "@/components/brand-logo";
 import ElementThumbnail from "@/components/element-thumbnail";
 import ExhibitionMinimap from "@/components/exhibition-minimap";
 import ExhibitionPublishDialog, { type PublishVisibility } from "@/components/exhibition-publish-dialog";
@@ -3462,7 +3463,7 @@ async function compressImage(file: File): Promise<File> {
       <header className="editor-topbar">
         <div className="editor-brand-group">
           <Link href="/" className="editor-back" aria-label="Back to dashboard"><ArrowLeft size={18} /></Link>
-          <Link className="brand-lockup editor-brand" href="/"><span className="brand-mark">s.</span><span className="brand-name">SANAA</span></Link>
+          <Link className="brand-lockup editor-brand" href="/"><BrandLogo variant="horizontal" height={30} /></Link>
           <span className="editor-separator" />
           {editingTitle ? (
             <input

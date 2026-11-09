@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Spatial Lab — SANAA",
+  title: "Spatial Lab — Lakisa",
   description:
     "The 3D side of the studio: gallery room templates, the editor where exhibitions take shape, and digital twins with VR and AR.",
 };

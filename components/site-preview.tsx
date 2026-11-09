@@ -471,7 +471,7 @@ export default function SitePreview({
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px", justifyContent: "space-between", alignItems: "center", marginTop: 28, paddingTop: 18, borderTop: `1px solid ${theme.line}`, fontSize: 12, color: theme.muted }}>
           <span>© {new Date().getFullYear()} {config.artistName || "Artist"}</span>
-          <span>Built with SANAA — Artist Website Builder</span>
+          <span>Built with Lakisa — Artist Website Builder</span>
           <a href="#top" style={{ color: theme.ink, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <ArrowUp size={14} aria-hidden="true" />Back to top
           </a>

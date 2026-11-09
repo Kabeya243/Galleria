@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import Sidebar from "@/components/sidebar";
+import BrandLogo from "@/components/brand-logo";
 import ThemeToggle from "@/components/theme-toggle";
 import { useLocale, useT, type Locale } from "@/lib/i18n";
 import styles from "./feed-page.module.css";
@@ -225,8 +226,7 @@ export default function FeedPage({
       <main className="galleries-page">
         <header className="galleries-header">
           <Link className="brand-lockup" href="/">
-            <span className="brand-mark">s.</span>
-            <span className="brand-name">SANAA</span>
+            <BrandLogo variant="horizontal" height={36} />
           </Link>
           <nav className="galleries-nav">
             <Link href="/galleries">{t("explore", "galleries")}</Link>

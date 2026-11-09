@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Tools — SANAA",
+  title: "Tools — Lakisa",
   description:
     "Tools for artists, curators, galleries and collectors: price your work, keep your inventory, know your contacts, present and sell.",
 };

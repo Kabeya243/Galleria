@@ -92,6 +92,34 @@ button { color: inherit; }
   .sidebar.collapsed .profile-chip { justify-content: center; padding: 16px 0 3px; gap: 0; }
   .sidebar.collapsed .profile-copy { opacity: 0; max-width: 0; }
   .sidebar.collapsed .sign-out-button { opacity: 0; max-width: 0; padding: 0; border-width: 0; visibility: hidden; transition: opacity .25s ease, max-width .25s ease, padding .25s ease, visibility 0s linear .25s; }
+
+/* Lakisa brand logo (components/brand-logo.tsx, kit in public/brand/).
+   The horizontal lockup is the default header mark; the cube icon is
+   the collapsed-rail mark. Theme switching only applies when both
+   variants are rendered (brand-logo-auto): the dark page shows Noir,
+   the light page shows Blanc. */
+.brand-logo { display: inline-flex; align-items: center; }
+.brand-logo img { display: block; height: 100%; width: auto; }
+.brand-logo-horizontal { height: 40px; }
+.brand-logo-icon { height: 30px; }
+.brand-logo-principal { height: 120px; }
+.brand-logo-auto:not(.brand-logo-admin) .brand-logo-light { display: none; }
+[data-theme="light"] .brand-logo-auto:not(.brand-logo-admin) .brand-logo-dark { display: none; }
+[data-theme="light"] .brand-logo-auto:not(.brand-logo-admin) .brand-logo-light { display: block; }
+/* Same switch driven by the admin panel's own theme attribute. */
+.brand-logo-admin .brand-logo-light { display: none; }
+[data-admin-theme="light"] .brand-logo-admin .brand-logo-dark { display: none; }
+[data-admin-theme="light"] .brand-logo-admin .brand-logo-light { display: block; }
+/* Sidebar: the cube icon alone on the collapsed 64 px rail, the
+   horizontal lockup when the menu is open. On mobile the slide-over
+   always shows the full lockup. */
+.sidebar .brand-logo-icon { display: none; }
+.sidebar.collapsed .brand-logo-horizontal { display: none; }
+.sidebar.collapsed .brand-logo-icon { display: inline-flex; }
+@media (max-width: 850px) {
+  .sidebar.open .brand-logo-icon { display: none; }
+  .sidebar.open .brand-logo-horizontal { display: inline-flex; }
+}
   /* Collapsible sidebar as an overlay: the rail is fixed above the
      page instead of taking space in the layout, so the content never
      shifts when the menu unfolds. Each page reserves the 64px rail

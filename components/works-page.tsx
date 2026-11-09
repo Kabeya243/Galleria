@@ -170,7 +170,7 @@ export default function WorksPage({
       )}
 
       <footer className="works-footer">
-        <Link href="/">← SANAA</Link>
+        <Link href="/">← Lakisa</Link>
       </footer>
 
       <style>{`

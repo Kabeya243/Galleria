@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Accessibility & Audio Guide Studio — SANAA Tools",
+  title: "Accessibility & Audio Guide Studio — Lakisa Tools",
   description:
     "Write audio descriptions, artist and curator narration, captions and transcripts for every artwork — in English and French — preview them with your browser's voices, and check the exhibition against a real accessibility checklist.",
 };

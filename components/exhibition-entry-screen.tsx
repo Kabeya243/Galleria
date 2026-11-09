@@ -77,6 +77,7 @@ export default function ExhibitionEntryScreen({
         <Avatar name={ownerName} avatarUrl={ownerAvatarUrl} className="entry-creator-avatar" />
         <span className="panel-kicker">{ownerName.toUpperCase()} PRESENTS</span>
       </div>
+      <p className="panel-kicker">LAKISA VR</p>
       <h1>{title}</h1>
       <p className="entry-meta">
         {artworkCount} {t("listView", "artworks")} · {roomCount} {t("minimap", "room").toLowerCase()}

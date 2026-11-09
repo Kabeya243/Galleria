@@ -12,12 +12,12 @@ type RouteProps = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: RouteProps): Promise<Metadata> {
   const { slug } = await params;
   const exhibition = await findPublishedExhibition(slug);
-  if (!exhibition) return { title: "Exhibition not found — SANAA" };
+  if (!exhibition) return { title: "Exhibition not found — Lakisa VR" };
   // A password-protected show keeps its title and description out of
   // the page metadata — the link must not leak the show before the
   // password is entered.
   if (exhibition.visibility === "password") {
-    return { title: "Protected exhibition — SANAA" };
+    return { title: "Protected exhibition — Lakisa VR" };
   }
   const description =
     exhibition.description || `A virtual exhibition curated by ${exhibition.owner.name}.`;
@@ -33,17 +33,17 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
     ? [{ url: firstImage, alt: firstArtwork?.altText?.trim() ? firstArtwork.altText.trim() : exhibition.title }]
     : [];
   return {
-    title: `${exhibition.title} — SANAA`,
+    title: `${exhibition.title} — Lakisa VR`,
     description,
     openGraph: {
-      title: `${exhibition.title} — SANAA`,
+      title: `${exhibition.title} — Lakisa VR`,
       description,
       type: "website",
       images,
     },
     twitter: {
       card: images.length ? "summary_large_image" : "summary",
-      title: `${exhibition.title} — SANAA`,
+      title: `${exhibition.title} — Lakisa VR`,
       description,
       images: images.map((image) => image.url),
     },

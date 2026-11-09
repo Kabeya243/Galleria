@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ListingInquiryForm from "@/components/marketplace-inquiry-form";
 import CurrencySelector, { RatesNote } from "@/components/currency-selector";
+import BrandLogo from "@/components/brand-logo";
 import ListingPrice from "@/components/listing-price";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -16,10 +17,10 @@ function kindLabel(kind: string): string {
 export async function generateMetadata({ params }: RouteProps): Promise<Metadata> {
   const { id } = await params;
   const listing = await db.listing.findUnique({ where: { id }, select: { title: true, artist: true, description: true } });
-  if (!listing) return { title: "Listing not found — SANAA" };
+  if (!listing) return { title: "Listing not found — Lakisa" };
   return {
-    title: `${listing.title} — SANAA Marketplace`,
-    description: listing.description || `${listing.title} by ${listing.artist}, for sale on SANAA.`,
+    title: `${listing.title} — Lakisa Marketplace`,
+    description: listing.description || `${listing.title} by ${listing.artist}, for sale on Lakisa.`,
   };
 }
 
@@ -43,8 +44,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
     <main className="galleries-page">
       <header className="galleries-header">
         <Link className="brand-lockup" href="/">
-          <span className="brand-mark">s.</span>
-          <span className="brand-name">SANAA</span>
+          <BrandLogo variant="horizontal" height={36} />
         </Link>
         <nav className="galleries-nav">
           <Link href="/marketplace">Marketplace</Link>
@@ -159,7 +159,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
           <aside className="mp-checkout-box">
             <h2>Checkout — Stripe integration point (not connected)</h2>
             <p>
-              There is no payment provider connected to SANAA yet, so this listing has no checkout
+              There is no payment provider connected to Lakisa yet, so this listing has no checkout
               button and no money moves on this page. The inquiry above is the complete working
               path to a sale: you and the seller agree the price, shipping and payment directly.
             </p>

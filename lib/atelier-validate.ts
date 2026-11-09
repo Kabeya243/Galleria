@@ -56,7 +56,7 @@ export function validateAtelierDocument(document: unknown): string | null {
           /^\/api\/atelier\/file\/atelier\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9]{32}\.(?:jpe?g|png|webp|svg)$/i.test(source) ||
           /^https?:\/\/[^/]+\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:jpe?g|png|webp|svg)$/i.test(source);
         const dataOk = /^data:image\/(?:png|jpe?g|webp|svg\+xml);base64,/i.test(source);
-        if (!uploadOk && !dataOk) return "Les images doivent provenir de la bibliothèque SANAA.";
+        if (!uploadOk && !dataOk) return "Les images doivent provenir de la bibliothèque Lakisa.";
       }
     }
   }

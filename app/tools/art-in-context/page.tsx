@@ -9,7 +9,7 @@ import { parseGalleryRooms } from "@/lib/rooms";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Art in Context — SANAA Tools",
+  title: "Art in Context — Lakisa Tools",
   description:
     "One guided journey for an artwork — from upload and photography through colour, framing, mockups, arrangement and the 3D gallery, to a published exhibition and its promotion. The same artwork record carries through every step.",
 };

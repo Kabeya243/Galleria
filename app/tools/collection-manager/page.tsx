@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Collection Manager — SANAA Tools",
+  title: "Collection Manager — Lakisa Tools",
   description:
     "Your whole collection in one place — every artwork across all your exhibitions, with search, filters, tags, availability, provenance, inventory numbers, condition reports and bulk actions.",
 };

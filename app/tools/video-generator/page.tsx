@@ -9,7 +9,7 @@ import { parseGalleryRooms } from "@/lib/rooms";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Exhibition Video Generator — SANAA Tools",
+  title: "Exhibition Video Generator — Lakisa Tools",
   description:
     "Turn an exhibition into a shareable video: build a shot list of camera walks, artwork close-ups and title cards, then record the real 3D room in your browser to a .webm file — vertical, square or landscape.",
 };

@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Mockup Studio — SANAA Tools",
+  title: "Mockup Studio — Lakisa Tools",
   description: "See your artwork on a real wall before you hang it — eight interiors, frames, lighting and print-ready exports.",
 };
 

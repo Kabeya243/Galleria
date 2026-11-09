@@ -81,7 +81,7 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
     };
   }
   const site = await findSite(id);
-  if (!site) return { title: "Site not found — SANAA" };
+  if (!site) return { title: "Site not found — Lakisa" };
   return {
     title: site.config.siteTitle || site.title,
     description: site.config.siteDescription || undefined,

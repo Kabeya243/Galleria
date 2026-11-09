@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import AdminThemeToggle from "@/components/admin-theme-toggle";
+import BrandLogo from "@/components/brand-logo";
 
 const COLLAPSED_KEY = "sanaa-admin-collapsed";
 
@@ -149,9 +150,9 @@ export default function AdminShell({
       />
       <aside className="ad-sidebar" aria-label="Admin menu">
         <div className="ad-sidebar-brand">
-          <span className="ad-sidebar-mark">s.</span>
+          <BrandLogo variant="icon" themeScope="admin" height={38} />
           <span className="ad-sidebar-titles">
-            <strong>SANAA</strong>
+            <strong>LAKISA</strong>
             <span>Admin Panel</span>
           </span>
         </div>

@@ -161,7 +161,7 @@ function drawAsset(
     ctx.fillStyle = cfg.bgColor;
     ctx.font = `700 ${Math.round(34 * s)}px ${sans}`;
     ctx.textAlign = "left";
-    ctx.fillText((cfg.logoText || cfg.artistName || "SANAA").toUpperCase(), pad, Math.round(78 * s));
+    ctx.fillText((cfg.logoText || cfg.artistName || "Lakisa").toUpperCase(), pad, Math.round(78 * s));
     ctx.font = `700 ${Math.round(92 * s)}px ${serif}`;
     const lines = wrapText(ctx, headline, w - pad * 2);
     lines.slice(0, 3).forEach((line, i) => ctx.fillText(line, pad, Math.round(190 * s) + i * Math.round(104 * s)));
@@ -215,7 +215,7 @@ function drawAsset(
   ctx.textAlign = "center";
   ctx.fillStyle = cfg.textColor;
   ctx.font = `600 ${Math.round(28 * s)}px ${sans}`;
-  ctx.fillText((cfg.logoText || cfg.artistName || "SANAA").toUpperCase(), w / 2, Math.round(86 * s));
+  ctx.fillText((cfg.logoText || cfg.artistName || "Lakisa").toUpperCase(), w / 2, Math.round(86 * s));
   const imgTop = Math.round(130 * s);
   const imgW = Math.round(w * 0.78);
   const imgH = Math.round(h * 0.52);

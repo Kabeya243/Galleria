@@ -1488,7 +1488,7 @@ export default function ArtInContext({
                 {exhibition.artworks[0]?.imageUrl && <img src={exhibition.artworks[0].imageUrl} alt="" style={{ width: "100%", height: 180, objectFit: "cover", display: "block" }} />}
                 <div style={{ padding: 12 }}>
                   <strong style={{ display: "block", fontSize: 15 }}>{exhibition.title}</strong>
-                  <span style={{ fontSize: 13, color: "#6b6558" }}>{(exhibition.description || "An exhibition on SANAA").slice(0, 120)}</span>
+                  <span style={{ fontSize: 13, color: "#6b6558" }}>{(exhibition.description || "An exhibition on Lakisa").slice(0, 120)}</span>
                   <span style={{ display: "block", fontSize: 12, color: GOLD, marginTop: 6 }}>{publicUrl.replace(/^https?:\/\//, "")}</span>
                 </div>
               </div>

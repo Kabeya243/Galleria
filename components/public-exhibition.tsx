@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Headset, Info, List
 import type { WebGLRenderer } from "three";
 import { useProgress } from "@react-three/drei";
 import Avatar from "@/components/avatar";
+import BrandLogo from "@/components/brand-logo";
 import GalleryScene, { artworkStandPoint, type CameraState, type TeleportTarget } from "@/components/gallery-scene";
 import ArtworkDetailPanel from "@/components/artwork-detail-panel";
 import ExhibitionAudioPlayer, { type ExhibitionMusic } from "@/components/exhibition-audio-player";
@@ -46,7 +47,7 @@ function ExhibitionLoader() {
   if (gone) return null;
   return (
     <div className={`exhibition-loader${fading ? " done" : ""}`} aria-hidden={fading || undefined}>
-      <div className="loader-brand"><span className="brand-mark">s.</span><span className="brand-name">SANAA</span></div>
+      <div className="loader-brand"><BrandLogo variant="horizontal" height={36} /></div>
       <div className="loader-bar"><span style={{ width: `${Math.round(progress)}%` }} /></div>
       <p>Loading the exhibition… {Math.round(progress)}%</p>
     </div>
@@ -457,9 +458,9 @@ export default function PublicExhibition({
       />}
       <header className="public-topbar">
         {embedded ? (
-          <span className="public-back" aria-hidden="true">SANAA</span>
+          <span className="public-back" aria-hidden="true">LAKISA</span>
         ) : (
-          <Link href="/" className="public-back"><ArrowLeft size={16} /> SANAA</Link>
+          <Link href="/" className="public-back"><ArrowLeft size={16} /> Lakisa</Link>
         )}
         <div className="public-title"><Avatar name={exhibition.ownerName} avatarUrl={exhibition.ownerAvatarUrl} className="public-creator-avatar" /><span>{exhibition.ownerName.toUpperCase()} PRESENTS</span><strong>{exhibition.title}</strong></div>
         <div className="public-topbar-actions">
@@ -692,7 +693,7 @@ export default function PublicExhibition({
           })}
         </aside>
       )}
-      <footer className="public-footer"><span>AN EXHIBITION BY {exhibition.ownerName.toUpperCase()}</span><span>MADE WITH <Link href="/">SANAA <ArrowUpRight size={12} /></Link></span></footer>
+      <footer className="public-footer"><span>AN EXHIBITION BY {exhibition.ownerName.toUpperCase()}</span><span>MADE WITH <Link href="/">LAKISA <ArrowUpRight size={12} /></Link></span></footer>
     </main>
   );
 }

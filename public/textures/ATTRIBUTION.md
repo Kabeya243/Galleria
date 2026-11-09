@@ -1,6 +1,6 @@
 # Photo textures — attribution
 
-Real photographs used as textures in the SANAA galleries (trees and
+Real photographs used as textures in the Lakisa galleries (trees and
 exterior windows in the eleven galleries from `Galeries_3D.html`),
 instead of procedural textures. All are free-license images from
 Wikimedia Commons; files are stored in this folder so the galleries

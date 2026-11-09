@@ -166,7 +166,7 @@ function PublishedSiteFooter({
       </div>
       <div className="published-footer-bottom">
         <p>© {year} {siteTitle} · Création indépendante</p>
-        <p>Un site d&apos;artiste · <a href="/">SANAA</a></p>
+        <p>Un site d&apos;artiste · <a href="/">Lakisa</a></p>
         <a href="#top" className="published-back-to-top"><ArrowUp size={14} aria-hidden="true" />Retour en haut</a>
       </div>
     </footer>

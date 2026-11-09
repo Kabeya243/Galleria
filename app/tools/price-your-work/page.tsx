@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Price your work — SANAA Tools",
+  title: "Price your work — Lakisa Tools",
   description: "Work out a fair price for a piece, from your hours, your materials and its size.",
 };
 

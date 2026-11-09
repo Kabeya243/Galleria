@@ -74,7 +74,7 @@ export default function ProviderPanel({ status }: { status: AiProviderStatus }) 
       ) : (
         <>
           <p style={S.text}>
-            There is no AI service connected to SANAA right now. Everything on this page that
+            There is no AI service connected to Lakisa right now. Everything on this page that
             works from your own data — your artworks, colours, dimensions, rooms and templates —
             works today. Anything that would need a language model is marked{" "}
             <strong>“needs an AI provider”</strong> and stays off until you connect one.

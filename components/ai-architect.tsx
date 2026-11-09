@@ -388,7 +388,7 @@ export default function AiArchitect({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#000000";
     ctx.font = "700 20px 'DM Sans', sans-serif";
-    ctx.fillText("SANAA · AI EXHIBITION ARCHITECT", pad, pad + 8);
+    ctx.fillText("LAKISA · AI EXHIBITION ARCHITECT", pad, pad + 8);
     ctx.fillStyle = "#141414";
     ctx.font = "600 46px Georgia, serif";
     ctx.fillText(`${theme} — moodboard`, pad, pad + 66, width - pad * 2);
@@ -748,7 +748,7 @@ export default function AiArchitect({
                 <div ref={boardRef} style={{ ...S.board, background: selectedTemplate?.wallColor ?? "#f5f2eb" }}>
                   <div style={S.boardHeader}>
                     <p style={{ margin: 0, color: "var(--accent)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em" }}>
-                      SANAA · AI EXHIBITION ARCHITECT
+                      LAKISA · AI EXHIBITION ARCHITECT
                     </p>
                     <h3 style={S.boardTitle}>{theme} — moodboard</h3>
                     <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>

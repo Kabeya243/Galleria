@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Manage — SANAA",
+  title: "Manage — Lakisa",
   description:
     "The running of your practice: inventory, collections, exhibition planning, accessibility, education, contacts, certificates, and — for the owner — platform stats.",
 };

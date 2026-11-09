@@ -8,7 +8,7 @@ import { getProviderStatus } from "@/lib/ai-providers";
 import { roomLayouts } from "@/lib/rooms";
 
 export const metadata = {
-  title: "AI Exhibition Architect — SANAA Tools",
+  title: "AI Exhibition Architect — Lakisa Tools",
   description:
     "Plan an exhibition from your own works: concept drafts, arrangement, room matches, lighting and wall colours — computed from your artworks, dimensions, colours and the 40 gallery templates. Model features stay off until an AI provider is connected.",
 };

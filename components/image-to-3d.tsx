@@ -350,7 +350,7 @@ export default function ImageTo3D() {
     setFabError(null);
     const url = fabForm.url.trim();
     if (!url || !/fab\.com/i.test(url)) {
-      setFabError("Paste the Fab asset page URL (a fab.com link). SANAA catalogues the metadata and links out — it never downloads or re-hosts the file.");
+      setFabError("Paste the Fab asset page URL (a fab.com link). Lakisa catalogues the metadata and links out — it never downloads or re-hosts the file.");
       return;
     }
     if (!fabForm.name.trim()) {
@@ -779,7 +779,7 @@ export default function ImageTo3D() {
             <label>CATALOGUE A FAB ASSET — METADATA ONLY, LINK OUT</label>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
               Fab (fab.com) is Epic Games&apos; marketplace for 3D models, textures, materials and environments. Browse
-              and acquire each asset on Fab itself — SANAA records the listing&apos;s metadata and links back to it. It
+              and acquire each asset on Fab itself — Lakisa records the listing&apos;s metadata and links back to it. It
               never copies, hotlinks or re-hosts Fab files, and there is no public Fab download API. Prefer Fab&apos;s
               FREE assets: use the price filter on fab.com. A paid asset is labelled PAID here and is never included by
               default. &ldquo;Free&rdquo; does not mean usable for anything — the licence on the listing decides.
@@ -840,7 +840,7 @@ export default function ImageTo3D() {
           <div className="property-section">
             <label>REFERENCE LINKS — LINK OUT, DO NOT RE-HOST</label>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-              Starter sources for free 3D assets, plus marketplaces below. These are links to other sites — SANAA does not copy or host their files. Always check the licence on the file page itself before using an asset.
+              Starter sources for free 3D assets, plus marketplaces below. These are links to other sites — Lakisa does not copy or host their files. Always check the licence on the file page itself before using an asset.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {PUBLIC_DOMAIN_REFERENCES.map((ref) => (
@@ -859,7 +859,7 @@ export default function ImageTo3D() {
             <h3 style={{ fontSize: 13, margin: "18px 0 6px" }}>Marketplaces — per-asset licence, link out only</h3>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
               Marketplace assets are not free by default: each one has its own licence and price. Record the asset URL
-              and licence in your library like any other source — SANAA never re-hosts marketplace files.
+              and licence in your library like any other source — Lakisa never re-hosts marketplace files.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {MARKETPLACE_REFERENCES.map((ref) => (
@@ -1036,7 +1036,7 @@ export default function ImageTo3D() {
             <strong>One honest limit, up front.</strong>
             <p>
               A single image cannot reconstruct hidden geometry — the back of an object, what sits behind it, or its true depth are not in the
-              picture. What SANAA does here, without any external service, is a 2D texture and a depth-from-brightness approximation. True
+              picture. What Lakisa does here, without any external service, is a 2D texture and a depth-from-brightness approximation. True
               reconstruction needs several photos or a hosted AI service (see the provider section below).
             </p>
           </div>
@@ -1212,7 +1212,7 @@ export default function ImageTo3D() {
             <label>PHOTOGRAMMETRY WORKFLOW — REALITYCAPTURE / REALITYSCAN (FREE)</label>
             <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, background: "#f6f1ea", border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
               <strong>Runs OUTSIDE the browser, on your own computer.</strong> Nothing in this workflow is simulated
-              inside SANAA: you photograph a real space or object, RealityScan (Epic Games&apos; desktop
+              inside Lakisa: you photograph a real space or object, RealityScan (Epic Games&apos; desktop
               photogrammetry app, formerly RealityCapture — renamed at version 2.0, June 2025) rebuilds it into a 3D
               model on your machine, and you import the finished .glb back here. RealityScan is free for students,
               educators and individuals / businesses under $1M USD annual gross revenue; above that it is a paid seat
@@ -1247,17 +1247,17 @@ export default function ImageTo3D() {
                 many for a browser. In RealityScan, go to SCENE 3D / TOOLS → <em>Simplify</em> and set an absolute
                 target triangle count; it creates a new simplified model and keeps the original. Then <em>retexture</em>{" "}
                 the simplified model: a simplified model must be retextured before its textures can be exported with
-                it. Aim for a file well under SANAA&apos;s 50 MB import limit.
+                it. Aim for a file well under Lakisa&apos;s 50 MB import limit.
               </li>
               <li>
                 <strong>4 · Export mesh + textures as GLB / glTF.</strong> Export → Model &amp; Point Cloud → Binary
                 GL Transmission Format (.glb), with &ldquo;Export textures&rdquo; on. GLB is one file with the textures
-                embedded, which is why SANAA imports it directly. (RealityScan also exports OBJ, FBX, USD, PLY, STL
+                embedded, which is why Lakisa imports it directly. (RealityScan also exports OBJ, FBX, USD, PLY, STL
                 and more — GLB is the web-ready choice.) RealityScan Mobile exports GLB directly on Android, and USDZ
                 / OBJ on iOS.
               </li>
               <li>
-                <strong>5 · Import the GLB into SANAA.</strong> Open the &ldquo;Import .glb / .gltf&rdquo; tab above,
+                <strong>5 · Import the GLB into Lakisa.</strong> Open the &ldquo;Import .glb / .gltf&rdquo; tab above,
                 choose the exported .glb (max 50 MB), preview it with orbit controls, adjust scale, rotation and tint,
                 then save it to your asset library. The library keeps the name, file details and transform — keep the
                 original .glb file on disk and re-attach it to preview again.

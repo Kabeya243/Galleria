@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Marketing Studio — SANAA Tools",
+  title: "Marketing Studio — Lakisa Tools",
   description:
     "Generate exhibition marketing assets from your own artworks — posters, social graphics, invitation cards, press kits and announcements, with live preview and real-size PNG/JPEG export.",
 };

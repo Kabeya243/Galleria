@@ -35,7 +35,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
   if (!invited) {
     return NextResponse.json(
-      { error: `No SANAA account with the email ${parsed.data.email.trim()}. They need to create an account first — no invitation email is sent.` },
+      { error: `No Lakisa account with the email ${parsed.data.email.trim()}. They need to create an account first — no invitation email is sent.` },
       { status: 404 },
     );
   }

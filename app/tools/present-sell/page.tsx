@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Present & Sell — SANAA Tools",
+  title: "Present & Sell — Lakisa Tools",
   description: "Your published rooms as viewing rooms — share them, track visits, follow up.",
 };
 

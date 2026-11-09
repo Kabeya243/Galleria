@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { getProviderStatus } from "@/lib/ai-providers";
 
 export const metadata = {
-  title: "Artwork Intelligence — SANAA Tools",
+  title: "Artwork Intelligence — Lakisa Tools",
   description:
     "Read what is already in your artwork: metadata pre-filled from your record, rule-based tags, dominant colours measured from the real pixels, and template description and accessibility drafts — all labelled as drafts to check. Model enrichment stays off until an AI provider is connected.",
 };

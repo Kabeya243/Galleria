@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
+import BrandLogo from "@/components/brand-logo";
 import "./atelier-editor.css";
 
 type ArtworkRef = { id: string; title: string; imageUrl: string };
@@ -73,7 +74,7 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
       <div className="editor-shell">
         <header className="editor-topbar">
           <a className="editor-brand" href="/" title="Retour à l'accueil">
-            <span className="brand-mark">S.</span>SANAA
+            <BrandLogo variant="horizontal" height={30} />
           </a>
           <div className="top-divider" />
           <div className="project-title-wrap">

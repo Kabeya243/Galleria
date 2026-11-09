@@ -50,7 +50,7 @@ function sanitiseSize(size: Partial<EmbedSize>): EmbedSize {
 export function buildEmbedSnippet(
   embedUrl: string,
   size: Partial<EmbedSize> = {},
-  title = "SANAA exhibition",
+  title = "Lakisa exhibition",
 ): string {
   const { width, height } = sanitiseSize(size);
   const safeTitle = title.replace(/"/g, "&quot;");

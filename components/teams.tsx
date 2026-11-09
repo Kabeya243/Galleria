@@ -366,7 +366,7 @@ export default function TeamsTool({
         {teams.length === 0 ? (
           <div className="tm-empty">
             <strong>No teams yet.</strong>
-            <p>Create one to share an exhibition with a curator, a collaborator or a gallery — they need a SANAA account to be invited.</p>
+            <p>Create one to share an exhibition with a curator, a collaborator or a gallery — they need a Lakisa account to be invited.</p>
           </div>
         ) : (
           <ul className="tm-team-list">
@@ -420,7 +420,7 @@ export default function TeamsTool({
             </ul>
             {isOwner ? (
               <form onSubmit={inviteMember} className="tm-inline-form">
-                <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="Invite by email — they need a SANAA account" aria-label="Invite by email" />
+                <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="Invite by email — they need a Lakisa account" aria-label="Invite by email" />
                 <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} aria-label="Role for the invited member">
                   <option value="editor">Editor — can share and edit</option>
                   <option value="viewer">Viewer — read-only</option>

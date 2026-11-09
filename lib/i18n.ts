@@ -95,7 +95,7 @@ export const DICTIONARY = {
     visit: { fr: "Visiter", en: "Visit" },
     minutes: { fr: "minutes", en: "minutes" },
     minute: { fr: "minute", en: "minute" },
-    footerRights: { fr: "© 2026 SANAA Studio", en: "© 2026 SANAA Studio" },
+    footerRights: { fr: "© 2026 Lakisa Studio", en: "© 2026 Lakisa Studio" },
     footerTagline: { fr: "Fait pour l'art, fait pour tous.", en: "Made for art, made for everyone." },
     yourWorkspace: { fr: "VOTRE ESPACE DE TRAVAIL", en: "YOUR WORKSPACE" },
   },
@@ -110,7 +110,7 @@ export const DICTIONARY = {
     studio: { fr: "Mon studio", en: "My Studio" },
     explore: { fr: "Explorer les expositions", en: "Explore exhibitions" },
     feed: { fr: "Fil", en: "Feed" },
-    templates: { fr: "Modèles de galeries", en: "Gallery templates" },
+    templates: { fr: "Lakisa Galerie", en: "Lakisa Galerie" },
     home: { fr: "Accueil", en: "Home" },
     exhibitions: { fr: "Mes expositions", en: "My exhibitions" },
     myArtworks: { fr: "Mes œuvres", en: "My artworks" },
@@ -133,7 +133,7 @@ export const DICTIONARY = {
     expandNav: { fr: "Déplier le menu", en: "Expand the menu" },
     collapseNav: { fr: "Replier le menu", en: "Collapse the menu" },
     mainNav: { fr: "Navigation principale", en: "Main navigation" },
-    sanaaHome: { fr: "Accueil SANAA", en: "SANAA home" },
+    sanaaHome: { fr: "Accueil Lakisa", en: "Lakisa home" },
   },
   artwork: {
     contactArtist: { fr: "Contacter l'artiste", en: "Contact the artist" },
@@ -594,7 +594,7 @@ export const DICTIONARY = {
   publish: {
     visibility: { fr: "Visibilité", en: "Visibility" },
     visibilityPublic: { fr: "Publique", en: "Public" },
-    visibilityPublicDesc: { fr: "Listée sur SANAA, ouverte à tous.", en: "Listed on SANAA, open to everyone." },
+    visibilityPublicDesc: { fr: "Listée sur Lakisa, ouverte à tous.", en: "Listed on Lakisa, open to everyone." },
     visibilityPrivateLink: { fr: "Lien privé", en: "Private link" },
     visibilityPrivateLinkDesc: {
       fr: "Non listée — seul le lien direct ouvre l'exposition.",
@@ -641,7 +641,7 @@ export const DICTIONARY = {
     yourName: { fr: "Votre nom", en: "Your name" },
     namePlaceholder: { fr: "Comment doit-on vous appeler ?", en: "How should we call you?" },
     yourRole: { fr: "Votre rôle", en: "Your role" },
-    roleAria: { fr: "Votre rôle sur SANAA", en: "Your role on SANAA" },
+    roleAria: { fr: "Votre rôle sur Lakisa", en: "Your role on Lakisa" },
     chooseRole: { fr: "Choisir votre rôle (facultatif)", en: "Choose your role (optional)" },
     country: { fr: "Pays", en: "Country" },
     countryPlaceholder: { fr: "Où êtes-vous basé ? (facultatif)", en: "Where are you based? (optional)" },
@@ -659,10 +659,10 @@ export const DICTIONARY = {
     signUp: { fr: "S'INSCRIRE", en: "SIGN UP" },
     signInBtn: { fr: "SE CONNECTER", en: "SIGN IN" },
     alreadyHave: { fr: "Vous avez déjà un compte ?", en: "Already have an account?" },
-    newToSanaa: { fr: "Nouveau sur SANAA ?", en: "New to SANAA?" },
+    newToSanaa: { fr: "Nouveau sur Lakisa ?", en: "New to Lakisa?" },
     terms: {
-      fr: "En continuant, vous acceptez d'utiliser SANAA avec respect et de ne partager que des œuvres que vous avez le droit de publier.",
-      en: "By continuing, you agree to use SANAA respectfully and only share work you have permission to publish.",
+      fr: "En continuant, vous acceptez d'utiliser Lakisa avec respect et de ne partager que des œuvres que vous avez le droit de publier.",
+      en: "By continuing, you agree to use Lakisa respectfully and only share work you have permission to publish.",
     },
     couldNotCreateAccount: {
       fr: "Impossible de créer votre compte pour le moment.",
@@ -670,7 +670,7 @@ export const DICTIONARY = {
     },
     couldNotSignIn: { fr: "Impossible de vous connecter pour le moment.", en: "Could not sign in right now." },
     somethingWrong: { fr: "Une erreur est survenue.", en: "Something went wrong." },
-    rights: { fr: "© 2026 SANAA Studio. Tous droits réservés.", en: "© 2026 SANAA Studio. All rights reserved." },
+    rights: { fr: "© 2026 Lakisa Studio. Tous droits réservés.", en: "© 2026 Lakisa Studio. All rights reserved." },
   },
   settings: {
     language: { fr: "Langue", en: "Language" },
@@ -681,13 +681,13 @@ export const DICTIONARY = {
     title: { fr: "Paramètres", en: "Settings" },
     yourAccount: { fr: "VOTRE COMPTE", en: "YOUR ACCOUNT" },
     settingsDesc: {
-      fr: "Votre profil, votre mot de passe, et l'apparence de SANAA.",
-      en: "Your profile, your password, and how SANAA looks.",
+      fr: "Votre profil, votre mot de passe, et l'apparence de Lakisa.",
+      en: "Your profile, your password, and how Lakisa looks.",
     },
     appearance: { fr: "Apparence", en: "Appearance" },
     appearanceDesc: {
-      fr: "Choisissez l'apparence de SANAA sur cet appareil. Système suit le réglage de votre appareil.",
-      en: "Choose how SANAA looks on this device. System follows your device setting.",
+      fr: "Choisissez l'apparence de Lakisa sur cet appareil. Système suit le réglage de votre appareil.",
+      en: "Choose how Lakisa looks on this device. System follows your device setting.",
     },
     light: { fr: "Clair", en: "Light" },
     dark: { fr: "Sombre", en: "Dark" },
@@ -759,7 +759,7 @@ export const DICTIONARY = {
       en: "Could not change your password right now.",
     },
     session: { fr: "Session", en: "Session" },
-    sessionDesc: { fr: "Se déconnecter de SANAA sur cet appareil.", en: "Sign out of SANAA on this device." },
+    sessionDesc: { fr: "Se déconnecter de Lakisa sur cet appareil.", en: "Sign out of Lakisa on this device." },
     deleteAccount: { fr: "Supprimer le compte", en: "Delete account" },
     deleteAccountDesc: {
       fr: "Supprimer définitivement votre compte et toutes vos expositions et œuvres. Irréversible.",
@@ -777,7 +777,7 @@ export const DICTIONARY = {
   dashboard: {
     creativeSpace: { fr: "VOTRE ESPACE CRÉATIF", en: "YOUR CREATIVE SPACE" },
     hello: { fr: "Bonjour,", en: "Hello," },
-    overview: { fr: "Voici un aperçu de votre travail sur SANAA.", en: "Here is an overview of your work on SANAA." },
+    overview: { fr: "Voici un aperçu de votre travail sur Lakisa.", en: "Here is an overview of your work on Lakisa." },
     searchPlaceholder: { fr: "Rechercher vos expositions…", en: "Search your exhibitions…" },
     searchAria: { fr: "Rechercher vos expositions", en: "Search your exhibitions" },
     createExhibition: { fr: "Créer une exposition", en: "Create an exhibition" },
@@ -842,17 +842,17 @@ export const DICTIONARY = {
       en: "Be the first to open a room and invite the world in.",
     },
     createAccount: { fr: "Créer un compte", en: "Create an account" },
-    aboutTitle: { fr: "À propos de SANAA", en: "About SANAA" },
+    aboutTitle: { fr: "À propos de Lakisa", en: "About Lakisa" },
     aboutText: {
-      fr: "SANAA est une plateforme d'expositions virtuelles où les artistes construisent des salles, accrochent leurs œuvres et invitent le monde à les parcourir — d'où que ce soit. Aucun téléchargement, aucun compte nécessaire pour visiter.",
-      en: "SANAA is a virtual exhibition platform where artists build rooms, hang their work, and invite the world to walk through — from anywhere. No downloads, no account needed to visit.",
+      fr: "Lakisa est une plateforme d'expositions virtuelles où les artistes construisent des salles, accrochent leurs œuvres et invitent le monde à les parcourir — d'où que ce soit. Aucun téléchargement, aucun compte nécessaire pour visiter.",
+      en: "Lakisa is a virtual exhibition platform where artists build rooms, hang their work, and invite the world to walk through — from anywhere. No downloads, no account needed to visit.",
     },
     artwork: { fr: "œuvre", en: "artwork" },
     artworks: { fr: "œuvres", en: "artworks" },
   },
   // Galleries catalogue page (/galleries).
   galleries: {
-    title: { fr: "Galeries", en: "Galleries" },
+    title: { fr: "Lakisa Galerie", en: "Lakisa Galerie" },
     roomsCollection: { fr: "SALLES · UNE COLLECTION", en: "ROOMS · ONE COLLECTION" },
     intro: {
       fr: "salles de galerie, chacune avec sa lumière, ses murs et son sol. Choisissez-en une à parcourir, ou ouvrez-la dans l'éditeur et accrochez vos œuvres.",
@@ -1022,8 +1022,8 @@ export const DICTIONARY = {
       en: "Public exhibitions by other artists, curators and galleries — walk through them for inspiration.",
     },
     copyPublic: {
-      fr: "Chaque exposition publique sur SANAA, créée par quelqu'un d'autre — entrez et parcourez leurs salles à votre rythme. Aucun compte nécessaire pour visiter.",
-      en: "Every public exhibition on SANAA, made by someone else — wander in and walk through their rooms at your own pace. No account needed to visit.",
+      fr: "Chaque exposition publique sur Lakisa, créée par quelqu'un d'autre — entrez et parcourez leurs salles à votre rythme. Aucun compte nécessaire pour visiter.",
+      en: "Every public exhibition on Lakisa, made by someone else — wander in and walk through their rooms at your own pace. No account needed to visit.",
     },
     noPublic: {
       fr: "Aucune exposition publique d'autres artistes pour l'instant.",
@@ -1042,11 +1042,11 @@ export const DICTIONARY = {
   // Publication feed (/feed) — published exhibitions, newest first.
   feed: {
     feed: { fr: "Fil", en: "Feed" },
-    eyebrow: { fr: "SANAA · EXPOSITIONS", en: "SANAA · EXHIBITIONS" },
+    eyebrow: { fr: "LAKISA · EXPOSITIONS", en: "LAKISA · EXHIBITIONS" },
     title: { fr: "Un monde d'art, à parcourir", en: "A world of art, open to wander" },
     copy: {
-      fr: "Entrez dans les expositions créées par les artistes de SANAA.",
-      en: "Step inside exhibitions created by artists across SANAA.",
+      fr: "Entrez dans les expositions créées par les artistes de Lakisa.",
+      en: "Step inside exhibitions created by artists across Lakisa.",
     },
     feedLabel: { fr: "Fil des expositions", en: "Exhibition feed" },
     loading: { fr: "Chargement des expositions…", en: "Loading exhibitions…" },
@@ -1063,7 +1063,7 @@ export const DICTIONARY = {
       fr: "Impossible de charger les expositions. Veuillez réessayer.",
       en: "We couldn't load the exhibitions. Please try again.",
     },
-    signIn: { fr: "Connectez-vous à SANAA pour aimer une exposition.", en: "Sign in to SANAA to like an exhibition." },
+    signIn: { fr: "Connectez-vous à Lakisa pour aimer une exposition.", en: "Sign in to Lakisa to like an exhibition." },
     likeError: {
       fr: "Votre j'aime n'a pas pu être enregistré. Veuillez réessayer.",
       en: "Your like could not be saved. Please try again.",
@@ -1277,8 +1277,8 @@ export const DICTIONARY = {
       en: "What the numbers say, and help thinking: visitor analytics, AI-assisted exhibition planning, artwork analysis, 3D assets and video.",
     },
     studioDesc: {
-      fr: "Votre espace sur SANAA : le tableau de bord, vos expositions et vos paramètres.",
-      en: "Your space on SANAA: the dashboard, your exhibitions, and your settings.",
+      fr: "Votre espace sur Lakisa : le tableau de bord, vos expositions et vos paramètres.",
+      en: "Your space on Lakisa: the dashboard, your exhibitions, and your settings.",
     },
     open: { fr: "Ouvrir", en: "Open" },
     inDevelopment: { fr: "En développement", en: "In development" },
@@ -1295,8 +1295,8 @@ export const DICTIONARY = {
     },
     publicHome: { fr: "Accueil public", en: "Public home" },
     publicHomeDesc: {
-      fr: "La porte d'entrée de SANAA — les plus récentes expositions publiques, ouvertes à tous.",
-      en: "The front door of SANAA — the newest public exhibitions, open to everyone.",
+      fr: "La porte d'entrée de Lakisa — les plus récentes expositions publiques, ouvertes à tous.",
+      en: "The front door of Lakisa — the newest public exhibitions, open to everyone.",
     },
     searchAll: { fr: "Rechercher toutes les expositions", en: "Search all exhibitions" },
     searchAllDesc: {
@@ -1468,10 +1468,10 @@ export const DICTIONARY = {
       fr: "Un jumeau mesuré d'une vraie salle, des visites en VR et des aperçus en RA de votre œuvre sur un vrai mur.",
       en: "A measured twin of a real room, VR walkthroughs and AR previews of your work on a real wall.",
     },
-    studioHome: { fr: "Mon studio — SANAA", en: "My Studio — SANAA" },
+    studioHome: { fr: "Mon studio — Lakisa", en: "My Studio — Lakisa" },
     studioHomeDesc: {
-      fr: "Votre espace sur SANAA : le tableau de bord, vos expositions et vos paramètres.",
-      en: "Your space on SANAA: the dashboard, your exhibitions, and your settings.",
+      fr: "Votre espace sur Lakisa : le tableau de bord, vos expositions et vos paramètres.",
+      en: "Your space on Lakisa: the dashboard, your exhibitions, and your settings.",
     },
     dashboardCard: { fr: "Tableau de bord", en: "Dashboard" },
     dashboardCardDesc: {
@@ -1490,8 +1490,8 @@ export const DICTIONARY = {
     },
     helpCentre: { fr: "Centre d'aide", en: "Help centre" },
     helpCentreDesc: {
-      fr: "Guides et réponses pour construire, publier et vendre sur SANAA.",
-      en: "Guides and answers for building, publishing and selling on SANAA.",
+      fr: "Guides et réponses pour construire, publier et vendre sur Lakisa.",
+      en: "Guides and answers for building, publishing and selling on Lakisa.",
     },
   },
   // Tool detail pages (app/tools/*) — page title, eyebrow and header
@@ -1607,8 +1607,8 @@ export const DICTIONARY = {
     },
     marketplace: { fr: "Place de marché", en: "Marketplace" },
     marketplaceDesc: {
-      fr: "Mettez une œuvre en vente, fixez son prix, et parlez à l'acheteur qui vous écrit. La demande est le chemin de la vente — un visiteur écrit, vous répondez par e-mail, et vous convenez de la vente directement. Aucun paiement n'est encore pris sur SANAA.",
-      en: "Put a work up for sale, set its price, and talk to the buyer who asks about it. The inquiry is the sale path — a visitor writes, you reply by email, and you agree the sale directly. No payment is taken on SANAA yet.",
+      fr: "Mettez une œuvre en vente, fixez son prix, et parlez à l'acheteur qui vous écrit. La demande est le chemin de la vente — un visiteur écrit, vous répondez par e-mail, et vous convenez de la vente directement. Aucun paiement n'est encore pris sur Lakisa.",
+      en: "Put a work up for sale, set its price, and talk to the buyer who asks about it. The inquiry is the sale path — a visitor writes, you reply by email, and you agree the sale directly. No payment is taken on Lakisa yet.",
     },
     mockupStudio: { fr: "Atelier maquettes", en: "Mockup Studio" },
     mockupStudioEyebrow: { fr: "OUTILS · ATELIER MAQUETTES", en: "TOOLS · MOCKUP STUDIO" },

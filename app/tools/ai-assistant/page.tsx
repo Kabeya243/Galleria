@@ -9,7 +9,7 @@ import { roomLayouts } from "@/lib/rooms";
 import { FRAME_VARIANTS } from "@/lib/demo-data";
 
 export const metadata = {
-  title: "AI Creative Assistant — SANAA Tools",
+  title: "AI Creative Assistant — Lakisa Tools",
   description:
     "Ask about your real project: which works are unframed, what fits a room, what is missing before publishing. Answers come from your exhibitions, artworks, rooms and frames — with their source shown — and the assistant says so plainly when it cannot answer.",
 };

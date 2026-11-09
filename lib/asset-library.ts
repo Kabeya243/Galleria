@@ -188,7 +188,7 @@ export const MARKETPLACE_REFERENCES: ReferenceLink[] = [
     name: "Fab (Epic Games)",
     url: "https://www.fab.com",
     license: "Varies per asset — Fab Standard License (Personal / Professional) or CC-BY",
-    what: "Epic's marketplace for 3D models, textures, materials and environments. Link out only: browse and acquire each asset on fab.com under its own licence and price — SANAA does not copy, hotlink or re-host Fab files, and there is no public Fab download API.",
+    what: "Epic's marketplace for 3D models, textures, materials and environments. Link out only: browse and acquire each asset on fab.com under its own licence and price — Lakisa does not copy, hotlink or re-host Fab files, and there is no public Fab download API.",
   },
 ];
 
@@ -349,9 +349,9 @@ export const EXTERNAL_PROVIDER_SLOTS: {
     label: "RealityCapture / RealityScan (Epic Games)",
     envVars: [],
     docs: "https://www.realityscan.com",
-    note: "Desktop photogrammetry: build a true 3D model from a set of overlapping photos. Processing happens on your own machine — there is no cloud API and no API key to paste into SANAA. Models built this way are imported back here as .glb. A step-by-step workflow guide is in the Image-to-3D tab.",
+    note: "Desktop photogrammetry: build a true 3D model from a set of overlapping photos. Processing happens on your own machine — there is no cloud API and no API key to paste into Lakisa. Models built this way are imported back here as .glb. A step-by-step workflow guide is in the Image-to-3D tab.",
     setup:
-      "Setup required — not connected. 1) Sign in with an Epic Games account and install RealityScan (the current name for RealityCapture since version 2.0, June 2025) from the Epic Games Launcher onto a Windows PC — there is a headless Linux build for command-line processing, but no macOS version. 2) It is free for individuals and companies under $1M annual gross revenue; above that it is a paid seat licence (check realityscan.com/license for the current threshold and price). 3) Workflow: export your photos from SANAA, align and reconstruct them in RealityScan (desktop app or its CLI), export the model as .glb, then import that .glb here. No credential is ever pasted into SANAA — the licence lives in your Epic account and the software on your machine.",
+      "Setup required — not connected. 1) Sign in with an Epic Games account and install RealityScan (the current name for RealityCapture since version 2.0, June 2025) from the Epic Games Launcher onto a Windows PC — there is a headless Linux build for command-line processing, but no macOS version. 2) It is free for individuals and companies under $1M annual gross revenue; above that it is a paid seat licence (check realityscan.com/license for the current threshold and price). 3) Workflow: export your photos from Lakisa, align and reconstruct them in RealityScan (desktop app or its CLI), export the model as .glb, then import that .glb here. No credential is ever pasted into Lakisa — the licence lives in your Epic account and the software on your machine.",
   },
 ];
 

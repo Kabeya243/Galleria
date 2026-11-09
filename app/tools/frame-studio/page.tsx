@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Frame Studio — SANAA Tools",
+  title: "Frame Studio — Lakisa Tools",
   description:
     "Frame your artworks — all 28 digitised styles with faithful previews, custom width, depth, material, matboard and glass, side-by-side comparison, and one-click save to the artwork.",
 };

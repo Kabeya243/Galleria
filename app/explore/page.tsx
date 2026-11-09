@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
 
 export const metadata = {
-  title: "Explore — SANAA",
+  title: "Explore — Lakisa",
   description: "Browse public exhibitions by other artists, curators and galleries — and walk through them.",
 };
 

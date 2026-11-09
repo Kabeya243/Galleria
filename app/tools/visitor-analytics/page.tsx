@@ -9,7 +9,7 @@ import { utcDay } from "@/lib/visits";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Visitor Analytics — SANAA Tools",
+  title: "Visitor Analytics — Lakisa Tools",
   description:
     "Who visits your exhibitions: visits over time, unique visitors, most viewed artworks, devices, traffic sources and countries — anonymous counts only, no personal data.",
 };

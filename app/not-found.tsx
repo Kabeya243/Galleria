@@ -1,11 +1,11 @@
 import Link from "next/link";
+import BrandLogo from "@/components/brand-logo";
 
 export default function NotFound() {
   return (
     <main className="not-found">
       <span className="brand-lockup">
-        <span className="brand-mark">s.</span>
-        <span className="brand-name">SANAA</span>
+        <BrandLogo variant="horizontal" height={40} />
       </span>
       <p className="eyebrow">404 · NOT FOUND</p>
       <h1>

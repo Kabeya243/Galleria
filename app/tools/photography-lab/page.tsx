@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Photography Lab — SANAA Tools",
+  title: "Photography Lab — Lakisa Tools",
   description:
     "Clean up photos of your artworks — straighten, crop, fix the light and export a print-ready file. Your original is never changed.",
 };

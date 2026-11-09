@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Color Intelligence — SANAA Tools",
+  title: "Color Intelligence — Lakisa Tools",
   description:
     "Read the real colours in your artwork — dominant colours, harmonies, contrast and wall colours that let it shine.",
 };

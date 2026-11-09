@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Digital Twin, VR & AR — SANAA Tools",
+  title: "Digital Twin, VR & AR — Lakisa Tools",
   description:
     "Build a measured digital twin of a physical room, compare planned vs measured values, plan the installation, walk the room in VR, and preview artworks in AR or on a photo of your own wall.",
 };

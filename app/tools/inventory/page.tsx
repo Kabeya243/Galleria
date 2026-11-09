@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Inventory & Collections — SANAA Tools",
+  title: "Inventory & Collections — Lakisa Tools",
   description: "Your artworks in one list — what you made, where it is, and what it is worth.",
 };
 

@@ -548,7 +548,7 @@ export default function MarketplaceTool({
                       Reopen
                     </button>
                   )}
-                  <a className="mp-small-button mp-small-button-link" href={`mailto:${inquiry.buyerEmail}?subject=${encodeURIComponent(`About “${inquiry.listingTitle}” on SANAA`)}`}>
+                  <a className="mp-small-button mp-small-button-link" href={`mailto:${inquiry.buyerEmail}?subject=${encodeURIComponent(`About “${inquiry.listingTitle}” on Lakisa`)}`}>
                     Reply by email
                   </a>
                 </div>

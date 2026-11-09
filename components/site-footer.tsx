@@ -1,0 +1,99 @@
+"use client";
+
+import Link from "next/link";
+import { Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
+import BrandLogo from "@/components/brand-logo";
+import LanguageSwitcher from "@/components/language-switcher";
+import { useT } from "@/lib/i18n";
+import styles from "./site-footer.module.css";
+
+// Shared Lakisa footer — public homepage and /about. Original copy and
+// design: four link columns (About, Resources, Partnerships, Help), a
+// brand block with social icons, and a legal bar with the language
+// switcher. /terms and /privacy do not exist yet (phase C creates them);
+// the links already point there so nothing has to change when they land.
+//
+// Social accounts: Lakisa has no public accounts yet. The icons link to
+// "#" on purpose — TODO: replace each href with the real Lakisa account
+// URL once the accounts exist. No fake account URL is invented here.
+
+const SOCIALS = [
+  { key: "socialInstagram", label: "socialInstagram", icon: Instagram },
+  { key: "socialFacebook", label: "socialFacebook", icon: Facebook },
+  { key: "socialLinkedin", label: "socialLinkedin", icon: Linkedin },
+  { key: "socialYoutube", label: "socialYoutube", icon: Youtube },
+  { key: "socialX", label: "socialX", icon: Twitter },
+] as const;
+
+export default function SiteFooter() {
+  const t = useT();
+  return (
+    <footer className={styles.footer}>
+      <div className={styles.inner}>
+        <div className={styles.brandBlock}>
+          <Link href="/" aria-label="Lakisa — home">
+            <BrandLogo variant="horizontal" theme="dark" height={36} />
+          </Link>
+          <p>{t("common", "footerTagline")}</p>
+          <div className={styles.socials}>
+            <span className={styles.socialLabel}>{t("footer", "follow")}</span>
+            <div className={styles.socialIcons}>
+              {SOCIALS.map((social) => (
+                <a
+                  key={social.key}
+                  href="#"
+                  aria-label={t("footer", social.label)}
+                  title={t("footer", "socialPending")}
+                >
+                  <social.icon size={17} />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <nav className={styles.columns} aria-label="Footer">
+          <div className={styles.column}>
+            <h3>{t("footer", "about")}</h3>
+            <Link href="/about">{t("footer", "aboutLakisa")}</Link>
+            <Link href="/about#what-we-do">{t("footer", "whatWeDo")}</Link>
+            <Link href="/about#contact">{t("footer", "contact")}</Link>
+          </div>
+
+          <div className={styles.column}>
+            <h3>{t("footer", "resources")}</h3>
+            <Link href="/about#guide">{t("footer", "userGuide")}</Link>
+            <Link href="/tools">{t("footer", "allTools")}</Link>
+            <Link href="/tools/price-your-work">{t("tools", "priceYourWork")}</Link>
+            <Link href="/tools/portfolio-pdf">{t("tools", "portfolioPdf")}</Link>
+          </div>
+
+          <div className={styles.column}>
+            <h3>{t("footer", "partnerships")}</h3>
+            <Link href="/tools/for-galleries">{t("tools", "forGalleries")}</Link>
+            <Link href="/tools/for-artists">{t("tools", "forArtists")}</Link>
+            <Link href="/tools/for-curators">{t("tools", "forCurators")}</Link>
+            <Link href="/tools/for-collectors">{t("tools", "forCollectors")}</Link>
+          </div>
+
+          <div className={styles.column}>
+            <h3>{t("footer", "help")}</h3>
+            <Link href="/about#help">{t("footer", "helpCentre")}</Link>
+            <Link href="/about#contact">{t("footer", "contactUs")}</Link>
+            <Link href="/terms">{t("footer", "terms")}</Link>
+            <Link href="/privacy">{t("footer", "privacy")}</Link>
+          </div>
+        </nav>
+      </div>
+
+      <div className={styles.legal}>
+        <span>{t("footer", "copyright")}</span>
+        <span className={styles.legalLinks}>
+          <Link href="/terms">{t("footer", "terms")}</Link>
+          <Link href="/privacy">{t("footer", "privacy")}</Link>
+        </span>
+        <LanguageSwitcher />
+      </div>
+    </footer>
+  );
+}

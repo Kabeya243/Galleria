@@ -1,11 +1,45 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Clock, Images } from "lucide-react";
+import {
+  Aperture,
+  Archive,
+  ArrowRight,
+  ArrowUpRight,
+  Calculator,
+  ChevronDown,
+  Clock,
+  FileDown,
+  FileText,
+  Frame,
+  Images,
+  Info,
+  Menu,
+  Presentation,
+  Users,
+  X,
+} from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
+import SiteFooter from "@/components/site-footer";
 import HeroGalleryPreview, { type HeroPreviewArtwork } from "@/components/hero-gallery-preview";
 import { useT } from "@/lib/i18n";
 import styles from "./public-home.module.css";
+
+// The tools listed in the "Resources" dropdown — the same tools as the
+// /tools hub, with the same dictionary labels (section "tools") and the
+// same lucide icons as the hub cards. "What we do" heads the menu and
+// points at /about; "See all tools" closes it at the /tools hub.
+const RESOURCE_TOOLS = [
+  { href: "/tools/price-your-work", icon: Calculator, title: "priceYourWork" },
+  { href: "/tools/inventory", icon: Archive, title: "inventory" },
+  { href: "/tools/contacts", icon: Users, title: "contacts" },
+  { href: "/tools/present-sell", icon: Presentation, title: "presentSell" },
+  { href: "/tools/documents", icon: FileText, title: "documents" },
+  { href: "/tools/frame-studio", icon: Frame, title: "frameStudio" },
+  { href: "/tools/photography-lab", icon: Aperture, title: "photographyLab" },
+  { href: "/tools/portfolio-pdf", icon: FileDown, title: "portfolioPdf" },
+] as const;
 
 // The public homepage — pure black & white editorial design. Logged-in
 // users never see this; app/page.tsx sends them to their workspace
@@ -59,6 +93,73 @@ export default function PublicHome({
   const shown = exhibitions.slice(0, 3);
   const visitHref = featured ? `/exhibition/${featured.slug}` : "/galleries";
 
+  // "Resources" dropdown: click to open (never hover-only), closes on
+  // outside click or Escape, Arrow keys move between items. The mobile
+  // menu below the header carries the same entries as an expandable
+  // group, since touch devices have no hover.
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileResourcesOpen, setMobileResourcesOpen] = useState(false);
+  const resourcesBtnRef = useRef<HTMLButtonElement>(null);
+  const resourcesMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!resourcesOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        resourcesMenuRef.current?.contains(target) ||
+        resourcesBtnRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setResourcesOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setResourcesOpen(false);
+        resourcesBtnRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [resourcesOpen]);
+
+  const focusMenuItem = (index: number) => {
+    const items = resourcesMenuRef.current?.querySelectorAll("a");
+    if (!items || items.length === 0) return;
+    const clamped = ((index % items.length) + items.length) % items.length;
+    items[clamped]?.focus();
+  };
+
+  const onMenuKeyDown = (event: React.KeyboardEvent) => {
+    const items = resourcesMenuRef.current?.querySelectorAll("a");
+    if (!items) return;
+    const current = Array.from(items).indexOf(document.activeElement as HTMLAnchorElement);
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusMenuItem(current + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusMenuItem(current - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusMenuItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusMenuItem(items.length - 1);
+    }
+  };
+
+  const closeMobileMenu = () => {
+    setMobileOpen(false);
+    setMobileResourcesOpen(false);
+  };
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
@@ -66,14 +167,122 @@ export default function PublicHome({
           <BrandLogo variant="horizontal" theme="dark" height={34} />
         </Link>
         <nav className={styles.nav} aria-label="Main">
-          <Link href="/explore">{t("home", "explore")}</Link>
-          <Link href="/galleries">{t("home", "exhibitions")}</Link>
-          <Link href="/create">{t("home", "create")}</Link>
-          <Link href="#about">{t("home", "about")}</Link>
+          <div className={styles.navLinks}>
+            <Link href="/explore">{t("home", "explore")}</Link>
+            <Link href="/galleries">{t("home", "exhibitions")}</Link>
+            <Link href="/create">{t("home", "create")}</Link>
+            <div className={styles.dropdown}>
+              <button
+                type="button"
+                ref={resourcesBtnRef}
+                className={styles.dropdownBtn}
+                aria-haspopup="true"
+                aria-expanded={resourcesOpen}
+                aria-controls="resources-menu"
+                onClick={() => setResourcesOpen((open) => !open)}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setResourcesOpen(true);
+                    // Focus the first item once the menu has rendered.
+                    requestAnimationFrame(() => focusMenuItem(0));
+                  }
+                }}
+              >
+                {t("home", "resources")}
+                <ChevronDown size={14} className={resourcesOpen ? styles.chevronOpen : undefined} />
+              </button>
+              {resourcesOpen && (
+                <div
+                  ref={resourcesMenuRef}
+                  id="resources-menu"
+                  className={styles.dropdownMenu}
+                  role="menu"
+                  onKeyDown={onMenuKeyDown}
+                >
+                  <Link href="/about" role="menuitem" className={styles.dropdownItem} onClick={() => setResourcesOpen(false)}>
+                    <Info size={15} />
+                    <span>{t("home", "whatWeDo")}</span>
+                  </Link>
+                  <span className={styles.dropdownDivider} aria-hidden="true" />
+                  {RESOURCE_TOOLS.map((tool) => (
+                    <Link
+                      key={tool.href}
+                      href={tool.href}
+                      role="menuitem"
+                      className={styles.dropdownItem}
+                      onClick={() => setResourcesOpen(false)}
+                    >
+                      <tool.icon size={15} />
+                      <span>{t("tools", tool.title)}</span>
+                    </Link>
+                  ))}
+                  <span className={styles.dropdownDivider} aria-hidden="true" />
+                  <Link href="/tools" role="menuitem" className={styles.dropdownAll} onClick={() => setResourcesOpen(false)}>
+                    {t("toolpages", "seeAllTools")} <ArrowRight size={14} />
+                  </Link>
+                </div>
+              )}
+            </div>
+            <Link href="#about">{t("home", "about")}</Link>
+          </div>
           <Link href="/login" className={styles.signin}>
             {t("home", "signIn")}
           </Link>
+          <button
+            type="button"
+            className={styles.mobileToggle}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
+            aria-label={mobileOpen ? t("nav", "closeNav") : t("nav", "openNav")}
+            onClick={() => setMobileOpen((open) => !open)}
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </nav>
+        {mobileOpen && (
+          <div id="mobile-menu" className={styles.mobileMenu}>
+            <Link href="/explore" onClick={closeMobileMenu}>
+              {t("home", "explore")}
+            </Link>
+            <Link href="/galleries" onClick={closeMobileMenu}>
+              {t("home", "exhibitions")}
+            </Link>
+            <Link href="/create" onClick={closeMobileMenu}>
+              {t("home", "create")}
+            </Link>
+            <button
+              type="button"
+              className={styles.mobileSubToggle}
+              aria-expanded={mobileResourcesOpen}
+              onClick={() => setMobileResourcesOpen((open) => !open)}
+            >
+              {t("home", "resources")}
+              <ChevronDown size={15} className={mobileResourcesOpen ? styles.chevronOpen : undefined} />
+            </button>
+            {mobileResourcesOpen && (
+              <div className={styles.mobileSubmenu}>
+                <Link href="/about" onClick={closeMobileMenu}>
+                  <Info size={15} />
+                  <span>{t("home", "whatWeDo")}</span>
+                </Link>
+                {RESOURCE_TOOLS.map((tool) => (
+                  <Link key={tool.href} href={tool.href} onClick={closeMobileMenu}>
+                    <tool.icon size={15} />
+                    <span>{t("tools", tool.title)}</span>
+                  </Link>
+                ))}
+                <Link href="/tools" onClick={closeMobileMenu}>
+                  <ArrowRight size={15} />
+                  <span>{t("toolpages", "seeAllTools")}</span>
+                </Link>
+              </div>
+            )}
+            <Link href="#about" onClick={closeMobileMenu}>
+              {t("home", "about")}
+            </Link>
+          </div>
+        )}
       </header>
 
       <section className={styles.hero}>
@@ -186,11 +395,7 @@ export default function PublicHome({
         <p>{t("home", "aboutText")}</p>
       </section>
 
-      <footer className={styles.footer}>
-        <BrandLogo variant="horizontal" theme="dark" height={40} />
-        <span>{t("common", "footerRights")}</span>
-        <span>{t("common", "footerTagline")}</span>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

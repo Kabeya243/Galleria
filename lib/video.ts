@@ -6,15 +6,13 @@
 // poster. No separate `mediaKind` column — presence of the URL is the
 // kind, so old rows (videoUrl null) keep rendering exactly as before.
 //
-// Source decision: R2 through the same server proxy as images and music
+// Source decision: R2. Small clips go through the server proxy
 // (/api/uploads/video → videos/<userId>/<uuid>.mp4, served same-origin
-// from /api/video/<key>). MP4 (H.264) only, 4.5 MB cap — the same Vercel
-// request-body cap that binds images and music, because the bucket has
-// no CORS policy and the browser cannot PUT to R2 directly (see
-// lib/r2.ts). At a gallery-loop bitrate (~1–2 Mbps, 720p) that fits a
-// ~20–30 s clip: a short loopable piece, which is what hangs on a wall.
-// A longer film needs the presigned direct upload once the bucket has a
-// CORS policy — the same known debt as images and music, not a new one.
+// from /api/video/<key>), which is capped at 4.5 MB by Vercel's
+// request-body cap; heavier films go straight to R2 with a presigned
+// PUT URL (/api/uploads/presign, 200 MB), and the stored URL is the
+// same either way. At a gallery-loop bitrate (~1–2 Mbps, 720p) 200 MB
+// fits a film of several minutes.
 // No external video URL is accepted: a third-party mp4 would need CORS
 // headers to load as a WebGL texture (most hosts do not send them), and
 // YouTube/Vimeo pages are not video files at all.
@@ -30,6 +28,7 @@
 // browsers allow); sound turns on only from an explicit visitor gesture
 // — the sound button in the artwork detail panel.
 export const VIDEO_MAX_FILE_SIZE = 4_500_000;
+export const VIDEO_DIRECT_MAX_FILE_SIZE = 200 * 1024 * 1024;
 export const VIDEO_MIME_TYPES: Record<string, string> = {
   "video/mp4": "mp4",
 };

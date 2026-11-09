@@ -7,22 +7,14 @@ import { SCULPTURE_MAX_FILE_SIZE, SCULPTURE_MIME_TYPES } from "@/lib/sculpture";
 
 export const runtime = "nodejs";
 
-// Server-side sculpture upload to R2 (proxy). Same shape as the image,
-// audio and video proxies (/api/uploads/r2, /api/uploads/audio,
-// /api/uploads/video) with its own allowlist and prefix: GLB only,
-// 4.5 MB max (Vercel's request-body cap), stored under
+// Server-side sculpture upload to R2 (proxy): the small-file path. Same
+// shape as the image, audio and video proxies (/api/uploads/r2,
+// /api/uploads/audio, /api/uploads/video) with its own allowlist and
+// prefix: GLB only, 4.5 MB max (Vercel's request-body cap), stored under
 // sculptures/<userId>/<uuid>.glb and served same-origin from
-// /api/sculpture/<key>.
-// GLB only, never .gltf: a .gltf file references its buffers and
-// textures by relative path, so a single-object upload would lose
-// them — GLB is self-contained. Blender exports GLB directly, and a
-// .gltf can be re-exported as .glb there.
-// Only sculpture the artist owns or that is free to share may be
-// uploaded — the editor says so next to the upload field.
-// At 4.5 MB a detailed single sculpture fits (GLBs compress well —
-// Draco / meshopt in Blender or gltfpack); a heavier piece needs the
-// presigned direct upload (/api/uploads/presign) once the bucket has
-// a CORS policy, which is still blocked (see lib/r2.ts).
+// /api/sculpture/<key>. Heavier pieces go straight to R2 with a
+// presigned PUT URL (/api/uploads/presign, 100 MB) and get the same
+// serving URL.
 const TOO_LARGE =
   "This sculpture is too large (over 4.5 MB). Try compressing it (Draco or meshopt in Blender, or gltfpack) or a simpler model.";
 

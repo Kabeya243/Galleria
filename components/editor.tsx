@@ -62,8 +62,13 @@ import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
 import { useLocale, useT } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
 import { galleryCameraStart, galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
-import { isVideoServingUrl, VIDEO_MAX_FILE_SIZE } from "@/lib/video";
-import { isSculptureServingUrl, SCULPTURE_MAX_FILE_SIZE } from "@/lib/sculpture";
+import { isVideoServingUrl, VIDEO_DIRECT_MAX_FILE_SIZE } from "@/lib/video";
+import { isSculptureServingUrl, SCULPTURE_DIRECT_MAX_FILE_SIZE } from "@/lib/sculpture";
+import {
+  DirectUploadFailedError,
+  DirectUploadNotConfiguredError,
+  uploadFileToR2,
+} from "@/lib/direct-upload";
 import {
   createSunlightElement,
   closestHangWall,
@@ -221,6 +226,7 @@ export default function Editor({
   const [music, setMusic] = useState<ExhibitionMusicState | null>(null);
   const [musicError, setMusicError] = useState<string | null>(null);
   const [musicUploading, setMusicUploading] = useState(false);
+  const [musicUploadProgress, setMusicUploadProgress] = useState<number | null>(null);
   const musicFileRef = useRef<HTMLInputElement>(null);
   function updateMusic(next: ExhibitionMusicState | null) {
     setMusic(next);
@@ -417,6 +423,9 @@ export default function Editor({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Upload progress (0–100) for heavy files sent straight to R2; null
+  // when nothing is uploading. Rendered as a bar under the add buttons.
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   // Reusable library ("Mes œuvres"): pick a work already uploaded
   // instead of uploading again. The picker loads GET /api/library on
   // first open; choosing a work adds a COPY to this room (same image
@@ -2745,51 +2754,59 @@ async function compressImage(file: File): Promise<File> {
   return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
 }
 
-  // Upload to R2 through the server proxy (/api/uploads/r2). The browser
-  // used to PUT straight to R2 via a presigned URL, but the bucket has no
-  // CORS policy, so the browser's preflight fails and fetch rejects with
-  // "Failed to fetch" — that is the error users kept seeing on every image
-  // upload. The bytes now go through this same-origin route and the server
-  // puts them in R2, so no CORS is involved. Trade-off: Vercel caps the
-  // body at 4.5 MB (the editor compresses first), and an oversized file
-  // gets a clear message. Once a CORS policy is set on the bucket, the
-  // presigned direct upload can be re-enabled to lift the cap.
-  // Returns the public URL — the same-origin serving URL (/api/r2/...)
-  // so the image loads as a 3D texture without CORS — or null when R2
+  // Upload an image to R2 and return its serving URL, or null when R2
   // is not configured so the caller can fall back to the legacy
-  // database upload.
+  // database upload. Small files go through the server proxy
+  // (/api/uploads/r2, same-origin, no CORS involved); heavy files go
+  // straight to R2 with a presigned PUT URL (see lib/direct-upload.ts),
+  // with a real progress percent for the bar. The returned URL is the
+  // same-origin serving URL (/api/r2/...) either way, so the image
+  // loads as a 3D texture without CORS.
   async function uploadToR2(file: File): Promise<string | null> {
-    const body = new FormData();
-    body.set("file", file);
-    let response: Response;
+    const proxyUpload = async (): Promise<string> => {
+      const body = new FormData();
+      body.set("file", file);
+      let response: Response;
+      try {
+        response = await fetch("/api/uploads/r2", { method: "POST", body });
+      } catch {
+        // A network failure (not an HTTP error): never surface the raw
+        // browser "Failed to fetch", say what happened in plain words.
+        throw new Error("Could not reach the server to upload this image. Check your connection and try again.");
+      }
+      if (response.status === 501) throw new DirectUploadNotConfiguredError();
+      // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+      // an oversized request) is not JSON and used to throw a cryptic
+      // "Unexpected end of JSON input" instead of a readable error.
+      const text = await response.text();
+      let result: { error?: string; url?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as typeof result) : {};
+      } catch {
+        result = {};
+      }
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413
+              ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
+              : "Could not upload this image."),
+        );
+      }
+      if (!result.url) throw new Error("Could not upload this image.");
+      return result.url;
+    };
     try {
-      response = await fetch("/api/uploads/r2", { method: "POST", body });
-    } catch {
-      // A network failure (not an HTTP error): never surface the raw
-      // browser "Failed to fetch" — say what happened in plain words.
-      throw new Error("Could not reach the server to upload this image. Check your connection and try again.");
+      return await uploadFileToR2(file, "image", proxyUpload, setUploadProgress);
+    } catch (error) {
+      if (error instanceof DirectUploadNotConfiguredError) return null;
+      if (error instanceof DirectUploadFailedError) {
+        throw new Error("The direct upload could not reach storage. Check your connection and try again.");
+      }
+      throw error;
+    } finally {
+      setUploadProgress(null);
     }
-    if (response.status === 501) return null;
-    // Read as text first: an error page (e.g. Vercel's plain-text 413 for
-    // an oversized request) is not JSON and used to throw a cryptic
-    // "Unexpected end of JSON input" instead of a readable error.
-    const text = await response.text();
-    let result: { error?: string; url?: string } = {};
-    try {
-      result = text ? (JSON.parse(text) as typeof result) : {};
-    } catch {
-      result = {};
-    }
-    if (!response.ok) {
-      throw new Error(
-        result.error ??
-          (response.status === 413
-            ? "This image is too large to upload (over 4 MB even after compression). Try a smaller file."
-            : "Could not upload this image."),
-      );
-    }
-    if (!result.url) throw new Error("Could not upload this image.");
-    return result.url;
   }
 
   // Upload one image file and return its public URL (R2 when configured,
@@ -2835,13 +2852,15 @@ async function compressImage(file: File): Promise<File> {
     return url;
   }
 
-  // Upload one music track (MP3/AAC, ≤ 4.5 MB) to R2 via the dedicated
-  // audio proxy and keep it as the exhibition's background music. The
-  // file name (without extension) becomes the default title; the
-  // visitor hears it from the "Enter" click, on loop. Removing the
-  // track later only clears the exhibition fields — the R2 file stays
-  // (no DeleteObject in the code yet; see the schema comment).
-  const MUSIC_MAX_SIZE = 4_500_000;
+  // Upload one music track (MP3/AAC, ≤ 50 MB) to R2 and keep it as the
+  // exhibition's background music. Small files go through the dedicated
+  // audio proxy; heavy tracks go straight to R2 with a presigned PUT
+  // URL (see lib/direct-upload.ts). The file name (without extension)
+  // becomes the default title; the visitor hears it from the "Enter"
+  // click, on loop. Removing the track later only clears the exhibition
+  // fields, the R2 file stays (no DeleteObject in the code yet; see
+  // the schema comment).
+  const MUSIC_DIRECT_MAX_SIZE = 50 * 1024 * 1024;
   const MUSIC_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a"];
   async function uploadMusicFile(file?: File) {
     if (!file) return;
@@ -2853,39 +2872,52 @@ async function compressImage(file: File): Promise<File> {
       setMusicError(t("music", "musicInvalidFormat"));
       return;
     }
-    if (file.size === 0 || file.size > MUSIC_MAX_SIZE) {
+    if (file.size === 0 || file.size > MUSIC_DIRECT_MAX_SIZE) {
       setMusicError(t("music", "musicTooLarge"));
       return;
     }
     setBusy(true);
     setMusicUploading(true);
     try {
-      const body = new FormData();
-      body.set("file", file);
-      let response: Response;
+      const proxyUpload = async (): Promise<string> => {
+        const body = new FormData();
+        body.set("file", file);
+        let response: Response;
+        try {
+          response = await fetch("/api/uploads/audio", { method: "POST", body });
+        } catch {
+          throw new Error(t("music", "musicUploadFailed"));
+        }
+        // Read as text first: an error page (e.g. Vercel's plain-text 413
+        // for an oversized request) is not JSON.
+        const text = await response.text();
+        let result: { error?: string; url?: string } = {};
+        try {
+          result = text ? (JSON.parse(text) as typeof result) : {};
+        } catch {
+          result = {};
+        }
+        if (!response.ok) {
+          throw new Error(
+            result.error ??
+              (response.status === 413 ? t("music", "musicTooLarge") : t("music", "musicUploadFailed")),
+          );
+        }
+        if (!result.url) throw new Error(t("music", "musicUploadFailed"));
+        return result.url;
+      };
+      let url: string;
       try {
-        response = await fetch("/api/uploads/audio", { method: "POST", body });
-      } catch {
-        throw new Error(t("music", "musicUploadFailed"));
+        url = await uploadFileToR2(file, "audio", proxyUpload, setMusicUploadProgress);
+      } catch (error) {
+        if (error instanceof DirectUploadFailedError) throw new Error(t("music", "musicDirectFailed"));
+        if (error instanceof DirectUploadNotConfiguredError) {
+          throw new Error(t("music", "musicUploadFailed"));
+        }
+        throw error;
       }
-      // Read as text first: an error page (e.g. Vercel's plain-text 413
-      // for an oversized request) is not JSON.
-      const text = await response.text();
-      let result: { error?: string; url?: string } = {};
-      try {
-        result = text ? (JSON.parse(text) as typeof result) : {};
-      } catch {
-        result = {};
-      }
-      if (!response.ok) {
-        throw new Error(
-          result.error ??
-            (response.status === 413 ? t("music", "musicTooLarge") : t("music", "musicUploadFailed")),
-        );
-      }
-      if (!result.url) throw new Error(t("music", "musicUploadFailed"));
       const title = file.name.replace(/\.[^.]+$/, "").trim();
-      updateMusic({ url: result.url, title, loop: true, volume: 0.5 });
+      updateMusic({ url, title, loop: true, volume: 0.5 });
       if (musicFileRef.current) musicFileRef.current.value = "";
     } catch (error) {
       console.error("Could not upload music.", error);
@@ -2893,6 +2925,7 @@ async function compressImage(file: File): Promise<File> {
     } finally {
       setBusy(false);
       setMusicUploading(false);
+      setMusicUploadProgress(null);
     }
   }
 
@@ -2948,43 +2981,58 @@ async function compressImage(file: File): Promise<File> {
     }
   }
 
-  // Upload one video file (MP4 H.264, ≤ 4.5 MB) to R2 via the dedicated
-  // video proxy and hang it as a video artwork (addVideoArtwork). The
-  // file name (without extension) becomes the working title only when
-  // the artist renames it — the artwork starts as "New video artwork
-  // N", like an image upload. Errors are inline (setUploadError), never
+  // Upload one video file (MP4 H.264, ≤ 200 MB) to R2 and hang it as a
+  // video artwork (addVideoArtwork). Small clips go through the
+  // dedicated video proxy; longer films go straight to R2 with a
+  // presigned PUT URL (see lib/direct-upload.ts). The file name
+  // (without extension) becomes the working title only when the artist
+  // renames it, the artwork starts as "New video artwork N", like an
+  // image upload. Errors are inline (setUploadError), never
   // window.alert. Removing a video later only clears the artwork's
   // videoUrl — the R2 file stays (no DeleteObject in the code yet; same
   // policy as music and images).
   async function uploadVideoFile(file: File): Promise<string> {
-    const body = new FormData();
-    body.set("file", file);
-    let response: Response;
+    const proxyUpload = async (): Promise<string> => {
+      const body = new FormData();
+      body.set("file", file);
+      let response: Response;
+      try {
+        response = await fetch("/api/uploads/video", { method: "POST", body });
+      } catch {
+        // A network failure (not an HTTP error): never surface the raw
+        // browser "Failed to fetch", say what happened in plain words.
+        throw new Error(t("video", "videoUploadFailed"));
+      }
+      // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+      // an oversized request) is not JSON and used to throw a cryptic
+      // "Unexpected end of JSON input" instead of a readable error.
+      const text = await response.text();
+      let result: { error?: string; url?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as typeof result) : {};
+      } catch {
+        result = {};
+      }
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413 ? t("video", "videoTooLarge") : t("video", "videoUploadFailed")),
+        );
+      }
+      if (!result.url) throw new Error(t("video", "videoUploadFailed"));
+      return result.url;
+    };
     try {
-      response = await fetch("/api/uploads/video", { method: "POST", body });
-    } catch {
-      // A network failure (not an HTTP error): never surface the raw
-      // browser "Failed to fetch" — say what happened in plain words.
-      throw new Error(t("video", "videoUploadFailed"));
+      return await uploadFileToR2(file, "video", proxyUpload, setUploadProgress);
+    } catch (error) {
+      if (error instanceof DirectUploadFailedError) throw new Error(t("video", "videoDirectFailed"));
+      if (error instanceof DirectUploadNotConfiguredError) {
+        throw new Error(t("video", "videoUploadFailed"));
+      }
+      throw error;
+    } finally {
+      setUploadProgress(null);
     }
-    // Read as text first: an error page (e.g. Vercel's plain-text 413 for
-    // an oversized request) is not JSON and used to throw a cryptic
-    // "Unexpected end of JSON input" instead of a readable error.
-    const text = await response.text();
-    let result: { error?: string; url?: string } = {};
-    try {
-      result = text ? (JSON.parse(text) as typeof result) : {};
-    } catch {
-      result = {};
-    }
-    if (!response.ok) {
-      throw new Error(
-        result.error ??
-          (response.status === 413 ? t("video", "videoTooLarge") : t("video", "videoUploadFailed")),
-      );
-    }
-    if (!result.url) throw new Error(t("video", "videoUploadFailed"));
-    return result.url;
   }
 
   async function uploadVideoArtwork(file?: File) {
@@ -2995,7 +3043,7 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(t("video", "videoInvalidFormat"));
       return;
     }
-    if (file.size === 0 || file.size > VIDEO_MAX_FILE_SIZE) {
+    if (file.size === 0 || file.size > VIDEO_DIRECT_MAX_FILE_SIZE) {
       setUploadError(t("video", "videoTooLarge"));
       return;
     }
@@ -3025,7 +3073,7 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(t("video", "videoInvalidFormat"));
       return;
     }
-    if (file.size === 0 || file.size > VIDEO_MAX_FILE_SIZE) {
+    if (file.size === 0 || file.size > VIDEO_DIRECT_MAX_FILE_SIZE) {
       setUploadError(t("video", "videoTooLarge"));
       return;
     }
@@ -3044,42 +3092,59 @@ async function compressImage(file: File): Promise<File> {
     }
   }
 
-  // Upload one sculpture file (GLB, ≤ 4.5 MB) to R2 via the dedicated
-  // sculpture proxy and stand it on its pedestal (addSculptureArtwork).
-  // The artwork starts as "New sculpture N", like an image upload.
-  // Errors are inline (setUploadError), never window.alert. Removing a
-  // sculpture later only clears the artwork's sculptureUrl — the R2
-  // file stays (no DeleteObject in the code yet; same policy as music,
-  // images and video).
+  // Upload one sculpture file (GLB, ≤ 100 MB) to R2 and stand it on its
+  // pedestal (addSculptureArtwork). Small models go through the
+  // dedicated sculpture proxy; heavier pieces go straight to R2 with a
+  // presigned PUT URL (see lib/direct-upload.ts). The artwork starts as
+  // "New sculpture N", like an image upload. Errors are inline
+  // (setUploadError), never window.alert. Removing a sculpture later
+  // only clears the artwork's sculptureUrl, the R2 file stays (no
+  // DeleteObject in the code yet; same policy as music, images and
+  // video).
   async function uploadSculptureFile(file: File): Promise<string> {
-    const body = new FormData();
-    body.set("file", file);
-    let response: Response;
+    const proxyUpload = async (): Promise<string> => {
+      const body = new FormData();
+      body.set("file", file);
+      let response: Response;
+      try {
+        response = await fetch("/api/uploads/sculpture", { method: "POST", body });
+      } catch {
+        // A network failure (not an HTTP error): never surface the raw
+        // browser "Failed to fetch", say what happened in plain words.
+        throw new Error(t("sculpture", "sculptureUploadFailed"));
+      }
+      // Read as text first: an error page (e.g. Vercel's plain-text 413 for
+      // an oversized request) is not JSON and used to throw a cryptic
+      // "Unexpected end of JSON input" instead of a readable error.
+      const text = await response.text();
+      let result: { error?: string; url?: string } = {};
+      try {
+        result = text ? (JSON.parse(text) as typeof result) : {};
+      } catch {
+        result = {};
+      }
+      if (!response.ok) {
+        throw new Error(
+          result.error ??
+            (response.status === 413 ? t("sculpture", "sculptureTooLarge") : t("sculpture", "sculptureUploadFailed")),
+        );
+      }
+      if (!result.url) throw new Error(t("sculpture", "sculptureUploadFailed"));
+      return result.url;
+    };
     try {
-      response = await fetch("/api/uploads/sculpture", { method: "POST", body });
-    } catch {
-      // A network failure (not an HTTP error): never surface the raw
-      // browser "Failed to fetch" — say what happened in plain words.
-      throw new Error(t("sculpture", "sculptureUploadFailed"));
+      return await uploadFileToR2(file, "sculpture", proxyUpload, setUploadProgress);
+    } catch (error) {
+      if (error instanceof DirectUploadFailedError) {
+        throw new Error(t("sculpture", "sculptureDirectFailed"));
+      }
+      if (error instanceof DirectUploadNotConfiguredError) {
+        throw new Error(t("sculpture", "sculptureUploadFailed"));
+      }
+      throw error;
+    } finally {
+      setUploadProgress(null);
     }
-    // Read as text first: an error page (e.g. Vercel's plain-text 413 for
-    // an oversized request) is not JSON and used to throw a cryptic
-    // "Unexpected end of JSON input" instead of a readable error.
-    const text = await response.text();
-    let result: { error?: string; url?: string } = {};
-    try {
-      result = text ? (JSON.parse(text) as typeof result) : {};
-    } catch {
-      result = {};
-    }
-    if (!response.ok) {
-      throw new Error(
-        result.error ??
-          (response.status === 413 ? t("sculpture", "sculptureTooLarge") : t("sculpture", "sculptureUploadFailed")),
-      );
-    }
-    if (!result.url) throw new Error(t("sculpture", "sculptureUploadFailed"));
-    return result.url;
   }
 
   async function uploadSculptureArtwork(file?: File) {
@@ -3089,7 +3154,7 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(t("sculpture", "sculptureInvalidFormat"));
       return;
     }
-    if (file.size === 0 || file.size > SCULPTURE_MAX_FILE_SIZE) {
+    if (file.size === 0 || file.size > SCULPTURE_DIRECT_MAX_FILE_SIZE) {
       setUploadError(t("sculpture", "sculptureTooLarge"));
       return;
     }
@@ -3117,7 +3182,7 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(t("sculpture", "sculptureInvalidFormat"));
       return;
     }
-    if (file.size === 0 || file.size > SCULPTURE_MAX_FILE_SIZE) {
+    if (file.size === 0 || file.size > SCULPTURE_DIRECT_MAX_FILE_SIZE) {
       setUploadError(t("sculpture", "sculptureTooLarge"));
       return;
     }
@@ -3607,6 +3672,11 @@ async function compressImage(file: File): Promise<File> {
                 </div>
               )}
               {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
+              {uploadProgress !== null && (
+                <div className="asset-upload-progress" role="status" aria-label={`${uploadProgress}%`}>
+                  <div className="asset-upload-progress-bar" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              )}
               <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
               <input ref={videoUploadRef} className="visually-hidden" type="file" accept="video/mp4,.mp4" onChange={(event) => void uploadVideoArtwork(event.target.files?.[0])} />
               <input ref={sculptureUploadRef} className="visually-hidden" type="file" accept=".glb" onChange={(event) => void uploadSculptureArtwork(event.target.files?.[0])} />
@@ -4376,6 +4446,11 @@ async function compressImage(file: File): Promise<File> {
                         onChange={(event) => void uploadMusicFile(event.target.files?.[0])}
                       />
                       {musicError && <p role="alert" style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>{musicError}</p>}
+                      {musicUploadProgress !== null && (
+                        <div className="asset-upload-progress" role="status" aria-label={`${musicUploadProgress}%`}>
+                          <div className="asset-upload-progress-bar" style={{ width: `${musicUploadProgress}%` }} />
+                        </div>
+                      )}
                     </div>
                     <div className="property-section">
                       <label>{t("tour", "guidedTour").toUpperCase()} <span>{tour?.stops.length ?? 0}/{MAX_TOUR_STOPS}</span></label>

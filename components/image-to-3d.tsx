@@ -25,6 +25,11 @@ import {
   type Image3DMode,
 } from "@/lib/asset-library";
 import styles from "@/components/tools.module.css";
+import {
+  DirectUploadFailedError,
+  DirectUploadNotConfiguredError,
+  uploadFileToR2,
+} from "@/lib/direct-upload";
 
 // ---------------------------------------------------------------------------
 // SavedWork rows for kind "asset-3d"
@@ -432,30 +437,47 @@ export default function ImageTo3D() {
     setBusy(true);
     setMessage(null);
     try {
-      const body = new FormData();
-      body.set("file", modelFile);
-      let response: Response;
+      // Small models go through the sculpture proxy; heavy ones go
+      // straight to R2 with a presigned PUT URL (see lib/direct-upload.ts).
+      const proxyUpload = async (): Promise<string> => {
+        const body = new FormData();
+        body.set("file", modelFile);
+        let response: Response;
+        try {
+          response = await fetch("/api/uploads/sculpture", { method: "POST", body });
+        } catch {
+          throw new Error("Could not upload this model. Check your connection and try again.");
+        }
+        const text = await response.text();
+        let result: { error?: string; url?: string } = {};
+        try {
+          result = text ? (JSON.parse(text) as typeof result) : {};
+        } catch {
+          result = {};
+        }
+        if (!response.ok) {
+          throw new Error(
+            result.error ??
+              (response.status === 413
+                ? "This model is too large (over 4.5 MB). Try compressing it (Draco or meshopt in Blender, or gltfpack) or a simpler model."
+                : "Could not upload this model."),
+          );
+        }
+        if (!result.url) throw new Error("Could not upload this model.");
+        return result.url;
+      };
+      let url: string;
       try {
-        response = await fetch("/api/uploads/sculpture", { method: "POST", body });
-      } catch {
-        throw new Error("Could not upload this model. Check your connection and try again.");
+        url = await uploadFileToR2(modelFile, "sculpture", proxyUpload);
+      } catch (error) {
+        if (error instanceof DirectUploadFailedError) {
+          throw new Error("The direct upload could not reach storage. Check your connection and try again.");
+        }
+        if (error instanceof DirectUploadNotConfiguredError) {
+          throw new Error("Could not upload this model.");
+        }
+        throw error;
       }
-      const text = await response.text();
-      let result: { error?: string; url?: string } = {};
-      try {
-        result = text ? (JSON.parse(text) as typeof result) : {};
-      } catch {
-        result = {};
-      }
-      if (!response.ok) {
-        throw new Error(
-          result.error ??
-            (response.status === 413
-              ? "This model is too large (over 4.5 MB). Try compressing it (Draco or meshopt in Blender, or gltfpack) or a simpler model."
-              : "Could not upload this model."),
-        );
-      }
-      if (!result.url) throw new Error("Could not upload this model.");
       const record: Asset3DRecord = {
         kind: "model",
         source: "upload",
@@ -468,12 +490,12 @@ export default function ImageTo3D() {
         fileSizeBytes: modelFile.size,
         fileType: modelFile.name.toLowerCase().endsWith(".gltf") ? "model/gltf+json" : "model/gltf-binary",
         mode: "imported-glb",
-        sculptureUrl: result.url,
+        sculptureUrl: url,
         transform: { scale: modelScale, rotationY: modelRotation, tint: modelTint },
         notes: "Stored in R2, add it to an exhibition from here or from the editor's library picker.",
       };
       await saveAsset(record, record.name);
-      setSavedSculptureUrl(result.url);
+      setSavedSculptureUrl(url);
       setSavedSculptureName(record.name);
     } catch (error) {
       setModelError(error instanceof Error ? error.message : "Could not save this model.");

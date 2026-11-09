@@ -739,16 +739,16 @@ export const DICTIONARY = {
     loop: { fr: "Jouer en boucle", en: "Loop" },
     removeMusic: { fr: "Retirer la musique", en: "Remove music" },
     musicHint: {
-      fr: "MP3 ou AAC (.m4a), 4,5 Mo maximum : un morceau court, en boucle. Pensez à 128 kbps pour un morceau de quelques minutes.",
-      en: "MP3 or AAC (.m4a), 4.5 MB maximum: a short track, on loop. Export at 128 kbps for a track a few minutes long.",
+      fr: "MP3 ou AAC (.m4a), 50 Mo maximum : un morceau long, en boucle. Pensez à 128 kbps pour un morceau de quelques minutes.",
+      en: "MP3 or AAC (.m4a), 50 MB maximum: a long track, on loop. Export at 128 kbps for a track a few minutes long.",
     },
     onlyOwnMusic: {
       fr: "Only upload music you own or that is free to share.",
       en: "Only upload music you own or that is free to share.",
     },
     musicTooLarge: {
-      fr: "Ce fichier audio est trop lourd (plus de 4,5 Mo). Essayez un morceau plus court, ou exportez-le à 128 kbps.",
-      en: "This audio file is too large (over 4.5 MB). Try a shorter track, or export it at 128 kbps.",
+      fr: "Ce fichier audio est trop lourd (plus de 50 Mo). Essayez un morceau plus court, ou exportez-le à 128 kbps.",
+      en: "This audio file is too large (over 50 MB). Try a shorter track, or export it at 128 kbps.",
     },
     musicInvalidFormat: {
       fr: "Ajoutez un fichier audio MP3 ou AAC (.m4a).",
@@ -757,6 +757,10 @@ export const DICTIONARY = {
     musicUploadFailed: {
       fr: "La musique n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.",
       en: "Could not upload this music. Check your connection and try again.",
+    },
+    musicDirectFailed: {
+      fr: "L'envoi direct n'a pas pu joindre le stockage. Vérifiez votre connexion et réessayez.",
+      en: "The direct upload could not reach storage. Check your connection and try again.",
     },
     musicUploading: { fr: "Envoi de la musique…", en: "Uploading music…" },
     musicPreview: { fr: "Écouter avant de publier", en: "Listen before publishing" },
@@ -770,16 +774,16 @@ export const DICTIONARY = {
     videoArtwork: { fr: "Œuvre vidéo", en: "Video artwork" },
     addVideo: { fr: "Ajouter une vidéo", en: "Add a video" },
     videoHint: {
-      fr: "MP4 (H.264), 4,5 Mo maximum : un clip court, en boucle. Exportez en 720p pour une vingtaine de secondes.",
-      en: "MP4 (H.264), 4.5 MB maximum: a short clip, on loop. Export at 720p for about twenty seconds.",
+      fr: "MP4 (H.264), 200 Mo maximum : un film plus long, en boucle. Exportez en 720p pour un fichier raisonnable.",
+      en: "MP4 (H.264), 200 MB maximum: a longer film, on loop. Export at 720p for a reasonable file size.",
     },
     onlyOwnVideo: {
       fr: "Only upload video you own or that is free to share.",
       en: "Only upload video you own or that is free to share.",
     },
     videoTooLarge: {
-      fr: "Cette vidéo est trop lourde (plus de 4,5 Mo). Essayez un clip plus court, ou exportez-le en 720p avec un débit plus bas.",
-      en: "This video is too large (over 4.5 MB). Try a shorter clip, or export it at 720p with a lower bitrate.",
+      fr: "Cette vidéo est trop lourde (plus de 200 Mo). Essayez un clip plus court, ou exportez-le en 720p avec un débit plus bas.",
+      en: "This video is too large (over 200 MB). Try a shorter clip, or export it at 720p with a lower bitrate.",
     },
     videoInvalidFormat: {
       fr: "Ajoutez une vidéo MP4 (H.264).",
@@ -788,6 +792,10 @@ export const DICTIONARY = {
     videoUploadFailed: {
       fr: "La vidéo n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.",
       en: "Could not upload this video. Check your connection and try again.",
+    },
+    videoDirectFailed: {
+      fr: "L'envoi direct n'a pas pu joindre le stockage. Vérifiez votre connexion et réessayez.",
+      en: "The direct upload could not reach storage. Check your connection and try again.",
     },
     videoUploading: { fr: "Envoi de la vidéo…", en: "Uploading video…" },
     playVideo: { fr: "Lire la vidéo", en: "Play video" },
@@ -810,16 +818,16 @@ export const DICTIONARY = {
     sculptureArtwork: { fr: "Sculpture 3D", en: "3D sculpture" },
     addSculpture: { fr: "Ajouter une sculpture", en: "Add a sculpture" },
     sculptureHint: {
-      fr: "Fichier .glb uniquement, 4,5 Mo maximum : la sculpture est posée sur un socle blanc automatique, au sol. Exportez en .glb depuis Blender (un .gltf ne peut pas être conservé seul).",
-      en: "GLB file only, 4.5 MB maximum: the sculpture stands on an automatic white pedestal, on the floor. Export as .glb from Blender (a .gltf cannot be stored on its own).",
+      fr: "Fichier .glb uniquement, 100 Mo maximum : la sculpture est posée sur un socle blanc automatique, au sol. Exportez en .glb depuis Blender (un .gltf ne peut pas être conservé seul).",
+      en: "GLB file only, 100 MB maximum: the sculpture stands on an automatic white pedestal, on the floor. Export as .glb from Blender (a .gltf cannot be stored on its own).",
     },
     onlyOwnSculpture: {
       fr: "Only upload sculpture you own or that is free to share.",
       en: "Only upload sculpture you own or that is free to share.",
     },
     sculptureTooLarge: {
-      fr: "Cette sculpture est trop lourde (plus de 4,5 Mo). Essayez de la compresser (Draco ou meshopt dans Blender, ou gltfpack) ou un modèle plus simple.",
-      en: "This sculpture is too large (over 4.5 MB). Try compressing it (Draco or meshopt in Blender, or gltfpack) or a simpler model.",
+      fr: "Cette sculpture est trop lourde (plus de 100 Mo). Essayez de la compresser (Draco ou meshopt dans Blender, ou gltfpack) ou un modèle plus simple.",
+      en: "This sculpture is too large (over 100 MB). Try compressing it (Draco or meshopt in Blender, or gltfpack) or a simpler model.",
     },
     sculptureInvalidFormat: {
       fr: "Ajoutez un fichier .glb. Un .gltf ne peut pas être conservé seul. Réexportez-le en .glb dans Blender.",
@@ -828,6 +836,10 @@ export const DICTIONARY = {
     sculptureUploadFailed: {
       fr: "La sculpture n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.",
       en: "Could not upload this sculpture. Check your connection and try again.",
+    },
+    sculptureDirectFailed: {
+      fr: "L'envoi direct n'a pas pu joindre le stockage. Vérifiez votre connexion et réessayez.",
+      en: "The direct upload could not reach storage. Check your connection and try again.",
     },
     sculptureUploading: { fr: "Envoi de la sculpture…", en: "Uploading sculpture…" },
     replaceSculpture: { fr: "Remplacer la sculpture", en: "Replace sculpture" },

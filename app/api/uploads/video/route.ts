@@ -7,15 +7,13 @@ import { VIDEO_MAX_FILE_SIZE, VIDEO_MIME_TYPES } from "@/lib/video";
 
 export const runtime = "nodejs";
 
-// Server-side video upload to R2 (proxy). Same shape as the image proxy
-// (/api/uploads/r2) and the audio proxy (/api/uploads/audio) with its
-// own allowlist and prefix, so the three never mix: MP4 (H.264) only,
-// 4.5 MB max (Vercel's request-body cap), stored under
-// videos/<userId>/<uuid>.mp4 and served same-origin from /api/video/<key>.
-// At a gallery-loop bitrate (~1–2 Mbps, 720p) 4.5 MB fits a ~20–30 s
-// clip — a short loopable piece, which is what hangs on a wall. A longer
-// film needs the presigned direct upload (/api/uploads/presign) once the
-// bucket has a CORS policy; that is still blocked (see lib/r2.ts).
+// Server-side video upload to R2 (proxy): the small-file path. Same shape
+// as the image proxy (/api/uploads/r2) and the audio proxy
+// (/api/uploads/audio) with its own allowlist and prefix, so the three
+// never mix: MP4 (H.264) only, 4.5 MB max (Vercel's request-body cap),
+// stored under videos/<userId>/<uuid>.mp4 and served same-origin from
+// /api/video/<key>. Longer films go straight to R2 with a presigned PUT
+// URL (/api/uploads/presign, 200 MB) and get the same serving URL.
 // Only video the artist owns or that is free to share may be uploaded
 // — the editor says so next to the upload field.
 const TOO_LARGE =

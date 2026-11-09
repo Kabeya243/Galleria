@@ -327,6 +327,8 @@ button { color: inherit; }
 .add-to-room:hover { border-color: var(--accent); background: var(--surface-2); }
 .asset-upload-hint { display: flex; align-items: flex-start; gap: 8px; padding: 12px 4px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 8px; line-height: 1.5; }
 .asset-upload-error { padding: 10px 12px; margin-top: 8px; border: 1px solid var(--danger); border-radius: 8px; background: rgba(255, 122, 107, 0.12); color: var(--danger); font-size: 12px; line-height: 1.5; }
+.asset-upload-progress { height: 6px; margin-top: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.asset-upload-progress-bar { height: 100%; border-radius: 999px; background: var(--accent); transition: width 0.2s ease; }
 .asset-upload-hint svg { min-width: 15px; }
 /* Reusable library ("Mes œuvres"): the editor picker and the /artworks
    page. The picker reuses the asset-list rows; the library page reuses

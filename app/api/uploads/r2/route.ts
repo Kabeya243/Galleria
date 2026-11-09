@@ -6,19 +6,14 @@ import { getR2Bucket, getR2Client, isR2Configured } from "@/lib/r2";
 
 export const runtime = "nodejs";
 
-// Server-side upload to R2 (proxy). The browser cannot PUT to R2 directly:
-// the bucket has no CORS policy, so the browser's preflight fails and
-// fetch rejects with "Failed to fetch" — that is the error users kept
-// seeing on every image upload. Until a CORS policy can be set in
-// Cloudflare (access is currently blocked), the bytes go through this
-// same-origin route instead and the server puts them in R2: no CORS is
-// involved on either leg, and the stored URL is the same as before
-// (uploads/<userId>/<uuid>.<ext>).
-// Trade-off: Vercel caps the request body at 4.5 MB, so the editor
-// compresses images first (see compressImage in the editor) and an
-// oversized file gets a clear 413 message. Once CORS is configured on
-// the bucket, the presigned direct upload (/api/uploads/presign) can be
-// re-enabled to lift the cap.
+// Server-side upload to R2 (proxy): the small-file path. The bytes go
+// through this same-origin route and the server puts them in R2, so no
+// CORS is involved on either leg, and the stored URL is the same as the
+// direct path (uploads/<userId>/<uuid>.<ext>). Vercel caps the request
+// body at 4.5 MB, so the editor compresses images first (see
+// compressImage in the editor) and sends heavier files straight to R2
+// with a presigned PUT URL (/api/uploads/presign) instead; an oversized
+// file that still reaches here gets a clear 413 message.
 const MAX_FILE_SIZE = 4_500_000;
 const allowedMimeTypes: Record<string, string> = {
   "image/png": "png",

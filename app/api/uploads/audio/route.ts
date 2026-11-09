@@ -6,14 +6,13 @@ import { getR2Bucket, getR2Client, isR2Configured } from "@/lib/r2";
 
 export const runtime = "nodejs";
 
-// Server-side audio upload to R2 (proxy). Same shape as the image proxy
-// (/api/uploads/r2) with its own allowlist and prefix, so the two never
-// mix: MP3 and AAC only, 4.5 MB max (Vercel's request-body cap), stored
-// under audio/<userId>/<uuid>.<ext> and served same-origin from
-// /api/audio/<key>. At 128–160 kbps that fits a ~3.5–4.5 minute track —
-// an ambient loop, not a full album. Longer tracks need the presigned
-// direct upload (/api/uploads/presign) once the bucket has a CORS
-// policy; that is still blocked (see lib/r2.ts).
+// Server-side audio upload to R2 (proxy): the small-file path. Same shape
+// as the image proxy (/api/uploads/r2) with its own allowlist and prefix,
+// so the two never mix: MP3 and AAC only, 4.5 MB max (Vercel's
+// request-body cap), stored under audio/<userId>/<uuid>.<ext> and served
+// same-origin from /api/audio/<key>. Longer tracks go straight to R2
+// with a presigned PUT URL (/api/uploads/presign, 50 MB) and get the
+// same serving URL.
 // Only music the artist owns or that is free to share may be uploaded
 // — the editor says so next to the upload field.
 const MAX_FILE_SIZE = 4_500_000;

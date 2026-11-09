@@ -8,16 +8,14 @@
 // column — presence of the URL is the kind, so old rows (sculptureUrl
 // null) keep rendering exactly as before (same pattern as videoUrl).
 //
-// Source decision: R2 through the same server proxy as images, music
-// and video (/api/uploads/sculpture → sculptures/<userId>/<uuid>.glb,
-// served same-origin from /api/sculpture/<key>). GLB only — a .gltf
-// file references external buffers/textures by relative path, so it
-// cannot survive a single-object upload; GLB is self-contained. 4.5 MB
-// cap — the same Vercel request-body cap that binds images, music and
-// video, because the bucket has no CORS policy and the browser cannot
-// PUT to R2 directly (see lib/r2.ts). A detailed sculpture over 4.5 MB
-// needs the presigned direct upload (/api/uploads/presign) once the
-// bucket has a CORS policy; that is still blocked (see lib/r2.ts).
+// Source decision: R2. Small models go through the server proxy
+// (/api/uploads/sculpture → sculptures/<userId>/<uuid>.glb, served
+// same-origin from /api/sculpture/<key>), which is capped at 4.5 MB by
+// Vercel's request-body cap; heavier pieces go straight to R2 with a
+// presigned PUT URL (/api/uploads/presign, 100 MB), and the stored URL
+// is the same either way. GLB only: a .gltf file references external
+// buffers/textures by relative path, so it cannot survive a single-object
+// upload; GLB is self-contained.
 // GLBs compress well (Draco / meshopt in Blender or gltfpack), so most
 // single sculptures fit: a 1–2 MB GLB is a typical detailed piece.
 //
@@ -35,6 +33,7 @@
 // image-to-GLB reconstruction still needs a connected provider (see
 // lib/asset-library.ts EXTERNAL_PROVIDER_SLOTS).
 export const SCULPTURE_MAX_FILE_SIZE = 4_500_000;
+export const SCULPTURE_DIRECT_MAX_FILE_SIZE = 100 * 1024 * 1024;
 export const SCULPTURE_MIME_TYPES: Record<string, string> = {
   "model/gltf-binary": "glb",
   // Some browsers / OSes report a .glb as application/octet-stream.

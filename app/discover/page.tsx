@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Compass, GalleryVerticalEnd, Home, Search } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
+import PublicNav from "@/components/public-nav";
 import HubPage, { HubCards, type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -53,12 +54,12 @@ export default async function DiscoverHub() {
           <Link className="brand-lockup" href="/">
             <BrandLogo variant="horizontal" height={52} />
           </Link>
-          <nav className="galleries-nav">
-            <Link href="/">Workspace</Link>
-            <Link href="/login" className="galleries-signin">
-              Sign in
-            </Link>
-          </nav>
+          <PublicNav
+            links={[
+              { href: "/", label: "Workspace" },
+              { href: "/login", label: "Sign in", primary: true },
+            ]}
+          />
         </header>
         <div className="galleries-intro">
           <p className="eyebrow">

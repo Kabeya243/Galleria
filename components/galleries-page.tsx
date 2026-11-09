@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Footprints, PenLine, Search, Star } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
 import BrandLogo from "@/components/brand-logo";
+import PublicNav from "@/components/public-nav";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import { ceilingTextures, createGalleryRoom, floorTextures, floorTexturesFr, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, wallTexturesFr, type RoomCategory, type RoomLayout } from "@/lib/rooms";
@@ -1090,10 +1091,12 @@ export default function GalleriesPage({
           <Link className="brand-lockup" href="/">
             <BrandLogo variant="horizontal" height={52} />
           </Link>
-          <nav className="galleries-nav">
-            <Link href="/">{t("common", "workspace")}</Link>
-            <Link href="/login" className="galleries-signin">{t("galleries", "signIn")}</Link>
-          </nav>
+          <PublicNav
+            links={[
+              { href: "/", label: t("common", "workspace") },
+              { href: "/login", label: t("galleries", "signIn"), primary: true },
+            ]}
+          />
         </header>
 
         {galleriesContent}

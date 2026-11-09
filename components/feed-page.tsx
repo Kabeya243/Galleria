@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import Sidebar from "@/components/sidebar";
 import BrandLogo from "@/components/brand-logo";
+import PublicNav from "@/components/public-nav";
 import ThemeToggle from "@/components/theme-toggle";
 import { LOCALE_TAGS, useLocale, useT, type Locale } from "@/lib/i18n";
 import styles from "./feed-page.module.css";
@@ -228,13 +229,13 @@ export default function FeedPage({
           <Link className="brand-lockup" href="/">
             <BrandLogo variant="horizontal" height={52} />
           </Link>
-          <nav className="galleries-nav">
-            <Link href="/galleries">{t("explore", "galleries")}</Link>
-            <Link href="/register">{t("explore", "createAccount")}</Link>
-            <Link href="/login" className="galleries-signin">
-              {t("explore", "signIn")}
-            </Link>
-          </nav>
+          <PublicNav
+            links={[
+              { href: "/galleries", label: t("explore", "galleries") },
+              { href: "/register", label: t("explore", "createAccount") },
+              { href: "/login", label: t("explore", "signIn"), primary: true },
+            ]}
+          />
         </header>
 
         <section className="galleries-intro">

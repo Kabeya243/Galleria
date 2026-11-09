@@ -92,8 +92,14 @@ button { color: inherit; }
   .sidebar.collapsed .profile-chip { justify-content: center; padding: 16px 0 3px; gap: 0; }
   .sidebar.collapsed .profile-copy { opacity: 0; max-width: 0; }
   .sidebar.collapsed .sign-out-button { opacity: 0; max-width: 0; padding: 0; border-width: 0; visibility: hidden; transition: opacity .25s ease, max-width .25s ease, padding .25s ease, visibility 0s linear .25s; }
+}
 
 /* Lakisa brand logo (components/brand-logo.tsx, kit in public/brand/).
+   TOP LEVEL ON PURPOSE: these sizing rules must apply at every width.
+   They used to sit inside @media (min-width: 851px), so on phones the
+   logo SVGs rendered at their intrinsic size (1400x600) and the cube
+   covered the hero while the nav was pushed off-screen. Never nest
+   them in a width query again.
    The horizontal lockup is the default header mark; the cube icon is
    the collapsed-rail mark. Theme switching only applies when both
    variants are rendered (brand-logo-auto): the dark page shows Noir,
@@ -116,10 +122,17 @@ button { color: inherit; }
 .sidebar .brand-logo-icon { display: none; }
 .sidebar.collapsed .brand-logo-horizontal { display: none; }
 .sidebar.collapsed .brand-logo-icon { display: inline-flex; }
+
+/* Mobile slide-over logo: when the slide-over is open, show the full
+   lockup, never the cube icon. TOP-LEVEL media query on purpose: this
+   block used to be nested inside @media (min-width: 851px), where it
+   could never match (a viewport cannot be both >= 851 and <= 850). */
 @media (max-width: 850px) {
   .sidebar.open .brand-logo-icon { display: none; }
   .sidebar.open .brand-logo-horizontal { display: inline-flex; }
 }
+
+@media (min-width: 851px) {
   /* Collapsible sidebar as an overlay: the rail is fixed above the
      page instead of taking space in the layout, so the content never
      shifts when the menu unfolds. Each page reserves the 64px rail
@@ -1317,8 +1330,53 @@ button { font-weight: 600; }
 /* Public galleries page */
 .galleries-page { height: 100vh; height: 100dvh; overflow-y: auto; overflow-x: hidden; background: var(--paper); }
 .galleries-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 44px; border-bottom: 1px solid var(--line); background: var(--paper); }
-.galleries-nav { display: flex; align-items: center; gap: 22px; font-size: 12px; font-weight: 600; }
+.galleries-nav { position: relative; display: flex; align-items: center; gap: 22px; font-size: 12px; font-weight: 600; }
 .galleries-signin { padding: 9px 14px; border: 1px solid transparent; border-radius: 8px; background: var(--ink); color: var(--paper); box-shadow: none; }
+
+/* Public nav hamburger (components/public-nav.tsx): hidden on desktop,
+   where the links show inline. On phones the plain links are hidden
+   (see the max-width: 620px block below) and the toggle opens a
+   dropdown with the same links, so navigation is never lost. */
+.public-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.public-nav-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-3);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+}
+
+.public-nav-menu a {
+  padding: 11px 12px;
+  border-radius: 9px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.public-nav-menu a:hover {
+  background: var(--surface-2);
+}
 .galleries-intro { max-width: 1350px; margin: 0 auto; padding: 64px 44px 12px; }
 .galleries-intro h1 { margin: 0; font: 450 clamp(28px, 3vw, 40px)/1.1 var(--font-display), Georgia, serif; letter-spacing: -.01em; }
 .galleries-intro > p:last-child { color: var(--muted); max-width: 560px; line-height: 1.6; }
@@ -1349,6 +1407,7 @@ button { font-weight: 600; }
   .galleries-header, .galleries-intro, .galleries-viewer, .galleries-grid { padding-left: 16px; padding-right: 16px; }
   .galleries-viewer-stage { height: 300px; }
   .galleries-viewer-head { flex-direction: column; align-items: start; }
+  .public-nav-toggle { display: inline-flex; }
 }
 
 /* Admin (CRM) sub-navigation: a row of links under the page header. */
@@ -1799,7 +1858,9 @@ html[data-admin-collapsed="true"] .ad-nav-item { justify-content: center; paddin
    overflows at 320px. */
 @media (max-width: 620px) {
   .galleries-grid { grid-template-columns: 1fr; }
-  .galleries-nav a:not(.galleries-signin) { display: none; }
+  /* Direct links only: the dropdown links live inside .public-nav-menu
+     and must stay visible when the menu is open. */
+  .galleries-nav > a:not(.galleries-signin) { display: none; }
 }
 
 /* ------------------------------------------------------------------ */

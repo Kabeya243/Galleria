@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import CurrencySelector, { RatesNote } from "@/components/currency-selector";
 import BrandLogo from "@/components/brand-logo";
+import PublicNav from "@/components/public-nav";
 import ListingPrice from "@/components/listing-price";
 
 export const metadata: Metadata = {
@@ -75,19 +76,15 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
         <Link className="brand-lockup" href="/">
           <BrandLogo variant="horizontal" height={52} />
         </Link>
-        <nav className="galleries-nav">
-          <Link href="/marketplace">Marketplace</Link>
-          <Link href="/explore">Exhibitions</Link>
-          {user ? (
-            <Link href="/tools/marketplace" className="galleries-signin">
-              Sell your work
-            </Link>
-          ) : (
-            <Link href="/login" className="galleries-signin">
-              Sign in
-            </Link>
-          )}
-        </nav>
+        <PublicNav
+          links={[
+            { href: "/marketplace", label: "Marketplace" },
+            { href: "/explore", label: "Exhibitions" },
+            user
+              ? { href: "/tools/marketplace", label: "Sell your work", primary: true }
+              : { href: "/login", label: "Sign in", primary: true },
+          ]}
+        />
       </header>
 
       <div className="galleries-intro">

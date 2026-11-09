@@ -1234,6 +1234,17 @@ button { font-weight: 600; }
 .auth-noir-remember input { width: 15px; height: 15px; accent-color: #ffffff; cursor: pointer; }
 .auth-noir-forgot { border: 0; background: transparent; padding: 0; color: rgba(255, 255, 255, 0.55); font-size: 11px; cursor: pointer; }
 .auth-noir-forgot:hover { color: #ffffff; }
+/* Signup terms checkbox (Nov 2026): same row treatment as "Remember
+   me", but the label wraps onto two lines and the legal links are
+   underlined white so the mandatory consent is unmissable. */
+.auth-noir-terms-check { justify-content: flex-start; margin: -6px 0 22px; line-height: 1.6; }
+.auth-noir-terms-check .auth-noir-remember { align-items: flex-start; }
+.auth-noir-terms-check .auth-noir-remember input { flex: none; margin-top: 1px; }
+.auth-noir-terms-check a { color: #ffffff; text-decoration: underline; text-underline-offset: 2px; }
+/* "Resend verification email" — a button that reads as a text link,
+   used under an error or on the check-your-inbox screen. */
+.auth-noir-link-button { border: 0; background: transparent; padding: 0; color: #ffffff; font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.auth-noir-link-button:disabled { opacity: .6; cursor: wait; }
 .auth-noir-forgot-note { margin: -18px 0 22px; color: rgba(255, 255, 255, 0.55); font-size: 11px; line-height: 1.6; }
 .auth-noir-hint { margin: -14px 0 22px; color: rgba(255, 255, 255, 0.55); font-size: 11px; line-height: 1.6; }
 /* Continue with Google (feature 9) + live password checklist. Pure black & white. */

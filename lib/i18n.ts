@@ -671,6 +671,40 @@ export const DICTIONARY = {
     couldNotSignIn: { fr: "Impossible de vous connecter pour le moment.", en: "Could not sign in right now." },
     somethingWrong: { fr: "Une erreur est survenue.", en: "Something went wrong." },
     rights: { fr: "© 2026 Lakisa Studio. Tous droits réservés.", en: "© 2026 Lakisa Studio. All rights reserved." },
+    // Signup terms checkbox + email verification (Nov 2026). The
+    // checkbox label is composed from footer.terms / footer.privacy
+    // so the two legal titles stay spelled one way everywhere.
+    agreeTermsPrefix: { fr: "J'accepte les ", en: "I agree to the " },
+    agreeTermsAnd: { fr: " et la ", en: " and " },
+    acceptTermsRequired: {
+      fr: "Vous devez accepter les Conditions d'utilisation et la Politique de confidentialité pour créer un compte.",
+      en: "You must accept the Terms of Use and Privacy Policy to create an account.",
+    },
+    checkInboxTitle: { fr: "Vérifiez votre boîte e-mail", en: "Check your inbox" },
+    checkInbox: {
+      fr: "Nous avons envoyé un lien de vérification à votre adresse e-mail. Ouvrez-le pour confirmer votre compte, puis connectez-vous.",
+      en: "We've sent a verification link to your email address. Open it to confirm your account, then sign in.",
+    },
+    verificationEmailNotSent: {
+      fr: "Nous n'avons pas pu envoyer l'e-mail de vérification pour le moment — veuillez contacter le support.",
+      en: "We couldn't send the verification email right now — please contact support.",
+    },
+    resendVerification: { fr: "Renvoyer l'e-mail de vérification", en: "Resend verification email" },
+    verificationResent: {
+      fr: "E-mail de vérification renvoyé — vérifiez votre boîte de réception.",
+      en: "Verification email sent again — check your inbox.",
+    },
+    verifyEmailTitle: { fr: "Vérification de l'e-mail", en: "Verify your email" },
+    verifying: { fr: "Vérification de votre e-mail…", en: "Verifying your email…" },
+    verifySuccess: {
+      fr: "Votre e-mail est vérifié. Vous pouvez maintenant vous connecter.",
+      en: "Your email is verified. You can now sign in.",
+    },
+    verifyFailed: {
+      fr: "Ce lien de vérification est invalide ou a expiré. Demandez-en un nouveau ci-dessous.",
+      en: "This verification link is invalid or has expired. Request a new one below.",
+    },
+    verifyEmailLabel: { fr: "Votre e-mail", en: "Your email" },
   },
   settings: {
     language: { fr: "Langue", en: "Language" },

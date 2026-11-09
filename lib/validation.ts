@@ -33,6 +33,12 @@ export const registrationSchema = credentialsSchema.extend({
     .regex(/[a-z]/, "Password must include a lowercase letter.")
     .regex(/[A-Z]/, "Password must include an uppercase letter.")
     .regex(/[0-9]/, "Password must include a number."),
+  // Mandatory since Nov 2026: the visitor must tick "I agree to the
+  // Terms of Use and Privacy Policy" — a direct API call without it
+  // is rejected here, not just in the form.
+  acceptTerms: z.boolean().refine((value) => value === true, {
+    message: "You must accept the Terms of Use and Privacy Policy to create an account.",
+  }),
   // Optional: older clients and accounts created before these fields
   // existed send nothing, and the account still works.
   role: z.enum(USER_ROLES).optional(),

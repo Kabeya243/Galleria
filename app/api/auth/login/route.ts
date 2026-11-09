@@ -3,6 +3,7 @@ import { compare } from "bcryptjs";
 import { ZodError } from "zod";
 import { createSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isEmailVerified } from "@/lib/email-verification";
 import { credentialsSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -19,6 +20,21 @@ export async function POST(request: Request) {
     }
     if (!user || !(await compare(input.password, user.passwordHash as string))) {
       return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
+    }
+    // Email verification (Nov 2026): an unverified account cannot sign
+    // in. Accounts created before verification shipped are grandfathered
+    // by isEmailVerified (createdAt cutoff, or Google sign-in), so
+    // existing accounts keep working. The flag lets the form offer a
+    // resend link instead of a dead end.
+    if (!isEmailVerified(user)) {
+      return NextResponse.json(
+        {
+          error: "Please verify your email before signing in — check your inbox for the link we sent you.",
+          emailNotVerified: true,
+          email: user.email,
+        },
+        { status: 403 },
+      );
     }
     await createSession(user.id, { rememberMe: input.rememberMe ?? false });
     return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } });

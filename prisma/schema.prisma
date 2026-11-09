@@ -24,7 +24,13 @@ model User {
   exhibitions  Exhibition[]
   posts        Post[]
   likes        Like[]
+  // Email verification (Nov 2026): set when the visitor confirms the
+  // link sent to their inbox at signup. Null for accounts created
+  // before verification shipped — see isEmailVerified in
+  // lib/email-verification.ts (legacy accounts keep working).
+  emailVerifiedAt DateTime?
   resetTokens  PasswordResetToken[]
+  verificationTokens EmailVerificationToken[]
   savedWorks   SavedWork[]
   listings     Listing[]
   libraryWorks LibraryWork[]
@@ -39,6 +45,27 @@ model User {
 }
 
 model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Email verification token (Nov 2026): same shape as
+// PasswordResetToken — the raw token is emailed once and only its
+// SHA-256 hash is stored, it expires after 24 h, and it is single-use
+// (usedAt is set when the link is confirmed). A new token is issued on
+// signup and on every resend; issuing deletes the previous unused
+// tokens for the user, so only the latest link works. Applied by
+// `prisma db push` on deploy (see vercel.json); no data migration —
+// existing users keep emailVerifiedAt null and are grandfathered by
+// lib/email-verification.ts.
+model EmailVerificationToken {
   id        String    @id @default(cuid())
   userId    String
   tokenHash String    @unique

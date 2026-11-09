@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import BrandLogo from "@/components/brand-logo";
+import { useT } from "@/lib/i18n";
 import { USER_ROLES, passwordChecks } from "@/lib/validation";
 
 // "Continue with Google" (feature 9): a plain link to the OAuth start —
@@ -50,15 +51,30 @@ export function AsteriskMark() {
 }
 
 export default function AuthForm({ mode }: { mode: "login" | "register" }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [country, setCountry] = useState("");
+  // Mandatory since Nov 2026: the visitor must tick "I agree to the
+  // Terms of Use and Privacy Policy" — the submit button stays
+  // disabled until then, and the server rejects the call anyway.
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // After signup: no session is created — the visitor must verify
+  // their email first, so the form becomes a "check your inbox"
+  // screen (emailSent false = SMTP not configured: the support
+  // message is shown instead, and a resend can be tried).
+  const [registered, setRegistered] = useState<{ email: string; emailSent: boolean } | null>(null);
+  // After a sign-in refused for an unverified email: the form offers
+  // a resend link instead of a dead end.
+  const [needsVerification, setNeedsVerification] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState("");
+  const [resending, setResending] = useState(false);
   const isRegister = mode === "register";
   // Live password checklist (feature 9): each rule ticks off as the
   // visitor types, using the same rules as the server schema.
@@ -70,9 +86,35 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     { ok: checks.number, label: "A number" },
   ];
 
+  async function handleResendVerification(targetEmail: string) {
+    setResendMessage("");
+    setError("");
+    setResending(true);
+    try {
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not send the email right now.");
+      if (!result.emailSent) throw new Error(t("auth", "verificationEmailNotSent"));
+      setResendMessage(t("auth", "verificationResent"));
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Something went wrong.");
+    } finally {
+      setResending(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setResendMessage("");
+    if (isRegister && !acceptTerms) {
+      setError(t("auth", "acceptTermsRequired"));
+      return;
+    }
     setSubmitting(true);
     try {
       const response = await fetch(`/api/auth/${mode}`, {
@@ -80,16 +122,27 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isRegister
-            ? { name, email, password, role: role || undefined, country: country || undefined }
+            ? { name, email, password, acceptTerms, role: role || undefined, country: country || undefined }
             : { email, password, rememberMe },
         ),
       });
       const result = await response.json();
       if (!response.ok) {
+        if (result.emailNotVerified) {
+          setNeedsVerification(result.email ?? email);
+        }
         throw new Error(
           result.error ??
             (isRegister ? "Could not create your account right now." : "Could not sign in right now."),
         );
+      }
+      if (isRegister) {
+        // No session is created at signup: the visitor verifies their
+        // email first (see /verify-email). The link itself is only
+        // ever sent by email — never shown here.
+        setRegistered({ email, emailSent: result.verificationEmailSent === true });
+        setSubmitting(false);
+        return;
       }
       window.location.assign("/");
     } catch (submitError) {
@@ -116,11 +169,49 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         </Link>
         <div className="auth-noir-form-wrap">
           <h1>{isRegister ? "Create an account" : "Login"}</h1>
-          <GoogleButton />
-          <div className="auth-noir-divider" aria-hidden="true">
-            <span>or</span>
-          </div>
-          <form onSubmit={handleSubmit}>
+          {registered ? (
+            <>
+              <p className="auth-noir-hint" style={{ marginTop: 0 }}>
+                {registered.emailSent ? (
+                  <>
+                    <strong>{t("auth", "checkInboxTitle")}</strong> — {t("auth", "checkInbox")} (
+                    {registered.email})
+                  </>
+                ) : (
+                  <>{t("auth", "verificationEmailNotSent")}</>
+                )}
+              </p>
+              <p className="auth-noir-hint" style={{ marginTop: 0 }}>
+                <button
+                  type="button"
+                  className="auth-noir-link-button"
+                  onClick={() => handleResendVerification(registered.email)}
+                  disabled={resending}
+                >
+                  {t("auth", "resendVerification")}
+                </button>
+              </p>
+              {resendMessage && (
+                <p className="auth-noir-hint" style={{ marginTop: 0 }} role="status">
+                  {resendMessage}
+                </p>
+              )}
+              {error && (
+                <p className="auth-noir-error" role="alert">
+                  {error}
+                </p>
+              )}
+              <p className="auth-noir-switch">
+                <Link href="/login">Sign in</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <GoogleButton />
+              <div className="auth-noir-divider" aria-hidden="true">
+                <span>or</span>
+              </div>
+              <form onSubmit={handleSubmit}>
             {isRegister && (
               <div className="auth-noir-field">
                 <label htmlFor="auth-name">Your name</label>
@@ -269,15 +360,56 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                 </Link>
               </div>
             )}
+            {isRegister && (
+              <div className="auth-noir-row auth-noir-terms-check">
+                <label className="auth-noir-remember">
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={(event) => setAcceptTerms(event.target.checked)}
+                    required
+                  />
+                  <span>
+                    {t("auth", "agreeTermsPrefix")}
+                    <Link href="/terms">{t("footer", "terms")}</Link>
+                    {t("auth", "agreeTermsAnd")}
+                    <Link href="/privacy">{t("footer", "privacy")}</Link>
+                  </span>
+                </label>
+              </div>
+            )}
             {error && (
               <p className="auth-noir-error" role="alert">
                 {error}
               </p>
             )}
-            <button type="submit" className="auth-noir-submit" disabled={submitting}>
+            {needsVerification && (
+              <p className="auth-noir-hint" style={{ marginTop: 0 }}>
+                <button
+                  type="button"
+                  className="auth-noir-link-button"
+                  onClick={() => handleResendVerification(needsVerification)}
+                  disabled={resending}
+                >
+                  {t("auth", "resendVerification")}
+                </button>
+              </p>
+            )}
+            {resendMessage && (
+              <p className="auth-noir-hint" style={{ marginTop: 0 }} role="status">
+                {resendMessage}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="auth-noir-submit"
+              disabled={submitting || (isRegister && !acceptTerms)}
+            >
               {submitting ? "…" : isRegister ? "SIGN UP" : "SIGN IN"}
             </button>
           </form>
+            </>
+          )}
           <p className="auth-noir-switch">
             {isRegister ? "Already have an account?" : "New to Lakisa?"}{" "}
             <Link href={isRegister ? "/login" : "/register"}>

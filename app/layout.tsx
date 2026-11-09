@@ -1,20 +1,31 @@
 import type { Metadata } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "@/components/advanced-site-editor.css";
 import "@/components/advanced-site-published.css";
 
 // Clean white-gallery typography: Fraunces (light serif headlines) + DM Sans (body/UI).
-const fraunces = Fraunces({
-  subsets: ["latin"],
+// Fonts self-hosted (variable woff2, latin subset) so the build no longer
+// depends on downloading from Google Fonts.
+const fraunces = localFont({
+  src: [
+    {
+      path: "./fonts/fraunces-variable.woff2",
+      weight: "400 700",
+      style: "normal",
+    },
+    {
+      path: "./fonts/fraunces-italic-variable.woff2",
+      weight: "400 700",
+      style: "italic",
+    },
+  ],
   variable: "--font-display",
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
 });
-const dmSans = DM_Sans({
-  subsets: ["latin"],
+const dmSans = localFont({
+  src: "./fonts/dm-sans-variable.woff2",
   variable: "--font-body",
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
 });
 
 export const metadata: Metadata = {

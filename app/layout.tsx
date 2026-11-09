@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import LakisaToast from "@/components/lakisa-toast";
 import "@/components/advanced-site-editor.css";
 import "@/components/advanced-site-published.css";
 
@@ -46,6 +47,7 @@ export default function RootLayout({
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
+        <LakisaToast />
       </body>
     </html>
   );

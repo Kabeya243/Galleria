@@ -1,0 +1,93 @@
+/* Animated Lakisa loading mark (components/lakisa-loader.tsx): the
+   wireframe cube draws itself once, then breathes gently until the
+   work is done. The stroke is currentColor, so the cube is white on
+   dark surfaces and black on light ones, following the site theme. */
+.lakisa-loader {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+.lakisa-loader-cube { display: block; height: auto; }
+.lakisa-loader-xs .lakisa-loader-cube { width: 20px; }
+.lakisa-loader-sm .lakisa-loader-cube { width: 44px; }
+.lakisa-loader-md .lakisa-loader-cube { width: 72px; }
+.lakisa-loader-lg .lakisa-loader-cube { width: 120px; }
+
+/* Each stroke draws itself in turn (dashoffset 100 to 0 over the
+   pathLength), then the whole cube breathes until the load finishes. */
+.lakisa-loader-shape {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: lakisa-draw 0.9s ease forwards;
+}
+@keyframes lakisa-draw {
+  to { stroke-dashoffset: 0; }
+}
+.lakisa-loader-breathe {
+  animation: lakisa-breathe 2.4s ease-in-out 1s infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+@keyframes lakisa-breathe {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.lakisa-loader-label { font-size: 12px; color: var(--muted); text-align: center; }
+.lakisa-loader-track {
+  display: block;
+  width: 120px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.lakisa-loader-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+.lakisa-loader-percent { font-size: 12px; color: var(--muted); }
+
+/* Full-screen route loading: the cube alone, centered on the page
+   background, so a slow route never looks blank. */
+.lakisa-loader-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background: var(--paper);
+}
+
+/* Upload progress baked into the button that started the upload: the
+   fill grows behind the label as the real percent climbs. The content
+   sits above the fill; the cube inside keeps animating. */
+.lakisa-upload-btn { position: relative; overflow: hidden; }
+.lakisa-upload-btn-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  background: rgba(201, 168, 106, 0.4);
+  transition: width 0.2s ease;
+  z-index: 0;
+}
+.lakisa-upload-btn-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lakisa-loader-shape { animation: none; stroke-dashoffset: 0; }
+  .lakisa-loader-breathe { animation: none; }
+}

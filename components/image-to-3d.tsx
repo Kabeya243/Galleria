@@ -25,6 +25,8 @@ import {
   type Image3DMode,
 } from "@/lib/asset-library";
 import styles from "@/components/tools.module.css";
+import { LakisaUploadProgress } from "@/components/lakisa-loader";
+import { showToast } from "@/lib/toast";
 import {
   DirectUploadFailedError,
   DirectUploadNotConfiguredError,
@@ -211,6 +213,11 @@ export default function ImageTo3D() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // True while an imported GLB is uploading to storage: the progress
+  // lives on the Save button itself (fill + animated cube + real
+  // percent from the direct upload, when it reports one).
+  const [savingModel, setSavingModel] = useState(false);
+  const [saveProgress, setSaveProgress] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   // Manual add form
@@ -435,6 +442,8 @@ export default function ImageTo3D() {
     // re-attaching the file. A failed upload is an inline error, and
     // nothing is saved without its file.
     setBusy(true);
+    setSavingModel(true);
+    setSaveProgress(null);
     setMessage(null);
     try {
       // Small models go through the sculpture proxy; heavy ones go
@@ -468,7 +477,7 @@ export default function ImageTo3D() {
       };
       let url: string;
       try {
-        url = await uploadFileToR2(modelFile, "sculpture", proxyUpload);
+        url = await uploadFileToR2(modelFile, "sculpture", proxyUpload, setSaveProgress);
       } catch (error) {
         if (error instanceof DirectUploadFailedError) {
           throw new Error("The direct upload could not reach storage. Check your connection and try again.");
@@ -497,8 +506,13 @@ export default function ImageTo3D() {
       await saveAsset(record, record.name);
       setSavedSculptureUrl(url);
       setSavedSculptureName(record.name);
+      setSavingModel(false);
+      setSaveProgress(null);
+      showToast(`Saved "${record.name}" to your library.`);
     } catch (error) {
       setModelError(error instanceof Error ? error.message : "Could not save this model.");
+      setSavingModel(false);
+      setSaveProgress(null);
       setBusy(false);
     }
   }
@@ -983,8 +997,14 @@ export default function ImageTo3D() {
                 <label>SAVE TO LIBRARY</label>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <input className="full-input" style={{ flex: "1 1 220px", height: 36 }} value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Asset name" aria-label="Asset name" />
-                  <button className="galleries-open-button" disabled={busy} onClick={() => void saveImportedModel()}>
-                    {busy ? "Saving…" : "Save to library"}
+                  <button className={`galleries-open-button${savingModel ? " lakisa-upload-btn" : ""}`} disabled={busy} onClick={() => void saveImportedModel()}>
+                    {savingModel ? (
+                      <LakisaUploadProgress progress={saveProgress} label="Uploading model…" />
+                    ) : busy ? (
+                      "Saving…"
+                    ) : (
+                      "Save to library"
+                    )}
                   </button>
                 </div>
                 <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>

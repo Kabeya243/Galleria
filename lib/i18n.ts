@@ -530,6 +530,7 @@ export const DICTIONARY = {
     yourEmail: { fr: "Votre e-mail", en: "Your email" },
     yourMessage: { fr: "Votre message", en: "Your message" },
     messageSent: { fr: "Message envoyé", en: "Message sent" },
+    imageAdded: { fr: "Image ajoutée.", en: "Image added." },
     messageSentDetail: {
       fr: "L'artiste lira votre message et vous répondra à cette adresse.",
       en: "The artist will read your message and reply to this address.",
@@ -763,6 +764,7 @@ export const DICTIONARY = {
       en: "The direct upload could not reach storage. Check your connection and try again.",
     },
     musicUploading: { fr: "Envoi de la musique…", en: "Uploading music…" },
+    musicAdded: { fr: "Musique ajoutée.", en: "Music added." },
     musicPreview: { fr: "Écouter avant de publier", en: "Listen before publishing" },
     musicRemovedNote: {
       fr: "Retirer le morceau le retire de l'exposition, pas du stockage. Le fichier reste conservé.",
@@ -773,6 +775,7 @@ export const DICTIONARY = {
     video: { fr: "Vidéo", en: "Video" },
     videoArtwork: { fr: "Œuvre vidéo", en: "Video artwork" },
     addVideo: { fr: "Ajouter une vidéo", en: "Add a video" },
+    videoAdded: { fr: "Vidéo ajoutée.", en: "Video added." },
     videoHint: {
       fr: "MP4 (H.264), 200 Mo maximum : un film plus long, en boucle. Exportez en 720p pour un fichier raisonnable.",
       en: "MP4 (H.264), 200 MB maximum: a longer film, on loop. Export at 720p for a reasonable file size.",
@@ -817,6 +820,7 @@ export const DICTIONARY = {
     sculpture: { fr: "Sculpture", en: "Sculpture" },
     sculptureArtwork: { fr: "Sculpture 3D", en: "3D sculpture" },
     addSculpture: { fr: "Ajouter une sculpture", en: "Add a sculpture" },
+    sculptureAdded: { fr: "Sculpture ajoutée.", en: "Sculpture added." },
     sculptureHint: {
       fr: "Fichier .glb uniquement, 100 Mo maximum : la sculpture est posée sur un socle blanc automatique, au sol. Exportez en .glb depuis Blender (un .gltf ne peut pas être conservé seul).",
       en: "GLB file only, 100 MB maximum: the sculpture stands on an automatic white pedestal, on the floor. Export as .glb from Blender (a .gltf cannot be stored on its own).",

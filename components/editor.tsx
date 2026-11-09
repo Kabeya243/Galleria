@@ -42,6 +42,8 @@ import {
   Video,
 } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
+import { LakisaUploadProgress } from "@/components/lakisa-loader";
+import { showToast } from "@/lib/toast";
 import ElementThumbnail from "@/components/element-thumbnail";
 import ExhibitionMinimap from "@/components/exhibition-minimap";
 import ExhibitionPublishDialog, { type PublishVisibility } from "@/components/exhibition-publish-dialog";
@@ -426,6 +428,13 @@ export default function Editor({
   // Upload progress (0–100) for heavy files sent straight to R2; null
   // when nothing is uploading. Rendered as a bar under the add buttons.
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  // True from the moment an artwork file starts uploading until it is
+  // added to the room and shown. The progress lives on the button that
+  // started the upload (fill + animated cube + real percent); the kind
+  // says which button that is. Small proxy uploads report no percent,
+  // so the button shows the cube and the label only, never a number.
+  const [assetUploading, setAssetUploading] = useState(false);
+  const [assetUploadKind, setAssetUploadKind] = useState<"image" | "video" | "sculpture" | null>(null);
   // Reusable library ("Mes œuvres"): pick a work already uploaded
   // instead of uploading again. The picker loads GET /api/library on
   // first open; choosing a work adds a COPY to this room (same image
@@ -2149,6 +2158,10 @@ export default function Editor({
         );
       }
       setSaved(true);
+      // The save re-records the artworks in the library, so the picker
+      // cache is stale from here on: drop it so the next open refetches
+      // and the new files show up without a manual reload.
+      setLibraryLoaded(false);
       setAutosaveState("saved");
       setLastSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       // Every save — manual or autosave — keeps a version snapshot, so
@@ -2918,6 +2931,7 @@ async function compressImage(file: File): Promise<File> {
       }
       const title = file.name.replace(/\.[^.]+$/, "").trim();
       updateMusic({ url, title, loop: true, volume: 0.5 });
+      showToast(t("music", "musicAdded"));
       if (musicFileRef.current) musicFileRef.current.value = "";
     } catch (error) {
       console.error("Could not upload music.", error);
@@ -2933,6 +2947,8 @@ async function compressImage(file: File): Promise<File> {
     if (!file) return;
     setBusy(true);
     setUploadError(null);
+    setAssetUploading(true);
+    setAssetUploadKind("image");
     try {
       // The palette is read from the file itself while it uploads —
       // decoding locally, so no extra network fetch and no wait after
@@ -2940,6 +2956,7 @@ async function compressImage(file: File): Promise<File> {
       // editor retries it lazily when the artwork is selected.
       const [url, palette] = await Promise.all([uploadImageFile(file), extractPalette(file)]);
       const artworkId = addArtwork(url, palette);
+      showToast(t("artwork", "imageAdded"));
       // The description is generated in the background (captioning model, in the
       // browser): the model downloads once, then is cached. It never
       // blocks the upload; a failure just leaves the description and
@@ -2951,6 +2968,8 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(error instanceof Error ? error.message : "Could not upload this image.");
     } finally {
       setBusy(false);
+      setAssetUploading(false);
+      setAssetUploadKind(null);
     }
   }
 
@@ -2961,6 +2980,8 @@ async function compressImage(file: File): Promise<File> {
     if (!file || !selected) return;
     setBusy(true);
     setUploadError(null);
+    setAssetUploading(true);
+    setAssetUploadKind("image");
     try {
       const [url, palette] = await Promise.all([uploadImageFile(file), extractPalette(file)]);
       snapshot();
@@ -2978,6 +2999,8 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(error instanceof Error ? error.message : "Could not upload this image.");
     } finally {
       setBusy(false);
+      setAssetUploading(false);
+      setAssetUploadKind(null);
     }
   }
 
@@ -3049,15 +3072,20 @@ async function compressImage(file: File): Promise<File> {
     }
     setBusy(true);
     setUploadError(null);
+    setAssetUploading(true);
+    setAssetUploadKind("video");
     try {
       const url = await uploadVideoFile(file);
       addVideoArtwork(url);
+      showToast(t("video", "videoAdded"));
       if (videoUploadRef.current) videoUploadRef.current.value = "";
     } catch (error) {
       console.error("Could not upload video artwork.", error);
       setUploadError(error instanceof Error ? error.message : t("video", "videoUploadFailed"));
     } finally {
       setBusy(false);
+      setAssetUploading(false);
+      setAssetUploadKind(null);
     }
   }
 
@@ -3079,6 +3107,8 @@ async function compressImage(file: File): Promise<File> {
     }
     setBusy(true);
     setUploadError(null);
+    setAssetUploading(true);
+    setAssetUploadKind("video");
     try {
       const url = await uploadVideoFile(file);
       snapshot();
@@ -3089,6 +3119,8 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(error instanceof Error ? error.message : t("video", "videoUploadFailed"));
     } finally {
       setBusy(false);
+      setAssetUploading(false);
+      setAssetUploadKind(null);
     }
   }
 
@@ -3160,15 +3192,20 @@ async function compressImage(file: File): Promise<File> {
     }
     setBusy(true);
     setUploadError(null);
+    setAssetUploading(true);
+    setAssetUploadKind("sculpture");
     try {
       const url = await uploadSculptureFile(file);
       addSculptureArtwork(url);
+      showToast(t("sculpture", "sculptureAdded"));
       if (sculptureUploadRef.current) sculptureUploadRef.current.value = "";
     } catch (error) {
       console.error("Could not upload sculpture artwork.", error);
       setUploadError(error instanceof Error ? error.message : t("sculpture", "sculptureUploadFailed"));
     } finally {
       setBusy(false);
+      setAssetUploading(false);
+      setAssetUploadKind(null);
     }
   }
 
@@ -3188,6 +3225,8 @@ async function compressImage(file: File): Promise<File> {
     }
     setBusy(true);
     setUploadError(null);
+    setAssetUploading(true);
+    setAssetUploadKind("sculpture");
     try {
       const url = await uploadSculptureFile(file);
       snapshot();
@@ -3198,6 +3237,8 @@ async function compressImage(file: File): Promise<File> {
       setUploadError(error instanceof Error ? error.message : t("sculpture", "sculptureUploadFailed"));
     } finally {
       setBusy(false);
+      setAssetUploading(false);
+      setAssetUploadKind(null);
     }
   }
 
@@ -3619,15 +3660,33 @@ async function compressImage(file: File): Promise<File> {
                   </button>
                 ))}
               </div>
-              <button className="add-to-room" onClick={() => uploadRef.current?.click()} disabled={busy}><Plus size={15} /> Add artwork to room</button>
+              <button className={`add-to-room${assetUploading && assetUploadKind === "image" ? " lakisa-upload-btn" : ""}`} onClick={() => uploadRef.current?.click()} disabled={busy}>
+                {assetUploading && assetUploadKind === "image" ? (
+                  <LakisaUploadProgress progress={uploadProgress} label={t("settings", "uploading")} />
+                ) : (
+                  <><Plus size={15} /> Add artwork to room</>
+                )}
+              </button>
               {/* Video artwork: an MP4 on the wall, looped and muted —
                   the same camera-wall placement as an image, a 16:9
                   frame, and the same compose / drag / snap afterwards. */}
-              <button className="add-to-room" onClick={() => videoUploadRef.current?.click()} disabled={busy}><Video size={15} /> {t("video", "addVideo")}</button>
+              <button className={`add-to-room${assetUploading && assetUploadKind === "video" ? " lakisa-upload-btn" : ""}`} onClick={() => videoUploadRef.current?.click()} disabled={busy}>
+                {assetUploading && assetUploadKind === "video" ? (
+                  <LakisaUploadProgress progress={uploadProgress} label={t("video", "videoUploading")} />
+                ) : (
+                  <><Video size={15} /> {t("video", "addVideo")}</>
+                )}
+              </button>
               {/* Sculpture artwork: a GLB on an automatic pedestal on
                   the floor — same upload flow as a video, floor
                   placement instead of a wall. */}
-              <button className="add-to-room" onClick={() => sculptureUploadRef.current?.click()} disabled={busy}><Box size={15} /> {t("sculpture", "addSculpture")}</button>
+              <button className={`add-to-room${assetUploading && assetUploadKind === "sculpture" ? " lakisa-upload-btn" : ""}`} onClick={() => sculptureUploadRef.current?.click()} disabled={busy}>
+                {assetUploading && assetUploadKind === "sculpture" ? (
+                  <LakisaUploadProgress progress={uploadProgress} label={t("sculpture", "sculptureUploading")} />
+                ) : (
+                  <><Box size={15} /> {t("sculpture", "addSculpture")}</>
+                )}
+              </button>
               {/* Reuse instead of re-uploading: pick a work already in
                   the artist's library ("Mes œuvres") and hang a copy
                   of it in this room — same image, fresh placement. */}
@@ -3672,11 +3731,6 @@ async function compressImage(file: File): Promise<File> {
                 </div>
               )}
               {uploadError && <div className="asset-upload-error" role="alert">{uploadError}</div>}
-              {uploadProgress !== null && (
-                <div className="asset-upload-progress" role="status" aria-label={`${uploadProgress}%`}>
-                  <div className="asset-upload-progress-bar" style={{ width: `${uploadProgress}%` }} />
-                </div>
-              )}
               <input ref={uploadRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void uploadArtwork(event.target.files?.[0])} />
               <input ref={videoUploadRef} className="visually-hidden" type="file" accept="video/mp4,.mp4" onChange={(event) => void uploadVideoArtwork(event.target.files?.[0])} />
               <input ref={sculptureUploadRef} className="visually-hidden" type="file" accept=".glb" onChange={(event) => void uploadSculptureArtwork(event.target.files?.[0])} />
@@ -3877,7 +3931,13 @@ async function compressImage(file: File): Promise<File> {
             <div className="scene-caption"><span className="scene-caption-dot" /> DOUBLE-CLICK TO SELECT <span className="caption-divider">·</span> DRAG A SELECTED ITEM TO MOVE IT <span className="caption-divider">·</span> WASD TO WALK <span className="caption-divider">·</span> CLICK THE FLOOR TO WALK THERE <span className="caption-divider">·</span> DRAG ELSEWHERE TO LOOK</div>
             <div className="scene-room-count"><span>{String(rooms.findIndex((room) => room.id === activeRoom?.id) + 1).padStart(2, "0")}</span><span className="room-count-line" /><span>{String(rooms.length).padStart(2, "0")}</span></div>
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up" aria-label="Move selected artwork up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down" aria-label="Move selected artwork down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale" aria-label="Increase scale of selected artwork"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale" aria-label="Decrease scale of selected artwork"><Minus size={14} /></button></div>
-            <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
+            <div className="stage-add-button"><button className={assetUploading && assetUploadKind === "image" ? "lakisa-upload-btn" : undefined} onClick={() => uploadRef.current?.click()}>
+              {assetUploading && assetUploadKind === "image" ? (
+                <LakisaUploadProgress progress={uploadProgress} label={t("settings", "uploading")} />
+              ) : (
+                <><Plus size={14} /> Add artwork</>
+              )}
+            </button></div>
           </div>
           <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLabel(activeRoom.layout) : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks{showGrid ? <><span className="status-dot-separator">·</span> Grid on, drags snap to 0.25 m</> : null}</span><span>{autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
         </section>
@@ -3918,13 +3978,25 @@ async function compressImage(file: File): Promise<File> {
               <div className="selected-art-preview"><div className="selected-art-image" style={{ backgroundColor: selected.color }}>{selected.sculptureUrl ? <span>3D</span> : selected.videoUrl ? <video src={selected.videoUrl} muted loop playsInline preload="metadata" controls /> : selected.imageUrl ? <img src={selected.imageUrl} alt={selected.altText ?? selected.title} /> : <span style={{ backgroundColor: selected.accent }} />}</div><div><strong>{selected.title}</strong><small>{selected.year} · {selected.sculptureUrl ? t("sculpture", "sculptureArtwork") : selected.videoUrl ? t("video", "videoArtwork") : selected.medium}</small></div></div>
               {!selected.text && !selected.videoUrl && !selected.sculptureUrl && (
                 <>
-                  <button type="button" className="add-to-room" onClick={() => replaceImageRef.current?.click()} disabled={busy}>Replace image</button>
+                  <button type="button" className={`add-to-room${assetUploading && assetUploadKind === "image" ? " lakisa-upload-btn" : ""}`} onClick={() => replaceImageRef.current?.click()} disabled={busy}>
+                    {assetUploading && assetUploadKind === "image" ? (
+                      <LakisaUploadProgress progress={uploadProgress} label={t("settings", "uploading")} />
+                    ) : (
+                      <>Replace image</>
+                    )}
+                  </button>
                   <input ref={replaceImageRef} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void replaceArtworkImage(event.target.files?.[0])} />
                 </>
               )}
               {!selected.text && selected.videoUrl && (
                 <>
-                  <button type="button" className="add-to-room" onClick={() => replaceVideoRef.current?.click()} disabled={busy}>{t("video", "replaceVideo")}</button>
+                  <button type="button" className={`add-to-room${assetUploading && assetUploadKind === "video" ? " lakisa-upload-btn" : ""}`} onClick={() => replaceVideoRef.current?.click()} disabled={busy}>
+                    {assetUploading && assetUploadKind === "video" ? (
+                      <LakisaUploadProgress progress={uploadProgress} label={t("video", "videoUploading")} />
+                    ) : (
+                      <>{t("video", "replaceVideo")}</>
+                    )}
+                  </button>
                   <input ref={replaceVideoRef} className="visually-hidden" type="file" accept="video/mp4,.mp4" onChange={(event) => void replaceArtworkVideo(event.target.files?.[0])} />
                   <button type="button" className="add-to-room" onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, videoUrl: null })); }} disabled={busy}>{t("video", "removeVideo")}</button>
                   <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{t("video", "videoPlaysMuted")}</p>
@@ -3932,7 +4004,13 @@ async function compressImage(file: File): Promise<File> {
               )}
               {!selected.text && selected.sculptureUrl && (
                 <>
-                  <button type="button" className="add-to-room" onClick={() => replaceSculptureRef.current?.click()} disabled={busy}>{t("sculpture", "replaceSculpture")}</button>
+                  <button type="button" className={`add-to-room${assetUploading && assetUploadKind === "sculpture" ? " lakisa-upload-btn" : ""}`} onClick={() => replaceSculptureRef.current?.click()} disabled={busy}>
+                    {assetUploading && assetUploadKind === "sculpture" ? (
+                      <LakisaUploadProgress progress={uploadProgress} label={t("sculpture", "sculptureUploading")} />
+                    ) : (
+                      <>{t("sculpture", "replaceSculpture")}</>
+                    )}
+                  </button>
                   <input ref={replaceSculptureRef} className="visually-hidden" type="file" accept=".glb" onChange={(event) => void replaceArtworkSculpture(event.target.files?.[0])} />
                   <button type="button" className="add-to-room" onClick={() => { snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, sculptureUrl: null })); }} disabled={busy}>{t("sculpture", "removeSculpture")}</button>
                   <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>{t("sculpture", "sculptureOnPedestal")}</p>
@@ -4417,8 +4495,12 @@ async function compressImage(file: File): Promise<File> {
                             {t("music", "loop")}
                           </label>
                           <div className="property-actions">
-                            <button type="button" onClick={() => musicFileRef.current?.click()} disabled={busy}>
-                              {musicUploading ? t("music", "musicUploading") : t("music", "uploadMusic")}
+                            <button type="button" className={musicUploading ? "lakisa-upload-btn" : undefined} onClick={() => musicFileRef.current?.click()} disabled={busy}>
+                              {musicUploading ? (
+                                <LakisaUploadProgress progress={musicUploadProgress} label={t("music", "musicUploading")} />
+                              ) : (
+                                <>{t("music", "uploadMusic")}</>
+                              )}
                             </button>
                             <button
                               type="button"
@@ -4433,8 +4515,12 @@ async function compressImage(file: File): Promise<File> {
                         </>
                       ) : (
                         <div className="property-actions">
-                          <button type="button" onClick={() => musicFileRef.current?.click()} disabled={busy}>
-                            {musicUploading ? t("music", "musicUploading") : t("music", "uploadMusic")}
+                          <button type="button" className={musicUploading ? "lakisa-upload-btn" : undefined} onClick={() => musicFileRef.current?.click()} disabled={busy}>
+                            {musicUploading ? (
+                              <LakisaUploadProgress progress={musicUploadProgress} label={t("music", "musicUploading")} />
+                            ) : (
+                              <>{t("music", "uploadMusic")}</>
+                            )}
                           </button>
                         </div>
                       )}
@@ -4446,11 +4532,6 @@ async function compressImage(file: File): Promise<File> {
                         onChange={(event) => void uploadMusicFile(event.target.files?.[0])}
                       />
                       {musicError && <p role="alert" style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>{musicError}</p>}
-                      {musicUploadProgress !== null && (
-                        <div className="asset-upload-progress" role="status" aria-label={`${musicUploadProgress}%`}>
-                          <div className="asset-upload-progress-bar" style={{ width: `${musicUploadProgress}%` }} />
-                        </div>
-                      )}
                     </div>
                     <div className="property-section">
                       <label>{t("tour", "guidedTour").toUpperCase()} <span>{tour?.stops.length ?? 0}/{MAX_TOUR_STOPS}</span></label>

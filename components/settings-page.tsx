@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Monitor, Moon, Sun } from "lucide-react";
 import Avatar from "@/components/avatar";
+import { LakisaUploadProgress } from "@/components/lakisa-loader";
+import { showToast } from "@/lib/toast";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import LanguageSwitcher from "@/components/language-switcher";
@@ -115,6 +117,7 @@ export default function SettingsPage({
       if (!res.ok) throw new Error(result.error ?? t("settings", "couldNotUpdateProfile"));
       setAvatarUrl(url);
       setAvatarNote({ ok: true, text: t("settings", "avatarSaved") });
+      showToast(t("settings", "avatarSaved"));
       router.refresh();
     } catch (error) {
       setAvatarNote({
@@ -289,11 +292,15 @@ export default function SettingsPage({
                   />
                   <button
                     type="button"
-                    className="settings-save"
+                    className={`settings-save${uploadingAvatar ? " lakisa-upload-btn" : ""}`}
                     disabled={uploadingAvatar}
                     onClick={() => avatarInputRef.current?.click()}
                   >
-                    {uploadingAvatar ? t("settings", "uploading") : t("settings", "uploadAvatar")}
+                    {uploadingAvatar ? (
+                      <LakisaUploadProgress progress={null} label={t("settings", "uploading")} />
+                    ) : (
+                      <>{t("settings", "uploadAvatar")}</>
+                    )}
                   </button>
                   {avatarUrl && (
                     <button type="button" className="settings-delete" disabled={uploadingAvatar} onClick={() => void removeAvatar()}>

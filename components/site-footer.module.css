@@ -146,6 +146,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* Stacked layout: let the tagline breathe instead of staying a
+     narrow 280 px column. */
+  .brandBlock p {
+    max-width: 420px;
+  }
+
   .legal {
     padding-left: 32px;
     padding-right: 32px;
@@ -161,11 +167,34 @@
   .legal {
     padding: 18px 18px 24px;
   }
+
+  /* The language select is a shared native control with small inline
+     padding: give it a real tap target in the footer on touch screens. */
+  .legal select {
+    min-height: 36px;
+  }
 }
 
 @media (max-width: 480px) {
   .columns {
     grid-template-columns: 1fr;
     gap: 28px;
+  }
+
+  /* Legal bar: stack copyright, links and language on their own rows
+     instead of a ragged wrap. */
+  .legal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .legalLinks {
+    gap: 16px;
+  }
+
+  .socialIcons a {
+    width: 40px;
+    height: 40px;
   }
 }

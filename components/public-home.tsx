@@ -129,6 +129,22 @@ export default function PublicHome({
     };
   }, [resourcesOpen]);
 
+  // Mobile menu: Escape closes it (and its Resources subgroup), like
+  // the desktop dropdown. Links already close it via closeMobileMenu.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        setMobileResourcesOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileOpen]);
+
   const focusMenuItem = (index: number) => {
     const items = resourcesMenuRef.current?.querySelectorAll("a");
     if (!items || items.length === 0) return;

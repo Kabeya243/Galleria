@@ -50,7 +50,29 @@ export const profileUpdateSchema = z.object({
   // Profile extras (avatar photo URL from the R2 upload proxy, short bio).
   // Stored in the "profile" SavedWork row, not on the User table — see
   // lib/profile.ts. Nullable so the avatar can be removed (null clears it).
-  avatarUrl: z.string().trim().url().max(500).nullable().optional(),
+  // The avatar URL is either an absolute URL (Google avatar, …) or a
+  // same-origin path from the R2 upload proxy (/api/r2/…). Zod's .url()
+  // alone rejects the relative path, so every avatar upload failed with
+  // "Invalid URL" even though the file was stored fine, hence this
+  // refinement, which accepts both shapes.
+  avatarUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine(
+      (value) => {
+        if (value.startsWith("/")) return /^\/\S+$/.test(value);
+        try {
+          new URL(value);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Invalid URL." },
+    )
+    .nullable()
+    .optional(),
   bio: z.string().trim().max(500).nullable().optional(),
 });
 

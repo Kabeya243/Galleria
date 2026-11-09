@@ -132,7 +132,21 @@ const SERIF = '"Fraunces", Georgia, serif';
 const MONO = '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
 const DEFAULT_VERIFICATION_NOTE =
+  "This certificate accompanies the original work described above. Verify it online: scan the QR code, or enter the certificate ID on the Lakisa certificate verification page.";
+
+// The note printed on certificates issued before the online
+// verification service existed. configFromSaved replaces it with the
+// new default (the QR code now points to the verification page); a
+// custom note written by the artist is kept as-is.
+const LEGACY_VERIFICATION_NOTE =
   "This certificate accompanies the original work described above. To check it, compare the certificate ID printed here with the artist's own records, or scan the QR code, which carries the certificate ID, the work's title and the artist's name.";
+
+// The verification URL a QR code points to. The origin comes from the
+// browser (window.location.origin), so the same code works on every
+// deployment; the ID is upper-cased and encoded, matching the lookup.
+function verificationUrl(cfg: CertificateConfig, origin: string): string {
+  return `${origin.replace(/\/$/, "")}/verify?id=${encodeURIComponent(cfg.certificateId.trim().toUpperCase())}`;
+}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -186,17 +200,18 @@ function configFromSaved(data: Record<string, unknown>, fallback: CertificateCon
   if (!["portrait", "landscape"].includes(merged.orientation)) merged.orientation = "portrait";
   if (!["none", "single", "double", "gold"].includes(merged.border)) merged.border = "double";
   if (typeof merged.priceUsd !== "string") merged.priceUsd = "";
+  // Certificates issued before the online verification service carry
+  // the old note. The QR code now points to the verification page, so
+  // the old note is wrong, so replace it with the new default, unless
+  // the artist wrote their own note (a custom note is kept as-is).
+  if (
+    typeof merged.verificationNote !== "string" ||
+    merged.verificationNote.trim() === "" ||
+    merged.verificationNote === LEGACY_VERIFICATION_NOTE
+  ) {
+    merged.verificationNote = DEFAULT_VERIFICATION_NOTE;
+  }
   return merged;
-}
-
-function verificationPayload(cfg: CertificateConfig): string {
-  return (
-    `Certificate of Authenticity ${cfg.certificateId}\n` +
-    `"${cfg.title}" by ${cfg.artist}, ${cfg.year}\n` +
-    `${cfg.medium}, ${cfg.dimensions}\n` +
-    `Edition ${cfg.editionNumber}/${cfg.editionSize}\n` +
-    `Verify this certificate ID against the artist's records.`
-  );
 }
 
 function editionLabel(cfg: CertificateConfig): string {
@@ -330,6 +345,13 @@ export default function CertificateTool({
   const [archiveNote, setArchiveNote] = useState<string | null>(null);
   const qrRef = useRef<HTMLCanvasElement | null>(null);
   const [qrError, setQrError] = useState(false);
+  // Site origin for the verification URL the QR code points to. Set
+  // after mount (window is not available during server rendering); the
+  // QR is drawn once it is known, via the payload below.
+  const [verifyOrigin, setVerifyOrigin] = useState("");
+  useEffect(() => {
+    setVerifyOrigin(window.location.origin);
+  }, []);
   // Sheet fit: the live preview is scaled down (never up) so the whole
   // studio fits the viewport without scrolling — see the effect below.
   const scalerRef = useRef<HTMLDivElement | null>(null);
@@ -380,8 +402,10 @@ export default function CertificateTool({
     };
   }, []);
 
-  // Draw the QR code on canvas whenever the verification payload changes.
-  const payload = cfg ? verificationPayload(cfg) : "";
+  // The QR code points to the public verification page for this
+  // certificate (/verify?id=…). Empty until the origin is known (after
+  // mount); the QR effect below redraws once it is set.
+  const payload = cfg && verifyOrigin ? verificationUrl(cfg, verifyOrigin) : "";
   useEffect(() => {
     const canvas = qrRef.current;
     if (!canvas || !payload) return;
@@ -571,10 +595,17 @@ export default function CertificateTool({
     setIssueMsg(null);
     setIssueError(null);
     try {
+      // The PDF is rendered server-side (Python); the verification URL
+      // travels with the config so the printed QR code points to the
+      // same public verification page as the on-screen QR. It is not
+      // part of the saved config, only of this export request.
       const res = await fetch("/api/atelier/export/certificate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cfg),
+        body: JSON.stringify({
+          ...cfg,
+          ...(verifyOrigin ? { verifyUrl: verificationUrl(cfg, verifyOrigin) } : {}),
+        }),
       });
       if (!res.ok) {
         const json = (await res.json().catch(() => null)) as { detail?: string } | null;
@@ -1046,15 +1077,14 @@ export default function CertificateTool({
           </div>
         </section>
 
-        {/* -- How verification works (honest, no invented service) ------------ */}
+        {/* -- How verification works (online, by ID or QR code) -------------- */}
         <div className="cert-verify-box">
           <h3>How anyone verifies this certificate</h3>
           <p>
-            There is no automatic online verification service for these certificates. A buyer or collector checks the certificate in two ways:
-            scan the QR code, which carries the certificate ID, the artwork title and the artist&apos;s name, or read the certificate ID printed
-            on the certificate and compare it with the artist&apos;s own records (your issued list on this page) and with the artwork itself:
-            title, medium, dimensions, year and edition must match. When in doubt, the holder should contact the artist directly and quote the
-            certificate ID.
+            Every certificate is checked online, automatically: scan the QR code on the certificate, or enter the certificate ID printed on
+            it at the Lakisa verification page (/verify). The service confirms whether the certificate is registered and shows the work it
+            belongs to: title, artist, medium, dimensions, year and edition must match the artwork itself. An ID that is not registered
+            is reported as not found. When in doubt, the holder should contact the artist directly and quote the certificate ID.
           </p>
           <p>
             Export is a real one-page PDF (“Download PDF”, rendered server-side in the template and paper size shown above) or through your

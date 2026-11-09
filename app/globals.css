@@ -653,13 +653,12 @@ button { color: inherit; }
 .create-dialog-models { margin: 18px 0 0; padding: 0; border: none; }
 .create-dialog-models legend { margin-bottom: 8px; padding: 0; font-size: 13px; font-weight: 600; }
 .create-dialog-model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.create-dialog-model { display: grid; gap: 1px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.create-dialog-model { display: grid; gap: 8px; padding: 10px 11px 11px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
 .create-dialog-model input { position: absolute; opacity: 0; pointer-events: none; }
 .create-dialog-model-selected { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .create-dialog-model:focus-within { outline: 2px solid var(--ink); outline-offset: 1px; }
+.create-dialog-model-image { display: block; width: 100%; height: auto; aspect-ratio: 640 / 240; object-fit: cover; border-radius: 6px; background: var(--line); }
 .create-dialog-model-name { font-family: var(--font-display), Georgia, serif; font-size: 14px; font-weight: 600; }
-.create-dialog-model-layout { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-.create-dialog-model-desc { color: var(--muted); font-size: 11px; line-height: 1.4; }
 .create-dialog-error { margin: 14px 0 0; color: #ff7a6b; font-size: 13px; }
 .create-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .create-dialog-cancel { padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font: 600 13px var(--font-body), "DM Sans", sans-serif; cursor: pointer; }

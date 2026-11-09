@@ -37,28 +37,31 @@ export default function ExhibitionCreateDialog({
     ? model
     : (visibleModels[0]?.id ?? "sunlight");
 
-  const modelText: Record<RoomModelId, { name: string; desc: string }> = {
-    sunlight: { name: galleryLabel("sunlight", locale, nameOverrides), desc: t("create", "modelSunlightDesc") },
-    serpentine: { name: galleryLabel("serpentine", locale, nameOverrides), desc: t("create", "modelSerpentineDesc") },
-    vitrine: { name: galleryLabel("vitrine", locale, nameOverrides), desc: t("create", "modelVitrineDesc") },
-    loft: { name: galleryLabel("loft", locale, nameOverrides), desc: t("create", "modelLoftDesc") },
-    halle: { name: galleryLabel("halle", locale, nameOverrides), desc: t("create", "modelHalleDesc") },
-    arche: { name: galleryLabel("arche", locale, nameOverrides), desc: t("create", "modelArcheDesc") },
-    musee: { name: galleryLabel("musee", locale, nameOverrides), desc: t("create", "modelMuseeDesc") },
-    "claire-voie": { name: galleryLabel("claire-voie", locale, nameOverrides), desc: t("create", "modelClaireVoieDesc") },
-    parquet: { name: galleryLabel("parquet", locale, nameOverrides), desc: t("create", "modelParquetDesc") },
-    verriere: { name: galleryLabel("verriere", locale, nameOverrides), desc: t("create", "modelVerriereDesc") },
-    pavillon: { name: galleryLabel("pavillon", locale, nameOverrides), desc: t("create", "modelPavillonDesc") },
-    classique: { name: galleryLabel("classique", locale, nameOverrides), desc: t("create", "modelClassiqueDesc") },
-    "atrium-blanc": { name: galleryLabel("atrium-blanc", locale, nameOverrides), desc: t("create", "modelAtriumBlancDesc") },
-    patio: { name: galleryLabel("patio", locale, nameOverrides), desc: t("create", "modelPatioDesc") },
-    escalier: { name: galleryLabel("escalier", locale, nameOverrides), desc: t("create", "modelEscalierDesc") },
-    "salles-vertes": { name: galleryLabel("salles-vertes", locale, nameOverrides), desc: t("create", "modelSallesVertesDesc") },
-    "couloir-sombre": { name: galleryLabel("couloir-sombre", locale, nameOverrides), desc: t("create", "modelCouloirSombreDesc") },
-    "couloir-dore": { name: galleryLabel("couloir-dore", locale, nameOverrides), desc: t("create", "modelCouloirDoreDesc") },
-    voutes: { name: galleryLabel("voutes", locale, nameOverrides), desc: t("create", "modelVoutesDesc") },
-    courbes: { name: galleryLabel("courbes", locale, nameOverrides), desc: t("create", "modelCourbesDesc") },
-    "atrium-lattes": { name: galleryLabel("atrium-lattes", locale, nameOverrides), desc: t("create", "modelAtriumLattesDesc") },
+  // Room names in the visitor's language (admin renames included).
+  // The cards show the room's real image and its name only, no
+  // description.
+  const modelName: Record<RoomModelId, string> = {
+    sunlight: galleryLabel("sunlight", locale, nameOverrides),
+    serpentine: galleryLabel("serpentine", locale, nameOverrides),
+    vitrine: galleryLabel("vitrine", locale, nameOverrides),
+    loft: galleryLabel("loft", locale, nameOverrides),
+    halle: galleryLabel("halle", locale, nameOverrides),
+    arche: galleryLabel("arche", locale, nameOverrides),
+    musee: galleryLabel("musee", locale, nameOverrides),
+    "claire-voie": galleryLabel("claire-voie", locale, nameOverrides),
+    parquet: galleryLabel("parquet", locale, nameOverrides),
+    verriere: galleryLabel("verriere", locale, nameOverrides),
+    pavillon: galleryLabel("pavillon", locale, nameOverrides),
+    classique: galleryLabel("classique", locale, nameOverrides),
+    "atrium-blanc": galleryLabel("atrium-blanc", locale, nameOverrides),
+    patio: galleryLabel("patio", locale, nameOverrides),
+    escalier: galleryLabel("escalier", locale, nameOverrides),
+    "salles-vertes": galleryLabel("salles-vertes", locale, nameOverrides),
+    "couloir-sombre": galleryLabel("couloir-sombre", locale, nameOverrides),
+    "couloir-dore": galleryLabel("couloir-dore", locale, nameOverrides),
+    voutes: galleryLabel("voutes", locale, nameOverrides),
+    courbes: galleryLabel("courbes", locale, nameOverrides),
+    "atrium-lattes": galleryLabel("atrium-lattes", locale, nameOverrides),
   };
 
   async function submit(event: React.FormEvent) {
@@ -117,11 +120,17 @@ export default function ExhibitionCreateDialog({
                     checked={effectiveModel === candidate.id}
                     onChange={() => setModel(candidate.id)}
                   />
-                  <span className="create-dialog-model-name">{modelText[candidate.id].name}</span>
-                  <span className="create-dialog-model-layout">
-                    {galleryLabel(candidate.layout, locale, nameOverrides)}
-                  </span>
-                  <span className="create-dialog-model-desc">{modelText[candidate.id].desc}</span>
+                  {/* The room's real entrance capture (public/gallery-thumbnails/<id>.jpg, taken from the room's entrance in 3D), one image per model, same files the galleries catalogue uses. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/gallery-thumbnails/${candidate.id}.jpg`}
+                    alt={`${modelName[candidate.id]} entrance view`}
+                    width={640}
+                    height={240}
+                    className="create-dialog-model-image"
+                    loading="lazy"
+                  />
+                  <span className="create-dialog-model-name">{modelName[candidate.id]}</span>
                 </label>
               ))}
             </div>

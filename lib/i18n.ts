@@ -3905,6 +3905,44 @@ export const DICTIONARY = {
     status: { fr: "Statut", en: "Status" },
     action: { fr: "Action", en: "Action" },
   },
+  verify: {
+    eyebrow: { fr: "LAKISA · VÉRIFICATION", en: "LAKISA · VERIFICATION" },
+    title: { fr: "Vérifier un certificat", en: "Verify a certificate" },
+    intro: {
+      fr: "Saisissez l'identifiant imprimé sur le certificat, ou scannez son QR code : le service vérifie en ligne si le certificat est authentique.",
+      en: "Enter the ID printed on the certificate, or scan its QR code: the service checks online whether the certificate is authentic.",
+    },
+    idLabel: { fr: "Identifiant du certificat", en: "Certificate ID" },
+    idPlaceholder: { fr: "Par exemple LAKISA-2026-XXXX", en: "For example LAKISA-2026-XXXX" },
+    check: { fr: "Vérifier", en: "Verify" },
+    checking: { fr: "Vérification…", en: "Checking…" },
+    authentic: { fr: "Certificat authentique", en: "Authentic certificate" },
+    authenticText: {
+      fr: "Ce certificat est enregistré sur Lakisa et correspond à l'œuvre ci-dessous.",
+      en: "This certificate is registered on Lakisa and matches the work below.",
+    },
+    notFound: { fr: "Certificat introuvable", en: "Certificate not found" },
+    notFoundText: {
+      fr: "Aucun certificat ne correspond à cet identifiant. Vérifiez l'identifiant et réessayez, ou contactez l'artiste directement.",
+      en: "No certificate matches this ID. Check the ID and try again, or contact the artist directly.",
+    },
+    artwork: { fr: "Œuvre", en: "Artwork" },
+    artist: { fr: "Artiste", en: "Artist" },
+    medium: { fr: "Médium", en: "Medium" },
+    dimensions: { fr: "Dimensions", en: "Dimensions" },
+    year: { fr: "Année", en: "Year" },
+    edition: { fr: "Édition", en: "Edition" },
+    certificateId: { fr: "Identifiant du certificat", en: "Certificate ID" },
+    issuedOn: { fr: "Émis le", en: "Issued on" },
+    uniqueWork: { fr: "Œuvre unique", en: "Unique work" },
+    ofEdition: { fr: "Exemplaire {n} sur {size}", en: "No. {n} of {size}" },
+    unavailable: {
+      fr: "La vérification est indisponible pour le moment. Réessayez plus tard.",
+      en: "Verification is unavailable right now. Please try again later.",
+    },
+    emptyId: { fr: "Saisissez un identifiant de certificat.", en: "Enter a certificate ID." },
+    backHome: { fr: "Retour à l'accueil", en: "Back home" },
+  },
 } as const;
 
 export type DictionaryKey = keyof typeof DICTIONARY;

@@ -1200,7 +1200,12 @@ def export_certificate_pdf(cfg):
     pdf.setFillColor(HexColor(ink))
     pdf.drawString(x0, ny, f"Certificate ID: {cfg.get('certificateId', '')}")
 
-    payload = (
+    # QR code: it points to the public verification page for this
+    # certificate (/verify?id=…), when the client sends its verifyUrl
+    # (see the Certificate Studio download). Without it (older clients),
+    # fall back to the text payload as before.
+    verify_url = str(cfg.get("verifyUrl") or "").strip()
+    payload = verify_url or (
         f"Certificate of Authenticity {cfg.get('certificateId', '')}\n"
         f"\"{cfg.get('title', '')}\" by {cfg.get('artist', '')}, {cfg.get('year', '')}\n"
         f"{cfg.get('medium', '')}, {cfg.get('dimensions', '')}\n"

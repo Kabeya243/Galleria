@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Intelligence — Lakisa",
+  title: "Intelligence: Lakisa",
   description:
     "What the numbers say, and help thinking: visitor analytics, AI-assisted exhibition planning, artwork analysis, 3D assets and video.",
 };

@@ -228,7 +228,7 @@ export default function LibraryPage({
                       <button
                         onClick={() => void deleteWork(work)}
                         disabled={deletingId === work.id}
-                        aria-label={confirmingDeleteId === work.id ? `${t("library", "clickAgainDelete")} — ${work.title}` : `${t("library", "delete")} — ${work.title}`}
+                        aria-label={confirmingDeleteId === work.id ? `${t("library", "clickAgainDelete")}, ${work.title}` : `${t("library", "delete")}, ${work.title}`}
                       >
                         <Trash2 size={14} /> {deletingId === work.id ? t("library", "deleting") : confirmingDeleteId === work.id ? t("library", "clickAgainDelete") : t("library", "delete")}
                       </button>

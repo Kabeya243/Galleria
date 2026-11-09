@@ -278,14 +278,14 @@ export default function MarketplaceTool({
         <p className="mp-hint">
           Pick one of your own artworks to prefill the details, or list a work manually. It appears
           on the public marketplace at <Link href="/marketplace">/marketplace</Link> as soon as you
-          save it. No payment is taken here — a buyer sends an inquiry, you reply by email, and the
+          save it. No payment is taken here. A buyer sends an inquiry, you reply by email, and the
           sale is agreed directly.
         </p>
         <form onSubmit={createListing} className="mp-form">
           <label>
             <span>From your artworks</span>
             <select value={artworkId} onChange={(e) => pickArtwork(e.target.value)}>
-              <option value="">— List manually, or pick an artwork —</option>
+              <option value="">List manually, or pick an artwork</option>
               {artworks.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.title} · {a.exhibitionTitle}
@@ -356,7 +356,7 @@ export default function MarketplaceTool({
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What should a buyer know about this work?" />
           </label>
           <label>
-            <span>Image URL (optional — prefilled from the artwork)</span>
+            <span>Image URL (optional, prefilled from the artwork)</span>
             <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
           </label>
           <button type="submit" className="primary-button" disabled={busy}>
@@ -400,7 +400,7 @@ export default function MarketplaceTool({
                   </p>
                   <p className="mp-card-meta">
                     {kindLabel(listing.kind)}
-                    {listing.editionSize ? ` · ${listing.editionNumber ?? "—"}/${listing.editionSize}` : ""}
+                    {listing.editionSize ? ` · ${listing.editionNumber ?? "N/A"}/${listing.editionSize}` : ""}
                     {listing.dimensions ? ` · ${listing.dimensions}` : ""}
                   </p>
                   <p className="mp-card-price">
@@ -494,7 +494,7 @@ export default function MarketplaceTool({
           Purchase inquiries <span className="mp-count">{openInquiries} open</span>
         </h2>
         <p className="mp-hint">
-          Buyers write to you through the listing page. There is no email notification yet — check
+          Buyers write to you through the listing page. There is no email notification yet. Check
           back here and reply directly to the buyer&apos;s email address.
         </p>
         <div className="mp-filter-row">

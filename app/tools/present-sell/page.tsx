@@ -7,8 +7,8 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Present & Sell — Lakisa Tools",
-  description: "Your published rooms as viewing rooms — share them, track visits, follow up.",
+  title: "Present & Sell: Lakisa Tools",
+  description: "Your published rooms as viewing rooms, share them, track visits, follow up.",
 };
 
 export default async function PresentSellRoute() {
@@ -71,8 +71,8 @@ export default async function PresentSellRoute() {
         and a note ready for the person you are sending it to.
       </p>
       <p className={styles.resultNote}>
-        Prices on the marketplace are shown in each visitor&apos;s own currency — US dollars, euros,
-        pounds, Swiss francs or Ugandan shillings — at the day&apos;s ECB reference rates.{" "}
+        Prices on the marketplace are shown in each visitor&apos;s own currency (US dollars, euros,
+        pounds, Swiss francs or Ugandan shillings) at the day&apos;s ECB reference rates.{" "}
         <Link href="/marketplace">See the marketplace</Link>.
       </p>
     </ToolsShell>

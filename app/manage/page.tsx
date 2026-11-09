@@ -4,9 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Manage — Lakisa",
+  title: "Manage: Lakisa",
   description:
-    "The running of your practice: inventory, collections, exhibition planning, accessibility, education, contacts, certificates, and — for the owner — platform stats.",
+    "The running of your practice: inventory, collections, exhibition planning, accessibility, education, contacts, certificates, and (for the owner) platform stats.",
 };
 
 export default async function ManageHub() {

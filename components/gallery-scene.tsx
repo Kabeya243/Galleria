@@ -357,7 +357,7 @@ function SunSlider({
       className="sunlight-sun-slider"
       role="group"
       aria-label="Sunlight"
-      title="Sun — move the sun along its arc"
+      title="Sun: move the sun along its arc"
       style={{
         position: "absolute",
         top,
@@ -454,7 +454,7 @@ function RenderQualityToggle({ quality, onChange, canvasClassName }: { quality: 
       className="render-quality-toggle"
       role="group"
       aria-label="Render quality"
-      title="Render quality — High: shadows, reflections and environment lighting on. Medium: smaller shadow maps. Low: shadows and environment off."
+      title="Render quality: High: shadows, reflections and environment lighting on. Medium: smaller shadow maps. Low: shadows and environment off."
       style={{
         position: "absolute",
         top,

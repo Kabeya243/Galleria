@@ -256,7 +256,7 @@ export default function ToolsPage({
       <section className="galleries-grid">
         {TOOLS.map((tool) => (
           <article key={tool.href} className={`gallery-card ${styles.toolCard}`}>
-            <Link href={tool.href} className={styles.toolCardLink} aria-label={`${t("tools", "open")} — ${t("tools", tool.title)}`}>
+            <Link href={tool.href} className={styles.toolCardLink} aria-label={`${t("tools", "open")}, ${t("tools", tool.title)}`}>
               <span className={styles.toolIcon}>
                 <tool.icon size={22} />
               </span>
@@ -281,7 +281,7 @@ export default function ToolsPage({
               <Link
                 href={audience.href}
                 className={styles.toolCardLink}
-                aria-label={`Lakisa — ${t("tools", audience.title)}`}
+                aria-label={`Lakisa, ${t("tools", audience.title)}`}
               >
                 <span className={styles.toolIcon}>
                   <audience.icon size={22} />

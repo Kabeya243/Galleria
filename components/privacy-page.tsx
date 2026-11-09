@@ -32,11 +32,11 @@ const SECTIONS: Section[] = [
       "Lakisa collects only what it needs to run a virtual gallery. That is:",
     ],
     list: [
-      "Account data — your email address and, if you register with a password, a one-way hash of that password (we never store your password itself). If you sign in with Google, Google gives us your email address and your name; we do not receive your Google password.",
-      "Profile data — the display name, biography and profile photo you choose to add in Settings.",
-      "Your work — the artworks you upload (images, and where supported, video or 3D files), their titles, descriptions and dimensions, and the exhibitions you build: their titles, descriptions, room choices, wall colours, artwork placement and visibility settings.",
-      "Usage data — how the Service is used: which public exhibitions are visited and how often, so that artists can see how many people visited their work. A visit is counted per exhibition, per day; we do not build a browsing profile of individual visitors.",
-      "Messages you send us — the content of emails you write to Lakisa, for example when you report a problem or ask a question.",
+      "Account data: your email address and, if you register with a password, a one-way hash of that password (we never store your password itself). If you sign in with Google, Google gives us your email address and your name; we do not receive your Google password.",
+      "Profile data: the display name, biography and profile photo you choose to add in Settings.",
+      "Your work: the artworks you upload (images, and where supported, video or 3D files), their titles, descriptions and dimensions, and the exhibitions you build: their titles, descriptions, room choices, wall colours, artwork placement and visibility settings.",
+      "Usage data: how the Service is used: which public exhibitions are visited and how often, so that artists can see how many people visited their work. A visit is counted per exhibition, per day; we do not build a browsing profile of individual visitors.",
+      "Messages you send us: the content of emails you write to Lakisa, for example when you report a problem or ask a question.",
     ],
   },
   {
@@ -47,9 +47,9 @@ const SECTIONS: Section[] = [
     ],
     list: [
       "To let you sign in, keep your account secure, and show you your own exhibitions and artworks.",
-      "To display the exhibitions you publish to the visitors you choose — everyone, people with the link, or people with the password.",
+      "To display the exhibitions you publish to the visitors you choose: everyone, people with the link, or people with the password.",
       "To show artists how their exhibitions are received (visit counts), and to keep the platform working (for example, to find out which pages fail).",
-      "To answer your messages, and to send you the emails the Service needs — such as a password reset. We do not send marketing emails, and we do not sell your data.",
+      "To answer your messages, and to send you the emails the Service needs, such as a password reset. We do not send marketing emails, and we do not sell your data.",
     ],
   },
   {
@@ -57,7 +57,7 @@ const SECTIONS: Section[] = [
     title: "3. Cookies and local storage",
     body: [
       "Lakisa uses one session cookie to keep you signed in. It contains a session token, it is set when you sign in, and it is removed when you sign out. Without it, the Service cannot tell that it is you.",
-      "Your language choice (English or French) is stored in your browser's local storage, on your device, so the site opens in the language you picked. Your saved favourite rooms are stored the same way — in your browser only, and not synced to your account.",
+      "Your language choice (English or French) is stored in your browser's local storage, on your device, so the site opens in the language you picked. Your saved favourite rooms are stored the same way, in your browser only, and not synced to your account.",
       "Lakisa runs no third-party advertising cookies and no advertising trackers.",
     ],
   },
@@ -68,10 +68,10 @@ const SECTIONS: Section[] = [
       "Lakisa does not sell your personal data to anyone. A small number of service providers handle data on our behalf, only to run the platform:",
     ],
     list: [
-      "Hosting — the website and its database are hosted by Vercel. When you visit Lakisa, your request passes through Vercel's servers.",
-      "File storage — the images and files you upload are stored in a Cloudflare R2 storage bucket. Public exhibition images are served from there to visitors.",
-      "Email — transactional emails (such as password resets) are sent through our email provider using standard SMTP. Your email address is shared with that provider only to deliver the message.",
-      "Google sign-in — if you choose “Continue with Google”, Google handles your sign-in and shares your email address and name with Lakisa, as described in section 1. Google's own privacy policy governs what Google does with your data on its side.",
+      "Hosting: the website and its database are hosted by Vercel. When you visit Lakisa, your request passes through Vercel's servers.",
+      "File storage: the images and files you upload are stored in a Cloudflare R2 storage bucket. Public exhibition images are served from there to visitors.",
+      "Email: transactional emails (such as password resets) are sent through our email provider using standard SMTP. Your email address is shared with that provider only to deliver the message.",
+      "Google sign-in: if you choose “Continue with Google”, Google handles your sign-in and shares your email address and name with Lakisa, as described in section 1. Google's own privacy policy governs what Google does with your data on its side.",
     ],
   },
   {
@@ -89,10 +89,10 @@ const SECTIONS: Section[] = [
       "Your work and your data are yours. You can, at any time:",
     ],
     list: [
-      "Access your data — your profile, your artworks and your exhibitions are visible to you in your workspace, and you can download the files you uploaded.",
-      "Correct it — change your display name, biography and profile photo in Settings, and edit any artwork or exhibition you own.",
-      "Delete it — delete individual artworks and exhibitions, or delete your whole account in Settings, which deletes everything attached to it (see section 5).",
-      "Ask us about it — write to contact@kabeyailunga.com if you want a copy of the personal data we hold about you, or if you want something corrected or deleted that you cannot change yourself. We will answer within a reasonable time.",
+      "Access your data: your profile, your artworks and your exhibitions are visible to you in your workspace, and you can download the files you uploaded.",
+      "Correct it: change your display name, biography and profile photo in Settings, and edit any artwork or exhibition you own.",
+      "Delete it: delete individual artworks and exhibitions, or delete your whole account in Settings, which deletes everything attached to it (see section 5).",
+      "Ask us about it: write to contact@kabeyailunga.com if you want a copy of the personal data we hold about you, or if you want something corrected or deleted that you cannot change yourself. We will answer within a reasonable time.",
     ],
   },
   {
@@ -114,7 +114,7 @@ const SECTIONS: Section[] = [
     id: "changes",
     title: "9. Changes to this policy",
     body: [
-      "We may update this policy when Lakisa changes — for example, if we add a new feature that collects a new kind of data. When a change matters, we will tell you in the product or by email before it takes effect. The date at the top of this page shows when it was last updated.",
+      "We may update this policy when Lakisa changes, for example, if we add a new feature that collects a new kind of data. When a change matters, we will tell you in the product or by email before it takes effect. The date at the top of this page shows when it was last updated.",
     ],
   },
   {
@@ -132,7 +132,7 @@ export default function PrivacyPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={34} />
+          <BrandLogo variant="horizontal" theme="dark" height={52} />
         </Link>
         <Link href="/" className={styles.backLink}>
           <ArrowLeft size={15} /> {t("legal", "backHome")}

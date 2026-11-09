@@ -81,7 +81,7 @@ export type SiteExhibition = {
 
 export function defaultSiteConfig(artistName: string, email: string, exhibitions: SiteExhibition[]): SiteConfig {
   return {
-    siteTitle: `${artistName} — Artist`,
+    siteTitle: `${artistName}, Artist`,
     siteDescription: `Portfolio of ${artistName}, contemporary artist.`,
     artistName,
     tagline: "Contemporary artist",
@@ -303,13 +303,13 @@ export default function SitePreview({
                     </div>
                   )}
                   <p style={{ fontSize: 12, color: theme.muted, marginTop: 10 }}>
-                    {heroArt.title}{heroArt.year ? `, ${heroArt.year}` : ""}{heroArt.medium ? ` — ${heroArt.medium}` : ""}
+                    {heroArt.title}{heroArt.year ? `, ${heroArt.year}` : ""}{heroArt.medium ? `, ${heroArt.medium}` : ""}
                   </p>
                 </div>
               )}
               {heroArt && theme.heroStyle === "banner" && (
                 <p style={{ fontSize: 12, color: theme.muted, marginTop: 10 }}>
-                  {heroArt.title}{heroArt.year ? `, ${heroArt.year}` : ""}{heroArt.medium ? ` — ${heroArt.medium}` : ""}
+                  {heroArt.title}{heroArt.year ? `, ${heroArt.year}` : ""}{heroArt.medium ? `, ${heroArt.medium}` : ""}
                 </p>
               )}
             </>
@@ -364,12 +364,12 @@ export default function SitePreview({
           )}
           {config.showCv && config.cv.length > 0 && (
             <>
-              <h3 style={{ ...headingStyle(theme), fontSize: 18, margin: "32px 0 12px", fontWeight: 600 }}>CV — Selected</h3>
+              <h3 style={{ ...headingStyle(theme), fontSize: 18, margin: "32px 0 12px", fontWeight: 600 }}>CV: Selected</h3>
               <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
                 {config.cv.map((entry, i) => (
                   <li key={i} style={{ display: "flex", gap: 16, padding: "10px 0", borderTop: `1px solid ${theme.line}`, fontSize: 14 }}>
                     <span style={{ color: theme.muted, minWidth: 56 }}>{entry.year}</span>
-                    <span><strong>{entry.role}</strong>{entry.organisation ? ` — ${entry.organisation}` : ""}</span>
+                    <span><strong>{entry.role}</strong>{entry.organisation ? `, ${entry.organisation}` : ""}</span>
                   </li>
                 ))}
               </ul>
@@ -386,7 +386,7 @@ export default function SitePreview({
             {shownExhibitions.map((ex) => (
               <li key={ex.id} style={{ padding: "10px 0", borderTop: `1px solid ${theme.line}`, fontSize: 14 }}>
                 <strong>{ex.title}</strong>
-                <span style={{ color: theme.muted }}> — {ex.status === "public" ? "Public" : "In progress"}</span>
+                <span style={{ color: theme.muted }}>, {ex.status === "public" ? "Public" : "In progress"}</span>
               </li>
             ))}
           </ul>
@@ -401,7 +401,7 @@ export default function SitePreview({
             {config.press.map((item, i) => (
               <li key={i} style={{ padding: "10px 0", borderTop: `1px solid ${theme.line}`, fontSize: 14 }}>
                 <strong>{item.title}</strong>
-                <span style={{ color: theme.muted }}> — {item.source}{item.year ? `, ${item.year}` : ""}</span>
+                <span style={{ color: theme.muted }}>, {item.source}{item.year ? `, ${item.year}` : ""}</span>
                 {item.url && (
                   <span> · <a href={item.url} target="_blank" rel="noreferrer" style={{ color: accent }}>Read</a></span>
                 )}
@@ -416,10 +416,10 @@ export default function SitePreview({
         <div id="contact" style={{ padding: "32px 28px 40px", borderTop: `1px solid ${theme.line}` }}>
           <h2 style={{ ...headingStyle(theme), fontSize: 26, margin: "0 0 12px", fontWeight: 600 }}>Contact</h2>
           <p style={{ fontSize: 14, lineHeight: 1.8, margin: 0 }}>
-            {config.email && (<>Email — <a href={`mailto:${config.email}`} style={{ color: accent }}>{config.email}</a><br /></>)}
-            {config.website && (<>Website — <a href={config.website} target="_blank" rel="noreferrer" style={{ color: accent }}>{config.website}</a><br /></>)}
-            {config.instagram && (<>Instagram — <a href={`https://instagram.com/${config.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" style={{ color: accent }}>{config.instagram}</a><br /></>)}
-            {config.twitter && (<>X / Twitter — <a href={`https://x.com/${config.twitter.replace(/^@/, "")}`} target="_blank" rel="noreferrer" style={{ color: accent }}>{config.twitter}</a></>)}
+            {config.email && (<>Email: <a href={`mailto:${config.email}`} style={{ color: accent }}>{config.email}</a><br /></>)}
+            {config.website && (<>Website: <a href={config.website} target="_blank" rel="noreferrer" style={{ color: accent }}>{config.website}</a><br /></>)}
+            {config.instagram && (<>Instagram: <a href={`https://instagram.com/${config.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" style={{ color: accent }}>{config.instagram}</a><br /></>)}
+            {config.twitter && (<>X / Twitter: <a href={`https://x.com/${config.twitter.replace(/^@/, "")}`} target="_blank" rel="noreferrer" style={{ color: accent }}>{config.twitter}</a></>)}
             {!config.email && !config.website && !config.instagram && !config.twitter && (
               <span style={{ color: theme.muted }}>No contact details added yet.</span>
             )}
@@ -471,7 +471,7 @@ export default function SitePreview({
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px", justifyContent: "space-between", alignItems: "center", marginTop: 28, paddingTop: 18, borderTop: `1px solid ${theme.line}`, fontSize: 12, color: theme.muted }}>
           <span>© {new Date().getFullYear()} {config.artistName || "Artist"}</span>
-          <span>Built with Lakisa — Artist Website Builder</span>
+          <span>Built with Lakisa: Artist Website Builder</span>
           <a href="#top" style={{ color: theme.ink, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <ArrowUp size={14} aria-hidden="true" />Back to top
           </a>

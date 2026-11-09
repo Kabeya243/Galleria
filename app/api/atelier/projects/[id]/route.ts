@@ -86,7 +86,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const copy = {
     ...document,
     id: copyId,
-    name: `${document.name || "Design"} — copie`,
+    name: `${document.name || "Design"} (copie)`,
     updatedAt: new Date().toISOString(),
     thumbnail: atelierFileUrl(atelierProjectThumbKey(user.id, copyId)),
   };

@@ -155,7 +155,7 @@ export default function WorksPage({
                       value={kinds[work.id] ?? work.kind}
                       disabled={savingKindId === work.id}
                       onChange={(e) => void changeKind(work.id, e.target.value as WorkKind)}
-                      aria-label={`${t("works", "type")} — ${work.title}`}
+                      aria-label={`${t("works", "type")}, ${work.title}`}
                     >
                       <option value="oeuvre">{t("works", "oeuvre")}</option>
                       <option value="design">{t("works", "design")}</option>

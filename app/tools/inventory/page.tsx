@@ -7,8 +7,8 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Inventory & Collections — Lakisa Tools",
-  description: "Your artworks in one list — what you made, where it is, and what it is worth.",
+  title: "Inventory & Collections: Lakisa Tools",
+  description: "Your artworks in one list, what you made, where it is, and what it is worth.",
 };
 
 export default async function InventoryRoute() {
@@ -59,7 +59,7 @@ export default async function InventoryRoute() {
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Open an exhibition in the editor and add your first work — it will show up here.</p>
+          <p>Open an exhibition in the editor and add your first work, it will show up here.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

@@ -5,8 +5,8 @@ import { db } from "@/lib/db";
 import { listLibraryWorks } from "@/lib/library";
 
 export const metadata = {
-  title: "Mes œuvres — Lakisa",
-  description: "Your reusable artwork library — every work you have uploaded, across all your exhibitions.",
+  title: "Mes œuvres: Lakisa",
+  description: "Your reusable artwork library, every work you have uploaded, across all your exhibitions.",
 };
 
 // The artist's own reusable library: every work they have ever

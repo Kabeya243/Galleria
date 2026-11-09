@@ -152,7 +152,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
       const json = (await res.json()) as { saved?: SavedPack[] };
       setSaved(json.saved ?? []);
     } catch {
-      setSavedError("Saved packs could not be loaded — check your connection and refresh.");
+      setSavedError("Saved packs could not be loaded, check your connection and refresh.");
       setSaved([]);
     } finally {
       setSavedLoading(false);
@@ -185,7 +185,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
 
   const savePack = useCallback(async () => {
     if (!pack || !exhibition) return;
-    const title = saveName.trim() || `Education pack — ${exhibition.title} (${pack.audience})`;
+    const title = saveName.trim() || `Education pack: ${exhibition.title} (${pack.audience})`;
     setSaving(true);
     setSaveStatus(null);
     try {
@@ -203,7 +203,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
       setSaveName("");
       await loadSaved();
     } catch {
-      setSaveStatus("Could not save — check your connection and try again.");
+      setSaveStatus("Could not save, check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -304,7 +304,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
       <div className={styles.wrap}>
         <div className={styles.emptyBox}>
           <strong>No exhibitions yet.</strong>
-          <p>Create an exhibition and add artworks first — the education pack is built per exhibition, artwork by artwork.</p>
+          <p>Create an exhibition and add artworks first, the education pack is built per exhibition, artwork by artwork.</p>
         </div>
       </div>
     );
@@ -387,7 +387,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
           <>
             <h3 style={{ marginTop: 18 }}>Educational labels</h3>
             <p className={styles.muted}>
-              Short, learner-friendly text per artwork — plain words, one idea at a time.
+              Short, learner-friendly text per artwork: plain words, one idea at a time.
               Written for {pack.audience.toLowerCase()}.
             </p>
             {artworks.length === 0 ? (
@@ -421,7 +421,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                 {selectedArtwork && (
                   <div className={styles.field}>
                     <label htmlFor="edu-label">
-                      Learner label — {selectedArtwork.title}{" "}
+                      Learner label: {selectedArtwork.title}{" "}
                       <span>({selectedArtwork.year} · {selectedArtwork.medium})</span>
                     </label>
                     <textarea
@@ -447,7 +447,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
           <>
             <h3 style={{ marginTop: 18 }}>Learning guides</h3>
             <p className={styles.muted}>
-              Structured guides for the whole exhibition — build them section by section,
+              Structured guides for the whole exhibition, build them section by section,
               then add the finished guide to the pack.
             </p>
             <div className={styles.field}>
@@ -560,7 +560,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
           <>
             <h3 style={{ marginTop: 18 }}>Curatorial questions</h3>
             <p className={styles.muted}>
-              One question per artwork, with a model answer — the kind of question a
+              One question per artwork, with a model answer, the kind of question a
               guide asks a group standing in front of the work.
             </p>
             {artworks.length === 0 ? (
@@ -592,7 +592,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                 {selectedArtwork && (
                   <>
                     <div className={styles.field}>
-                      <label htmlFor="edu-q">Question — {selectedArtwork.title}</label>
+                      <label htmlFor="edu-q">Question: {selectedArtwork.title}</label>
                       <input
                         id="edu-q"
                         type="text"
@@ -687,10 +687,10 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                     </p>
                     <p className={styles.muted}>
                       {score === takingQuiz.questions.length
-                        ? "A perfect score — you read this exhibition closely."
+                        ? "A perfect score, you read this exhibition closely."
                         : score >= takingQuiz.questions.length / 2
-                          ? "A solid score — revisit the works you missed and try again."
-                          : "Worth another walk through the exhibition — the answers are in the works."}
+                          ? "A solid score, revisit the works you missed and try again."
+                          : "Worth another walk through the exhibition, the answers are in the works."}
                     </p>
                     <div className={styles.row} style={{ marginTop: 12 }}>
                       <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => startQuiz(takingQuiz)}>
@@ -731,7 +731,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                         <p className={styles.muted}>
                           {pickedOption === currentQuestion.correctIndex
                             ? "Correct."
-                            : `Not quite — the answer is “${currentQuestion.options[currentQuestion.correctIndex]}”.`}{" "}
+                            : `Not quite, the answer is “${currentQuestion.options[currentQuestion.correctIndex]}”.`}{" "}
                           {currentQuestion.explanation}
                         </p>
                         <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={nextQuestion} style={{ marginTop: 10 }}>
@@ -745,7 +745,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
             ) : (
               <>
                 <p className={styles.muted}>
-                  Build a multiple-choice quiz, then take it right here — answers are scored
+                  Build a multiple-choice quiz, then take it right here, answers are scored
                   live and every question explains itself afterwards.
                 </p>
                 <div className={styles.field}>
@@ -802,7 +802,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                     style={{ minHeight: 64 }}
                     value={quizExplanation}
                     onChange={(e) => setQuizExplanation(e.target.value)}
-                    placeholder="Why this answer is right — point back to the work."
+                    placeholder="Why this answer is right: point back to the work."
                   />
                 </div>
                 <div className={styles.row} style={{ marginTop: 12 }}>
@@ -892,7 +892,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
           <>
             <h3 style={{ marginTop: 18 }}>Artwork analysis prompts</h3>
             <p className={styles.muted}>
-              Three lenses per artwork — observe, interpret, put in context. Learners work
+              Three lenses per artwork: observe, interpret, put in context. Learners work
               through them in order, in front of the work.
             </p>
             {artworks.length === 0 ? (
@@ -939,7 +939,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                             prompts: { ...c.prompts, [selectedArtwork.id]: { ...prompts, observation: e.target.value } },
                           }))
                         }
-                        placeholder="Look closely for one minute. List what you see — colours, shapes, people, objects — before guessing what any of it means."
+                        placeholder="Look closely for one minute. List what you see (colours, shapes, people, objects) before guessing what any of it means."
                       />
                     </div>
                     <div className={styles.field}>
@@ -969,7 +969,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                             prompts: { ...c.prompts, [selectedArtwork.id]: { ...prompts, context: e.target.value } },
                           }))
                         }
-                        placeholder="Who made it, when, where — and what was happening around it?"
+                        placeholder="Who made it, when, where, and what was happening around it?"
                       />
                     </div>
                   </>
@@ -984,7 +984,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
           <>
             <h3 style={{ marginTop: 18 }}>Guided learning paths</h3>
             <p className={styles.muted}>
-              An ordered route through the exhibition — each stop is an artwork with a
+              An ordered route through the exhibition: each stop is an artwork with a
               note for the group. Build the stops in order, then save the path.
             </p>
             <div className={styles.field}>
@@ -994,7 +994,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                 type="text"
                 value={pathTitle}
                 onChange={(e) => setPathTitle(e.target.value)}
-                placeholder="e.g. From portrait to pride — a 20-minute route"
+                placeholder="e.g. From portrait to pride, a 20-minute route"
               />
             </div>
             <div className={styles.field}>
@@ -1010,7 +1010,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
             {artworks.length > 0 && (
               <div className={styles.twoCol}>
                 <div className={styles.field}>
-                  <label htmlFor="edu-path-artwork">Next stop — artwork</label>
+                  <label htmlFor="edu-path-artwork">Next stop: artwork</label>
                   <select
                     id="edu-path-artwork"
                     value={pathStepArtwork}
@@ -1069,7 +1069,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
                 {pathSteps.map((step, i) => (
                   <div key={step.id} className={styles.listItem}>
                     <div>
-                      <strong>Stop {i + 1} — {artworkById(step.artworkId)?.title ?? "Artwork"}</strong>
+                      <strong>Stop {i + 1}: {artworkById(step.artworkId)?.title ?? "Artwork"}</strong>
                       <span>{step.note || "No note"}</span>
                     </div>
                     <div className={styles.row}>
@@ -1173,7 +1173,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
             type="text"
             value={saveName}
             onChange={(e) => setSaveName(e.target.value)}
-            placeholder={savedId ? "Rename the pack…" : `Education pack — ${exhibition.title} (${pack.audience})`}
+            placeholder={savedId ? "Rename the pack…" : `Education pack: ${exhibition.title} (${pack.audience})`}
             aria-label="Pack name"
             style={{ flex: 1, minWidth: 220, padding: "10px 12px", border: "1px solid var(--line, #eceae4)", borderRadius: 6, background: "#fff", fontSize: 13 }}
           />
@@ -1236,7 +1236,7 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
 
       {/* Printable resource sheet — visible only when printing. */}
       <div className={styles.printOnly} aria-hidden>
-        <h1>{exhibition.title} — Learning resources</h1>
+        <h1>{exhibition.title}: Learning resources</h1>
         <p>Education pack · {pack.audience} · Lakisa</p>
         {artworks.map((a) => {
           const label = pack.labels[a.id];
@@ -1269,13 +1269,13 @@ export default function EducationStudio({ exhibitions }: { exhibitions: Educatio
         ))}
         {pack.paths.map((p) => (
           <section key={p.id}>
-            <h2>Route — {p.title}</h2>
+            <h2>Route: {p.title}</h2>
             {p.description && <p>{p.description}</p>}
             <ol>
               {p.steps.map((s) => (
                 <li key={s.id}>
                   {artworkById(s.artworkId)?.title ?? "Artwork"}
-                  {s.note ? ` — ${s.note}` : ""}
+                  {s.note ? `, ${s.note}` : ""}
                 </li>
               ))}
             </ol>

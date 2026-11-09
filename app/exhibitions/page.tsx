@@ -5,8 +5,8 @@ import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
 
 export const metadata = {
-  title: "Exhibitions — Lakisa",
-  description: "Your exhibitions — drafts and published rooms, in one place.",
+  title: "Exhibitions: Lakisa",
+  description: "Your exhibitions, drafts and published rooms, in one place.",
 };
 
 function countRooms(value: string): number {

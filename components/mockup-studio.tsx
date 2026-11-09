@@ -1523,7 +1523,7 @@ export default function MockupStudio({
           out.push({ art, img });
         } catch {
           out.push({ art, img: null });
-          if (!cancelled) setImgError(`Could not load the image for “${art.title}”. The mockup uses a colour stand-in instead — check the artwork image in the editor, or export again.`);
+          if (!cancelled) setImgError(`Could not load the image for “${art.title}”. The mockup uses a colour stand-in instead, check the artwork image in the editor, or export again.`);
         }
       }
       if (!cancelled) setLoaded(out);
@@ -1617,7 +1617,7 @@ export default function MockupStudio({
       drawMockup(ctx, res.w, res.h, cfg, exportLoaded, scene, framePhoto);
       const mime = cfg.format === "png" ? "image/png" : cfg.format === "jpeg" ? "image/jpeg" : "image/webp";
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.92));
-      if (!blob) throw new Error("The export came back empty — try PNG instead.");
+      if (!blob) throw new Error("The export came back empty. Try PNG instead.");
       const first = selectedArts[0];
       const name = `lakisa-mockup-${(first?.title ?? "artwork").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${cfg.scene}-${cfg.resolution}.${cfg.format === "jpeg" ? "jpg" : cfg.format}`;
       const url = URL.createObjectURL(blob);
@@ -1628,7 +1628,7 @@ export default function MockupStudio({
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-      setRenderMsg(`Exported ${res.label} as ${cfg.format.toUpperCase()} — ${name}`);
+      setRenderMsg(`Exported ${res.label} as ${cfg.format.toUpperCase()}: ${name}`);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : "Export failed.");
     } finally {
@@ -1638,7 +1638,7 @@ export default function MockupStudio({
 
   // --- Save / load ----------------------------------------------------------
   const doSave = useCallback(async () => {
-    const title = saveTitle.trim() || `${selectedArts[0]?.title ?? "Mockup"} — ${scene.label}`;
+    const title = saveTitle.trim() || `${selectedArts[0]?.title ?? "Mockup"}, ${scene.label}`;
     setSaving(true);
     setSaveMsg(null);
     try {
@@ -1785,7 +1785,7 @@ export default function MockupStudio({
           <canvas ref={previewRef} width={960} height={540} aria-label="Mockup preview" />
           <div className="ms-caption">
             <span>
-              {firstArt ? `${firstArt.title} · ${firstArt.year} · ${firstArt.medium}` : "No artwork selected"} — {scene.label} · {scene.mood}
+              {firstArt ? `${firstArt.title} · ${firstArt.year} · ${firstArt.medium}` : "No artwork selected"}, {scene.label} · {scene.mood}
             </span>
             <span>Preview 960 × 540 · export renders at full resolution</span>
           </div>
@@ -1931,20 +1931,20 @@ export default function MockupStudio({
               </button>
             </p>
             <label className="ms-field" style={{ marginTop: 10 }}>
-              Wall position — {cfg.posX}%
+              Wall position: {cfg.posX}%
               <input type="range" min={15} max={85} value={cfg.posX} onChange={(e) => update({ posX: Number(e.target.value) })} />
             </label>
             <label className="ms-field">
-              Hanging height (centre above floor) — {cfg.hangCm} cm
+              Hanging height (centre above floor): {cfg.hangCm} cm
               <input type="range" min={110} max={220} value={cfg.hangCm} onChange={(e) => update({ hangCm: Number(e.target.value) })} />
             </label>
             <label className="ms-field">
-              Perspective tilt — {cfg.tilt}°
+              Perspective tilt: {cfg.tilt}°
               <input type="range" min={-12} max={12} value={cfg.tilt} onChange={(e) => update({ tilt: Number(e.target.value) })} />
             </label>
             {needed > 1 && (
               <label className="ms-field">
-                Spacing between works — {cfg.spacing} cm
+                Spacing between works: {cfg.spacing} cm
                 <input type="range" min={2} max={60} value={cfg.spacing} onChange={(e) => update({ spacing: Number(e.target.value) })} />
               </label>
             )}
@@ -1960,7 +1960,7 @@ export default function MockupStudio({
               ))}
             </div>
             <label className="ms-field" style={{ marginTop: 10 }}>
-              Scene brightness — {Math.round(cfg.brightness * 100)}%
+              Scene brightness: {Math.round(cfg.brightness * 100)}%
               <input type="range" min={60} max={130} value={Math.round(cfg.brightness * 100)} onChange={(e) => update({ brightness: Number(e.target.value) / 100 })} />
             </label>
             <label className="ms-check">
@@ -1969,7 +1969,7 @@ export default function MockupStudio({
             </label>
             {cfg.shadow && (
               <label className="ms-field">
-                Shadow strength — {cfg.shadowStrength}%
+                Shadow strength: {cfg.shadowStrength}%
                 <input type="range" min={0} max={100} value={cfg.shadowStrength} onChange={(e) => update({ shadowStrength: Number(e.target.value) })} />
               </label>
             )}
@@ -1996,7 +1996,7 @@ export default function MockupStudio({
               </label>
             </div>
             <p className="ms-note" style={{ margin: "8px 0" }}>
-              The export is drawn fresh at the full target resolution — never an upscaled preview.
+              The export is drawn fresh at the full target resolution, never an upscaled preview.
             </p>
             <div className="ms-export">
               <button type="button" className="ms-btn" onClick={doExport} disabled={rendering || selectedArts.length === 0}>
@@ -2015,7 +2015,7 @@ export default function MockupStudio({
               <input
                 type="text"
                 value={saveTitle}
-                placeholder={firstArt ? `${firstArt.title} — ${scene.label}` : "My mockup"}
+                placeholder={firstArt ? `${firstArt.title}, ${scene.label}` : "My mockup"}
                 onChange={(e) => setSaveTitle(e.target.value)}
               />
             </label>
@@ -2030,7 +2030,7 @@ export default function MockupStudio({
                   onClick={() => {
                     setLoadedId(null);
                     setSaveTitle("");
-                    setSaveMsg("Editing a new copy — saving will create a new mockup.");
+                    setSaveMsg("Editing a new copy, saving will create a new mockup.");
                   }}
                 >
                   Save as new

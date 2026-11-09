@@ -56,15 +56,15 @@ export interface Shot {
 export type VideoFormat = "9:16" | "1:1" | "16:9";
 
 const FORMATS: { id: VideoFormat; label: string; width: number; height: number }[] = [
-  { id: "9:16", label: "Vertical 9:16 — Reels / TikTok / Shorts", width: 720, height: 1280 },
-  { id: "1:1", label: "Square 1:1 — Instagram feed", width: 1080, height: 1080 },
-  { id: "16:9", label: "Landscape 16:9 — YouTube / website", width: 1280, height: 720 },
+  { id: "9:16", label: "Vertical 9:16: Reels / TikTok / Shorts", width: 720, height: 1280 },
+  { id: "1:1", label: "Square 1:1: Instagram feed", width: 1080, height: 1080 },
+  { id: "16:9", label: "Landscape 16:9: YouTube / website", width: 1280, height: 720 },
 ];
 
 const PRESETS = [
-  { id: "short", label: "Short — about 15 s", scale: 0.5 },
-  { id: "standard", label: "Standard — about 30 s", scale: 1 },
-  { id: "long", label: "Long — about 60 s", scale: 2 },
+  { id: "short", label: "Short: about 15 s", scale: 0.5 },
+  { id: "standard", label: "Standard: about 30 s", scale: 1 },
+  { id: "long", label: "Long: about 60 s", scale: 2 },
 ] as const;
 
 interface RenderRecord {
@@ -350,7 +350,7 @@ function buildDefaultShots(exhibition: VideoExhibition): Shot[] {
     shots.push({
       id: uid(),
       type: "closeup",
-      label: `Close-up — ${artwork.title}`,
+      label: `Close-up: ${artwork.title}`,
       duration: 4,
       from: front,
       to: near,
@@ -529,7 +529,7 @@ export default function VideoGenerator({
 
   async function saveProject() {
     if (!exhibition) return;
-    const title = projectTitle.trim() || `${exhibition.title} — video`;
+    const title = projectTitle.trim() || `${exhibition.title}: video`;
     const data: VideoProjectData = { exhibitionId: exhibition.id, format, preset, shots };
     setBusy(true);
     setMessage(null);
@@ -624,7 +624,7 @@ export default function VideoGenerator({
       setRecording(false);
       setProgress(0);
       if (cancelRef.current) {
-        setMessage("Recording cancelled — nothing was saved.");
+        setMessage("Recording cancelled, nothing was saved.");
         return;
       }
       const blob = new Blob(chunks, { type: mimeType.split(";")[0] });
@@ -635,7 +635,7 @@ export default function VideoGenerator({
       const url = URL.createObjectURL(blob);
       const record: RenderRecord = {
         id: uid(),
-        name: `${exhibition?.title ?? "Exhibition"} — ${format} — ${new Date().toLocaleString()}`,
+        name: `${exhibition?.title ?? "Exhibition"}: ${format}, ${new Date().toLocaleString()}`,
         createdAt: new Date().toISOString(),
         sizeBytes: blob.size,
         durationSeconds: Math.round(totalDuration),
@@ -643,7 +643,7 @@ export default function VideoGenerator({
         url,
       };
       setRenders((current) => [record, ...current]);
-      setMessage(`Recorded ${Math.round(totalDuration)} s of video (${(blob.size / 1024 / 1024).toFixed(1)} MB). Download it below — the file lives in this browser session only.`);
+      setMessage(`Recorded ${Math.round(totalDuration)} s of video (${(blob.size / 1024 / 1024).toFixed(1)} MB). Download it below, the file lives in this browser session only.`);
     };
     recorder.onerror = () => {
       setRecording(false);
@@ -690,7 +690,7 @@ export default function VideoGenerator({
     return (
       <div className={styles.emptyBox}>
         <strong>No exhibitions yet.</strong>
-        <p>Create an exhibition in the editor first — the video generator walks a camera through your real rooms and artworks.</p>
+        <p>Create an exhibition in the editor first, the video generator walks a camera through your real rooms and artworks.</p>
       </div>
     );
   }
@@ -708,10 +708,10 @@ export default function VideoGenerator({
       )}
 
       <div className={styles.emptyBox} style={{ marginBottom: 16 }}>
-        <strong>What this records — honestly.</strong>
+        <strong>What this records: honestly.</strong>
         <p>
           This is a browser-captured walkthrough, not a server render farm: your browser plays the camera path through the 3D room in real time
-          and records the canvas to a .webm file. A 30-second video takes 30 seconds to record. Files are kept in this browser session only —
+          and records the canvas to a .webm file. A 30-second video takes 30 seconds to record. Files are kept in this browser session only,
           download them before you close the tab; only the project (shot list and settings) is saved server-side.
         </p>
       </div>
@@ -755,7 +755,7 @@ export default function VideoGenerator({
 
           <div style={{ marginTop: 10 }}>
             <label style={{ display: "block", marginBottom: 6, color: "var(--muted)", fontSize: 11 }}>
-              Preview — {activeShot ? `${activeShot.label} (${Math.round(previewTime)}s / ${Math.round(totalDuration)}s)` : "no shots yet"}
+              Preview: {activeShot ? `${activeShot.label} (${Math.round(previewTime)}s / ${Math.round(totalDuration)}s)` : "no shots yet"}
             </label>
             <input
               type="range"
@@ -801,7 +801,7 @@ export default function VideoGenerator({
                 <div style={{ height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${progress}%`, background: "#ffffff" }} />
                 </div>
-                <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: 11 }}>Recording… {Math.round(progress)}% — keep this tab in the foreground until it finishes.</p>
+                <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: 11 }}>Recording… {Math.round(progress)}%, keep this tab in the foreground until it finishes.</p>
               </div>
             )}
             {recordError && (
@@ -814,7 +814,7 @@ export default function VideoGenerator({
           {/* Renders this session */}
           {renders.length > 0 && (
             <div className="property-section">
-              <label>RENDERS — THIS BROWSER SESSION ONLY</label>
+              <label>RENDERS: THIS BROWSER SESSION ONLY</label>
               <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 8 }}>
                 {renders.map((render) => (
                   <li key={render.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 10, fontSize: 12, lineHeight: 1.6 }}>
@@ -845,12 +845,12 @@ export default function VideoGenerator({
             <select className="full-input" value={exhibition.id} onChange={(event) => selectExhibition(event.target.value)} aria-label="Exhibition">
               {exhibitions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title} ({item.status}) — {item.artworks.length} artwork{item.artworks.length === 1 ? "" : "s"}
+                  {item.title} ({item.status}), {item.artworks.length} artwork{item.artworks.length === 1 ? "" : "s"}
                 </option>
               ))}
             </select>
             {!room && (
-              <p style={{ margin: "8px 0 0", color: "#a33", fontSize: 12 }}>This exhibition has no rooms yet — open it in the editor and add a room first.</p>
+              <p style={{ margin: "8px 0 0", color: "#a33", fontSize: 12 }}>This exhibition has no rooms yet. Open it in the editor and add a room first.</p>
             )}
           </div>
 
@@ -892,13 +892,13 @@ export default function VideoGenerator({
 
           <div className="property-section">
             <label>SHOT LIST</label>
-            {shots.length === 0 && <p style={{ color: "var(--muted)", fontSize: 12 }}>No shots yet — add one below or regenerate the default list.</p>}
+            {shots.length === 0 && <p style={{ color: "var(--muted)", fontSize: 12 }}>No shots yet. Add one below or regenerate the default list.</p>}
             <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {shots.map((shot, index) => (
                 <li key={shot.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                     <strong style={{ fontSize: 13 }}>
-                      {index + 1}. {SHOT_TYPE_LABELS[shot.type]} — {shot.label}
+                      {index + 1}. {SHOT_TYPE_LABELS[shot.type]}: {shot.label}
                     </strong>
                     <span style={{ display: "flex", gap: 4 }}>
                       <button className="galleries-open-button" style={{ padding: "4px 8px" }} disabled={index === 0} onClick={() => moveShot(shot.id, -1)} aria-label="Move shot up">
@@ -936,7 +936,7 @@ export default function VideoGenerator({
                             if (!artwork) return;
                             updateShot(shot.id, {
                               artworkId: artwork.id,
-                              label: `Close-up — ${artwork.title}`,
+                              label: `Close-up: ${artwork.title}`,
                               from: [artwork.positionX, artwork.positionY, artwork.positionZ + 2.6],
                               to: [artwork.positionX, artwork.positionY, artwork.positionZ + 1.2],
                               lookAt: [artwork.positionX, artwork.positionY, artwork.positionZ],
@@ -1008,13 +1008,13 @@ export default function VideoGenerator({
           <div className="property-section">
             <label>SAVE PROJECT</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <input className="full-input" style={{ flex: "1 1 200px", height: 36 }} value={projectTitle} onChange={(event) => setProjectTitle(event.target.value)} placeholder={`${exhibition.title} — video`} aria-label="Project title" />
+              <input className="full-input" style={{ flex: "1 1 200px", height: 36 }} value={projectTitle} onChange={(event) => setProjectTitle(event.target.value)} placeholder={`${exhibition.title}: video`} aria-label="Project title" />
               <button className="galleries-open-button" disabled={busy} onClick={() => void saveProject()}>
                 {busy ? "Saving…" : "Save project"}
               </button>
             </div>
             <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-              Saves the exhibition, format, preset and shot list. Render files are not saved with it — download them from this session.
+              Saves the exhibition, format, preset and shot list. Render files are not saved with it, download them from this session.
             </p>
           </div>
 

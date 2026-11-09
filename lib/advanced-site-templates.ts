@@ -40,7 +40,7 @@ export const templates: RawTemplate[] = [
       { title: "Biographie", type: "text", heading: "Un esprit en mouvement", body: "Né à Vinci en 1452, Léonard de Vinci est peintre, ingénieur et observateur de la nature. Son œuvre traverse les disciplines : peinture, anatomie, architecture, mécanique et dessin. Il meurt à Amboise en 1519." },
       { title: "Contact", type: "contact", heading: "Explorer les archives", body: "Ressources, études et œuvres issues de collections publiques.", items: ["Œuvres", "Carnets", "Biographie"], image: "/images/leonardo-self-portrait.jpg" },
       { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
-      { title: "Pied de page", type: "footer", heading: "Leonardo da Vinci", body: "Portfolio d'atelier — peintures, carnets et recherches." }
+      { title: "Pied de page", type: "footer", heading: "Leonardo da Vinci", body: "Portfolio d'atelier, peintures, carnets et recherches." }
     ],
     pageSections: [
       [
@@ -65,7 +65,7 @@ export const templates: RawTemplate[] = [
       { title: "Accueil", type: "hero", heading: "La couleur comme lieu de rencontre", body: "Peintures originales de Claire Morel, artiste à Lyon." },
       { title: "Œuvres", type: "gallery", heading: "Peintures récentes", body: "Une collection de paysages intérieurs, de lumière et de mémoire." },
       { title: "À propos", type: "text", heading: "Un atelier ouvert sur le monde", body: "Claire Morel explore la matière et les nuances dans son atelier lyonnais depuis 2012." },
-      { title: "Expositions", type: "events", heading: "Rencontrons-nous", body: "Exposition « Les heures bleues » — Galerie des Terreaux, Lyon, du 12 au 28 juin." },
+      { title: "Expositions", type: "events", heading: "Rencontrons-nous", body: "Exposition « Les heures bleues », Galerie des Terreaux, Lyon, du 12 au 28 juin." },
       { title: "Contact", type: "contact", heading: "Parlons de votre projet", body: "Pour une œuvre, une collaboration ou une visite d'atelier, écrivez-moi." },
       { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
       { title: "Pied de page", type: "footer", heading: "Atelier Ambre", body: "Peintures originales de Claire Morel, artiste à Lyon." }
@@ -75,13 +75,13 @@ export const templates: RawTemplate[] = [
     id: "lumiere-lente", name: "Lumière lente", coverImage: "/images/lookbook-fashion.jpg", design: "lookbook", category: "Photographie", description: "Lookbook photographique sombre et plein cadre, organisé en séries visuelles.",
     colors: palettes.photo, hero: "Voir autrement, prendre le temps", pages: ["Accueil", "Séries", "Prestations", "Journal", "Contact"],
     sections: [
-      { title: "Accueil", type: "hero", heading: "Voir autrement, prendre le temps", body: "Photographies de Nora Diallo — portraits, lieux et instants suspendus." },
+      { title: "Accueil", type: "hero", heading: "Voir autrement, prendre le temps", body: "Photographies de Nora Diallo, portraits, lieux et instants suspendus." },
       { title: "Séries", type: "gallery", heading: "Histoires en images", body: "Trois séries récentes entre lumière naturelle, mouvement et paysage." },
       { title: "Prestations", type: "pricing", heading: "Photographie sur mesure", body: "Portraits, reportages et images de marque, pensés ensemble." },
       { title: "Journal", type: "text", heading: "Notes de terrain", body: "Carnets d'images, repérages et histoires derrière les photographies." },
       { title: "Contact", type: "contact", heading: "Une idée en tête ?", body: "Parlons de votre prochain projet photo." },
       { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
-      { title: "Pied de page", type: "footer", heading: "Lumière lente", body: "Photographies de Nora Diallo — portraits, lieux et instants suspendus." }
+      { title: "Pied de page", type: "footer", heading: "Lumière lente", body: "Photographies de Nora Diallo, portraits, lieux et instants suspendus." }
     ]
   },
   {
@@ -94,7 +94,7 @@ export const templates: RawTemplate[] = [
       { title: "À propos", type: "text", heading: "Petit studio, grandes idées", body: "Lila Bensaïd travaille avec des lieux culturels, des artisans et des maisons indépendantes." },
       { title: "Contact", type: "contact", heading: "Créons quelque chose de beau", body: "Les projets bien racontés commencent par une conversation." },
       { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
-      { title: "Pied de page", type: "footer", heading: "Formes vives", body: "Studio Lila — identités visuelles généreuses et singulières." }
+      { title: "Pied de page", type: "footer", heading: "Formes vives", body: "Studio Lila, identités visuelles généreuses et singulières." }
     ]
   },
   {
@@ -114,13 +114,13 @@ export const templates: RawTemplate[] = [
     id: "onde-claire", name: "Onde claire", coverImage: "/images/live-music.jpg", design: "stage", category: "Musique", description: "Portfolio musical nocturne : couverture d'album, dates de scène et lecteur d'écoute.",
     colors: palettes.music, hero: "Des chansons pour les jours ouverts", pages: ["Accueil", "Musique", "Concerts", "Vidéos", "Contact"],
     sections: [
-      { title: "Accueil", type: "hero", heading: "Des chansons pour les jours ouverts", body: "Maëlle Rivière — autrice, compositrice et voix nomade." },
-      { title: "Musique", type: "audio", heading: "Écouter le nouvel EP", body: "« La maison bleue » — cinq chansons enregistrées au bord de l'Atlantique." },
+      { title: "Accueil", type: "hero", heading: "Des chansons pour les jours ouverts", body: "Maëlle Rivière, autrice, compositrice et voix nomade." },
+      { title: "Musique", type: "audio", heading: "Écouter le nouvel EP", body: "« La maison bleue », cinq chansons enregistrées au bord de l'Atlantique." },
       { title: "Concerts", type: "events", heading: "Sur scène bientôt", body: "14 juin · Le Périscope, Lyon · 20h30" },
       { title: "Vidéos", type: "video", heading: "Sessions en direct", body: "Une session acoustique enregistrée dans le jardin du studio." },
       { title: "Contact", type: "contact", heading: "Booking & collaborations", body: "Pour les concerts, la presse et les projets musicaux." },
       { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
-      { title: "Pied de page", type: "footer", heading: "Onde claire", body: "Maëlle Rivière — autrice, compositrice et voix nomade." }
+      { title: "Pied de page", type: "footer", heading: "Onde claire", body: "Maëlle Rivière, autrice, compositrice et voix nomade." }
     ]
   },
   {
@@ -141,7 +141,7 @@ export const templates: RawTemplate[] = [
     colors: palettes.dance, hero: "Le mouvement ouvre des passages", pages: ["Accueil", "Spectacles", "Vidéos", "Cours", "Compagnie"],
     sections: [
       { title: "Accueil", type: "hero", heading: "Le mouvement ouvre des passages", body: "La compagnie Traverse, chorégraphies de Samia Benali." },
-      { title: "Spectacles", type: "events", heading: "À l'affiche", body: "« Nos lignes » — Théâtre de la Croix-Rousse, 4 et 5 juillet." },
+      { title: "Spectacles", type: "events", heading: "À l'affiche", body: "« Nos lignes », Théâtre de la Croix-Rousse, 4 et 5 juillet." },
       { title: "Vidéos", type: "video", heading: "Le corps en images", body: "Extraits de spectacles et films chorégraphiques." },
       { title: "Cours", type: "pricing", heading: "Danser ensemble", body: "Ateliers contemporains pour tous les corps, débutants bienvenus." },
       { title: "Compagnie", type: "team", heading: "Une aventure collective", body: "Six interprètes, une chorégraphe et des rencontres qui déplacent les frontières." },
@@ -155,7 +155,7 @@ export const templates: RawTemplate[] = [
     sections: [
       { title: "Accueil", type: "hero", heading: "Des histoires à hauteur d'humain", body: "Films documentaires et créations de Thomas Girard." },
       { title: "Films", type: "video", heading: "Voir les films", body: "Un regard documentaire sur les gestes, les lieux et celles et ceux qui les habitent." },
-      { title: "Festivals", type: "events", heading: "Projections & sélections", body: "« Les mains du fleuve » — sélection officielle, Festival du réel, 2025." },
+      { title: "Festivals", type: "events", heading: "Projections & sélections", body: "« Les mains du fleuve », sélection officielle, Festival du réel, 2025." },
       { title: "Services", type: "pricing", heading: "Raconter votre projet", body: "Réalisation, image, montage et films de commande à taille humaine." },
       { title: "Contact", type: "contact", heading: "Parlons cinéma", body: "Pour une projection, une commande ou une collaboration." },
       { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
@@ -166,10 +166,10 @@ export const templates: RawTemplate[] = [
     id: "maison-commune", name: "Maison commune", coverImage: "/images/gallery-show.jpg", design: "collective", category: "Galerie & collectif", description: "Site de galerie indépendant avec affiche d'exposition, artistes et calendrier.",
     colors: palettes.gallery, hero: "L'art se partage, les portes sont ouvertes", pages: ["Accueil", "Artistes", "Expositions", "Événements", "Visiter"],
     sections: [
-      { title: "Accueil", type: "hero", heading: "L'art se partage, les portes sont ouvertes", body: "Maison Commune — galerie associative et collectif d'artistes à Nantes." },
+      { title: "Accueil", type: "hero", heading: "L'art se partage, les portes sont ouvertes", body: "Maison Commune, galerie associative et collectif d'artistes à Nantes." },
       { title: "Artistes", type: "team", heading: "Celles et ceux qui font le lieu", body: "Peinture, photographie, céramique, édition et pratiques croisées." },
       { title: "Expositions", type: "gallery", heading: "En ce moment à la galerie", body: "« Jardins possibles », exposition collective jusqu'au 30 juin." },
-      { title: "Événements", type: "events", heading: "À venir à la Maison", body: "Vernissage · jeudi 13 juin · 18h30 — entrée libre." },
+      { title: "Événements", type: "events", heading: "À venir à la Maison", body: "Vernissage · jeudi 13 juin · 18h30, entrée libre." },
       { title: "Visiter", type: "map", heading: "Passez nous voir", body: "18 rue des Olivettes, Nantes · Mer–Sam, 11h–19h" },
       { title: "Réseaux sociaux", type: "social", heading: "Suivez-nous", body: "Retrouvez l’actualité de l’atelier sur les réseaux." },
       { title: "Pied de page", type: "footer", heading: "Maison commune", body: "Galerie associative et collectif d'artistes à Nantes." }
@@ -220,22 +220,22 @@ const templateVisuals: Record<string, { hero: string; gallery: string[]; caption
   "lumiere-lente": {
     hero: "/images/lookbook-fashion.jpg",
     gallery: ["/images/lookbook-fashion.jpg", "/images/artist-portrait.jpg", "/images/architecture.jpg"],
-    captions: ["Silence — éditorial", "Visages en lumière", "Lignes de ville"]
+    captions: ["Silence: éditorial", "Visages en lumière", "Lignes de ville"]
   },
   "formes-vives": {
     hero: "/images/architecture.jpg",
     gallery: ["/images/studio-art.jpg", "/images/gallery-show.jpg", "/images/architecture.jpg"],
-    captions: ["Identité : La Fabrique", "Édition — couleurs vives", "Système graphique"]
+    captions: ["Identité : La Fabrique", "Édition: couleurs vives", "Système graphique"]
   },
   "matiere-brute": {
     hero: "/images/gallery-show.jpg",
     gallery: ["/images/gallery-show.jpg", "/images/studio-art.jpg", "/images/architecture.jpg"],
-    captions: ["Volume I — argile", "L'atelier de taille", "Étude de forme"]
+    captions: ["Volume I: argile", "L'atelier de taille", "Étude de forme"]
   },
   "onde-claire": {
     hero: "/images/live-music.jpg",
     gallery: ["/images/live-music.jpg", "/images/artist-portrait.jpg", "/images/lookbook-fashion.jpg"],
-    captions: ["En concert", "Session acoustique", "Pochette — La maison bleue"]
+    captions: ["En concert", "Session acoustique", "Pochette: La maison bleue"]
   },
   "pages-sauvages": {
     hero: "/images/books-studio.jpg",
@@ -245,7 +245,7 @@ const templateVisuals: Record<string, { hero: string; gallery: string[]; caption
   "corps-en-scene": {
     hero: "/images/lookbook-fashion.jpg",
     gallery: ["/images/lookbook-fashion.jpg", "/images/artist-portrait.jpg", "/images/live-music.jpg"],
-    captions: ["Nos lignes — répétition", "Corps en mouvement", "Traverse — sur scène"]
+    captions: ["Nos lignes: répétition", "Corps en mouvement", "Traverse: sur scène"]
   },
   "hors-champ": {
     hero: "/images/architecture.jpg",
@@ -260,7 +260,7 @@ const templateVisuals: Record<string, { hero: string; gallery: string[]; caption
   "terre-et-fil": {
     hero: "/images/studio-art.jpg",
     gallery: ["/images/studio-art.jpg", "/images/gallery-show.jpg", "/images/books-studio.jpg"],
-    captions: ["Terre rouge — série", "Pièces de saison", "Objets faits main"]
+    captions: ["Terre rouge: série", "Pièces de saison", "Objets faits main"]
   }
 };
 
@@ -280,7 +280,7 @@ export function createTemplateSite(template: TemplateSummary): SiteDocument {
       id: id(),
       slug: pageIndex === 0 ? "accueil" : title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
       title,
-      seoTitle: `${title} — ${template.name}`,
+      seoTitle: `${title}: ${template.name}`,
       seoDescription: sectionDefinitions[0]?.body ?? "",
       sections: sectionDefinitions.map((sectionDefinition) => ({
         id: id(),

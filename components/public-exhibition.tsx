@@ -47,7 +47,7 @@ function ExhibitionLoader() {
   if (gone) return null;
   return (
     <div className={`exhibition-loader${fading ? " done" : ""}`} aria-hidden={fading || undefined}>
-      <div className="loader-brand"><BrandLogo variant="horizontal" height={36} /></div>
+      <div className="loader-brand"><BrandLogo variant="horizontal" height={52} /></div>
       <div className="loader-bar"><span style={{ width: `${Math.round(progress)}%` }} /></div>
       <p>Loading the exhibition… {Math.round(progress)}%</p>
     </div>

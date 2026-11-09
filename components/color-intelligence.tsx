@@ -239,17 +239,17 @@ function presentationBackgrounds(base: RGB): { name: string; hex: string; note: 
     {
       name: "Muted complement",
       hex: rgbToHex(muted[0], muted[1], muted[2]),
-      note: "Soft opposite of the dominant colour — the work stands out without fighting the wall.",
+      note: "Soft opposite of the dominant colour, the work stands out without fighting the wall.",
     },
     {
       name: "Deep tone",
       hex: rgbToHex(deep[0], deep[1], deep[2]),
-      note: "A dark room pulled from the painting itself — bright colours glow against it.",
+      note: "A dark room pulled from the painting itself, bright colours glow against it.",
     },
     {
       name: "Light neutral",
       hex: rgbToHex(neutral[0], neutral[1], neutral[2]),
-      note: "A near-white tinted with the painting's own hue — the classic gallery wall, warmed.",
+      note: "A near-white tinted with the painting's own hue, the classic gallery wall, warmed.",
     },
   ];
 }
@@ -469,10 +469,10 @@ export default function ColorIntelligence({
         if (cancelled) return;
         setStatus("error");
         if (err instanceof Error && err.message === "load") {
-          setError("This image could not be loaded. It may have been moved or deleted — try another artwork or upload a file.");
+          setError("This image could not be loaded. It may have been moved or deleted. Try another artwork or upload a file.");
         } else {
           setError(
-            "This image cannot be read for analysis — its host does not allow cross-origin pixel access, so the canvas is blocked. Download the image and upload it directly instead.",
+            "This image cannot be read for analysis. Its host does not allow cross-origin pixel access, so the canvas is blocked. Download the image and upload it directly instead.",
           );
         }
       });
@@ -557,7 +557,7 @@ export default function ColorIntelligence({
 
   const savePalette = useCallback(async () => {
     if (palette.length === 0) return;
-    const title = saveName.trim() || `Palette — ${sourceLabel ?? "untitled"}`;
+    const title = saveName.trim() || `Palette: ${sourceLabel ?? "untitled"}`;
     setSaving(true);
     setSaveStatus(null);
     try {
@@ -575,7 +575,7 @@ export default function ColorIntelligence({
       setSaveName("");
       await loadSaved();
     } catch {
-      setSaveStatus("Could not save — check your connection and try again.");
+      setSaveStatus("Could not save. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -611,7 +611,7 @@ export default function ColorIntelligence({
       await navigator.clipboard.writeText(palette.join("\n"));
       setSaveStatus("Hex list copied to the clipboard.");
     } catch {
-      setSaveStatus("Copy failed — select the list below and copy it by hand.");
+      setSaveStatus("Copy failed. Select the list below and copy it by hand.");
     }
   }, [palette]);
 
@@ -683,13 +683,13 @@ export default function ColorIntelligence({
         <h2 style={S.sectionTitle}>Choose an artwork</h2>
         <p style={S.sectionNote}>
           Pick one of your artworks, or upload an image from your device. The analysis reads the
-          actual pixels — nothing is uploaded anywhere.
+          actual pixels. Nothing is uploaded anywhere.
         </p>
         {artworks.length === 0 ? (
           <div className={styles.emptyBox}>
             <strong>No artworks with images yet.</strong>
             <p>
-              Add a work with an image in the editor and it will show up here — or upload an image
+              Add a work with an image in the editor and it will show up here, or upload an image
               directly below.
             </p>
           </div>
@@ -726,7 +726,7 @@ export default function ColorIntelligence({
         <div style={{ ...S.uploadBox, marginTop: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Or upload an image</span>
           <span style={{ fontSize: 12, color: "var(--muted)" }}>
-            JPG, PNG or WebP. The file stays in your browser — it is never sent to the server.
+            JPG, PNG or WebP. The file stays in your browser. It is never sent to the server.
           </span>
           <span style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="button" className="galleries-open-button" onClick={() => fileRef.current?.click()}>
@@ -787,7 +787,7 @@ export default function ColorIntelligence({
           <section style={S.section}>
             <h2 style={S.sectionTitle}>Dominant colours</h2>
             <p style={S.sectionNote}>
-              The six colours that cover the most of {sourceLabel} — found by median-cut
+              The six colours that cover the most of {sourceLabel}, found by median-cut
               quantisation of the real pixels. Tap any swatch to copy its hex.
             </p>
             <div style={S.previewRow}>
@@ -864,7 +864,7 @@ export default function ColorIntelligence({
               </label>
               {loadedSaved && (
                 <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                  Showing saved palette “{loadedSaved.title}” — change the harmony or size to go
+                  Showing saved palette “{loadedSaved.title}”, change the harmony or size to go
                   back to the live palette.
                 </span>
               )}
@@ -921,7 +921,7 @@ export default function ColorIntelligence({
                         ? "Text on white"
                         : passBlack
                           ? "Text on black"
-                          : "Background only — pair with white or black text";
+                          : "Background only: pair with white or black text";
                     return (
                       <tr key={hex}>
                         <td style={S.td}>
@@ -967,7 +967,7 @@ export default function ColorIntelligence({
           <section style={S.section}>
             <h2 style={S.sectionTitle}>Present it on these walls</h2>
             <p style={S.sectionNote}>
-              Wall colours drawn from the painting itself — so the room frames the work instead of
+              Wall colours drawn from the painting itself, so the room frames the work instead of
               competing with it.
             </p>
             <div style={S.bgGrid}>
@@ -979,7 +979,7 @@ export default function ColorIntelligence({
                   </div>
                   <div style={S.bgBody}>
                     <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700 }}>
-                      {bg.name} —{" "}
+                      {bg.name}:{" "}
                       <button
                         type="button"
                         onClick={() => void copyHex(bg.hex)}
@@ -1021,7 +1021,7 @@ export default function ColorIntelligence({
                   style={S.input}
                   value={saveName}
                   onChange={(event) => setSaveName(event.target.value)}
-                  placeholder={sourceLabel ? `Palette — ${sourceLabel}` : "Palette name"}
+                  placeholder={sourceLabel ? `Palette: ${sourceLabel}` : "Palette name"}
                 />
               </label>
               <button type="button" className="galleries-open-button" onClick={() => void savePalette()} disabled={saving}>
@@ -1076,7 +1076,7 @@ export default function ColorIntelligence({
                     <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 14 }}>{artwork.title}</p>
                     {compareLoading[id] && <p style={S.status}>Reading pixels…</p>}
                     {!compareLoading[id] && result && result.length === 0 && (
-                      <p style={S.status}>This image could not be read — try uploading it directly.</p>
+                      <p style={S.status}>This image could not be read. Try uploading it directly.</p>
                     )}
                     {!compareLoading[id] && result && result.length > 0 && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

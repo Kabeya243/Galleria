@@ -959,7 +959,7 @@ export default function GalleriesPage({
           <button
             className="galleries-open-button"
             onClick={() => toggleFavourite(selected)}
-            aria-label={favourites.includes(selected) ? `${t("galleries", "removeFromFavourites")} — ${selectedRoom.label}` : `${t("galleries", "saveAsFavourite")} — ${selectedRoom.label}`}
+            aria-label={favourites.includes(selected) ? `${t("galleries", "removeFromFavourites")}, ${selectedRoom.label}` : `${t("galleries", "saveAsFavourite")}, ${selectedRoom.label}`}
             aria-pressed={favourites.includes(selected)}
             style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}
           >
@@ -1033,7 +1033,7 @@ export default function GalleriesPage({
       <section className="galleries-grid">
         {filteredRooms.map((room) => (
           <article key={room.key} className={`gallery-card${room.key === selected ? " selected" : ""}`}>
-            <button className="gallery-card-preview-button" onClick={() => viewIn3D(room.key)} aria-label={`${t("galleries", "previewIn3d")} — ${room.label}`}>
+            <button className="gallery-card-preview-button" onClick={() => viewIn3D(room.key)} aria-label={`${t("galleries", "previewIn3d")}, ${room.label}`}>
               <RoomPreview room={room} />
             </button>
             <div className="gallery-card-body">
@@ -1045,7 +1045,7 @@ export default function GalleriesPage({
                 <button
                   type="button"
                   onClick={() => toggleFavourite(room.key)}
-                  aria-label={favourites.includes(room.key) ? `${t("galleries", "removeFromFavourites")} — ${room.label}` : `${t("galleries", "saveAsFavourite")} — ${room.label}`}
+                  aria-label={favourites.includes(room.key) ? `${t("galleries", "removeFromFavourites")}, ${room.label}` : `${t("galleries", "saveAsFavourite")}, ${room.label}`}
                   aria-pressed={favourites.includes(room.key)}
                   title={favourites.includes(room.key) ? t("galleries", "removeFromFavourites") : t("galleries", "saveAsFavourite")}
                   style={{ background: "transparent", border: 0, padding: 2, cursor: "pointer", color: favourites.includes(room.key) ? "var(--accent)" : "var(--muted)", flexShrink: 0 }}
@@ -1088,7 +1088,7 @@ export default function GalleriesPage({
       <main className="galleries-page">
         <header className="galleries-header">
           <Link className="brand-lockup" href="/">
-            <BrandLogo variant="horizontal" height={36} />
+            <BrandLogo variant="horizontal" height={52} />
           </Link>
           <nav className="galleries-nav">
             <Link href="/">{t("common", "workspace")}</Link>

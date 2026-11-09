@@ -178,8 +178,8 @@ export default function AdminGalleries({
         </p>
       ) : null}
       <p style={{ color: "var(--ad-muted)", fontSize: 13, marginTop: 10 }}>
-        Deleting a gallery only hides it from the catalogue, the creation dialog and the editor —
-        exhibitions already built with it keep working. Use Restore to bring one back.
+        Deleting a gallery only hides it from the catalogue, the creation dialog and the editor.
+        Exhibitions already built with it keep working. Use Restore to bring one back.
       </p>
     </div>
   );

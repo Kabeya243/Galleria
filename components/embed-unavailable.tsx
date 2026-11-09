@@ -14,7 +14,7 @@ export default function EmbedUnavailable() {
   return (
     <main className="embed-unavailable">
       <p className="embed-unavailable-brand">
-        <BrandLogo variant="horizontal" height={40} />
+        <BrandLogo variant="horizontal" height={56} />
       </p>
       <h1>{t("embed", "notAvailable")}</h1>
       <p>{translate("embed", "notAvailableHint", "en")}</p>

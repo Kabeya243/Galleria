@@ -21,9 +21,9 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Atelier — Lakisa",
+  title: "Atelier: Lakisa",
   description:
-    "Design posters, posts, CVs, invitations and presentations in the Atelier editor — 8 original templates, text, shapes, images and your own artworks — and export a real vector PDF, JPG or PNG.",
+    "Design posters, posts, CVs, invitations and presentations in the Atelier editor (8 original templates, text, shapes, images and your own artworks) and export a real vector PDF, JPG or PNG.",
 };
 
 export default async function PortfolioPdfRoute({

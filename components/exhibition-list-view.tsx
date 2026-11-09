@@ -73,7 +73,7 @@ export default function ExhibitionListView({
       ) : (
         <ul ref={gridRef} className="list-view-grid" onKeyDown={onGridKeyDown}>
           {artworks.map((artwork, index) => {
-            const alt = `${artwork.title} — ${artwork.artist}${artwork.year ? `, ${artwork.year}` : ""}`;
+            const alt = `${artwork.title}, ${artwork.artist}${artwork.year ? `, ${artwork.year}` : ""}`;
             return (
               <li key={artwork.id}>
                 <article className="list-view-card">

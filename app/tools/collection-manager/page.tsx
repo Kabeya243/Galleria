@@ -8,9 +8,9 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Collection Manager — Lakisa Tools",
+  title: "Collection Manager: Lakisa Tools",
   description:
-    "Your whole collection in one place — every artwork across all your exhibitions, with search, filters, tags, availability, provenance, inventory numbers, condition reports and bulk actions.",
+    "Your whole collection in one place, every artwork across all your exhibitions, with search, filters, tags, availability, provenance, inventory numbers, condition reports and bulk actions.",
 };
 
 export default async function CollectionManagerRoute() {
@@ -54,7 +54,7 @@ export default async function CollectionManagerRoute() {
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Open an exhibition in the editor and add your first work — it will show up here as soon as it exists.</p>
+          <p>Open an exhibition in the editor and add your first work, it will show up here as soon as it exists.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

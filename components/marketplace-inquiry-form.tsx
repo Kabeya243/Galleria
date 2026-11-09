@@ -40,7 +40,7 @@ export default function ListingInquiryForm({ listingId, listingTitle }: { listin
         <strong>Your inquiry is with the seller.</strong>
         <p>
           The seller reads inquiries in their Marketplace tool and will reply to {buyerEmail}.
-          No payment is taken here — price, shipping and payment are agreed directly with them.
+          No payment is taken here. Price, shipping and payment are agreed directly with them.
         </p>
       </div>
     );
@@ -73,7 +73,7 @@ export default function ListingInquiryForm({ listingId, listingTitle }: { listin
           onChange={(e) => setMessage(e.target.value)}
           required
           rows={4}
-          placeholder="I would like to know more about this work — is it still available, and what would shipping cost?"
+          placeholder="I would like to know more about this work: is it still available, and what would shipping cost?"
         />
       </label>
       <button type="submit" className="primary-button" disabled={busy}>

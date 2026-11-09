@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     // never match — the visitor must use Google sign-in instead.
     if (user && !user.passwordHash) {
       return NextResponse.json(
-        { error: "This account signs in with Google — use “Continue with Google” below." },
+        { error: "This account signs in with Google. Use “Continue with Google” below." },
         { status: 401 },
       );
     }
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (!isEmailVerified(user)) {
       return NextResponse.json(
         {
-          error: "Please verify your email before signing in — check your inbox for the link we sent you.",
+          error: "Please verify your email before signing in. Check your inbox for the link we sent you.",
           emailNotVerified: true,
           email: user.email,
         },

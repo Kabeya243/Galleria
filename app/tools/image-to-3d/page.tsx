@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Image-to-3D & Asset Library — Lakisa Tools",
+  title: "Image-to-3D & Asset Library: Lakisa Tools",
   description:
     "Your personal 3D asset library with licences and attribution, .glb/.gltf import with a Three.js preview, and honest image-to-3D: 2D textures and depth approximations that run in the browser, with documented slots for external reconstruction services.",
 };

@@ -155,7 +155,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     <main className="auth-noir">
       <section className="auth-noir-left">
         <Link className="auth-noir-brand" href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={44} />
+          <BrandLogo variant="horizontal" theme="dark" height={60} />
         </Link>
         <div className="auth-noir-star">
           <AsteriskMark />
@@ -174,7 +174,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
               <p className="auth-noir-hint" style={{ marginTop: 0 }}>
                 {registered.emailSent ? (
                   <>
-                    <strong>{t("auth", "checkInboxTitle")}</strong> — {t("auth", "checkInbox")} (
+                    <strong>{t("auth", "checkInboxTitle")}</strong>: {t("auth", "checkInbox")} (
                     {registered.email})
                   </>
                 ) : (

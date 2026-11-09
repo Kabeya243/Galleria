@@ -8,9 +8,9 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Frame Studio — Lakisa Tools",
+  title: "Frame Studio: Lakisa Tools",
   description:
-    "Frame your artworks — all 28 digitised styles with faithful previews, custom width, depth, material, matboard and glass, side-by-side comparison, and one-click save to the artwork.",
+    "Frame your artworks, all 28 digitised styles with faithful previews, custom width, depth, material, matboard and glass, side-by-side comparison, and one-click save to the artwork.",
 };
 
 export default async function FrameStudioRoute({
@@ -54,7 +54,7 @@ export default async function FrameStudioRoute({
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Open an exhibition in the editor and add your first work — it will show up here as soon as it exists.</p>
+          <p>Open an exhibition in the editor and add your first work, it will show up here as soon as it exists.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Teams & Collaboration — Lakisa Tools",
+  title: "Teams & Collaboration: Lakisa Tools",
   description: "Share exhibitions with a team, comment, run reviews and track activity together.",
 };
 

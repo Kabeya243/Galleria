@@ -270,12 +270,12 @@ export async function PublishedSite({ slug, pageSlug }: { slug: string; pageSlug
             {image && <img className="published-image" src={image} alt={heading} />}
             {type === "gallery" && <>
               <GalleryLightbox works={galleryWorks} className="published-gallery" />
-              {gallerySources.length > 0 && <p className="published-image-credit">Images du domaine public · <a href={gallerySources[0]} target="_blank" rel="noreferrer">La Joconde</a> · <a href={gallerySources[1]} target="_blank" rel="noreferrer">La Cène</a> · <a href={gallerySources[2]} target="_blank" rel="noreferrer">Portrait attribué</a> — Wikimedia Commons</p>}
+              {gallerySources.length > 0 && <p className="published-image-credit">Images du domaine public · <a href={gallerySources[0]} target="_blank" rel="noreferrer">La Joconde</a> · <a href={gallerySources[1]} target="_blank" rel="noreferrer">La Cène</a> · <a href={gallerySources[2]} target="_blank" rel="noreferrer">Portrait attribué</a>, Wikimedia Commons</p>}
             </>}
             {type === "events" && <div className="published-event"><span>À VENIR</span><p><CalendarDays size={16} aria-hidden="true" />{body}</p></div>}
             {type === "audio" && <div className="published-media"><Music size={16} aria-hidden="true" />Écouter un extrait</div>}
             {type === "video" && <div className="published-media"><Clapperboard size={16} aria-hidden="true" />Voir le film</div>}
-            {type === "contact" && <ContactForm email={readString(block.content, "email", "bonjour@atelier-exemple.fr")} subject={`${site.title} — ${heading}`} />}
+            {type === "contact" && <ContactForm email={readString(block.content, "email", "bonjour@atelier-exemple.fr")} subject={`${site.title}, ${heading}`} />}
             {["hero", "cta", "pricing"].includes(type) && <a className="published-button" href="#contact">{action}<ArrowRight size={14} aria-hidden="true" /></a>}
             {type === "team" && <div className="published-team"><span><Users size={20} aria-hidden="true" />Artistes</span><span><Palette size={20} aria-hidden="true" />Création</span><span><Sparkles size={20} aria-hidden="true" />Rencontres</span></div>}
             {type === "testimonials" && <blockquote>« Une belle rencontre et un travail profondément singulier. »</blockquote>}

@@ -251,11 +251,11 @@ export default function CollectionManager({
     setStatus(null);
     setError(null);
     try {
-      await saveRecord(openId, draft, `Collection record — ${artwork.title}`);
+      await saveRecord(openId, draft, `Collection record: ${artwork.title}`);
       setDraftDirty(false);
       setStatus(`Saved the record for “${artwork.title}”.`);
     } catch {
-      setError("Could not save — check your connection and try again.");
+      setError("Could not save. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -274,12 +274,12 @@ export default function CollectionManager({
         if (!artwork) continue;
         const current = recordFor(id).data;
         if (current.tags.includes(tag)) continue;
-        await saveRecord(id, { ...current, tags: [...current.tags, tag] }, `Collection record — ${artwork.title}`);
+        await saveRecord(id, { ...current, tags: [...current.tags, tag] }, `Collection record: ${artwork.title}`);
       }
       setStatus(`Added the tag “${tag}” to ${ids.length} artwork${ids.length === 1 ? "" : "s"}.`);
       setBulkTag("");
     } catch {
-      setError("Some tags could not be saved — check your connection and try again.");
+      setError("Some tags could not be saved. Check your connection and try again.");
     } finally {
       setBulkBusy(false);
     }
@@ -296,11 +296,11 @@ export default function CollectionManager({
         const artwork = artworks.find((a) => a.id === id);
         if (!artwork) continue;
         const current = recordFor(id).data;
-        await saveRecord(id, { ...current, availability: bulkAvailability }, `Collection record — ${artwork.title}`);
+        await saveRecord(id, { ...current, availability: bulkAvailability }, `Collection record: ${artwork.title}`);
       }
       setStatus(`Set ${ids.length} artwork${ids.length === 1 ? "" : "s"} to “${bulkAvailability}”.`);
     } catch {
-      setError("Some availability changes could not be saved — check your connection and try again.");
+      setError("Some availability changes could not be saved. Check your connection and try again.");
     } finally {
       setBulkBusy(false);
     }
@@ -328,13 +328,13 @@ export default function CollectionManager({
       setSelected(new Set());
       setConfirmBulkDelete(false);
       if (deleted.length < ids.length) {
-        setError(`Deleted ${deleted.length} of ${ids.length} artworks — the rest could not be deleted. Try again.`);
+        setError(`Deleted ${deleted.length} of ${ids.length} artworks. The rest could not be deleted. Try again.`);
       } else {
         setStatus(`Deleted ${deleted.length} artwork${deleted.length === 1 ? "" : "s"}.`);
       }
       if (openId && deleted.includes(openId)) setOpenId(null);
     } catch {
-      setError("Could not delete — check your connection and try again.");
+      setError("Could not delete. Check your connection and try again.");
     } finally {
       setBulkBusy(false);
     }
@@ -494,7 +494,7 @@ export default function CollectionManager({
       {filtered.length === 0 ? (
         <div className="cm-empty">
           <strong>No artworks match.</strong>
-          <p>Try a different search or clear the filters — your collection is still there.</p>
+          <p>Try a different search or clear the filters, your collection is still there.</p>
           <button
             type="button"
             className="cm-btn"
@@ -557,20 +557,20 @@ export default function CollectionManager({
                         <span>{a.title}</span>
                       </button>
                     </td>
-                    <td>{a.artist || "—"}</td>
-                    <td>{a.year || "—"}</td>
-                    <td>{a.medium || "—"}</td>
-                    <td>{a.dimensions || "—"}</td>
+                    <td>{a.artist || "N/A"}</td>
+                    <td>{a.year || "N/A"}</td>
+                    <td>{a.medium || "N/A"}</td>
+                    <td>{a.dimensions || "N/A"}</td>
                     <td>{a.exhibitionTitle}</td>
                     <td>
                       <span className={`cm-avail cm-avail-${rec.availability.replace(/\s+/g, "-").toLowerCase()}`}>
                         {rec.availability}
                       </span>
                     </td>
-                    <td>{rec.location || "—"}</td>
+                    <td>{rec.location || "N/A"}</td>
                     <td>
                       {rec.tags.length === 0 ? (
-                        "—"
+                        "N/A"
                       ) : (
                         <span className="cm-tags">
                           {rec.tags.map((t) => (
@@ -661,7 +661,7 @@ export default function CollectionManager({
               <textarea
                 rows={2}
                 value={draft.provenance}
-                placeholder="Where this work has been — previous owners, exhibitions, sales…"
+                placeholder="Where this work has been: previous owners, exhibitions, sales…"
                 onChange={(e) => {
                   setDraft((d) => ({ ...d, provenance: e.target.value }));
                   setDraftDirty(true);

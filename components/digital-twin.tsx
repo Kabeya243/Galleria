@@ -416,7 +416,7 @@ function PlanView({ twin, artworks }: { twin: TwinData; artworks: TwinArtwork[] 
       })}
       {/* North / scale note */}
       <text x={pad} y={hPx - 8} fontSize={10} fill="#6b675f">
-        Plan — 1 square ≈ 1 m · doors brown, windows blue, artworks gold
+        Plan: 1 square ≈ 1 m · doors brown, windows blue, artworks gold
       </text>
     </svg>
   );
@@ -600,8 +600,8 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
     for (const placement of twin.placements) {
       const artwork = artworks.find((a) => a.id === placement.artworkId);
       rows.push(
-        { label: `${artwork?.title ?? "Artwork"} — offset on ${placement.wall} wall`, planned: placement.plannedOffset, measured: placement.offset },
-        { label: `${artwork?.title ?? "Artwork"} — hanging height (centre)`, planned: placement.plannedHeight, measured: placement.height },
+        { label: `${artwork?.title ?? "Artwork"}: offset on ${placement.wall} wall`, planned: placement.plannedOffset, measured: placement.offset },
+        { label: `${artwork?.title ?? "Artwork"}: hanging height (centre)`, planned: placement.plannedHeight, measured: placement.height },
       );
     }
     return rows.map((row) => ({ ...row, diffCm: Math.round((row.measured - row.planned) * 100) }));
@@ -613,8 +613,8 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
   const installSteps = useMemo(() => {
     const wallOrder: WallId[] = ["back", "left", "right", "front"];
     const steps: string[] = [];
-    steps.push(`1. Mark the room: verify the tape — ${twin.length.toFixed(2)} × ${twin.width.toFixed(2)} m, ceiling ${twin.height.toFixed(2)} m.`);
-    steps.push("2. Hang the largest work first, then work outward — large pieces set the sightlines.");
+    steps.push(`1. Mark the room: verify the tape: ${twin.length.toFixed(2)} × ${twin.width.toFixed(2)} m, ceiling ${twin.height.toFixed(2)} m.`);
+    steps.push("2. Hang the largest work first, then work outward, large pieces set the sightlines.");
     let n = 3;
     for (const wall of wallOrder) {
       const onWall = twin.placements
@@ -629,7 +629,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
         const prev = onWall[i - 1];
         const gap =
           prev && artwork
-            ? ` — ${Math.round((placement.offset - size.w / 2 - (prev.offset + artworkSize(artworks.find((a) => a.id === prev.artworkId) ?? artwork).w / 2)) * 100)} cm from the previous work`
+            ? `, ${Math.round((placement.offset - size.w / 2 - (prev.offset + artworkSize(artworks.find((a) => a.id === prev.artworkId) ?? artwork).w / 2)) * 100)} cm from the previous work`
             : "";
         steps.push(
           `   • ${artwork?.title ?? "Artwork"} (${size.w.toFixed(2)} × ${size.h.toFixed(2)} m): centre ${placement.height.toFixed(2)} m high, ${placement.offset.toFixed(2)} m from the wall's left end${gap}.`,
@@ -696,7 +696,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
       return;
     }
     if (!gl) {
-      setVrStatus("The 3D view is still loading — wait a moment and try again.");
+      setVrStatus("The 3D view is still loading, wait a moment and try again.");
       return;
     }
     setVrStatus("Requesting a VR session…");
@@ -742,7 +742,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
       return;
     }
     if (!canvas) {
-      setArStatus("The AR view is still loading — wait a moment and try again.");
+      setArStatus("The AR view is still loading, wait a moment and try again.");
       return;
     }
     if (!arArtwork) {
@@ -854,7 +854,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
     } catch (error) {
       setArStatus(
         error instanceof Error
-          ? `AR could not start: ${error.message} — hit-test may be unsupported on this device. Use the photo preview below instead.`
+          ? `AR could not start: ${error.message}, hit-test may be unsupported on this device. Use the photo preview below instead.`
           : "AR could not start on this device. Use the photo preview below instead.",
       );
     }
@@ -869,7 +869,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
       photoImgRef.current = img;
       setWallPhoto(url);
       setWallPhotoName(file.name);
-      setMessage(`Loaded “${file.name}” — drag the artwork to position it, use the corner handle to resize.`);
+      setMessage(`Loaded “${file.name}”, drag the artwork to position it, use the corner handle to resize.`);
     };
     img.onerror = () => setMessage("That photo could not be read. Try a JPG or PNG.");
     img.src = url;
@@ -1043,7 +1043,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
       }),
       notes: [
         "This is a JSON manifest, NOT a Datasmith (.udatasmith) or FBX file. Rebuild the room in Twinmotion or Unreal Engine from these dimensions and place each artwork as an image plane at the listed wall, offset and hanging height.",
-        "Artwork image files are referenced by URL where available; they are not embedded in this file — supply the image files to Twinmotion / Unreal Engine separately.",
+        "Artwork image files are referenced by URL where available; they are not embedded in this file. Supply the image files to Twinmotion / Unreal Engine separately.",
         "Requires Twinmotion or Unreal Engine installed and an Epic Games account. This export is a one-way bridge, not a live link to Unreal.",
       ],
     };
@@ -1054,7 +1054,7 @@ export default function DigitalTwin({ artworks }: { artworks: TwinArtwork[] }) {
     link.download = `${slug}-unreal-twinmotion-manifest.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setMessage("Exported the Unreal / Twinmotion manifest as JSON. It is a data bridge for rebuilding this room — not a Datasmith file and not a live link to Unreal.");
+    setMessage("Exported the Unreal / Twinmotion manifest as JSON. It is a data bridge for rebuilding this room, not a Datasmith file and not a live link to Unreal.");
   }
 
 // --- VR movement rig ----------------------------------------------------------
@@ -1157,7 +1157,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
             <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>1 · Measure the room</h2>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 14px", lineHeight: 1.6 }}>
               Enter the tape-measure values of the physical room. “Planned” is what the floor plan or the gallery said;
-              “measured” is what you found on site — the comparison below flags any difference over 2 cm.
+              “measured” is what you found on site, the comparison below flags any difference over 2 cm.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
               <label style={fieldStyle}>Twin name
@@ -1166,22 +1166,22 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
               <label style={fieldStyle}>Room name
                 <input style={inputStyle} value={twin.roomName} onChange={(e) => updateTwin({ roomName: e.target.value })} />
               </label>
-              <label style={fieldStyle}>Length — measured (m)
+              <label style={fieldStyle}>Length: measured (m)
                 <input style={inputStyle} type="number" step={0.01} min={0.5} value={twin.length} onChange={(e) => updateTwin({ length: num(e.target.value, twin.length) })} />
               </label>
-              <label style={fieldStyle}>Length — planned (m)
+              <label style={fieldStyle}>Length: planned (m)
                 <input style={inputStyle} type="number" step={0.01} min={0.5} value={twin.plannedLength} onChange={(e) => updateTwin({ plannedLength: num(e.target.value, twin.plannedLength) })} />
               </label>
-              <label style={fieldStyle}>Width — measured (m)
+              <label style={fieldStyle}>Width: measured (m)
                 <input style={inputStyle} type="number" step={0.01} min={0.5} value={twin.width} onChange={(e) => updateTwin({ width: num(e.target.value, twin.width) })} />
               </label>
-              <label style={fieldStyle}>Width — planned (m)
+              <label style={fieldStyle}>Width: planned (m)
                 <input style={inputStyle} type="number" step={0.01} min={0.5} value={twin.plannedWidth} onChange={(e) => updateTwin({ plannedWidth: num(e.target.value, twin.plannedWidth) })} />
               </label>
-              <label style={fieldStyle}>Ceiling height — measured (m)
+              <label style={fieldStyle}>Ceiling height: measured (m)
                 <input style={inputStyle} type="number" step={0.01} min={1.5} value={twin.height} onChange={(e) => updateTwin({ height: num(e.target.value, twin.height) })} />
               </label>
-              <label style={fieldStyle}>Ceiling height — planned (m)
+              <label style={fieldStyle}>Ceiling height: planned (m)
                 <input style={inputStyle} type="number" step={0.01} min={1.5} value={twin.plannedHeight} onChange={(e) => updateTwin({ plannedHeight: num(e.target.value, twin.plannedHeight) })} />
               </label>
               <label style={fieldStyle}>Wall colour
@@ -1262,7 +1262,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
                 <select style={inputStyle} value={selectedArtworkId || artworks[0]?.id} onChange={(e) => setSelectedArtworkId(e.target.value)}>
                   {artworks.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.title} — {a.dimensions || "dimensions unknown"} ({a.exhibitionTitle})
+                      {a.title}, {a.dimensions || "dimensions unknown"} ({a.exhibitionTitle})
                     </option>
                   ))}
                 </select>
@@ -1274,7 +1274,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
               </label>
               <button className="primary-button" onClick={addPlacement}>Add to wall</button>
             </div>
-            {twin.placements.length === 0 && <p style={{ fontSize: 12 }}>No works placed yet — add your first work above.</p>}
+            {twin.placements.length === 0 && <p style={{ fontSize: 12 }}>No works placed yet. Add your first work above.</p>}
             {twin.placements.map((placement) => {
               const artwork = artworks.find((a) => a.id === placement.artworkId);
               const size = artwork ? artworkSize(artwork) : { w: 0, h: 0 };
@@ -1285,16 +1285,16 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
                     {artwork?.title ?? "Artwork"} · {size.w.toFixed(2)} × {size.h.toFixed(2)} m · {WALLS.find((w) => w.id === placement.wall)?.label}
                   </strong>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginTop: 8 }}>
-                    <label style={fieldStyle}>Offset — planned (m)
+                    <label style={fieldStyle}>Offset: planned (m)
                       <input style={inputStyle} type="number" step={0.01} min={0} max={maxOffset} value={placement.plannedOffset} onChange={(e) => updatePlacement(placement.id, { plannedOffset: num(e.target.value, placement.plannedOffset) })} />
                     </label>
-                    <label style={fieldStyle}>Offset — measured (m)
+                    <label style={fieldStyle}>Offset: measured (m)
                       <input style={inputStyle} type="number" step={0.01} min={0} max={maxOffset} value={placement.offset} onChange={(e) => updatePlacement(placement.id, { offset: num(e.target.value, placement.offset) })} />
                     </label>
-                    <label style={fieldStyle}>Height — planned (m)
+                    <label style={fieldStyle}>Height: planned (m)
                       <input style={inputStyle} type="number" step={0.01} min={0} max={twin.height} value={placement.plannedHeight} onChange={(e) => updatePlacement(placement.id, { plannedHeight: num(e.target.value, placement.plannedHeight) })} />
                     </label>
-                    <label style={fieldStyle}>Height — measured (m)
+                    <label style={fieldStyle}>Height: measured (m)
                       <input style={inputStyle} type="number" step={0.01} min={0} max={twin.height} value={placement.height} onChange={(e) => updatePlacement(placement.id, { height: num(e.target.value, placement.height) })} />
                     </label>
                     <div style={{ display: "flex", alignItems: "end" }}>
@@ -1308,10 +1308,10 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
 
           {/* Views */}
           <section style={cardStyle} aria-label="Twin views">
-            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 12px" }}>4 · The twin — 3D view &amp; plan</h2>
+            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 12px" }}>4 · The twin: 3D view &amp; plan</h2>
             <div style={grid2}>
               <div>
-                <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 6px" }}>3D VIEW — drag to orbit, scroll to zoom</p>
+                <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 6px" }}>3D VIEW: drag to orbit, scroll to zoom</p>
                 <div style={{ height: 360, border: "1px solid var(--border)", borderRadius: 6, overflow: "hidden", background: "#efebe1" }}>
                   <Canvas camera={{ position: [twin.length * 0.9, twin.height + 1.2, twin.width * 1.1], fov: 45 }} dpr={[1, 2]}>
                     <Suspense fallback={null}>
@@ -1333,7 +1333,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
               {mismatches.length === 0
                 ? "Everything matches the plan within 2 cm."
-                : `${mismatches.length} value${mismatches.length > 1 ? "s differ" : " differs"} from the plan by more than 2 cm — highlighted below.`}
+                : `${mismatches.length} value${mismatches.length > 1 ? "s differ" : " differs"} from the plan by more than 2 cm, highlighted below.`}
             </p>
             <div className={styles.tableScroll}>
               <table className={styles.inventoryTable}>
@@ -1347,7 +1347,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
                     <td>{row.planned.toFixed(2)} m</td>
                     <td>{row.measured.toFixed(2)} m</td>
                     <td style={{ fontWeight: Math.abs(row.diffCm) > 2 ? 700 : 400, color: Math.abs(row.diffCm) > 2 ? "#8a5a12" : "inherit" }}>
-                      {row.diffCm === 0 ? "—" : `${row.diffCm > 0 ? "+" : ""}${row.diffCm} cm`}
+                      {row.diffCm === 0 ? "N/A" : `${row.diffCm > 0 ? "+" : ""}${row.diffCm} cm`}
                     </td>
                   </tr>
                 ))}
@@ -1403,16 +1403,16 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
           <section style={cardStyle} aria-label="Export for Unreal Engine and Twinmotion">
             <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>7 · Export for Unreal Engine / Twinmotion</h2>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
-              Download this twin as a JSON manifest — room dimensions, wall / floor / ceiling materials and colours,
+              Download this twin as a JSON manifest: room dimensions, wall / floor / ceiling materials and colours,
               door and window positions, and every artwork placement with its real dimensions, frame and hanging
-              height — so the room can be rebuilt 1:1 in Twinmotion or Unreal Engine.
+              height, so the room can be rebuilt 1:1 in Twinmotion or Unreal Engine.
             </p>
             <p style={{ fontSize: 12, lineHeight: 1.6, background: "#fdf3e3", border: "1px solid #e8d5ae", borderRadius: 6, padding: 10 }}>
-              <strong>An export bridge, not a live link.</strong> This downloads a JSON manifest — it does <em>not</em>{" "}
+              <strong>An export bridge, not a live link.</strong> This downloads a JSON manifest, it does <em>not</em>{" "}
               produce a Datasmith (.udatasmith) or FBX file, and there is no one-click Datasmith import. In Twinmotion
               or Unreal Engine, rebuild the room to these exact dimensions and place each artwork as an image plane at
               the listed wall, offset and hanging height. That needs Twinmotion or Unreal Engine installed, with an Epic
-              Games account. Artwork images are referenced by URL in the manifest, not embedded — supply the image files
+              Games account. Artwork images are referenced by URL in the manifest, not embedded. Supply the image files
               separately.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1429,11 +1429,11 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
           </section>
 
           {/* Unreal Engine — Pixel Streaming: PAID, not part of the free stack */}
-          <section style={cardStyle} aria-label="Unreal Engine Pixel Streaming — paid, not part of the free stack">
-            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>8 · Unreal Engine — Pixel Streaming</h2>
+          <section style={cardStyle} aria-label="Unreal Engine Pixel Streaming: paid, not part of the free stack">
+            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>8 · Unreal Engine: Pixel Streaming</h2>
             <p style={{ fontSize: 12, lineHeight: 1.6, background: "#fbe9e7", border: "1px solid #d98a7a", borderRadius: 6, padding: 10 }}>
-              <strong>PAID — not part of the free stack.</strong> Pixel Streaming is NOT the path Lakisa uses. It
-              requires a paid GPU cloud server running while visitors watch — an ongoing cost, not a free tool. Nothing
+              <strong>PAID, not part of the free stack.</strong> Pixel Streaming is NOT the path Lakisa uses. It
+              requires a paid GPU cloud server running while visitors watch, an ongoing cost, not a free tool. Nothing
               on this page streams Unreal, and no stream URL is wired in. This section exists only as a labelled
               integration point, for completeness.
             </p>
@@ -1441,29 +1441,29 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
               Unreal Engine does <strong>not</strong> run natively in a browser the way Three.js does. Pixel Streaming
               is how Unreal quality reaches a browser anyway: the packaged Unreal application runs on a remote GPU
               server and streams its rendered frames to the visitor&apos;s browser as video over WebRTC, with input
-              travelling back. The visitor needs only a modern browser — but somebody pays for the GPU server the whole
+              travelling back. The visitor needs only a modern browser, but somebody pays for the GPU server the whole
               time the stream is up.
             </p>
             <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>What Pixel Streaming really requires (paid)</h3>
             <ul style={{ fontSize: 12, lineHeight: 1.8, margin: "0 0 12px", paddingLeft: 18 }}>
               <li>An Epic Games developer account, and the gallery built as an Unreal Engine project with the Pixel Streaming plugin enabled and packaged.</li>
-              <li>A GPU cloud server to run it on — for example an AWS, Azure or GCP GPU instance (Epic publishes an official Pixel Streaming solution in the Azure Marketplace). The server runs while visitors are watching, so this is an <strong>ongoing cost</strong>, priced by the cloud provider — no price is stated here because it depends on the instance, region and hours used.</li>
-              <li>A signalling server (the plugin ships a Node.js one) plus STUN / TURN servers so the stream can reach visitors behind home routers — see Epic&apos;s Pixel Streaming documentation at dev.epicgames.com.</li>
-              <li>At scale, a matchmaker / load balancer so several visitors each get their own running instance — one stream is one running Unreal app.</li>
+              <li>A GPU cloud server to run it on, for example an AWS, Azure or GCP GPU instance (Epic publishes an official Pixel Streaming solution in the Azure Marketplace). The server runs while visitors are watching, so this is an <strong>ongoing cost</strong>, priced by the cloud provider, no price is stated here because it depends on the instance, region and hours used.</li>
+              <li>A signalling server (the plugin ships a Node.js one) plus STUN / TURN servers so the stream can reach visitors behind home routers, see Epic&apos;s Pixel Streaming documentation at dev.epicgames.com.</li>
+              <li>At scale, a matchmaker / load balancer so several visitors each get their own running instance: one stream is one running Unreal app.</li>
             </ul>
-            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>The primary path — free, offline, no streaming</h3>
+            <h3 style={{ fontSize: 13, margin: "0 0 6px" }}>The primary path: free, offline, no streaming</h3>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
               This is the path Lakisa actually uses, and it needs no server at all: scan real spaces and objects with
               RealityCapture / RealityScan (free under $1M annual revenue), dress the scene with Fab&apos;s free assets,
               build the exact room from the JSON manifest above (section 7), and produce photorealistic renders and
-              models in Twinmotion / Unreal Engine <strong>offline</strong> — then feed those renders and .glb models
+              models in Twinmotion / Unreal Engine <strong>offline</strong>, then feed those renders and .glb models
               back into this web platform, which already shows them in Three.js. Streaming is only ever a later step,
               if the gallery must be interactive in the browser at Unreal quality <em>and</em> the GPU server cost is
               budgeted. If that day comes: build in Unreal from the manifest, enable the Pixel Streaming plugin,
               package, deploy to a GPU server with the signalling server, and only then wire the stream URL in here.
             </p>
             <p style={{ fontSize: 11, color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
-              Reference: Epic&apos;s official Pixel Streaming deployment in Azure —{" "}
+              Reference: Epic&apos;s official Pixel Streaming deployment in Azure,{" "}
               <a href="https://learn.microsoft.com/de-de/gaming/azure/reference-architectures/unreal-pixel-streaming-in-azure" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
                 Unreal Pixel Streaming in Azure ↗
               </a>{" "}
@@ -1478,7 +1478,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
           <section style={cardStyle} aria-label="VR exhibition">
             <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>VR exhibition</h2>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 14px", lineHeight: 1.6 }}>
-              Walk the measured room in a headset. The check below runs on this device and browser — on most desktops
+              Walk the measured room in a headset. The check below runs on this device and browser, on most desktops
               and phones WebXR is unavailable, and the walkthrough underneath is the honest fallback: the same room,
               the same works, on a flat screen. It is a preview, not VR.
             </p>
@@ -1508,7 +1508,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
             {xr.vr === "unsupported" && (
               <p style={{ fontSize: 12, background: "#fdf3e3", border: "1px solid #e8d5ae", borderRadius: 6, padding: 10, lineHeight: 1.6 }}>
                 <strong>VR not supported on this device/browser.</strong> This browser reports no WebXR
-                immersive-vr session — the usual case on desktop and on phones without a headset. Use the walkthrough
+                immersive-vr session, the usual case on desktop and on phones without a headset. Use the walkthrough
                 below as the preview instead: drag to look around, scroll to move closer, click a work to read its panel.
                 To try real VR, open this page in a WebXR browser on a headset (e.g. Meta Quest browser) or a phone with
                 a Cardboard-style viewer and a WebXR-capable browser.
@@ -1538,7 +1538,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
                   </Canvas>
                 </div>
                 <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0" }}>
-                  Walkthrough preview — drag to look around. In a live VR session: thumbstick walks, the primary
+                  Walkthrough preview: drag to look around. In a live VR session: thumbstick walks, the primary
                   button teleports you 2 m forward, and selecting a work opens its panel.
                 </p>
               </>
@@ -1576,7 +1576,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
                   STOP {tourIndex + 1} OF {vrWorks.length}
                 </p>
                 <h3 style={{ fontFamily: "Fraunces, serif", fontSize: 17, margin: "0 0 6px" }}>
-                  {vrTourWork.title} <span style={{ fontSize: 12, color: "var(--muted)" }}>— {vrTourWork.artist} {vrTourWork.year ? `(${vrTourWork.year})` : ""}</span>
+                  {vrTourWork.title} <span style={{ fontSize: 12, color: "var(--muted)" }}>, {vrTourWork.artist} {vrTourWork.year ? `(${vrTourWork.year})` : ""}</span>
                 </h3>
                 <p style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
                   {vrTourWork.description ||
@@ -1635,7 +1635,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
                 <select style={inputStyle} value={arArtworkId} onChange={(e) => setArArtworkId(e.target.value)}>
                   {artworks.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.title} — {a.dimensions || "dimensions unknown"}
+                      {a.title}, {a.dimensions || "dimensions unknown"}
                     </option>
                   ))}
                 </select>
@@ -1672,7 +1672,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
             {xr.ar === "unsupported" && (
               <p style={{ fontSize: 12, background: "#fdf3e3", border: "1px solid #e8d5ae", borderRadius: 6, padding: 10, lineHeight: 1.6 }}>
                 <strong>AR not supported on this device/browser.</strong> This browser reports no WebXR immersive-ar
-                session with hit-test — the usual case on desktop. The photo preview below is the fallback and works
+                session with hit-test, the usual case on desktop. The photo preview below is the fallback and works
                 everywhere: upload a photo of your wall, drag the framed work into place, resize it, and export the
                 composite as a PNG.
               </p>
@@ -1699,7 +1699,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
 
           {/* Photo fallback — genuinely works everywhere */}
           <section style={cardStyle} aria-label="Photo wall preview">
-            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>Photo preview — no AR needed</h2>
+            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 18, margin: "0 0 4px" }}>Photo preview: no AR needed</h2>
             <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.6 }}>
               Upload a photo of your wall. Drag the framed artwork to move it, drag its bottom-right corner to resize it,
               then export the composite as a PNG. The artwork is drawn at the same proportions as its real dimensions.
@@ -1747,7 +1747,7 @@ function VrCameraTour({ target, active, dollyRef }: { target: [number, number, n
                     }}
                     onPointerDown={(e) => onOverlayPointerDown(e, "move")}
                     role="img"
-                    aria-label={`Preview of ${arArtwork?.title ?? "artwork"} on your wall — drag to move`}
+                    aria-label={`Preview of ${arArtwork?.title ?? "artwork"} on your wall: drag to move`}
                   >
                     <span
                       style={{

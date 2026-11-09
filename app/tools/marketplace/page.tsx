@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Marketplace — Lakisa Tools",
+  title: "Marketplace: Lakisa Tools",
   description: "List your works for sale, manage prices and status, and answer purchase inquiries.",
 };
 

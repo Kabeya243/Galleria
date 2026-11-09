@@ -146,7 +146,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
         })),
       );
     } catch {
-      setPlansError("Could not load your saved plans — check your connection and refresh the page.");
+      setPlansError("Could not load your saved plans. Check your connection and refresh the page.");
     } finally {
       setPlansLoading(false);
     }
@@ -210,7 +210,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
       }
       await loadPlans();
     } catch {
-      setError("Could not save the plan — check your connection and try again.");
+      setError("Could not save the plan. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -227,7 +227,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
       setStatus("Plan deleted.");
       await loadPlans();
     } catch {
-      setError("Could not delete the plan — check your connection and try again.");
+      setError("Could not delete the plan. Check your connection and try again.");
     }
   };
 
@@ -311,7 +311,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
 
   const dateRange =
     plan.startDate || plan.endDate
-      ? [plan.startDate, plan.endDate].filter(Boolean).join(" — ")
+      ? [plan.startDate, plan.endDate].filter(Boolean).join(" to ")
       : "Dates to confirm";
 
   return (
@@ -330,7 +330,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
           <p className="ep-error" role="alert">{plansError}</p>
         ) : plans.length === 0 ? (
           <p className="ep-muted">
-            No plans saved yet. Start below — give the exhibition a title and a concept, pick the works, and save it.
+            No plans saved yet. Start below: give the exhibition a title and a concept, pick the works, and save it.
           </p>
         ) : (
           <ul className="ep-plan-list">
@@ -404,7 +404,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
             <textarea
               rows={3}
               value={plan.concept}
-              placeholder="The idea in a few sentences — what the show is about and why now."
+              placeholder="The idea in a few sentences: what the show is about and why now."
               onChange={(e) => update({ concept: e.target.value })}
             />
           </label>
@@ -498,7 +498,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
       <section className="ep-card ep-screen" aria-label="Sequence and wall labels">
         <h2>Sequence &amp; wall labels</h2>
         {plan.items.length === 0 ? (
-          <p className="ep-muted">No artworks selected yet — pick works above and they will appear here in order.</p>
+          <p className="ep-muted">No artworks selected yet. Pick works above and they will appear here in order.</p>
         ) : (
           <ol className="ep-sequence">
             {plan.items.map((item, i) => {
@@ -614,7 +614,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
             {plan.team.map((m) => (
               <li key={m.id}>
                 <strong>{m.name || "Unnamed"}</strong>
-                <span>{[m.role, m.task].filter(Boolean).join(" — ")}</span>
+                <span>{[m.role, m.task].filter(Boolean).join(", ")}</span>
                 <button type="button" className="ep-remove" onClick={() => removeMember(m.id)} aria-label={`Remove ${m.name || "team member"}`}>
                   ×
                 </button>
@@ -679,7 +679,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
           {dirty && <span className="ep-muted">Unsaved changes.</span>}
         </div>
         <p className="ep-muted ep-hint">
-          “Export PDF” opens your browser’s print dialog — choose <strong>Save as PDF</strong>, paper size A4,
+          “Export PDF” opens your browser’s print dialog, choose <strong>Save as PDF</strong>, paper size A4,
           portrait, and turn off headers and footers for a clean one-document plan.
         </p>
       </section>
@@ -715,8 +715,8 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
                 <li key={item.artworkId}>
                   <strong>
                     {i + 1}. {a.title}
-                  </strong>{" "}
-                  — {item.room}
+                  </strong>
+                 , {item.room}
                   <br />
                   <span className="ep-print-label">{item.label}</span>
                 </li>
@@ -744,7 +744,7 @@ export default function ExhibitionPlanner({ artworks }: { artworks: PlannerArtwo
             {plan.team.map((m) => (
               <li key={m.id}>
                 <strong>{m.name || "Unnamed"}</strong>
-                {m.role ? ` — ${m.role}` : ""}
+                {m.role ? `, ${m.role}` : ""}
                 {m.task ? `: ${m.task}` : ""}
               </li>
             ))}

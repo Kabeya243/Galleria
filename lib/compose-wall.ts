@@ -293,7 +293,7 @@ export function composeWall(items: ComposeItem[], face: HangWallFace, obstacles:
       [],
       items,
       "row",
-      `None of the selected artworks fit on the ${wallLabel} — try a longer wall.`,
+      `None of the selected artworks fit on the ${wallLabel}. Try a longer wall.`,
     );
   }
 
@@ -333,8 +333,8 @@ export function composeWall(items: ComposeItem[], face: HangWallFace, obstacles:
       const shifted = Math.abs(start - centredStart) > 0.001;
       const message =
         tooBig.length === 0
-          ? `Composed ${placed} ${plural(placed, "artwork")} on the ${wallLabel} — one row at eye level (1.50 m), 12 cm apart${shifted ? ", shifted along the wall to clear a wall or furniture in front of it" : ""}.`
-          : `Composed ${placed} ${plural(placed, "artwork")} on the ${wallLabel} in one row. ${tooBig.length} ${plural(tooBig.length, "artwork")} did not fit (too large for this wall) — try a longer wall.`;
+          ? `Composed ${placed} ${plural(placed, "artwork")} on the ${wallLabel}, one row at eye level (1.50 m), 12 cm apart${shifted ? ", shifted along the wall to clear a wall or furniture in front of it" : ""}.`
+          : `Composed ${placed} ${plural(placed, "artwork")} on the ${wallLabel} in one row. ${tooBig.length} ${plural(tooBig.length, "artwork")} did not fit (too large for this wall). Try a longer wall.`;
       return result(placements, tooBig, "row", message);
     }
     // No shift clears the row: fall through to the packed layout,
@@ -376,7 +376,7 @@ export function composeWall(items: ComposeItem[], face: HangWallFace, obstacles:
       [],
       items,
       "packed",
-      `None of the selected artworks fit on the ${wallLabel} — try a longer wall.`,
+      `None of the selected artworks fit on the ${wallLabel}. Try a longer wall.`,
     );
   }
   // Map the packed rectangles back onto the wall. The packer fills
@@ -439,10 +439,10 @@ export function composeWall(items: ComposeItem[], face: HangWallFace, obstacles:
   const placedCount = placements.length;
   const message =
     finalUnplaced.length === 0
-      ? `Composed ${placedCount} ${plural(placedCount, "artwork")} on the ${wallLabel} in ${rows} ${plural(rows, "row")} — too many for a single row at eye level. Drag any work to adjust.`
+      ? `Composed ${placedCount} ${plural(placedCount, "artwork")} on the ${wallLabel} in ${rows} ${plural(rows, "row")}, too many for a single row at eye level. Drag any work to adjust.`
       : blockedItems.length > 0
-        ? `Placed ${placedCount} of ${items.length} ${plural(items.length, "artwork")} on the ${wallLabel}. ${blockedItems.length} ${plural(blockedItems.length, "artwork")} could not be placed — part of this wall is blocked where it meets another wall or furniture.`
-        : `Placed ${placedCount} of ${items.length} ${plural(items.length, "artwork")} on the ${wallLabel}. ${finalUnplaced.length} did not fit — try a longer wall.`;
+        ? `Placed ${placedCount} of ${items.length} ${plural(items.length, "artwork")} on the ${wallLabel}. ${blockedItems.length} ${plural(blockedItems.length, "artwork")} could not be placed: part of this wall is blocked where it meets another wall or furniture.`
+        : `Placed ${placedCount} of ${items.length} ${plural(items.length, "artwork")} on the ${wallLabel}. ${finalUnplaced.length} did not fit. Try a longer wall.`;
   return result(placements, finalUnplaced, "packed", message);
 }
 

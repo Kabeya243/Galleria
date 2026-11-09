@@ -450,7 +450,7 @@ export default function ArWallView({ artwork }: { artwork: ArWallArtwork }) {
     setStatus("pointAtWall");
   }
 
-  const realSizeLabel = `${artwork.dimensions} — ${t("ar", "realSizeNote")}`;
+  const realSizeLabel = `${artwork.dimensions}, ${t("ar", "realSizeNote")}`;
 
   return (
     <div className="artwork-detail-ar">

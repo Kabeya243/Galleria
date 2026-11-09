@@ -17,9 +17,9 @@ function kindLabel(kind: string): string {
 export async function generateMetadata({ params }: RouteProps): Promise<Metadata> {
   const { id } = await params;
   const listing = await db.listing.findUnique({ where: { id }, select: { title: true, artist: true, description: true } });
-  if (!listing) return { title: "Listing not found — Lakisa" };
+  if (!listing) return { title: "Listing not found: Lakisa" };
   return {
-    title: `${listing.title} — Lakisa Marketplace`,
+    title: `${listing.title}: Lakisa Marketplace`,
     description: listing.description || `${listing.title} by ${listing.artist}, for sale on Lakisa.`,
   };
 }
@@ -44,7 +44,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
     <main className="galleries-page">
       <header className="galleries-header">
         <Link className="brand-lockup" href="/">
-          <BrandLogo variant="horizontal" height={36} />
+          <BrandLogo variant="horizontal" height={52} />
         </Link>
         <nav className="galleries-nav">
           <Link href="/marketplace">Marketplace</Link>
@@ -111,7 +111,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
                 <div>
                   <dt>Edition</dt>
                   <dd>
-                    {listing.editionNumber ?? "—"} of {listing.editionSize}
+                    {listing.editionNumber ?? "N/A"} of {listing.editionSize}
                   </dd>
                 </div>
               )}
@@ -157,7 +157,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
           </div>
 
           <aside className="mp-checkout-box">
-            <h2>Checkout — Stripe integration point (not connected)</h2>
+            <h2>Checkout: Stripe integration point (not connected)</h2>
             <p>
               There is no payment provider connected to Lakisa yet, so this listing has no checkout
               button and no money moves on this page. The inquiry above is the complete working
@@ -172,7 +172,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
               <li>A Checkout Session created server-side for this listing, with the listing id as metadata.</li>
             </ul>
             <p className="mp-checkout-note">
-              Until then, never send payment details through the inquiry form — agree payment with
+              Until then, never send payment details through the inquiry form, agree payment with
               the seller by email first.
             </p>
             <Link href="/marketplace" className="galleries-open-button">

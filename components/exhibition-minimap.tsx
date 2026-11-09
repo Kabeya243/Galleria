@@ -151,7 +151,7 @@ export default function ExhibitionMinimap({
                           type="button"
                           className={artwork.id === selectedArtworkId ? "active" : ""}
                           onClick={() => onTeleport(artwork)}
-                          aria-label={`${t("minimap", "goToArtwork")} — ${artwork.title}`}
+                          aria-label={`${t("minimap", "goToArtwork")}, ${artwork.title}`}
                         >
                           <i aria-hidden="true" />
                           {artwork.title}

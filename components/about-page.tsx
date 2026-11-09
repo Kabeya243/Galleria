@@ -31,7 +31,7 @@ export default function AboutPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={34} />
+          <BrandLogo variant="horizontal" theme="dark" height={52} />
         </Link>
         <Link href="/" className={styles.backLink}>
           <ArrowLeft size={15} /> {t("about", "backHome")}

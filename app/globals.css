@@ -100,9 +100,9 @@ button { color: inherit; }
    the light page shows Blanc. */
 .brand-logo { display: inline-flex; align-items: center; }
 .brand-logo img { display: block; height: 100%; width: auto; }
-.brand-logo-horizontal { height: 40px; }
-.brand-logo-icon { height: 30px; }
-.brand-logo-principal { height: 120px; }
+.brand-logo-horizontal { height: 60px; }
+.brand-logo-icon { height: 44px; }
+.brand-logo-principal { height: 160px; }
 .brand-logo-auto:not(.brand-logo-admin) .brand-logo-light { display: none; }
 [data-theme="light"] .brand-logo-auto:not(.brand-logo-admin) .brand-logo-dark { display: none; }
 [data-theme="light"] .brand-logo-auto:not(.brand-logo-admin) .brand-logo-light { display: block; }

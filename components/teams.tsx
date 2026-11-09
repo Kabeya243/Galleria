@@ -276,7 +276,7 @@ export default function TeamsTool({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(exhibitionId ? { exhibitionId } : {}),
-          body: text || (kind === "approve" ? "Approved." : kind === "changes" ? "Changes requested — see the comment." : "Please review this exhibition."),
+          body: text || (kind === "approve" ? "Approved." : kind === "changes" ? "Changes requested. See the comment." : "Please review this exhibition."),
           kind,
         }),
       });
@@ -366,7 +366,7 @@ export default function TeamsTool({
         {teams.length === 0 ? (
           <div className="tm-empty">
             <strong>No teams yet.</strong>
-            <p>Create one to share an exhibition with a curator, a collaborator or a gallery — they need a Lakisa account to be invited.</p>
+            <p>Create one to share an exhibition with a curator, a collaborator or a gallery. They need a Lakisa account to be invited.</p>
           </div>
         ) : (
           <ul className="tm-team-list">
@@ -420,10 +420,10 @@ export default function TeamsTool({
             </ul>
             {isOwner ? (
               <form onSubmit={inviteMember} className="tm-inline-form">
-                <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="Invite by email — they need a Lakisa account" aria-label="Invite by email" />
+                <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="Invite by email: they need a Lakisa account" aria-label="Invite by email" />
                 <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} aria-label="Role for the invited member">
-                  <option value="editor">Editor — can share and edit</option>
-                  <option value="viewer">Viewer — read-only</option>
+                  <option value="editor">Editor: can share and edit</option>
+                  <option value="viewer">Viewer: read-only</option>
                 </select>
                 <button type="submit" className="primary-button" disabled={busy || !inviteEmail.trim()}>
                   Invite
@@ -439,7 +439,7 @@ export default function TeamsTool({
             {detail.shares.length === 0 ? (
               <div className="tm-empty">
                 <strong>Nothing shared yet.</strong>
-                <p>Share one of your exhibitions and the team can comment on it — with edit permission, editors can also open it in the editor and save changes.</p>
+                <p>Share one of your exhibitions and the team can comment on it. With edit permission, editors can also open it in the editor and save changes.</p>
               </div>
             ) : (
               <div className="tm-shares">
@@ -565,7 +565,7 @@ export default function TeamsTool({
             {canEdit && unsharedExhibitions.length > 0 && (
               <form onSubmit={shareExhibition} className="tm-inline-form">
                 <select value={shareExhibitionId} onChange={(e) => setShareExhibitionId(e.target.value)} aria-label="Exhibition to share">
-                  <option value="">— Share one of your exhibitions —</option>
+                  <option value="">Share one of your exhibitions</option>
                   {unsharedExhibitions.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.title} ({e.status})
@@ -581,7 +581,7 @@ export default function TeamsTool({
                 </button>
               </form>
             )}
-            {!canEdit && <p className="tm-hint">Viewers cannot share exhibitions — ask an editor or the owner.</p>}
+            {!canEdit && <p className="tm-hint">Viewers cannot share exhibitions. Ask an editor or the owner.</p>}
           </section>
 
           <section className="tm-section">
@@ -630,7 +630,7 @@ export default function TeamsTool({
           <section className="tm-section">
             <h3>Activity</h3>
             {detail.activity.length === 0 ? (
-              <p className="tm-hint">Nothing logged yet — invites, shares, reviews and comments appear here.</p>
+              <p className="tm-hint">Nothing logged yet, invites, shares, reviews and comments appear here.</p>
             ) : (
               <ul className="tm-activity">
                 {detail.activity.map((entry) => (

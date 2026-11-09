@@ -107,7 +107,7 @@ export default function ContactsTool() {
       {contacts.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No contacts yet.</strong>
-          <p>Add the people around your work — collectors, curators, galleries, advisors.</p>
+          <p>Add the people around your work: collectors, curators, galleries, advisors.</p>
         </div>
       ) : (
         <div className={styles.tableScroll}>
@@ -126,8 +126,8 @@ export default function ContactsTool() {
               <tr key={contact.id}>
                 <td>{contact.name}</td>
                 <td>{contact.role}</td>
-                <td>{contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : "—"}</td>
-                <td>{contact.notes || "—"}</td>
+                <td>{contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : "N/A"}</td>
+                <td>{contact.notes || "N/A"}</td>
                 <td>
                   <button
                     className={styles.iconButton}
@@ -143,7 +143,7 @@ export default function ContactsTool() {
           </table>
         </div>
       )}
-      <p className={styles.resultNote}>Saved in this browser only — they do not sync to your account yet.</p>
+      <p className={styles.resultNote}>Saved in this browser only. They do not sync to your account yet.</p>
     </div>
   );
 }

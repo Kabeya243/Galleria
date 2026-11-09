@@ -268,7 +268,7 @@ export const DEFAULT_FRAME_CONFIG: FrameConfig = {
 export const FRAME_PRESETS: { name: string; description: string; config: FrameConfig }[] = [
   {
     name: "Gallery standard",
-    description: "Thin matte black, no mat — the white-cube default.",
+    description: "Thin matte black, no mat, the white-cube default.",
     config: { ...DEFAULT_FRAME_CONFIG, base: "black", width: 0.05, depth: 0.1, color: "#141414", material: "plain", finish: "matte", grain: 0 },
   },
   {

@@ -69,7 +69,7 @@ export default function SettingsPage({
         month: "long",
         year: "numeric",
       })
-    : "—";
+    : "N/A";
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -8,9 +8,9 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Exhibition Planner — Lakisa Tools",
+  title: "Exhibition Planner: Lakisa Tools",
   description:
-    "Plan an exhibition end to end — concept and curatorial statement, dates, artwork selection, room assignment and sequence, wall labels, installation checklist, team assignments and a printable plan.",
+    "Plan an exhibition end to end, concept and curatorial statement, dates, artwork selection, room assignment and sequence, wall labels, installation checklist, team assignments and a printable plan.",
 };
 
 export default async function ExhibitionPlannerRoute() {
@@ -48,7 +48,7 @@ export default async function ExhibitionPlannerRoute() {
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Open an exhibition in the editor and add your first work — it will show up here as soon as it exists.</p>
+          <p>Open an exhibition in the editor and add your first work, it will show up here as soon as it exists.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

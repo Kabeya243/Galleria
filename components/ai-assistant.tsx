@@ -112,7 +112,7 @@ export default function AiAssistant({
     {
       id: uid(),
       role: "assistant",
-      text: `Hello — I can answer questions about your actual work here: your ${artworks.length} artwork${artworks.length === 1 ? "" : "s"}, ${exhibitions.length} exhibition${exhibitions.length === 1 ? "" : "s"} and your rooms and frames. Try one of the suggestions below, or ask in your own words. If I cannot answer from your data, I will say so rather than guess.`,
+      text: `Hello, I can answer questions about your actual work here: your ${artworks.length} artwork${artworks.length === 1 ? "" : "s"}, ${exhibitions.length} exhibition${exhibitions.length === 1 ? "" : "s"} and your rooms and frames. Try one of the suggestions below, or ask in your own words. If I cannot answer from your data, I will say so rather than guess.`,
       source: `Based on your ${artworks.length} artworks and ${exhibitions.length} exhibitions.`,
     },
   ]);
@@ -166,7 +166,7 @@ export default function AiAssistant({
           };
         }
         return {
-          text: `Before publishing, ${issues.length} thing${issues.length === 1 ? " needs" : "s need"} attention:\n${issues.map((i) => `• ${i.label} — ${i.detail}`).join("\n")}`,
+          text: `Before publishing, ${issues.length} thing${issues.length === 1 ? " needs" : "s need"} attention:\n${issues.map((i) => `• ${i.label}: ${i.detail}`).join("\n")}`,
           source: sourceLine,
         };
       }
@@ -195,7 +195,7 @@ export default function AiAssistant({
         });
         const unknown = artworks.filter((a) => !parseDimensions(a.dimensions));
         return {
-          text: `${template.label} is ${template.width} × ${template.depth} m with ${template.height} m ceilings.\n\n${fitting.length} of your works fit with breathing room (widest work + 2 m):\n${fitting.map((a) => `• ${a.title} — ${a.dimensions}`).join("\n") || "• none"}${
+          text: `${template.label} is ${template.width} × ${template.depth} m with ${template.height} m ceilings.\n\n${fitting.length} of your works fit with breathing room (widest work + 2 m):\n${fitting.map((a) => `• ${a.title}, ${a.dimensions}`).join("\n") || "• none"}${
             unknown.length > 0
               ? `\n\n${unknown.length} work${unknown.length === 1 ? " has" : "s have"} no dimensions recorded, so I cannot check ${unknown.length === 1 ? "it" : "them"}: ${unknown.map((a) => a.title).join(", ")}.`
               : ""
@@ -214,7 +214,7 @@ export default function AiAssistant({
           };
         }
         return {
-          text: `${large.length} large work${large.length === 1 ? "" : "s"}:\n${large.map((a) => `• ${a.title} — ${a.dimensions ?? "no dimensions"} (${sizeClass(a.dimensions)})`).join("\n")}`,
+          text: `${large.length} large work${large.length === 1 ? "" : "s"}:\n${large.map((a) => `• ${a.title}, ${a.dimensions ?? "no dimensions"} (${sizeClass(a.dimensions)})`).join("\n")}`,
           source: sourceLine,
         };
       }
@@ -223,10 +223,10 @@ export default function AiAssistant({
       if (q.includes("room")) {
         const allRooms = exhibitions.flatMap((e) => e.rooms.map((r) => ({ ...r, exhibitionTitle: e.title })));
         if (allRooms.length === 0) {
-          return { text: "You have no rooms yet — rooms live inside your exhibitions. Create an exhibition in the editor to add one.", source: sourceLine };
+          return { text: "You have no rooms yet. Rooms live inside your exhibitions. Create an exhibition in the editor to add one.", source: sourceLine };
         }
         return {
-          text: `You have ${allRooms.length} room${allRooms.length === 1 ? "" : "s"}:\n${allRooms.map((r) => `• ${r.name} (${r.layout}) — ${r.exhibitionTitle}`).join("\n")}`,
+          text: `You have ${allRooms.length} room${allRooms.length === 1 ? "" : "s"}:\n${allRooms.map((r) => `• ${r.name} (${r.layout}), ${r.exhibitionTitle}`).join("\n")}`,
           source: sourceLine,
         };
       }
@@ -271,7 +271,7 @@ export default function AiAssistant({
         }
         if (!target) {
           return {
-            text: `Which work? I can suggest a frame for a named work — for example "suggest a frame for ${artworks[0]?.title ?? "…"}" — or for "my darkest work".`,
+            text: `Which work? I can suggest a frame for a named work (for example "suggest a frame for ${artworks[0]?.title ?? "…"}") or for "my darkest work".`,
             source: sourceLine,
           };
         }
@@ -280,7 +280,7 @@ export default function AiAssistant({
           return { text: `I could not find a frame to suggest for “${target.title}”.`, source: sourceLine };
         }
         return {
-          text: `For “${target.title}” (${target.medium || "medium not recorded"}${target.dimensions ? `, ${target.dimensions}` : ""}, dominant colour ${colourName(target.color ?? "#b8a184")}):\n\n${suggestion.label} — ${suggestion.reason}\n\nIts current frame is ${target.frame ?? "wood"}. Change it in Frame Studio.`,
+          text: `For “${target.title}” (${target.medium || "medium not recorded"}${target.dimensions ? `, ${target.dimensions}` : ""}, dominant colour ${colourName(target.color ?? "#b8a184")}):\n\n${suggestion.label}: ${suggestion.reason}\n\nIts current frame is ${target.frame ?? "wood"}. Change it in Frame Studio.`,
           source: `Medium, dimensions and recorded colour of “${target.title}”; frame list from Frame Studio.`,
         };
       }
@@ -305,7 +305,7 @@ export default function AiAssistant({
         if (exhibition) {
           const works = artworks.filter((a) => a.exhibitionId === exhibition.id);
           return {
-            text: `“${exhibition.title}” has ${works.length} work${works.length === 1 ? "" : "s"}:\n${works.map((a) => `• ${a.title}${a.medium ? ` — ${a.medium}` : ""}`).join("\n") || "• none yet"}`,
+            text: `“${exhibition.title}” has ${works.length} work${works.length === 1 ? "" : "s"}:\n${works.map((a) => `• ${a.title}${a.medium ? `, ${a.medium}` : ""}`).join("\n") || "• none yet"}`,
             source: sourceLine,
           };
         }
@@ -341,7 +341,7 @@ export default function AiAssistant({
         : {
             id: uid(),
             role: "assistant",
-            text: `I cannot answer that from your data and rules. I can only work with what is recorded here — your artworks, exhibitions, rooms, frames and saved work — and the rules built on them.\n\nThings I can answer: which works are unframed, what is missing before publishing, what fits a room, which works are large or lack dimensions, what rooms you have, and frame suggestions for a named work.\n\nIf a model is connected, you can also ask it below — its reply will be labelled as a model answer.`,
+            text: `I cannot answer that from your data and rules. I can only work with what is recorded here (your artworks, exhibitions, rooms, frames and saved work) and the rules built on them.\n\nThings I can answer: which works are unframed, what is missing before publishing, what fits a room, which works are large or lack dimensions, what rooms you have, and frame suggestions for a named work.\n\nIf a model is connected, you can also ask it below. Its reply will be labelled as a model answer.`,
             source: sourceLine,
           };
       setMessages((current) => [...current, userMessage, assistantMessage]);
@@ -378,7 +378,7 @@ export default function AiAssistant({
           id: uid(),
           role: "assistant",
           text: json.text ?? "",
-          source: `Model answer — ${json.provider ?? ""} (${json.model ?? ""}). Check it against your data; it was given only the facts listed above.`,
+          source: `Model answer: ${json.provider ?? ""} (${json.model ?? ""}). Check it against your data; it was given only the facts listed above.`,
           model: json.model,
         },
       ]);
@@ -399,7 +399,7 @@ export default function AiAssistant({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kind: "ai-analysis",
-          title: `Assistant session — ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
+          title: `Assistant session, ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
           data: {
             session: true,
             messages: messages.map((m) => ({ role: m.role, text: m.text, source: m.source ?? null })),
@@ -407,9 +407,9 @@ export default function AiAssistant({
         }),
       });
       if (!res.ok) throw new Error("save");
-      setSaveStatus("Session saved — find it under your saved analyses in Artwork Intelligence.");
+      setSaveStatus("Session saved. Find it under your saved analyses in Artwork Intelligence.");
     } catch {
-      setSaveStatus("Could not save — check your connection and try again.");
+      setSaveStatus("Could not save. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -425,7 +425,7 @@ export default function AiAssistant({
       <section style={S.section}>
         <h2 style={S.sectionTitle}>Ask about your project</h2>
         <p style={S.sectionNote}>
-          I answer from your real data — exhibitions, artworks, rooms, frames and saved work — and
+          I answer from your real data (exhibitions, artworks, rooms, frames and saved work) and
           I show my source under every answer. I never invent an answer I cannot ground.
         </p>
 
@@ -507,7 +507,7 @@ export default function AiAssistant({
                 {
                   id: uid(),
                   role: "assistant",
-                  text: `Hello — I can answer questions about your actual work here: your ${artworks.length} artworks, ${exhibitions.length} exhibitions and your rooms and frames.`,
+                  text: `Hello, I can answer questions about your actual work here: your ${artworks.length} artworks, ${exhibitions.length} exhibitions and your rooms and frames.`,
                   source: sourceLine,
                 },
               ])
@@ -522,7 +522,7 @@ export default function AiAssistant({
       <section style={S.section}>
         <h2 style={S.sectionTitle}>What I know about your project</h2>
         <p style={S.sectionNote}>
-          The data I can actually see — nothing more. If something is missing here, it is missing
+          The data I can actually see. Nothing more. If something is missing here, it is missing
           from the record, and I will tell you that too.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>

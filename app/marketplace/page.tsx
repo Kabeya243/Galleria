@@ -7,7 +7,7 @@ import BrandLogo from "@/components/brand-logo";
 import ListingPrice from "@/components/listing-price";
 
 export const metadata: Metadata = {
-  title: "Marketplace — Lakisa",
+  title: "Marketplace: Lakisa",
   description: "Originals, editions, prints and digital works for sale by artists on Lakisa.",
 };
 
@@ -73,7 +73,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
     <main className="galleries-page">
       <header className="galleries-header">
         <Link className="brand-lockup" href="/">
-          <BrandLogo variant="horizontal" height={36} />
+          <BrandLogo variant="horizontal" height={52} />
         </Link>
         <nav className="galleries-nav">
           <Link href="/marketplace">Marketplace</Link>
@@ -97,7 +97,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
         <h1>Works for sale.</h1>
         <p>
           Originals, editions, prints and digital works, listed by the artists themselves. To buy
-          one, send an inquiry — the seller replies directly, and price, shipping and payment are
+          one, send an inquiry, the seller replies directly, and price, shipping and payment are
           agreed between you.
         </p>
       </div>
@@ -166,7 +166,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
                 </p>
                 <p>
                   {kindLabel(listing.kind)}
-                  {listing.editionSize ? ` · ${listing.editionNumber ?? "—"}/${listing.editionSize}` : ""}
+                  {listing.editionSize ? ` · ${listing.editionNumber ?? "N/A"}/${listing.editionSize}` : ""}
                   {listing.medium ? ` · ${listing.medium}` : ""}
                 </p>
                 <p className="mp-browse-price">

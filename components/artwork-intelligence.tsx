@@ -266,10 +266,10 @@ export default function ArtworkIntelligence({
         if (cancelled) return;
         setStatus("error");
         if (err instanceof Error && err.message === "load") {
-          setError("This image could not be loaded. It may have been moved or deleted — try another artwork or upload a file.");
+          setError("This image could not be loaded. It may have been moved or deleted, try another artwork or upload a file.");
         } else {
           setError(
-            "This image cannot be read for analysis — its host does not allow cross-origin pixel access, so the canvas is blocked. Download the image and upload it directly instead.",
+            "This image cannot be read for analysis, its host does not allow cross-origin pixel access, so the canvas is blocked. Download the image and upload it directly instead.",
           );
         }
       });
@@ -408,7 +408,7 @@ export default function ArtworkIntelligence({
 
   const saveAnalysis = useCallback(async () => {
     if (!selectedArtwork && !upload) return;
-    const title = saveName.trim() || `Analysis — ${meta.title || sourceLabel || "untitled"}`;
+    const title = saveName.trim() || `Analysis: ${meta.title || sourceLabel || "untitled"}`;
     setSaving(true);
     setSaveStatus(null);
     try {
@@ -436,7 +436,7 @@ export default function ArtworkIntelligence({
       setSaveName("");
       await loadSaved();
     } catch {
-      setSaveStatus("Could not save — check your connection and try again.");
+      setSaveStatus("Could not save, check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -469,7 +469,7 @@ export default function ArtworkIntelligence({
         setUpload(null);
       }
     }
-    setSaveStatus(`Loaded “${item.title}”. Edit anything — nothing is overwritten until you save again.`);
+    setSaveStatus(`Loaded “${item.title}”. Edit anything, nothing is overwritten until you save again.`);
   }, [artworks]);
 
   const deleteSaved = useCallback(
@@ -509,13 +509,13 @@ export default function ArtworkIntelligence({
         <h2 style={S.sectionTitle}>1 · Choose an artwork</h2>
         <p style={S.sectionNote}>
           Pick one of your artworks, or upload an image from your device. The analysis reads the
-          actual pixels — nothing is uploaded anywhere.
+          actual pixels, nothing is uploaded anywhere.
         </p>
         {artworks.length === 0 ? (
           <div className={styles.emptyBox}>
             <strong>No artworks with images yet.</strong>
             <p>
-              Add a work with an image in the editor and it will show up here — or upload an image
+              Add a work with an image in the editor and it will show up here, or upload an image
               directly below.
             </p>
           </div>
@@ -556,7 +556,7 @@ export default function ArtworkIntelligence({
         <div style={{ ...S.uploadBox, marginTop: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Or upload an image</span>
           <span style={{ fontSize: 12, color: "var(--muted)" }}>
-            JPG, PNG or WebP. The file stays in your browser — it is never sent to the server.
+            JPG, PNG or WebP. The file stays in your browser, it is never sent to the server.
           </span>
           <span style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="button" className="galleries-open-button" onClick={() => fileRef.current?.click()}>
@@ -608,9 +608,9 @@ export default function ArtworkIntelligence({
         <>
           {/* 2 — Metadata --------------------------------------------------- */}
           <section style={S.section}>
-            <h2 style={S.sectionTitle}>2 · Metadata<span style={S.draftTag}>draft — check before use</span></h2>
+            <h2 style={S.sectionTitle}>2 · Metadata<span style={S.draftTag}>draft, check before use</span></h2>
             <p style={S.sectionNote}>
-              Pre-filled from the artwork record. Correct anything — these are your facts, not
+              Pre-filled from the artwork record. Correct anything, these are your facts, not
               facts found by a model. Nothing here is invented: fields the record does not have
               stay blank.
             </p>
@@ -643,7 +643,7 @@ export default function ArtworkIntelligence({
             <section style={S.section}>
               <h2 style={S.sectionTitle}>3 · Dominant colours</h2>
               <p style={S.sectionNote}>
-                The six colours that cover the most of {sourceLabel} — found by median-cut
+                The six colours that cover the most of {sourceLabel}, found by median-cut
                 quantisation of the real pixels. Tap any swatch to copy its hex.
               </p>
               <div style={S.previewRow}>
@@ -680,13 +680,13 @@ export default function ArtworkIntelligence({
 
           {/* 4 — Suggested tags ---------------------------------------------- */}
           <section style={S.section}>
-            <h2 style={S.sectionTitle}>4 · Suggested tags<span style={S.draftTag}>draft — check before use</span></h2>
+            <h2 style={S.sectionTitle}>4 · Suggested tags<span style={S.draftTag}>draft, check before use</span></h2>
             <p style={S.sectionNote}>
-              Suggested from the medium, dimensions, year, title words and the measured colours —
+              Suggested from the medium, dimensions, year, title words and the measured colours,
               never from guessed subject matter. Tick the ones that fit; add your own below.
             </p>
             {tags.length === 0 ? (
-              <p style={S.status}>No tags suggested yet — fill in the medium or title above, or wait for the colour analysis.</p>
+              <p style={S.status}>No tags suggested yet, fill in the medium or title above, or wait for the colour analysis.</p>
             ) : (
               <>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
@@ -707,7 +707,7 @@ export default function ArtworkIntelligence({
                   })}
                 </div>
                 <p style={{ ...S.status, marginTop: 0 }}>
-                  {visibleTags.map((t) => `${t.tag} — ${t.reason}`).slice(0, 3).join(" · ")}
+                  {visibleTags.map((t) => `${t.tag}: ${t.reason}`).slice(0, 3).join(" · ")}
                 </p>
               </>
             )}
@@ -742,9 +742,9 @@ export default function ArtworkIntelligence({
 
           {/* 5 — Description draft ------------------------------------------- */}
           <section style={S.section}>
-            <h2 style={S.sectionTitle}>5 · Description draft<span style={S.draftTag}>draft — check before use</span></h2>
+            <h2 style={S.sectionTitle}>5 · Description draft<span style={S.draftTag}>draft, check before use</span></h2>
             <p style={S.sectionNote}>
-              A template draft built only from this artwork's own data — title, artist, year,
+              A template draft built only from this artwork's own data: title, artist, year,
               medium, dimensions and measured colours. It states facts, never invents them.
             </p>
             <div style={S.controls}>
@@ -774,8 +774,8 @@ export default function ArtworkIntelligence({
             {descriptionSource && (
               <p style={S.status}>
                 {descriptionSource === "record" && "From the artwork record as saved."}
-                {descriptionSource === "template" && "Draft generated from a template — edit it to make it yours."}
-                {descriptionSource === "model" && `Draft written by ${providerStatus.label}${providerStatus.model ? ` (${providerStatus.model})` : ""} — check every fact before use.`}
+                {descriptionSource === "template" && "Draft generated from a template, edit it to make it yours."}
+                {descriptionSource === "model" && `Draft written by ${providerStatus.label}${providerStatus.model ? ` (${providerStatus.model})` : ""}, check every fact before use.`}
                 {descriptionSource === "edited" && "Edited by you."}
               </p>
             )}
@@ -790,10 +790,10 @@ export default function ArtworkIntelligence({
 
           {/* 6 — Accessibility description ------------------------------------ */}
           <section style={S.section}>
-            <h2 style={S.sectionTitle}>6 · Accessibility description<span style={S.draftTag}>draft — check before use</span></h2>
+            <h2 style={S.sectionTitle}>6 · Accessibility description<span style={S.draftTag}>draft, check before use</span></h2>
             <p style={S.sectionNote}>
               A template draft for screen readers and alt text. It covers the facts the record
-              holds, then asks you to add what the work actually shows — a model cannot see it
+              holds, then asks you to add what the work actually shows, a model cannot see it
               either, so that part is always yours.
             </p>
             <div style={S.controls}>
@@ -813,7 +813,7 @@ export default function ArtworkIntelligence({
             />
             {accessibilitySource && (
               <p style={S.status}>
-                {accessibilitySource === "template" && "Draft generated from a template — add what the work shows, then edit."}
+                {accessibilitySource === "template" && "Draft generated from a template, add what the work shows, then edit."}
                 {accessibilitySource === "edited" && "Edited by you."}
               </p>
             )}
@@ -833,7 +833,7 @@ export default function ArtworkIntelligence({
                   style={S.input}
                   value={saveName}
                   onChange={(e) => setSaveName(e.target.value)}
-                  placeholder={`Analysis — ${meta.title || sourceLabel || "untitled"}`}
+                  placeholder={`Analysis: ${meta.title || sourceLabel || "untitled"}`}
                 />
               </label>
               <button type="button" className="galleries-open-button" onClick={() => void saveAnalysis()} disabled={saving}>

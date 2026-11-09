@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Discover — Lakisa",
+  title: "Discover: Lakisa",
   description:
     "Find exhibitions to walk through, gallery rooms to build in, and the public home of the platform.",
 };
@@ -51,7 +51,7 @@ export default async function DiscoverHub() {
       <main className="galleries-page">
         <header className="galleries-header">
           <Link className="brand-lockup" href="/">
-            <BrandLogo variant="horizontal" height={36} />
+            <BrandLogo variant="horizontal" height={52} />
           </Link>
           <nav className="galleries-nav">
             <Link href="/">Workspace</Link>

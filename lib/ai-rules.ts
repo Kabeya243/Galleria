@@ -198,17 +198,17 @@ export function wallColoursFrom(dominantHex: string): { name: string; hex: strin
     {
       name: "Muted complement",
       hex: rgbToHex(muted[0], muted[1], muted[2]),
-      note: "Soft opposite of the dominant colour — the work stands out without fighting the wall.",
+      note: "Soft opposite of the dominant colour, the work stands out without fighting the wall.",
     },
     {
       name: "Deep tone",
       hex: rgbToHex(deep[0], deep[1], deep[2]),
-      note: "A dark room pulled from the painting itself — bright colours glow against it.",
+      note: "A dark room pulled from the painting itself, bright colours glow against it.",
     },
     {
       name: "Light neutral",
       hex: rgbToHex(neutral[0], neutral[1], neutral[2]),
-      note: "A near-white tinted with the painting's own hue — the classic gallery wall, warmed.",
+      note: "A near-white tinted with the painting's own hue, the classic gallery wall, warmed.",
     },
   ];
 }
@@ -293,7 +293,7 @@ export function accessibilityDraft(artwork: AiArtworkLike, dominantHexes: string
       : "";
   return (
     `Artwork titled “${title}”${medium}${size}.${colours} ` +
-    `The image itself is not described here — add one or two sentences about what the work shows ` +
+    `The image itself is not described here. Add one or two sentences about what the work shows ` +
     `(subject, composition, mood) so a listener can picture it.`
   );
 }
@@ -327,7 +327,7 @@ export function arrangementSuggestions(artworks: AiArtworkLike[]): ArrangementSu
   const sequence = sorted.map((x) => x.a.id);
   const sequenceReason =
     artworks.some((a) => parseDimensions(a.dimensions))
-      ? "Largest works first — they anchor each wall, smaller works fill the rhythm between them."
+      ? "Largest works first, they anchor each wall, smaller works fill the rhythm between them."
       : "No dimensions recorded, so the order follows your list. Add dimensions to sort by size.";
 
   // Group by dominant colour hue (artwork.color is the recorded main colour).
@@ -354,8 +354,8 @@ export function arrangementSuggestions(artworks: AiArtworkLike[]): ArrangementSu
       id: `group-${groupIndex}`,
       label:
         members.length > 1
-          ? `${colourName(seedHex)} family — ${members.length} works`
-          : `${seed.title} — stands alone`,
+          ? `${colourName(seedHex)} family: ${members.length} works`
+          : `${seed.title}: stands alone`,
       reason:
         members.length > 1
           ? `These works share a ${colourName(seedHex)} dominant colour (hue within 35°), so they hang as one visual family.`
@@ -414,26 +414,26 @@ export function recommendTemplates(
       let score = 0;
       if (t.width >= widest + 2) {
         score += 3;
-        reasons.push(`Room is ${t.width} m wide — fits your widest work (${widest.toFixed(1)} m) with breathing room.`);
+        reasons.push(`Room is ${t.width} m wide, fits your widest work (${widest.toFixed(1)} m) with breathing room.`);
       } else if (t.width >= widest + 0.5) {
         score += 1;
-        reasons.push(`Room is ${t.width} m wide — fits your widest work, tightly.`);
+        reasons.push(`Room is ${t.width} m wide, fits your widest work, tightly.`);
       } else {
         score -= 3;
-        reasons.push(`Room is only ${t.width} m wide — your widest work (${widest.toFixed(1)} m) would dominate it.`);
+        reasons.push(`Room is only ${t.width} m wide, your widest work (${widest.toFixed(1)} m) would dominate it.`);
       }
       const wallLength = t.width * 2 + t.depth;
       if (wallLength >= neededWall) {
         score += 2;
-        reasons.push(`About ${wallLength.toFixed(0)} m of wall — room for all ${artworks.length} works at a comfortable spacing.`);
+        reasons.push(`About ${wallLength.toFixed(0)} m of wall, room for all ${artworks.length} works at a comfortable spacing.`);
       } else {
-        reasons.push(`About ${wallLength.toFixed(0)} m of wall — tight for ${artworks.length} works; consider two rooms.`);
+        reasons.push(`About ${wallLength.toFixed(0)} m of wall, tight for ${artworks.length} works; consider two rooms.`);
       }
       const wallRgb = hexToRgb(t.wallColor);
       const wallDark = wallRgb ? relativeLuminance(wallRgb) < 0.25 : false;
       if (mostlyDark && wallDark) {
         score += 2;
-        reasons.push("Dark walls suit your mostly dark works — the contrast makes them glow.");
+        reasons.push("Dark walls suit your mostly dark works, the contrast makes them glow.");
       }
       if (!mostlyDark && !wallDark) {
         score += 1;
@@ -466,25 +466,25 @@ export function lightingSuggestions(
   const mostlyDark = artworks.length > 0 && darkCount > artworks.length / 2;
   if (lightType === "spot-warm") {
     out.push({
-      title: "Warm spots — keep them",
+      title: "Warm spots: keep them",
       detail:
         "The room already uses warm spotlights. Warm light flatters charcoal, wood frames and warm palettes; keep spots at roughly 30° to the wall so glare stays off the glass.",
     });
   } else if (lightType === "spot-cool") {
     out.push({
-      title: "Cool spots — check the whites",
+      title: "Cool spots: check the whites",
       detail:
         "Cool spots sharpen blues and whites but can make warm skin tones and wood frames look grey. If the work is warm, switch the room to warm spots.",
     });
   } else if (lightType === "sunlight") {
     out.push({
-      title: "Sunlight — the sun does the work",
+      title: "Sunlight: the sun does the work",
       detail:
         "The room is lit by the sun through seven skylights, plus a soft hemisphere and IBL. The glow is bright and even; move the sun with the slider to rake light across the panels, and keep the per-artwork spots low so the daylight, not the fixtures, carries the room.",
     });
   } else {
     out.push({
-      title: "Soft ambient light — add spots for the anchors",
+      title: "Soft ambient light: add spots for the anchors",
       detail:
         "Ambient light is even and gentle, but large or dark works lose presence without a focused beam. Add one warm spot per anchor work.",
     });
@@ -492,7 +492,7 @@ export function lightingSuggestions(
   if (mostlyDark) {
     out.push({
       title: "Dark works need focused light",
-      detail: `${darkCount} of ${artworks.length} selected works are dark. Light each one individually — a shared wash will flatten them into the wall.`,
+      detail: `${darkCount} of ${artworks.length} selected works are dark. Light each one individually. A shared wash will flatten them into the wall.`,
     });
   }
   const hasGlossy = artworks.some((a) => /oil|acrylic|varnish|gloss/i.test(a.medium ?? ""));
@@ -512,7 +512,7 @@ export function lightingSuggestions(
       : null;
   if (avgLight !== null && avgLight > 0.6) {
     out.push({
-      title: "Bright palette — dim slightly",
+      title: "Bright palette: dim slightly",
       detail:
         "The measured palette is very bright. Slightly lower intensity avoids washing the pale tones out against a white wall.",
     });
@@ -545,7 +545,7 @@ export function conceptDraft(theme: string, artworks: AiArtworkLike[], templateL
   const lines = [
     `${theme}: ${count} work${count === 1 ? "" : "s"}${mediumPhrase}${roomPhrase}.`,
     count > 0
-      ? `The hang opens with ${titles}${count > 4 ? ` and ${count - 4} more` : ""} — each work carrying the theme in its own register.`
+      ? `The hang opens with ${titles}${count > 4 ? ` and ${count - 4} more` : ""}, each work carrying the theme in its own register.`
       : "Select works below and the draft will name them here.",
     "Edit this draft freely: add what the theme means to you, why these works belong together, and what you want a visitor to carry out of the room.",
   ];
@@ -588,7 +588,7 @@ export function installationChecklist(artworks: AiArtworkLike[], roomNames: stri
     });
   }
   items.push(
-    { label: "Check lighting angles — 30° spots, no glare on glass", detail: "", done: false },
+    { label: "Check lighting angles: 30° spots, no glare on glass", detail: "", done: false },
     { label: "Print and place wall labels", detail: "", done: false },
     { label: "Photograph the finished hang for the record", detail: "", done: false },
   );
@@ -627,7 +627,7 @@ export function suggestFrame(
       return {
         key: frame.key,
         label: frame.label,
-        reason: "Work on paper — a conservation frame with a wide cream mat keeps the sheet safe and breathing.",
+        reason: "Work on paper, a conservation frame with a wide cream mat keeps the sheet safe and breathing.",
       };
   }
   if (dark) {
@@ -636,7 +636,7 @@ export function suggestFrame(
       return {
         key: frame.key,
         label: frame.label,
-        reason: "A dark work — a light frame separates it from the wall instead of disappearing into it.",
+        reason: "A dark work, a light frame separates it from the wall instead of disappearing into it.",
       };
   }
   if (warm) {
@@ -645,7 +645,7 @@ export function suggestFrame(
       return {
         key: frame.key,
         label: frame.label,
-        reason: "Warm dominant colours — dark walnut picks up the warmth without competing.",
+        reason: "Warm dominant colours, dark walnut picks up the warmth without competing.",
       };
   }
   if (cls === "very large" || cls === "large") {
@@ -654,7 +654,7 @@ export function suggestFrame(
       return {
         key: frame.key,
         label: frame.label,
-        reason: "A large work — a wider, deeper frame holds its scale on the wall.",
+        reason: "A large work, a wider, deeper frame holds its scale on the wall.",
       };
   }
   const fallback = find("black") ?? find("wood") ?? frames[0] ?? null;
@@ -662,7 +662,7 @@ export function suggestFrame(
   return {
     key: fallback.key,
     label: fallback.label,
-    reason: "The gallery default — a thin matte frame that lets the work speak first.",
+    reason: "The gallery default, a thin matte frame that lets the work speak first.",
   };
 }
 
@@ -716,7 +716,7 @@ export function publishReadiness(
   if (!savedKinds.includes("ai-concept")) {
     issues.push({
       label: "No saved exhibition concept",
-      detail: "Draft one in AI Exhibition Architect — it becomes the curatorial statement.",
+      detail: "Draft one in AI Exhibition Architect, it becomes the curatorial statement.",
     });
   }
   return issues;

@@ -9,9 +9,9 @@ import { parseGalleryRooms } from "@/lib/rooms";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Art in Context — Lakisa Tools",
+  title: "Art in Context: Lakisa Tools",
   description:
-    "One guided journey for an artwork — from upload and photography through colour, framing, mockups, arrangement and the 3D gallery, to a published exhibition and its promotion. The same artwork record carries through every step.",
+    "One guided journey for an artwork, from upload and photography through colour, framing, mockups, arrangement and the 3D gallery, to a published exhibition and its promotion. The same artwork record carries through every step.",
 };
 
 export default async function ArtInContextRoute() {
@@ -62,7 +62,7 @@ export default async function ArtInContextRoute() {
       {artworks.length === 0 && exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Create an exhibition first, or start a project below and upload your first artwork — it will show up here as soon as it exists.</p>
+          <p>Create an exhibition first, or start a project below and upload your first artwork, it will show up here as soon as it exists.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

@@ -49,20 +49,6 @@
   color: var(--ink);
 }
 
-.certificate-scope .cert-brand-mark {
-  width: 27px;
-  height: 27px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #2f3932;
-  color: #f5f2eb;
-  font-size: 17px;
-  font-weight: 700;
-  padding-bottom: 3px;
-  letter-spacing: 0;
-}
-
 .certificate-scope .cert-top-divider {
   height: 25px;
   border-left: 1px solid var(--line);
@@ -162,6 +148,46 @@
   grid-template-columns: minmax(300px, 380px) 1fr;
   gap: 16px;
   align-items: start;
+}
+
+/* Desktop: the studio fills the viewport (same 100dvh - 300px frame the
+   Atelier editor uses: the app topbar, the page header and this tool's
+   own topbar sit above it). The form panel scrolls inside itself with
+   a hidden scrollbar; the workspace never scrolls — the sheet is
+   scaled down to fit it instead (see .cert-sheet-scaler). Below
+   900 px the two columns stack and everything flows naturally again. */
+@media (min-width: 901px) {
+  .certificate-scope .cert-layout {
+    height: calc(100dvh - 300px);
+    min-height: 620px;
+    align-items: stretch;
+  }
+
+  .certificate-scope .cert-panel {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .certificate-scope .cert-panel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .certificate-scope .cert-workspace {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .certificate-scope .cert-sheet-scaler {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: hidden;
+  }
 }
 
 @media (max-width: 900px) {
@@ -280,36 +306,187 @@
   background: var(--cert-gold-soft);
 }
 
+/* Each miniature is a faithful thumbnail of its template: the same
+   composition as the live preview at small scale — ornament, alignment
+   and details layout come from the template itself (see TemplateMini
+   in certificate-tool.tsx), so the ten designs read apart at a glance. */
 .certificate-scope .cert-tpl-mini {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 78px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.certificate-scope .cert-tpl-mini-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  height: 64px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  gap: 3px;
+  padding: 5px 8px 6px;
 }
 
-.certificate-scope .cert-tpl-mini-kicker {
-  width: 22px;
+.certificate-scope .cert-tpl-mini-body.left {
+  align-items: flex-start;
+}
+
+.certificate-scope .mini-topbar {
+  flex: none;
+  height: 7px;
+}
+
+.certificate-scope .mini-band {
+  flex: none;
+  height: 9px;
+}
+
+.certificate-scope .mini-diamonds {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding-top: 7px;
+}
+
+.certificate-scope .mini-diamonds span {
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+}
+
+.certificate-scope .mini-kicker {
   height: 2px;
 }
 
-.certificate-scope .cert-tpl-mini-title {
-  width: 34px;
+.certificate-scope .mini-title {
   height: 4px;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
-.certificate-scope .cert-tpl-mini-line {
-  width: 26px;
+.certificate-scope .mini-line {
   height: 2px;
   opacity: 0.6;
 }
 
-.certificate-scope .cert-tpl-mini-line.short {
-  width: 18px;
+.certificate-scope .mini-rule {
+  width: 60%;
+  height: 1px;
+}
+
+.certificate-scope .mini-ruled {
+  width: 100%;
+  height: 1px;
+  opacity: 0.55;
+}
+
+.certificate-scope .mini-double-rule {
+  width: 70%;
+  height: 3px;
+  border-top: 1px solid;
+  border-bottom: 1px solid;
+}
+
+.certificate-scope .mini-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 8px;
+  width: 100%;
+}
+
+.certificate-scope .mini-col {
+  display: grid;
+  gap: 3px;
+}
+
+.certificate-scope .mini-img {
+  width: 100%;
+  height: 26px;
+  border: 1px solid;
+}
+
+.certificate-scope .mini-seal {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.certificate-scope .mini-stamp {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 1;
+  font-size: 5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  border: 1px solid;
+  padding: 1px 3px;
+  transform: rotate(-4deg);
+}
+
+.certificate-scope .mini-frame {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid;
+  pointer-events: none;
+}
+
+.certificate-scope .mini-frame.inner {
+  inset: 5px;
+}
+
+.certificate-scope .mini-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 0 solid;
+}
+
+.certificate-scope .mini-corner.tl {
+  top: 7px;
+  left: 7px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.certificate-scope .mini-corner.tr {
+  top: 7px;
+  right: 7px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.certificate-scope .mini-corner.bl {
+  bottom: 7px;
+  left: 7px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+
+.certificate-scope .mini-corner.br {
+  bottom: 7px;
+  right: 7px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+.certificate-scope .mini-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 46px;
+  line-height: 1;
+  opacity: 0.07;
+  pointer-events: none;
 }
 
 .certificate-scope .cert-tpl-name {
@@ -346,6 +523,10 @@
 }
 
 /* -- The sheet (the document itself) ------------------------------------------- */
+.certificate-scope .cert-sheet-scaler {
+  min-width: 0;
+}
+
 .certificate-scope .cert-print-sheet {
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
 }
@@ -617,6 +798,7 @@
 
 /* -- Verification box + issued list ------------------------------------------------ */
 .certificate-scope .cert-verify-box {
+  margin-top: 16px;
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: 8px;

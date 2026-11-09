@@ -40,7 +40,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
     <main className="auth-noir">
       <section className="auth-noir-left">
         <Link className="auth-noir-brand" href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={44} />
+          <BrandLogo variant="horizontal" theme="dark" height={60} />
         </Link>
         <div className="auth-noir-star">
           <AsteriskMark />

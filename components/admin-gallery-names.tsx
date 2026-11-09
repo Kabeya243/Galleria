@@ -186,8 +186,8 @@ export default function AdminGalleryNames({ names }: { names: GalleryNamesMap })
         </table>
       </div>
       <p style={{ color: "var(--ad-muted)", fontSize: 13, marginTop: 10 }}>
-        Renaming a gallery changes its name everywhere it appears — the catalogue, the creation
-        dialog and the editor — in the matching language. The room itself, its 3D model and its
+        Renaming a gallery changes its name everywhere it appears (the catalogue, the creation
+        dialog and the editor) in the matching language. The room itself, its 3D model and its
         layout never change.
       </p>
     </div>

@@ -256,7 +256,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
     next.title = "Mon portfolio";
     next.slug = `mon-portfolio-${makeId().slice(0, 4)}`;
     next.pages[0].title = "Accueil";
-    next.pages[0].seoTitle = "Mon portfolio — Artiste";
+    next.pages[0].seoTitle = "Mon portfolio: Artiste";
     setSavedSites((current) => [...current, next]);
     activateSite(next);
     dirtyRef.current = true;
@@ -374,7 +374,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
   function addPage() {
     const page: SitePage = {
       id: makeId(), slug: `page-${site.pages.length + 1}`, title: "Nouvelle page",
-      seoTitle: `${site.title} — Nouvelle page`, seoDescription: "Découvrez mon travail et mes actualités.",
+      seoTitle: `${site.title} : Nouvelle page`, seoDescription: "Découvrez mon travail et mes actualités.",
       sections: [{ id: makeId(), title: "Présentation", blocks: [{ id: makeId(), type: "hero", content: { heading: "Bienvenue sur cette page", body: "Ajoutez votre texte de présentation.", label: site.title, action: "Découvrir", image: "" } }] }]
     };
     commit((current) => ({ ...current, pages: [...current.pages, page] }));
@@ -701,7 +701,7 @@ function MediaPanel({ media, inputRef, onUpload, onChoose }: {
   return <><h2 className="panel-title">Médias</h2><p className="panel-subtitle">Importez vos images JPG, PNG ou WebP (4,5 Mo max, stockées sur R2).</p>
     <button className="button primary" style={{ width: "100%" }} onClick={() => inputRef.current?.click()}>＋ Importer une image</button>
     <label className="panel-label">Bibliothèque de médias</label>
-    {media.length === 0 ? <div className="notice">Vos images importées apparaîtront ici. Les modèles utilisent des images de démonstration — remplacez-les par vos propres œuvres.</div>
+    {media.length === 0 ? <div className="notice">Vos images importées apparaîtront ici. Les modèles utilisent des images de démonstration. Remplacez-les par vos propres œuvres.</div>
       : media.map((item) => <button key={item.url} className="template-card" style={{ width: "100%", textAlign: "left", padding: 0 }} onClick={() => onChoose(item.url)}>
         <img src={item.url} alt={item.name} style={{ width: "100%", height: 110, objectFit: "cover" }} /><span style={{ display: "block", padding: 8, fontSize: 11 }}>{item.name} · Ajouter à la sélection</span>
       </button>)}

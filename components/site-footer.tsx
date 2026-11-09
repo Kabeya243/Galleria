@@ -31,8 +31,8 @@ export default function SiteFooter() {
     <footer className={styles.footer}>
       <div className={styles.inner}>
         <div className={styles.brandBlock}>
-          <Link href="/" aria-label="Lakisa — home">
-            <BrandLogo variant="horizontal" theme="dark" height={36} />
+          <Link href="/" aria-label="Lakisa: home">
+            <BrandLogo variant="horizontal" theme="dark" height={52} />
           </Link>
           <p>{t("common", "footerTagline")}</p>
           <div className={styles.socials}>

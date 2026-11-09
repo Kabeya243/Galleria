@@ -143,7 +143,7 @@ export default function ExhibitionsPage({
                   <Link
                     href={`/editor/${exhibition.id}`}
                     className={styles.coverLink}
-                    aria-label={`${t("exhibitions", "continueBuilding")} — ${exhibition.title}`}
+                    aria-label={`${t("exhibitions", "continueBuilding")}, ${exhibition.title}`}
                   >
                     {exhibition.coverImageUrl ? (
                       <img
@@ -178,7 +178,7 @@ export default function ExhibitionsPage({
                       <button
                         onClick={() => void deleteExhibition(exhibition)}
                         disabled={deletingId === exhibition.id}
-                        aria-label={confirmingDeleteId === exhibition.id ? `${t("exhibitions", "clickAgainDelete")} — ${exhibition.title}` : `${t("exhibitions", "delete")} — ${exhibition.title}`}
+                        aria-label={confirmingDeleteId === exhibition.id ? `${t("exhibitions", "clickAgainDelete")}, ${exhibition.title}` : `${t("exhibitions", "delete")}, ${exhibition.title}`}
                       >
                         <Trash2 size={14} /> {deletingId === exhibition.id ? t("exhibitions", "deleting") : confirmingDeleteId === exhibition.id ? t("exhibitions", "clickAgainDelete") : t("exhibitions", "delete")}
                       </button>

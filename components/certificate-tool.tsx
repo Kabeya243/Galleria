@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import BrandLogo from "@/components/brand-logo";
 import { convert, formatCurrency, formatRateDate } from "@/lib/currency";
 import { archiveToolDocument, deleteToolArchive } from "@/lib/tool-archive";
 import { useExchangeRates } from "@/lib/use-exchange-rates";
@@ -112,16 +113,16 @@ type TemplateMeta = {
 };
 
 const TEMPLATES: TemplateMeta[] = [
-  { id: "classic", name: "Classic", blurb: "Centred, formal, double rule — the traditional certificate.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "classic", name: "Classic", blurb: "Centred, formal, double rule: the traditional certificate.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
   { id: "minimal", name: "Minimal", blurb: "Quiet and spare: small type, wide margins, one thin rule.", align: "left", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#1a1a1a", ornament: "none", details: "stack", kickerSpacing: "0.18em", titleSize: 26 },
   { id: "gallery", name: "Gallery", blurb: "The work leads: large image, generous title, gallery-label details.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
   { id: "heritage", name: "Heritage", blurb: "Warm ivory paper, double gold rule, corner flourishes and a wax seal.", align: "center", bg: "#faf6ec", ink: "#2b2416", muted: "#7a6a45", accent: "#8a6d2b", ornament: "corners", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
   { id: "modern", name: "Modern", blurb: "Left-aligned, thick black top bar, bold grotesque type, details in two columns.", align: "left", bg: "#ffffff", ink: "#111111", muted: "#555555", accent: "#111111", ornament: "topbar", details: "grid", kickerSpacing: "0.2em", titleSize: 32 },
-  { id: "noir", name: "Atelier Noir", blurb: "Charcoal sheet, gold type — the certificate as a dark gallery wall.", align: "center", bg: "#141210", ink: "#f5f2eb", muted: "#c9b896", accent: "#c9a86a", ornament: "none", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
-  { id: "deco", name: "Deco", blurb: "A row of gold diamonds, wide letterspacing, double rule — geometry, not clutter.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "diamonds", details: "stack", kickerSpacing: "0.34em", titleSize: 30 },
+  { id: "noir", name: "Atelier Noir", blurb: "Charcoal sheet, gold type: the certificate as a dark gallery wall.", align: "center", bg: "#141210", ink: "#f5f2eb", muted: "#c9b896", accent: "#c9a86a", ornament: "none", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
+  { id: "deco", name: "Deco", blurb: "A row of gold diamonds, wide letterspacing, double rule: geometry, not clutter.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "diamonds", details: "stack", kickerSpacing: "0.34em", titleSize: 30 },
   { id: "monogram", name: "Monogram", blurb: "The artist's initial as a pale watermark behind the title, hairline frame.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "watermark", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
   { id: "ledger", name: "Ledger", blurb: "An archival ledger: ruled lines, typewriter details, an ORIGINAL stamp box.", align: "left", bg: "#fbfaf6", ink: "#22201a", muted: "#6b6558", accent: "#22201a", ornament: "ruled", details: "stack", kickerSpacing: "0.12em", titleSize: 26 },
-  { id: "ribbon", name: "Ribbon", blurb: "A gold band across the top and a seal circle — the certificate as an award.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "band", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "ribbon", name: "Ribbon", blurb: "A gold band across the top and a seal circle: the certificate as an award.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "band", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
 ];
 
 const TEMPLATE_IDS = TEMPLATES.map((item) => item.id) as TemplateId[];
@@ -141,7 +142,7 @@ function generateCertificateId(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let suffix = "";
   for (let i = 0; i < 4; i += 1) suffix += chars[Math.floor(Math.random() * chars.length)];
-  return `SANAA-${new Date().getFullYear()}-${suffix}`;
+  return `LAKISA-${new Date().getFullYear()}-${suffix}`;
 }
 
 function formatIssueDate(iso: string): string {
@@ -201,7 +202,104 @@ function verificationPayload(cfg: CertificateConfig): string {
 function editionLabel(cfg: CertificateConfig): string {
   const n = cfg.editionNumber.trim() || "1";
   const size = cfg.editionSize.trim() || "1";
-  return size === "1" ? `${n} / 1 — unique work` : `No. ${n} of ${size}`;
+  return size === "1" ? `${n} / 1: unique work` : `No. ${n} of ${size}`;
+}
+
+// Faithful miniature of one certificate template: the same composition
+// as the live preview, at thumbnail scale — ornament, alignment,
+// details layout and paper / ink / accent colours all come from the
+// template itself, so the ten designs are told apart at a glance.
+function TemplateMini({ item }: { item: TemplateMeta }) {
+  const titleWidth = Math.round(20 + item.titleSize * 0.45);
+  const left = item.align === "left";
+  const kicker = (
+    <span className="mini-kicker" style={{ background: item.accent, width: item.id === "minimal" ? 14 : 20 }} />
+  );
+  const title = <span className="mini-title" style={{ background: item.ink, width: titleWidth }} />;
+  const line = (width: number, key: string) => (
+    <span key={key} className="mini-line" style={{ background: item.muted, width }} />
+  );
+  const stack = (
+    <>
+      {line(26, "l1")}
+      {line(18, "l2")}
+    </>
+  );
+  const grid = (
+    <span className="mini-cols">
+      <span className="mini-col">
+        {line(16, "g1")}
+        {line(12, "g2")}
+      </span>
+      <span className="mini-col">
+        {line(16, "g3")}
+        {line(12, "g4")}
+      </span>
+    </span>
+  );
+  return (
+    <span className="cert-tpl-mini" style={{ background: item.bg }}>
+      {item.ornament === "topbar" && <span className="mini-topbar" style={{ background: item.ink }} />}
+      {item.ornament === "band" && <span className="mini-band" style={{ background: item.accent }} />}
+      {item.ornament === "diamonds" && (
+        <span className="mini-diamonds">
+          {[0, 1, 2].map((i) => (
+            <span key={i} style={{ background: item.accent }} />
+          ))}
+        </span>
+      )}
+      {item.ornament === "corners" && (
+        <>
+          <span className="mini-frame" style={{ borderColor: item.accent }} />
+          <span className="mini-frame inner" style={{ borderColor: item.accent }} />
+          <span className="mini-corner tl" style={{ borderColor: item.accent }} />
+          <span className="mini-corner tr" style={{ borderColor: item.accent }} />
+          <span className="mini-corner bl" style={{ borderColor: item.accent }} />
+          <span className="mini-corner br" style={{ borderColor: item.accent }} />
+        </>
+      )}
+      {item.ornament === "watermark" && (
+        <span className="mini-watermark" style={{ color: item.ink }}>
+          A
+        </span>
+      )}
+      {item.id === "noir" && <span className="mini-frame" style={{ borderColor: item.accent, opacity: 0.45 }} />}
+      {item.id === "monogram" && <span className="mini-frame" style={{ borderColor: item.ink, opacity: 0.4 }} />}
+      <span className={`cert-tpl-mini-body${left ? " left" : ""}`}>
+        {item.id === "gallery" && (
+          <span className="mini-img" style={{ background: `${item.ink}14`, borderColor: `${item.ink}33` }} />
+        )}
+        {kicker}
+        {title}
+        {item.id === "minimal" ? (
+          <>
+            <span className="mini-rule" style={{ background: item.accent }} />
+            {line(22, "m1")}
+          </>
+        ) : item.ornament === "ruled" ? (
+          <>
+            <span className="mini-ruled" style={{ background: item.muted }} />
+            <span className="mini-ruled" style={{ background: item.muted }} />
+          </>
+        ) : item.details === "grid" ? (
+          grid
+        ) : (
+          stack
+        )}
+        {(item.id === "classic" || item.id === "deco") && (
+          <span className="mini-double-rule" style={{ borderColor: item.accent }} />
+        )}
+        {(item.id === "heritage" || item.id === "ribbon") && (
+          <span className="mini-seal" style={{ background: item.accent }} />
+        )}
+      </span>
+      {item.id === "ledger" && (
+        <span className="mini-stamp" style={{ borderColor: item.ink, color: item.ink }}>
+          ORIGINAL
+        </span>
+      )}
+    </span>
+  );
 }
 
 export default function CertificateTool({
@@ -232,6 +330,12 @@ export default function CertificateTool({
   const [archiveNote, setArchiveNote] = useState<string | null>(null);
   const qrRef = useRef<HTMLCanvasElement | null>(null);
   const [qrError, setQrError] = useState(false);
+  // Sheet fit: the live preview is scaled down (never up) so the whole
+  // studio fits the viewport without scrolling — see the effect below.
+  const scalerRef = useRef<HTMLDivElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const [sheetScale, setSheetScale] = useState(1);
+  const [sheetHeight, setSheetHeight] = useState(0);
   const rates = useExchangeRates();
 
   // The sale price as a whole number of US dollars, or null when the field
@@ -288,12 +392,44 @@ export default function CertificateTool({
     }).catch(() => setQrError(true));
   }, [payload]);
 
+  // Fit the sheet inside the workspace on desktop: measure the space
+  // the workspace actually gives the sheet and scale the sheet down
+  // (never up) so it fits without the workspace scrolling. The sheet's
+  // layout size is fixed by its aspect ratio, so a transform scale is
+  // enough — the wrapper is given the scaled height so no empty space
+  // is left behind. Below 900 px the columns stack and the sheet keeps
+  // its natural size (scale 1, no wrapper height).
+  useEffect(() => {
+    const scaler = scalerRef.current;
+    const sheet = sheetRef.current;
+    if (!scaler || !sheet) return;
+    const measure = () => {
+      if (!window.matchMedia("(min-width: 901px)").matches) {
+        setSheetScale(1);
+        setSheetHeight(0);
+        return;
+      }
+      const naturalW = sheet.offsetWidth;
+      const naturalH = sheet.offsetHeight;
+      const availW = scaler.clientWidth;
+      const availH = scaler.clientHeight;
+      if (!naturalW || !naturalH || !availW || !availH) return;
+      setSheetHeight(naturalH);
+      setSheetScale(Math.min(1, availW / naturalW, availH / naturalH));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scaler);
+    observer.observe(sheet);
+    return () => observer.disconnect();
+  }, []);
+
   if (!cfg || !selectedArtwork) {
     return (
       <div className="certificate-scope">
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Add a work in the editor first — a certificate needs a real piece behind it.</p>
+          <p>Add a work in the editor first, a certificate needs a real piece behind it.</p>
         </div>
       </div>
     );
@@ -340,7 +476,7 @@ export default function CertificateTool({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             kind: "certificate",
-            title: `${cfg.title} — ${cfg.certificateId}`,
+            title: `${cfg.title}: ${cfg.certificateId}`,
             data: cfg,
             artworkId: cfg.artworkId,
           }),
@@ -354,7 +490,7 @@ export default function CertificateTool({
         const res = await fetch("/api/saved-work", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: loadedId, title: `${cfg.title} — ${cfg.certificateId}`, data: cfg }),
+          body: JSON.stringify({ id: loadedId, title: `${cfg.title}: ${cfg.certificateId}`, data: cfg }),
         });
         if (!res.ok) throw new Error("Could not update the saved certificate.");
         const json = (await res.json()) as { saved: SavedCertificate };
@@ -372,12 +508,12 @@ export default function CertificateTool({
         setArchiveNote(
           archived.reason === "archive-unavailable"
             ? "Saved in your account. The file archive is not configured, so no R2 copy was made."
-            : "Saved in your account. The file archive copy could not be made — try again later.",
+            : "Saved in your account. The file archive copy could not be made, try again later.",
         );
       }
       setIssueMsg(
         asNew || !loadedId
-          ? `Issued as ${cfg.certificateId}. It is now in your issued list below — download the PDF or print it.`
+          ? `Issued as ${cfg.certificateId}. It is now in your issued list below, download the PDF or print it.`
           : `Saved changes to ${cfg.certificateId}.`,
       );
     } catch (error) {
@@ -422,7 +558,7 @@ export default function CertificateTool({
         newCertificate();
       }
       setConfirmDeleteId(null);
-      setIssueMsg(`Revoked ${row.title}. It no longer appears in your issued list — tell anyone holding a printed copy directly, as paper already handed out cannot be recalled from here.`);
+      setIssueMsg(`Revoked ${row.title}. It no longer appears in your issued list, tell anyone holding a printed copy directly, as paper already handed out cannot be recalled from here.`);
     } catch (error) {
       setIssueError(error instanceof Error ? error.message : "Could not revoke the certificate.");
     } finally {
@@ -453,7 +589,7 @@ export default function CertificateTool({
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setIssueMsg(`PDF downloaded as ${cfg.certificateId}.pdf — one page, in the template and paper size shown above.`);
+      setIssueMsg(`PDF downloaded as ${cfg.certificateId}.pdf, one page, in the template and paper size shown above.`);
     } catch (error) {
       setIssueError(error instanceof Error ? error.message : "Could not create the PDF.");
     } finally {
@@ -501,8 +637,14 @@ export default function CertificateTool({
   .cert-print-sheet {
     position: absolute !important; left: 0; top: 0; width: 100% !important;
     max-width: none !important; aspect-ratio: auto !important; margin: 0 !important;
-    min-height: 100%; box-shadow: none !important;
+    min-height: 100%; box-shadow: none !important; transform: none !important;
   }
+  /* The screen-only fit (fixed layout height, scaled sheet, scrolling
+     panel) must not constrain the printed page. */
+  .cert-layout { height: auto !important; min-height: 0 !important; }
+  .cert-panel { overflow: visible !important; }
+  .cert-workspace { overflow: visible !important; }
+  .cert-sheet-scaler { height: auto !important; overflow: visible !important; }
 }
 `;
 
@@ -514,7 +656,8 @@ export default function CertificateTool({
       {/* -- Topbar (Atelier language: brand, title, save status, actions) -- */}
       <header className="cert-topbar">
         <span className="cert-brand">
-          <span className="cert-brand-mark">S.</span>LAKISA
+          <BrandLogo variant="icon" height={36} />
+          LAKISA
         </span>
         <span className="cert-top-divider" />
         <div className="cert-title-wrap">
@@ -604,7 +747,7 @@ export default function CertificateTool({
               <span>Sale price (USD, optional)</span>
               <input
                 inputMode="decimal"
-                placeholder="e.g. 1500 — leave empty to print no price"
+                placeholder="e.g. 1500, leave empty to print no price"
                 value={cfg.priceUsd}
                 onChange={(event) => set("priceUsd", event.target.value)}
               />
@@ -639,7 +782,7 @@ export default function CertificateTool({
               </span>
             </label>
             <label className={styles.field}>
-              <span>Signature — typed name as it appears above the line</span>
+              <span>Signature: typed name as it appears above the line</span>
               <input
                 value={cfg.signatureText}
                 placeholder="Type your signature, e.g. Kabeya Ilunga"
@@ -663,7 +806,7 @@ export default function CertificateTool({
 
           <div className="cert-panel-section">
             <p className="cert-eyebrow">DESIGN</p>
-            <h3>Template — 10 original designs</h3>
+            <h3>Template: 10 original designs</h3>
             <div className="cert-tpl-grid">
               {TEMPLATES.map((item) => (
                 <button
@@ -673,12 +816,7 @@ export default function CertificateTool({
                   onClick={() => set("template", item.id)}
                   aria-pressed={cfg.template === item.id}
                 >
-                  <span className="cert-tpl-mini" style={{ background: item.bg }}>
-                    <span className="cert-tpl-mini-kicker" style={{ background: item.accent }} />
-                    <span className="cert-tpl-mini-title" style={{ background: item.ink }} />
-                    <span className="cert-tpl-mini-line" style={{ background: item.muted }} />
-                    <span className="cert-tpl-mini-line short" style={{ background: item.muted }} />
-                  </span>
+                  <TemplateMini item={item} />
                   <span className="cert-tpl-name">{item.name}</span>
                   <span className="cert-tpl-blurb">{item.blurb}</span>
                 </button>
@@ -731,11 +869,22 @@ export default function CertificateTool({
         {/* -- Live preview (workspace) ---------------------------------------- */}
         <section className="cert-workspace">
           <p className="cert-workspace-hint">
-            Live preview — {template.name} · {cfg.paperSize} {cfg.orientation}. What you see here is what prints and what the PDF contains, on one page.
+            Live preview: {template.name} · {cfg.paperSize} {cfg.orientation}. What you see here is what prints and what the PDF contains, on one page.
           </p>
           <div
+            className="cert-sheet-scaler"
+            ref={scalerRef}
+            style={sheetHeight ? { height: Math.max(1, Math.round(sheetHeight * sheetScale)) } : undefined}
+          >
+          <div
             className="cert-print-sheet"
-            style={{ ...sheetStyle, paddingTop: template.ornament === "band" ? 84 : sheetStyle.paddingTop }}
+            ref={sheetRef}
+            style={{
+              ...sheetStyle,
+              paddingTop: template.ornament === "band" ? 84 : sheetStyle.paddingTop,
+              transform: sheetScale === 1 ? undefined : `scale(${sheetScale})`,
+              transformOrigin: "top center",
+            }}
           >
             {template.ornament === "band" && <div className="cert-orn-band" style={{ background: accent }} />}
             {template.ornament === "corners" && (
@@ -791,15 +940,15 @@ export default function CertificateTool({
             >
               <div>
                 <dt style={{ color: template.muted }}>Medium</dt>
-                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.medium || "—"}</dd>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.medium || "N/A"}</dd>
               </div>
               <div>
                 <dt style={{ color: template.muted }}>Dimensions</dt>
-                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.dimensions || "—"}</dd>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.dimensions || "N/A"}</dd>
               </div>
               <div>
                 <dt style={{ color: template.muted }}>Year</dt>
-                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.year || "—"}</dd>
+                <dd style={{ fontFamily: template.id === "ledger" ? MONO : undefined }}>{cfg.year || "N/A"}</dd>
               </div>
               <div>
                 <dt style={{ color: template.muted }}>Edition</dt>
@@ -824,7 +973,7 @@ export default function CertificateTool({
                         <span style={{ color: template.muted, fontWeight: 400 }}>
                           {" "}
                           (ECB reference rates of {formatRateDate(rates.date)}
-                          {rates.stale ? " — last rates available" : ""})
+                          {rates.stale ? ", last rates available" : ""})
                         </span>
                       </>
                     )}
@@ -854,13 +1003,13 @@ export default function CertificateTool({
                     <span className="cert-sig-blank" />
                   )}
                   <span className="cert-sig-line" style={{ background: template.ink }} />
-                  <p style={{ color: template.muted }}>{cfg.signatureName} — Artist</p>
+                  <p style={{ color: template.muted }}>{cfg.signatureName}, Artist</p>
                 </div>
                 <div className="cert-sign-col">
                   <span className="cert-sig-blank" />
                   <span className="cert-sig-line" style={{ background: template.ink }} />
                   <p style={{ color: template.muted }}>
-                    {cfg.place} — {formatIssueDate(cfg.issueDate)}
+                    {cfg.place}, {formatIssueDate(cfg.issueDate)}
                   </p>
                 </div>
                 {template.ornament === "ruled" && (
@@ -873,7 +1022,7 @@ export default function CertificateTool({
               <div className="cert-verify-row">
                 {template.id === "heritage" && (
                   <div className="cert-seal" style={{ background: accent }}>
-                    S.
+                    {watermarkInitial}
                   </div>
                 )}
                 <p style={{ color: template.muted }}>
@@ -883,7 +1032,7 @@ export default function CertificateTool({
                 </p>
                 <div className="cert-qr">
                   {qrError ? (
-                    <p className="cert-qr-fallback">QR unavailable — verify with the certificate ID above.</p>
+                    <p className="cert-qr-fallback">QR unavailable, verify with the certificate ID above.</p>
                   ) : (
                     <>
                       <canvas ref={qrRef} width={132} height={132} aria-label={`QR code for certificate ${cfg.certificateId}`} />
@@ -894,23 +1043,24 @@ export default function CertificateTool({
               </div>
             </div>
           </div>
-
-          {/* -- How verification works (honest, no invented service) ------------ */}
-          <div className="cert-verify-box">
-            <h3>How anyone verifies this certificate</h3>
-            <p>
-              There is no automatic online verification service for these certificates. A buyer or collector checks the certificate in two ways:
-              scan the QR code, which carries the certificate ID, the artwork title and the artist&apos;s name — or read the certificate ID printed
-              on the certificate and compare it with the artist&apos;s own records (your issued list on this page) and with the artwork itself:
-              title, medium, dimensions, year and edition must match. When in doubt, the holder should contact the artist directly and quote the
-              certificate ID.
-            </p>
-            <p>
-              Export is a real one-page PDF (“Download PDF”, rendered server-side in the template and paper size shown above) or through your
-              browser (“Print” opens the print dialog, where you choose “Save as PDF”).
-            </p>
           </div>
         </section>
+
+        {/* -- How verification works (honest, no invented service) ------------ */}
+        <div className="cert-verify-box">
+          <h3>How anyone verifies this certificate</h3>
+          <p>
+            There is no automatic online verification service for these certificates. A buyer or collector checks the certificate in two ways:
+            scan the QR code, which carries the certificate ID, the artwork title and the artist&apos;s name, or read the certificate ID printed
+            on the certificate and compare it with the artist&apos;s own records (your issued list on this page) and with the artwork itself:
+            title, medium, dimensions, year and edition must match. When in doubt, the holder should contact the artist directly and quote the
+            certificate ID.
+          </p>
+          <p>
+            Export is a real one-page PDF (“Download PDF”, rendered server-side in the template and paper size shown above) or through your
+            browser (“Print” opens the print dialog, where you choose “Save as PDF”).
+          </p>
+        </div>
       </div>
 
       {/* -- Issued certificates -------------------------------------------- */}
@@ -929,7 +1079,7 @@ export default function CertificateTool({
         {!savedLoading && !savedError && saved.length === 0 && (
           <div className={styles.emptyBox}>
             <strong>No certificates issued yet.</strong>
-            <p>Fill in the details above and choose “Issue certificate” — it will appear here, ready to reprint.</p>
+            <p>Fill in the details above and choose “Issue certificate”, it will appear here, ready to reprint.</p>
           </div>
         )}
         {saved.length > 0 && (

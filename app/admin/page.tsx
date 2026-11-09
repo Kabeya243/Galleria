@@ -10,9 +10,9 @@ import { HIDDEN_LAYOUT_KEYS, ROOM_MODELS, roomLayouts, type RoomLayout } from "@
 import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
 
 export const metadata = {
-  title: "Admin — Lakisa",
+  title: "Admin: Lakisa",
   description:
-    "The platform overview for the owner: users, exhibitions, artworks, visits and tool use — everything on one page.",
+    "The platform overview for the owner: users, exhibitions, artworks, visits and tool use, everything on one page.",
 };
 
 function formatBytes(bytes: number): string {
@@ -362,21 +362,21 @@ export default async function AdminRoute({
     ...recentUsers.map((a) => ({
       key: `user-${a.id}`,
       kind: "signup",
-      title: `New signup — ${a.name}`,
+      title: `New signup: ${a.name}`,
       sub: `${a.email}${a.role ? ` · ${a.role}` : ""}${a.country ? ` · ${a.country}` : ""}`,
       at: a.createdAt,
     })),
     ...recentExhibitions.map((e) => ({
       key: `exhibition-${e.id}`,
       kind: "exhibition",
-      title: `Exhibition created — ${e.title}`,
+      title: `Exhibition created: ${e.title}`,
       sub: `by ${e.owner.name} · ${e.status}`,
       at: e.createdAt,
     })),
     ...recentArtworks.map((a) => ({
       key: `artwork-${a.id}`,
       kind: "artwork",
-      title: `Artwork added — ${a.title}`,
+      title: `Artwork added: ${a.title}`,
       sub: `in ${a.exhibition.title}`,
       at: a.createdAt,
     })),
@@ -412,7 +412,7 @@ export default async function AdminRoute({
       user={user}
       title="Hello, Kabeya"
       eyebrow="ADMIN · FOR THE OWNER ONLY"
-      description={`${todayLabel} — a look at who joined, what was built, and what visitors viewed on Lakisa.`}
+      description={`${todayLabel}, a look at who joined, what was built, and what visitors viewed on Lakisa.`}
       counts={{ users: userCount, exhibitions: exhibitionCount, artworks: artworkCount, tools: totalToolUses }}
     >
       <div id="overview" className="ad-section">
@@ -452,7 +452,7 @@ export default async function AdminRoute({
           <section className="ad-card">
             <div className="ad-card-head">
               <div>
-                <h2>Signups — last 14 days</h2>
+                <h2>Signups: last 14 days</h2>
                 <p className="ad-card-sub">New accounts per day</p>
               </div>
               <strong className="ad-card-total">
@@ -519,7 +519,7 @@ export default async function AdminRoute({
         <section className="ad-card" style={{ marginBottom: 20 }}>
           <div className="ad-card-head">
             <div>
-              <h2>Visits — last 30 days</h2>
+              <h2>Visits: last 30 days</h2>
               <p className="ad-card-sub">Exhibition views per day, all exhibitions</p>
             </div>
             <strong className="ad-card-total">
@@ -529,7 +529,7 @@ export default async function AdminRoute({
           {visitsTotal30 === 0 ? (
             <EmptyBox
               title="No visits yet."
-              body="Visits are logged from the day Visitor Analytics ships — one row per public exhibition view. They will appear here day by day."
+              body="Visits are logged from the day Visitor Analytics ships, one row per public exhibition view. They will appear here day by day."
             />
           ) : (
             <>
@@ -706,8 +706,8 @@ export default async function AdminRoute({
                     <tr key={account.id}>
                       <td>{account.name}</td>
                       <td>{account.email}</td>
-                      <td>{account.country ?? "—"}</td>
-                      <td>{account.role ?? "—"}</td>
+                      <td>{account.country ?? "N/A"}</td>
+                      <td>{account.role ?? "N/A"}</td>
                       <td>{account._count.exhibitions}</td>
                       <td>{account.createdAt.toLocaleDateString("en-GB")}</td>
                     </tr>
@@ -724,7 +724,7 @@ export default async function AdminRoute({
         <div className="ad-section-head">
           <h2>Tools used</h2>
           <p>
-            {totalToolUses} {totalToolUses === 1 ? "use" : "uses"} recorded — per tool, all time and in the last 30
+            {totalToolUses} {totalToolUses === 1 ? "use" : "uses"} recorded, per tool, all time and in the last 30
             days. Tracking started when this version shipped, so a tool nobody has opened yet shows 0.
           </p>
         </div>
@@ -769,7 +769,7 @@ export default async function AdminRoute({
             {recentToolUses.length === 0 ? (
               <EmptyBox
                 title="No tool use yet."
-                body="Tracking started with this version — uses appear here as soon as someone opens a tool."
+                body="Tracking started with this version, uses appear here as soon as someone opens a tool."
               />
             ) : (
               <ul className="ad-feed">
@@ -797,7 +797,7 @@ export default async function AdminRoute({
         <div className="ad-section-head">
           <h2>All users</h2>
           <p>
-            {allUsers.length} {query ? `matching “${query}”` : "registered"} — who they are, what they do, where they
+            {allUsers.length} {query ? `matching “${query}”` : "registered"}, who they are, what they do, where they
             are based, and when they signed up.
           </p>
         </div>
@@ -825,8 +825,8 @@ export default async function AdminRoute({
                   <tr key={account.id}>
                     <td>{account.name}</td>
                     <td>{account.email}</td>
-                    <td>{account.role ?? "—"}</td>
-                    <td>{account.country ?? "—"}</td>
+                    <td>{account.role ?? "N/A"}</td>
+                    <td>{account.country ?? "N/A"}</td>
                     <td>{account._count.exhibitions}</td>
                     <td>{account.createdAt.toLocaleDateString("en-GB")}</td>
                   </tr>
@@ -842,7 +842,7 @@ export default async function AdminRoute({
         <div className="ad-section-head">
           <h2>All exhibitions</h2>
           <p>
-            {allExhibitions.length} exhibitions — who built it, whether it is public, how many works it holds and how
+            {allExhibitions.length} exhibitions, who built it, whether it is public, how many works it holds and how
             many visits it received.
           </p>
         </div>
@@ -890,7 +890,7 @@ export default async function AdminRoute({
       <section id="artworks" className="ad-section">
         <div className="ad-section-head">
           <h2>All artworks</h2>
-          <p>{allArtworks.length} artworks — what it is, where it hangs, and who it belongs to.</p>
+          <p>{allArtworks.length} artworks, what it is, where it hangs, and who it belongs to.</p>
         </div>
         {allArtworks.length === 0 ? (
           <EmptyBox title="No artworks yet." body="Artworks appear here as soon as someone adds one to an exhibition." />
@@ -931,7 +931,7 @@ export default async function AdminRoute({
         <div className="ad-section-head">
           <h2>Galleries</h2>
           <p>
-            {galleryTemplates.length} room templates — the models visitors can pick. Deleting one hides it
+            {galleryTemplates.length} room templates, the models visitors can pick. Deleting one hides it
             from the catalogue, the creation dialog and the editor; exhibitions already built with it keep
             working.
           </p>
@@ -954,7 +954,7 @@ export default async function AdminRoute({
         <div className="ad-section-head">
           <h2>Test reports</h2>
           <p>
-            Results of the automated feature tests for the new tools — profile photos, works wall, website
+            Results of the automated feature tests for the new tools, profile photos, works wall, website
             builder (51 templates) and portfolio PDF builder (50 templates). Re-run with{" "}
             <code>node scripts/test-new-features.mjs --build</code>.
           </p>
@@ -962,7 +962,7 @@ export default async function AdminRoute({
         {!testReport ? (
           <EmptyBox
             title="No test report yet."
-            body="Run node scripts/test-new-features.mjs from the repo to generate public/test-reports/latest.json — it will show up here."
+            body="Run node scripts/test-new-features.mjs from the repo to generate public/test-reports/latest.json. It will show up here."
           />
         ) : (
           <div className="ad-card ad-table-wrap">

@@ -28,7 +28,7 @@ function prettyDate(iso: string): string {
 // Same format as the dashboard's Visitor statistics, so the average
 // time reads identically on both pages.
 function formatDuration(seconds: number | null): string {
-  if (seconds == null) return "—";
+  if (seconds == null) return "N/A";
   if (seconds < 60) return `${seconds} s`;
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
@@ -88,7 +88,7 @@ export default function VisitorAnalytics({
     setDownloading(true);
     try {
       const lines: (string | number)[][] = [
-        ["Visitor Analytics — Lakisa"],
+        ["Visitor Analytics: Lakisa"],
         ["Exhibition", selectedTitle],
         ["Exported", new Date().toISOString().slice(0, 10)],
         [],
@@ -215,7 +215,7 @@ export default function VisitorAnalytics({
       </p>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Visits — last 30 days</h2>
+        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Visits: last 30 days</h2>
         <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
           One bar per day. The number above a bar is that day&apos;s visits; unique visitors count each anonymous
           visitor once per day.
@@ -316,7 +316,7 @@ export default function VisitorAnalytics({
             <section>
               <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Countries</h2>
               <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
-                Only where the platform reports a country. “Unknown” is shown otherwise — never guessed.
+                Only where the platform reports a country. “Unknown” is shown otherwise, never guessed.
               </p>
               {countries.length === 0 ? (
                 <p style={{ color: "var(--muted)", fontSize: 13 }}>No country data yet.</p>
@@ -340,12 +340,12 @@ export default function VisitorAnalytics({
           color: "var(--muted)",
         }}
       >
-        <strong style={{ color: "var(--ink)" }}>Privacy — what is (and isn&apos;t) collected.</strong>
+        <strong style={{ color: "var(--ink)" }}>Privacy: what is (and isn&apos;t) collected.</strong>
         <br />
         Visits are counted with an anonymous random id stored in a cookie on the visitor&apos;s own browser. No names,
         no email addresses, no IP addresses and no personal data are collected or stored. Country is recorded only
         when the hosting platform reports it; device type comes from the browser&apos;s user-agent and the referrer
-        from the page the visitor came from. Only aggregate counts are shown here — individual visits cannot be traced
+        from the page the visitor came from. Only aggregate counts are shown here. Individual visits cannot be traced
         back to a person. Data is kept to the minimum needed to answer “how is this exhibition doing?”.
       </aside>
     </div>

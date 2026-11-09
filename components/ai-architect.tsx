@@ -292,7 +292,7 @@ export default function AiArchitect({
 
   const saveConcept = useCallback(async () => {
     if (selected.length === 0 && !concept.trim()) return;
-    const title = saveName.trim() || `${theme} — ${selected.length} work${selected.length === 1 ? "" : "s"}`;
+    const title = saveName.trim() || `${theme}: ${selected.length} work${selected.length === 1 ? "" : "s"}`;
     setSaving(true);
     setSaveStatus(null);
     try {
@@ -318,7 +318,7 @@ export default function AiArchitect({
       setSaveName("");
       await loadSaved();
     } catch {
-      setSaveStatus("Could not save — check your connection and try again.");
+      setSaveStatus("Could not save, check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -343,7 +343,7 @@ export default function AiArchitect({
             .map((j) => ({ id: uid(), roomId: j.roomId, note: j.note ?? "" })),
         );
       }
-      setSaveStatus(`Loaded “${item.title}”. Edit anything — nothing is overwritten until you save again.`);
+      setSaveStatus(`Loaded “${item.title}”. Edit anything, nothing is overwritten until you save again.`);
     },
     [],
   );
@@ -391,7 +391,7 @@ export default function AiArchitect({
     ctx.fillText("LAKISA · AI EXHIBITION ARCHITECT", pad, pad + 8);
     ctx.fillStyle = "#141414";
     ctx.font = "600 46px Georgia, serif";
-    ctx.fillText(`${theme} — moodboard`, pad, pad + 66, width - pad * 2);
+    ctx.fillText(`${theme}: moodboard`, pad, pad + 66, width - pad * 2);
     // Thumbs: real images where they load, recorded colour blocks otherwise.
     const thumbs = selected.slice(0, 4);
     const thumbW = (width - pad * 2 - (thumbs.length - 1) * 16) / thumbs.length;
@@ -473,7 +473,7 @@ export default function AiArchitect({
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
           <p>
-            Add a work with an image in the editor and it will show up here — the Architect plans
+            Add a work with an image in the editor and it will show up here, the Architect plans
             from your real works, not from placeholders.
           </p>
         </div>
@@ -483,7 +483,7 @@ export default function AiArchitect({
           <section style={S.section}>
             <h2 style={S.sectionTitle}>1 · Choose the works</h2>
             <p style={S.sectionNote}>
-              Tick the works for this show. Every suggestion below is computed from these works —
+              Tick the works for this show. Every suggestion below is computed from these works:
               their sizes, colours and media.
             </p>
             <div style={S.grid}>
@@ -545,7 +545,7 @@ export default function AiArchitect({
               <section style={S.section}>
                 <h2 style={S.sectionTitle}>2 · Concept</h2>
                 <p style={S.sectionNote}>
-                  Pick a theme and generate a draft from a template — the draft names your actual
+                  Pick a theme and generate a draft from a template, the draft names your actual
                   works. Edit it freely; generating again never overwrites your edits without
                   asking.
                 </p>
@@ -583,13 +583,13 @@ export default function AiArchitect({
                     setConcept(e.target.value);
                     setConceptSource("edited");
                   }}
-                  placeholder="Your concept draft will appear here — or write your own."
+                  placeholder="Your concept draft will appear here, or write your own."
                   aria-label="Exhibition concept draft"
                 />
                 {conceptSource && (
                   <p style={S.status}>
-                    {conceptSource === "template" && "Draft generated from a template — edit it to make it yours."}
-                    {conceptSource === "model" && `Draft written by ${providerStatus.label}${providerStatus.model ? ` (${providerStatus.model})` : ""} — check it before use.`}
+                    {conceptSource === "template" && "Draft generated from a template, edit it to make it yours."}
+                    {conceptSource === "model" && `Draft written by ${providerStatus.label}${providerStatus.model ? ` (${providerStatus.model})` : ""}, check it before use.`}
                     {conceptSource === "edited" && "Edited by you."}
                   </p>
                 )}
@@ -641,7 +641,7 @@ export default function AiArchitect({
                   <ModelIntegrationNote status={providerStatus} feature="Natural-language arrangement advice" />
                   {modelAdvice && (
                     <div style={{ ...S.infoBox, marginTop: 12 }}>
-                      <strong>Model advice — {modelAdvice.provider} ({modelAdvice.model}):</strong>
+                      <strong>Model advice: {modelAdvice.provider} ({modelAdvice.model}):</strong>
                       <p style={{ margin: "6px 0 0", whiteSpace: "pre-wrap" }}>{modelAdvice.text}</p>
                     </div>
                   )}
@@ -652,7 +652,7 @@ export default function AiArchitect({
               <section style={S.section}>
                 <h2 style={S.sectionTitle}>4 · Room &amp; template</h2>
                 <p style={S.sectionNote}>
-                  The 40 gallery templates, ranked by how well they fit your selected works — wall
+                  The 40 gallery templates, ranked by how well they fit your selected works: wall
                   length, widest work and mood.
                 </p>
                 <div style={S.controls}>
@@ -662,7 +662,7 @@ export default function AiArchitect({
                       <option value="">No specific room</option>
                       {rooms.map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name} — {r.exhibitionTitle}
+                          {r.name}: {r.exhibitionTitle}
                         </option>
                       ))}
                     </select>
@@ -673,7 +673,7 @@ export default function AiArchitect({
                       <option value="">Choose a template…</option>
                       {templates.map((t) => (
                         <option key={t.key} value={t.key}>
-                          {t.label} — {t.width} × {t.depth} m
+                          {t.label}: {t.width} × {t.depth} m
                         </option>
                       ))}
                     </select>
@@ -750,7 +750,7 @@ export default function AiArchitect({
                     <p style={{ margin: 0, color: "var(--accent)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em" }}>
                       LAKISA · AI EXHIBITION ARCHITECT
                     </p>
-                    <h3 style={S.boardTitle}>{theme} — moodboard</h3>
+                    <h3 style={S.boardTitle}>{theme}: moodboard</h3>
                     <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
                       {selected.length} work{selected.length === 1 ? "" : "s"}
                       {selectedTemplate ? ` · ${selectedTemplate.label}` : ""}
@@ -793,7 +793,7 @@ export default function AiArchitect({
                   note what each stop should do.
                 </p>
                 {journey.length === 0 ? (
-                  <p style={S.status}>No journey yet — pick a room below and add it as a stop.</p>
+                  <p style={S.status}>No journey yet. Pick a room below and add it as a stop.</p>
                 ) : (
                   <ol style={{ margin: "0 0 16px", paddingLeft: 20 }}>
                     {journey.map((stop, index) => {
@@ -803,7 +803,7 @@ export default function AiArchitect({
                           <strong>
                             Stop {index + 1}: {room?.name ?? stop.roomId}
                           </strong>
-                          {stop.note ? ` — ${stop.note}` : ""}
+                          {stop.note ? `, ${stop.note}` : ""}
                           <span style={{ display: "inline-flex", gap: 6, marginLeft: 10 }}>
                             <button type="button" style={{ ...S.ghostButton, minHeight: 28, padding: "0 8px" }} onClick={() => moveJourneyStop(stop.id, -1)} disabled={index === 0}>
                               ↑
@@ -827,7 +827,7 @@ export default function AiArchitect({
                       <option value="">Choose a room…</option>
                       {rooms.map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name} — {r.exhibitionTitle}
+                          {r.name}: {r.exhibitionTitle}
                         </option>
                       ))}
                     </select>
@@ -847,7 +847,7 @@ export default function AiArchitect({
                 <h2 style={S.sectionTitle}>8 · Installation plan</h2>
                 <p style={S.sectionNote}>
                   Checklist generated from your selected works and rooms. Tick items as they are
-                  done — the state is saved with the concept.
+                  done, the state is saved with the concept.
                 </p>
                 {checklist.map((item) => (
                   <label key={item.label} style={S.checkRow}>
@@ -858,7 +858,7 @@ export default function AiArchitect({
                     />
                     <span>
                       <strong>{item.label}</strong>
-                      {item.detail ? <span style={{ color: "var(--muted)" }}> — {item.detail}</span> : ""}
+                      {item.detail ? <span style={{ color: "var(--muted)" }}>, {item.detail}</span> : ""}
                     </span>
                   </label>
                 ))}
@@ -878,7 +878,7 @@ export default function AiArchitect({
                       style={S.input}
                       value={saveName}
                       onChange={(e) => setSaveName(e.target.value)}
-                      placeholder={`${theme} — ${selected.length} works`}
+                      placeholder={`${theme}: ${selected.length} works`}
                     />
                   </label>
                   <button type="button" className="galleries-open-button" onClick={() => void saveConcept()} disabled={saving}>

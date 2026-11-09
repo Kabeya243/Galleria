@@ -8,9 +8,9 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Accessibility & Audio Guide Studio — Lakisa Tools",
+  title: "Accessibility & Audio Guide Studio: Lakisa Tools",
   description:
-    "Write audio descriptions, artist and curator narration, captions and transcripts for every artwork — in English and French — preview them with your browser's voices, and check the exhibition against a real accessibility checklist.",
+    "Write audio descriptions, artist and curator narration, captions and transcripts for every artwork (in English and French), preview them with your browser's voices, and check the exhibition against a real accessibility checklist.",
 };
 
 export default async function AccessibilityStudioRoute() {
@@ -53,7 +53,7 @@ export default async function AccessibilityStudioRoute() {
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No exhibitions yet.</strong>
-          <p>Create an exhibition and add artworks first — the accessibility pack is written per exhibition, artwork by artwork.</p>
+          <p>Create an exhibition and add artworks first, the accessibility pack is written per exhibition, artwork by artwork.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

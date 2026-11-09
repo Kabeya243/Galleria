@@ -148,7 +148,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
       const json = (await res.json()) as { saved?: SavedPack[] };
       setSaved(json.saved ?? []);
     } catch {
-      setSavedError("Saved packs could not be loaded — check your connection and refresh.");
+      setSavedError("Saved packs could not be loaded, check your connection and refresh.");
       setSaved([]);
     } finally {
       setSavedLoading(false);
@@ -262,7 +262,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
       },
       {
         label: "Every artwork has an image",
-        detail: `${artworks.filter((a) => a.imageUrl).length} of ${artworks.length} artworks have an image — a screen reader needs one to describe`,
+        detail: `${artworks.filter((a) => a.imageUrl).length} of ${artworks.length} artworks have an image, a screen reader needs one to describe`,
         pass: artworks.length > 0 && artworks.every((a) => a.imageUrl),
       },
       {
@@ -295,7 +295,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
         detail:
           ratio === null
             ? "Pick valid wall text and background colours to measure the contrast."
-            : `Measured contrast ${ratio.toFixed(2)}:1 — ${ratio >= 4.5 ? "passes AA for normal text" : ratio >= 3 ? "passes AA for large text only" : "too low — darken the text or lighten the wall"}`,
+            : `Measured contrast ${ratio.toFixed(2)}:1, ${ratio >= 4.5 ? "passes AA for normal text" : ratio >= 3 ? "passes AA for large text only" : "too low, darken the text or lighten the wall"}`,
         pass: ratio !== null && ratio >= 4.5,
       },
     ];
@@ -306,7 +306,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
 
   const savePack = useCallback(async () => {
     if (!pack || !exhibition) return;
-    const title = saveName.trim() || `Accessibility pack — ${exhibition.title}`;
+    const title = saveName.trim() || `Accessibility pack: ${exhibition.title}`;
     setSaving(true);
     setSaveStatus(null);
     try {
@@ -324,7 +324,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
       setSaveName("");
       await loadSaved();
     } catch {
-      setSaveStatus("Could not save — check your connection and try again.");
+      setSaveStatus("Could not save, check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -359,7 +359,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
       <div className={styles.wrap}>
         <div className={styles.emptyBox}>
           <strong>No exhibitions yet.</strong>
-          <p>Create an exhibition and add artworks first — the accessibility pack is written per exhibition, artwork by artwork.</p>
+          <p>Create an exhibition and add artworks first, the accessibility pack is written per exhibition, artwork by artwork.</p>
         </div>
       </div>
     );
@@ -390,7 +390,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
         </div>
         <div className={styles.twoCol}>
           <div className={styles.field}>
-            <label htmlFor="a11y-intro-en">Welcome narration — English</label>
+            <label htmlFor="a11y-intro-en">Welcome narration: English</label>
             <textarea
               id="a11y-intro-en"
               value={pack.introEn}
@@ -399,7 +399,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
             />
           </div>
           <div className={styles.field}>
-            <label htmlFor="a11y-intro-fr">Accueil — français</label>
+            <label htmlFor="a11y-intro-fr">Accueil: français</label>
             <textarea
               id="a11y-intro-fr"
               value={pack.introFr}
@@ -418,7 +418,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>This exhibition has no artworks yet.</strong>
-          <p>Add artworks in the editor first — each one gets its own audio description, narration, caption and transcript here.</p>
+          <p>Add artworks in the editor first, each one gets its own audio description, narration, caption and transcript here.</p>
         </div>
       ) : (
         <div className={styles.card}>
@@ -484,7 +484,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
 
               <div className={styles.field}>
                 <label htmlFor="a11y-audio">
-                  Audio description — {lang === "fr" ? "français" : "English"}{" "}
+                  Audio description: {lang === "fr" ? "français" : "English"}{" "}
                   <span>(long descriptive text: what is in the work, colours, composition, feeling)</span>
                 </label>
                 <textarea
@@ -496,7 +496,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
                   placeholder={
                     lang === "fr"
                       ? "Décrivez l’œuvre comme si vous la racontiez à quelqu’un qui ne la voit pas…"
-                      : "Describe the work as if telling someone who cannot see it — subject, colours, composition, mood…"
+                      : "Describe the work as if telling someone who cannot see it: subject, colours, composition, mood…"
                   }
                 />
               </div>
@@ -524,7 +524,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
 
               <div className={styles.twoCol}>
                 <div className={styles.field}>
-                  <label htmlFor="a11y-caption">Caption — English <span>(one or two lines)</span></label>
+                  <label htmlFor="a11y-caption">Caption: English <span>(one or two lines)</span></label>
                   <textarea
                     id="a11y-caption"
                     style={{ minHeight: 64 }}
@@ -534,7 +534,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
                   />
                 </div>
                 <div className={styles.field}>
-                  <label htmlFor="a11y-caption-fr">Légende — français</label>
+                  <label htmlFor="a11y-caption-fr">Légende: français</label>
                   <textarea
                     id="a11y-caption-fr"
                     style={{ minHeight: 64 }}
@@ -557,13 +557,13 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
 
               <h3>Listen &amp; preview</h3>
               <p className={styles.muted}>
-                Browser preview — this uses your device’s built-in voices (SpeechSynthesis),
+                Browser preview: this uses your device’s built-in voices (SpeechSynthesis),
                 not a studio recording. It is a way to check wording and length, not the
                 audio visitors will hear from a recorded guide.
               </p>
               {!ttsSupported && (
                 <p className={styles.statusErr} role="alert">
-                  Text-to-speech is not available in this browser — try Chrome, Edge or Safari.
+                  Text-to-speech is not available in this browser, try Chrome, Edge or Safari.
                 </p>
               )}
               <div className={styles.row} style={{ marginTop: 10 }}>
@@ -631,7 +631,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
 
               <h3>How the label reads</h3>
               <p className={styles.muted}>
-                Text-size preview — how the caption and audio description render at
+                Text-size preview: how the caption and audio description render at
                 small, medium and large visitor text sizes.
               </p>
               <div className={styles.tabs} role="group" aria-label="Text size preview" style={{ marginTop: 10 }}>
@@ -667,7 +667,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
         <p className={styles.kicker}>Checklist</p>
         <h2>Is this exhibition ready for every visitor?</h2>
         <p className={styles.muted}>
-          Real checks against this exhibition and this pack — {passedCount} of {checks.length} passing.
+          Real checks against this exhibition and this pack: {passedCount} of {checks.length} passing.
           Nothing here is assumed: each line is measured from the artworks and the text you wrote.
         </p>
         <ul className={styles.checkList}>
@@ -687,7 +687,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
         <h3>Wall text contrast</h3>
         <p className={styles.muted}>
           The contrast of the wall labels visitors read in the room. WCAG AA asks for
-          4.5:1 for normal text — this is measured live from the two colours.
+          4.5:1 for normal text, this is measured live from the two colours.
         </p>
         <div className={styles.swatchRow} style={{ marginTop: 10 }}>
           <label style={{ fontSize: 11, fontWeight: 600 }}>
@@ -710,7 +710,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
           </label>
           <span className={styles.ratio}>
             {ratio === null ? "Invalid colours" : `${ratio.toFixed(2)}:1`}
-            {ratio !== null && (ratio >= 4.5 ? " — passes AA" : ratio >= 3 ? " — large text only" : " — fails AA")}
+            {ratio !== null && (ratio >= 4.5 ? ", passes AA" : ratio >= 3 ? ", large text only" : ", fails AA")}
           </span>
         </div>
         <div
@@ -718,7 +718,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
           style={{ background: pack.wallBgColor, color: pack.wallTextColor }}
         >
           <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6 }}>
-            Wall label preview — {selectedArtwork?.title ?? exhibition.title}. This is how
+            Wall label preview: {selectedArtwork?.title ?? exhibition.title}. This is how
             the text sits on the wall colour you chose.
           </p>
         </div>
@@ -732,7 +732,7 @@ export default function AccessibilityStudio({ exhibitions }: { exhibitions: Acce
             type="text"
             value={saveName}
             onChange={(e) => setSaveName(e.target.value)}
-            placeholder={savedId ? "Rename the pack…" : `Accessibility pack — ${exhibition.title}`}
+            placeholder={savedId ? "Rename the pack…" : `Accessibility pack: ${exhibition.title}`}
             aria-label="Pack name"
             style={{ flex: 1, minWidth: 220, padding: "10px 12px", border: "1px solid var(--line, #eceae4)", borderRadius: 6, background: "#fff", fontSize: 13 }}
           />

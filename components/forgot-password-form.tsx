@@ -35,7 +35,7 @@ export default function ForgotPasswordForm() {
     <main className="auth-noir">
       <section className="auth-noir-left">
         <Link className="auth-noir-brand" href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={44} />
+          <BrandLogo variant="horizontal" theme="dark" height={60} />
         </Link>
         <div className="auth-noir-star">
           <AsteriskMark />
@@ -52,8 +52,8 @@ export default function ForgotPasswordForm() {
           {sent ? (
             <>
               <p className="auth-noir-hint" style={{ marginTop: 0 }}>
-                Check your inbox. If an account exists for {email}, a reset link is on its way —
-                it expires in 1 hour.
+                Check your inbox. If an account exists for {email}, a reset link is on its way.
+                It expires in 1 hour.
               </p>
               <p className="auth-noir-switch">
                 <Link href="/login">Back to sign in</Link>

@@ -180,7 +180,7 @@ export default function PublicHome({
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={34} />
+          <BrandLogo variant="horizontal" theme="dark" height={52} />
         </Link>
         <nav className={styles.nav} aria-label="Main">
           <div className={styles.navLinks}>
@@ -321,7 +321,7 @@ export default function PublicHome({
             <Link
               href={`/exhibition/${featured.slug}`}
               className={styles.preview}
-              aria-label={`${t("home", "visit")} — ${featured.title}`}
+              aria-label={`${t("home", "visit")}, ${featured.title}`}
             >
               <HeroGalleryPreview artworks={featured.artworks} />
               <span className={styles.liveLabel}>
@@ -375,7 +375,7 @@ export default function PublicHome({
                 key={exhibition.id}
                 href={`/exhibition/${exhibition.slug}`}
                 className={styles.card}
-                aria-label={`${t("home", "visit")} — ${exhibition.title}`}
+                aria-label={`${t("home", "visit")}, ${exhibition.title}`}
               >
                 {exhibition.coverImageUrl ? (
                   <img

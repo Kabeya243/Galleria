@@ -30,7 +30,7 @@ export function HubCards({ cards }: { cards: HubCard[] }) {
       {cards.map((card) => (
         <article key={card.title} className={`gallery-card ${styles.toolCard}`}>
           {card.status === "ready" && card.href ? (
-            <Link href={card.href} className={styles.toolCardLink} aria-label={`${t("hubs", "open")} — ${t("hubs", card.title)}`}>
+            <Link href={card.href} className={styles.toolCardLink} aria-label={`${t("hubs", "open")}, ${t("hubs", card.title)}`}>
               <span className={styles.toolIcon}>
                 <card.icon size={22} />
               </span>
@@ -43,7 +43,7 @@ export function HubCards({ cards }: { cards: HubCard[] }) {
           ) : (
             <div
               className={styles.toolCardLink}
-              aria-label={`${t("hubs", card.title)} — ${card.status === "development" ? t("hubs", "inDevelopment") : t("hubs", "ownerOnly")}`}
+              aria-label={`${t("hubs", card.title)}, ${card.status === "development" ? t("hubs", "inDevelopment") : t("hubs", "ownerOnly")}`}
             >
               <span className={styles.toolIcon}>
                 <card.icon size={22} />

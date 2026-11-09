@@ -106,7 +106,7 @@ export default function ArtworkDetailPanel({
   // what the work shows; without one, fall back to title + artist + year.
   const alt = artwork.altText?.trim()
     ? artwork.altText.trim()
-    : `${artwork.title} — ${artist}${artwork.year ? `, ${artwork.year}` : ""}`;
+    : `${artwork.title}, ${artist}${artwork.year ? `, ${artwork.year}` : ""}`;
 
   // Colour palette: works created before ColorThief (or whose palette
   // was never stored) have none on the record, so the panel reads it
@@ -320,7 +320,7 @@ export default function ArtworkDetailPanel({
               required
               rows={4}
               maxLength={4000}
-              placeholder={`${t("artwork", "writeToArtist")} — ${artwork.title}`}
+              placeholder={`${t("artwork", "writeToArtist")}, ${artwork.title}`}
             />
           </label>
           <button type="submit" className="artwork-detail-submit" disabled={busy}>

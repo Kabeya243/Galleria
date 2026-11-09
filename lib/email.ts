@@ -31,8 +31,8 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
     from: `Lakisa <${from}>`,
     to,
     subject: "Reset your Lakisa password",
-    text: `Hello,\n\nYou asked to reset your Lakisa password. Use this link (it expires in 1 hour):\n\n${resetUrl}\n\nIf you didn't ask for this, you can ignore this email.\n\n— Lakisa`,
-    html: `<p>Hello,</p><p>You asked to reset your Lakisa password. Use this link (it expires in 1 hour):</p><p><a href="${resetUrl}">Reset your password</a></p><p>If you didn't ask for this, you can ignore this email.</p><p>— Lakisa</p>`,
+    text: `Hello,\n\nYou asked to reset your Lakisa password. Use this link (it expires in 1 hour):\n\n${resetUrl}\n\nIf you didn't ask for this, you can ignore this email.\n\nLakisa`,
+    html: `<p>Hello,</p><p>You asked to reset your Lakisa password. Use this link (it expires in 1 hour):</p><p><a href="${resetUrl}">Reset your password</a></p><p>If you didn't ask for this, you can ignore this email.</p><p>Lakisa</p>`,
   });
   return true;
 }
@@ -61,8 +61,8 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
     from: `Lakisa <${from}>`,
     to,
     subject: "Verify your Lakisa email",
-    text: `Hello,\n\nWelcome to Lakisa! Please confirm your email address by opening this link (it expires in 24 hours):\n\n${verifyUrl}\n\nOnce verified, you can sign in and start building your gallery.\n\nIf you didn't create a Lakisa account, you can ignore this email.\n\n— Lakisa`,
-    html: `<p>Hello,</p><p>Welcome to Lakisa! Please confirm your email address by opening the link below (it expires in 24 hours):</p><p><a href="${verifyUrl}">Verify my email</a></p><p>Once verified, you can sign in and start building your gallery.</p><p>If you didn't create a Lakisa account, you can ignore this email.</p><p>— Lakisa</p>`,
+    text: `Hello,\n\nWelcome to Lakisa! Please confirm your email address by opening this link (it expires in 24 hours):\n\n${verifyUrl}\n\nOnce verified, you can sign in and start building your gallery.\n\nIf you didn't create a Lakisa account, you can ignore this email.\n\nLakisa`,
+    html: `<p>Hello,</p><p>Welcome to Lakisa! Please confirm your email address by opening the link below (it expires in 24 hours):</p><p><a href="${verifyUrl}">Verify my email</a></p><p>Once verified, you can sign in and start building your gallery.</p><p>If you didn't create a Lakisa account, you can ignore this email.</p><p>Lakisa</p>`,
   });
   return true;
 }

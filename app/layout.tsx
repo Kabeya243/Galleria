@@ -29,7 +29,7 @@ const dmSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Lakisa — Your art, in another space",
+  title: "Lakisa: Your art, in another space",
   description:
     "Create, curate and share your own immersive virtual art exhibitions.",
 };

@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <main className="not-found">
       <span className="brand-lockup">
-        <BrandLogo variant="horizontal" height={40} />
+        <BrandLogo variant="horizontal" height={56} />
       </span>
       <p className="eyebrow">404 · NOT FOUND</p>
       <h1>

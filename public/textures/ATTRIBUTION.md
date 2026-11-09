@@ -1,4 +1,4 @@
-# Photo textures — attribution
+# Photo textures: attribution
 
 Real photographs used as textures in the Lakisa galleries (trees and
 exterior windows in the eleven galleries from `Galeries_3D.html`),
@@ -18,7 +18,7 @@ work offline and need no external fetch.
 | `glass-brick.jpg` | Centre Street Market glass block brick wall | Yaibote_Hopait | CC BY-SA 4.0 |
 | `gravel.jpg` | Gravel small stones.jpg | Martin Olsson | CC BY-SA 3.0 |
 
-Images were downscaled for the web (max 1600 px, JPEG quality 80 —
+Images were downscaled for the web (max 1600 px, JPEG quality 80,
 the sky keeps 3200 px because it wraps a 60 m cylinder); the palm
 trunk was cropped from its source photo and straightened (the trunk
 leans ~5° in the original). No other alteration.

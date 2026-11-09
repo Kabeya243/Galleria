@@ -60,14 +60,14 @@ export default function ProviderPanel({ status }: { status: AiProviderStatus }) 
           color: configured ? "#2e6b34" : "#7b241c",
         }}
       >
-        {configured ? `● Connected — ${status.label}` : "● Not connected — no AI provider"}
+        {configured ? `● Connected, ${status.label}` : "● Not connected, no AI provider"}
       </span>
       <h2 style={S.title}>AI provider</h2>
       {configured ? (
         <>
           <p style={S.text}>
             {status.label} is connected{status.model ? ` (model ${status.model})` : ""}. The
-            model-powered features below are live. Your API key stays on the server — it is never
+            model-powered features below are live. Your API key stays on the server. It is never
             shown or sent to the browser.
           </p>
         </>
@@ -75,7 +75,7 @@ export default function ProviderPanel({ status }: { status: AiProviderStatus }) 
         <>
           <p style={S.text}>
             There is no AI service connected to Lakisa right now. Everything on this page that
-            works from your own data — your artworks, colours, dimensions, rooms and templates —
+            works from your own data (your artworks, colours, dimensions, rooms and templates)
             works today. Anything that would need a language model is marked{" "}
             <strong>“needs an AI provider”</strong> and stays off until you connect one.
           </p>
@@ -84,7 +84,7 @@ export default function ProviderPanel({ status }: { status: AiProviderStatus }) 
             {`# In your server environment (Vercel → Settings → Environment Variables):
 AI_PROVIDER=openai            # or anthropic, or openai-compatible
 AI_API_KEY=your-secret-key    # never commit this
-AI_MODEL=gpt-4o-mini          # optional — a default is used otherwise
+AI_MODEL=gpt-4o-mini          # optional, a default is used otherwise
 # AI_BASE_URL=…               # only for openai-compatible endpoints`}
           </code>
           {status.missingVars.length > 0 && (
@@ -93,7 +93,7 @@ AI_MODEL=gpt-4o-mini          # optional — a default is used otherwise
             </p>
           )}
           <ul style={S.list}>
-            <li>Keys are read only on the server — the browser never receives them.</li>
+            <li>Keys are read only on the server. The browser never receives them.</li>
             <li>After setting the variables, redeploy (Vercel picks them up on the next deploy).</li>
             <li>Model replies are labelled with the provider and model that answered.</li>
           </ul>
@@ -119,7 +119,7 @@ export function ModelIntegrationNote({ status, feature }: { status: AiProviderSt
         lineHeight: 1.55,
       }}
     >
-      <strong style={{ color: "var(--ink)" }}>Needs an AI provider — not connected.</strong> {feature}{" "}
+      <strong style={{ color: "var(--ink)" }}>Needs an AI provider, not connected.</strong> {feature}{" "}
       would need a language model. Connect a provider in the panel above to switch it on; nothing
       here is a simulated model reply.
     </p>

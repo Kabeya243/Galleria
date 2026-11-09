@@ -172,7 +172,7 @@
       $("#add-heading").onclick=()=>addText("Votre titre",56,true);$("#add-subheading").onclick=()=>addText("Un sous-titre",36);$("#add-body").onclick=()=>addText("Ajoutez votre texte ici",23);
     } else if(state.activeTab==="artworks") {
       const artworks=(window.EDITOR_CONFIG&&window.EDITOR_CONFIG.artworks)||[];
-      root.innerHTML=artworks.length?`<div class="action-card"><h3>Vos œuvres</h3><p>Cliquez sur une œuvre pour l’ajouter à la page.</p></div><div class="upload-gallery" id="artworks-gallery" style="display:contents"></div>`:`<div class="action-card"><h3>Vos œuvres</h3><p>Vous n’avez pas encore d’œuvre. Ouvrez une exposition dans l’éditeur et ajoutez votre première œuvre — elle apparaîtra ici.</p></div>`;
+      root.innerHTML=artworks.length?`<div class="action-card"><h3>Vos œuvres</h3><p>Cliquez sur une œuvre pour l’ajouter à la page.</p></div><div class="upload-gallery" id="artworks-gallery" style="display:contents"></div>`:`<div class="action-card"><h3>Vos œuvres</h3><p>Vous n’avez pas encore d’œuvre. Ouvrez une exposition dans l’éditeur et ajoutez votre première œuvre, elle apparaîtra ici.</p></div>`;
       const gallery=$("#artworks-gallery");
       if(gallery){gallery.innerHTML=artworks.map((item)=>`<img class="asset-thumb" src="${escapeHTML(item.imageUrl)}" data-src="${escapeHTML(item.imageUrl)}" alt="${escapeHTML(item.title)}" title="${escapeHTML(item.title)}">`).join("");$$(".asset-thumb",gallery).forEach((image)=>image.onclick=()=>addImage(image.dataset.src));}
     } else if(state.activeTab==="uploads") {

@@ -150,7 +150,7 @@ export default function AdminShell({
       />
       <aside className="ad-sidebar" aria-label="Admin menu">
         <div className="ad-sidebar-brand">
-          <BrandLogo variant="icon" themeScope="admin" height={38} />
+          <BrandLogo variant="icon" themeScope="admin" height={52} />
           <span className="ad-sidebar-titles">
             <strong>LAKISA</strong>
             <span>Admin Panel</span>

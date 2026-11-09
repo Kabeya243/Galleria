@@ -13,16 +13,16 @@
 // ---------------------------------------------------------------------------
 
 export const ASSET_LICENSES = [
-  "CC0 — Public Domain",
+  "CC0: Public Domain",
   "CC BY 4.0",
   "CC BY-SA 4.0",
   "CC BY-NC 4.0",
-  "Fab Standard — Personal",
-  "Fab Standard — Professional",
-  "Fab Standard — tier not confirmed",
+  "Fab Standard: Personal",
+  "Fab Standard: Professional",
+  "Fab Standard: tier not confirmed",
   "Royalty-free (check terms)",
   "All rights reserved",
-  "Unknown — do not use commercially",
+  "Unknown: do not use commercially",
 ] as const;
 
 export type AssetLicense = (typeof ASSET_LICENSES)[number];
@@ -36,9 +36,9 @@ export type AssetLicense = (typeof ASSET_LICENSES)[number];
  *  "Free" on Fab does not mean "usable for anything": always read the
  *  licence on the listing itself. */
 export const FAB_LICENSES: AssetLicense[] = [
-  "Fab Standard — Personal",
-  "Fab Standard — Professional",
-  "Fab Standard — tier not confirmed",
+  "Fab Standard: Personal",
+  "Fab Standard: Professional",
+  "Fab Standard: tier not confirmed",
   "CC BY 4.0",
 ];
 
@@ -109,7 +109,7 @@ export function validateAssetFile(file: File, allowedExtensions: string[]): stri
     return `“${file.name}” is not a supported file. Accepted: ${allowedExtensions.join(", ")}.`;
   }
   if (file.size > MAX_ASSET_FILE_BYTES) {
-    return `“${file.name}” is ${(file.size / 1024 / 1024).toFixed(1)} MB — the limit is 50 MB.`;
+    return `“${file.name}” is ${(file.size / 1024 / 1024).toFixed(1)} MB, the limit is 50 MB.`;
   }
   if (file.size === 0) return `“${file.name}” is empty.`;
   return null;
@@ -140,25 +140,25 @@ export const PUBLIC_DOMAIN_REFERENCES: ReferenceLink[] = [
   {
     name: "Poly Haven",
     url: "https://polyhaven.com/models",
-    license: "CC0 — Public Domain",
+    license: "CC0: Public Domain",
     what: "Free 3D models, HDRIs and textures. No attribution required, commercial use allowed.",
   },
   {
     name: "Smithsonian Open Access",
     url: "https://www.si.edu/openaccess",
-    license: "CC0 — Public Domain",
+    license: "CC0: Public Domain",
     what: "Millions of 2D and 3D assets from the Smithsonian collections, released as CC0.",
   },
   {
     name: "Wikimedia Commons",
     url: "https://commons.wikimedia.org/wiki/Category:3D_models",
-    license: "Varies per file — check each file's licence page",
+    license: "Varies per file: check each file's licence page",
     what: "Freely licensed 3D models and images. Always read the licence on the file page before use.",
   },
   {
     name: "Sketchfab",
     url: "https://sketchfab.com/search?q=&type=models&licenses=7",
-    license: "Varies per model — filter by licence (CC0 / CC BY)",
+    license: "Varies per model: filter by licence (CC0 / CC BY)",
     what: "Downloadable models. Use the licence filter and respect each model's terms; many are not free.",
   },
 ];
@@ -187,8 +187,8 @@ export const MARKETPLACE_REFERENCES: ReferenceLink[] = [
   {
     name: "Fab (Epic Games)",
     url: "https://www.fab.com",
-    license: "Varies per asset — Fab Standard License (Personal / Professional) or CC-BY",
-    what: "Epic's marketplace for 3D models, textures, materials and environments. Link out only: browse and acquire each asset on fab.com under its own licence and price — Lakisa does not copy, hotlink or re-host Fab files, and there is no public Fab download API.",
+    license: "Varies per asset: Fab Standard License (Personal / Professional) or CC-BY",
+    what: "Epic's marketplace for 3D models, textures, materials and environments. Link out only: browse and acquire each asset on fab.com under its own licence and price. Lakisa does not copy, hotlink or re-host Fab files, and there is no public Fab download API.",
   },
 ];
 
@@ -214,7 +214,7 @@ export const IMAGE3D_MODES: {
     label: "2D texture",
     available: true,
     description:
-      "The image is applied as a texture on a box or plane. The object is flat — this is a textured panel, not a 3D model.",
+      "The image is applied as a texture on a box or plane. The object is flat. This is a textured panel, not a 3D model.",
   },
   {
     id: "depth-approximation",
@@ -303,7 +303,7 @@ export const localApproximationProvider: Image3DProvider = {
       imageDataUrl,
       note:
         options.mode === "2d-texture"
-          ? "Textured panel. The image is flat — no geometry was reconstructed."
+          ? "Textured panel. The image is flat. No geometry was reconstructed."
           : "Depth approximation from brightness. An artistic relief, not a reconstruction: a single image cannot show hidden geometry.",
     };
   },
@@ -349,9 +349,9 @@ export const EXTERNAL_PROVIDER_SLOTS: {
     label: "RealityCapture / RealityScan (Epic Games)",
     envVars: [],
     docs: "https://www.realityscan.com",
-    note: "Desktop photogrammetry: build a true 3D model from a set of overlapping photos. Processing happens on your own machine — there is no cloud API and no API key to paste into Lakisa. Models built this way are imported back here as .glb. A step-by-step workflow guide is in the Image-to-3D tab.",
+    note: "Desktop photogrammetry: build a true 3D model from a set of overlapping photos. Processing happens on your own machine. There is no cloud API and no API key to paste into Lakisa. Models built this way are imported back here as .glb. A step-by-step workflow guide is in the Image-to-3D tab.",
     setup:
-      "Setup required — not connected. 1) Sign in with an Epic Games account and install RealityScan (the current name for RealityCapture since version 2.0, June 2025) from the Epic Games Launcher onto a Windows PC — there is a headless Linux build for command-line processing, but no macOS version. 2) It is free for individuals and companies under $1M annual gross revenue; above that it is a paid seat licence (check realityscan.com/license for the current threshold and price). 3) Workflow: export your photos from Lakisa, align and reconstruct them in RealityScan (desktop app or its CLI), export the model as .glb, then import that .glb here. No credential is ever pasted into Lakisa — the licence lives in your Epic account and the software on your machine.",
+      "Setup required: not connected. 1) Sign in with an Epic Games account and install RealityScan (the current name for RealityCapture since version 2.0, June 2025) from the Epic Games Launcher onto a Windows PC. There is a headless Linux build for command-line processing, but no macOS version. 2) It is free for individuals and companies under $1M annual gross revenue; above that it is a paid seat licence (check realityscan.com/license for the current threshold and price). 3) Workflow: export your photos from Lakisa, align and reconstruct them in RealityScan (desktop app or its CLI), export the model as .glb, then import that .glb here. No credential is ever pasted into Lakisa. The licence lives in your Epic account and the software on your machine.",
   },
 ];
 

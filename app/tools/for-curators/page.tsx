@@ -5,7 +5,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "For Curators — Lakisa Tools",
+  title: "For Curators: Lakisa Tools",
   description: "Build exhibitions, and keep the works and the people around them in order.",
 };
 

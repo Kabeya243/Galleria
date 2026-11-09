@@ -495,7 +495,7 @@ export default function ArtInContext({
         </button>
       ) : (
         <span style={{ color: "#6b6558", fontSize: 13, alignSelf: "center" }}>
-          {doneCount} of 10 steps done — {pct}%
+          {doneCount} of 10 steps done, {pct}%
         </span>
       )}
     </div>
@@ -515,7 +515,7 @@ export default function ArtInContext({
               value={activeId ?? ""}
               onChange={(e) => openProject(e.target.value)}
             >
-              {projects.length === 0 && <option value="">No project yet — create one</option>}
+              {projects.length === 0 && <option value="">No project yet. Create one</option>}
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -530,7 +530,7 @@ export default function ArtInContext({
               style={inputStyle}
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="e.g. Dakar series — from studio to show"
+              placeholder="e.g. Dakar series, from studio to show"
             />
           </div>
           <button type="button" style={btnPrimary} disabled={busy === "create-project"} onClick={createProject}>
@@ -553,13 +553,13 @@ export default function ArtInContext({
             </button>
           )}
           <span style={{ fontSize: 13, color: "#6b6558", marginLeft: "auto" }}>
-            {saveState === "saving" ? "Saving…" : saveState === "saved" ? "All changes saved ✓" : saveState === "error" ? "Save failed — changes are kept in this tab" : ""}
+            {saveState === "saving" ? "Saving…" : saveState === "saved" ? "All changes saved ✓" : saveState === "error" ? "Save failed, changes are kept in this tab" : ""}
           </span>
         </div>
         {notice && <p style={{ margin: "12px 0 0", fontSize: 13, color: "#5b554a" }}>{notice}</p>}
         {!activeProject && (
           <p style={{ margin: "12px 0 0", fontSize: 14 }}>
-            Create a project to begin — it holds the artworks, the exhibition and every step&apos;s state, and you can come back to it any time.
+            Create a project to begin, it holds the artworks, the exhibition and every step&apos;s state, and you can come back to it any time.
           </p>
         )}
       </div>
@@ -707,9 +707,9 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(1, "Upload — choose the work", "Pick artworks from your library, or upload a new one. The wizard records the real artwork — title, artist, year, medium, dimensions, description and image — and every later step works on that same record.")}
+        {stepHeader(1, "Upload: choose the work", "Pick artworks from your library, or upload a new one. The wizard records the real artwork: title, artist, year, medium, dimensions, description and image, and every later step works on that same record.")}
         <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>
-          {selectedArtworks.length === 0 ? "No artwork selected yet." : `${selectedArtworks.length} artwork${selectedArtworks.length > 1 ? "s" : ""} in this project — the first one leads the journey.`}
+          {selectedArtworks.length === 0 ? "No artwork selected yet." : `${selectedArtworks.length} artwork${selectedArtworks.length > 1 ? "s" : ""} in this project, the first one leads the journey.`}
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
           {artworks.map((art) => {
@@ -767,7 +767,7 @@ export default function ArtInContext({
 
         {primary && (
           <div style={{ marginTop: 28, borderTop: "1px solid #e8e2d4", paddingTop: 20 }}>
-            <h3 style={{ fontFamily: "Fraunces, serif", margin: "0 0 4px" }}>The record — {primary.title}</h3>
+            <h3 style={{ fontFamily: "Fraunces, serif", margin: "0 0 4px" }}>The record: {primary.title}</h3>
             <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>This is the real artwork row. Edits here save straight to it, and the 3D gallery, catalogue and wall labels all read the same row.</p>
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
               {primary.imageUrl && <img src={primary.imageUrl} alt={primary.title} style={{ width: 180, height: 180, objectFit: "contain", background: "#f5f2eb", border: "1px solid #e8e2d4" }} />}
@@ -791,11 +791,11 @@ export default function ArtInContext({
                   </div>
                 ) : (
                   <dl style={{ margin: 0, fontSize: 14, display: "grid", gridTemplateColumns: "auto 1fr", gap: "6px 14px" }}>
-                    <dt style={{ color: "#6b6558" }}>Artist</dt><dd style={{ margin: 0 }}>{primary.artist || "—"}</dd>
-                    <dt style={{ color: "#6b6558" }}>Year</dt><dd style={{ margin: 0 }}>{primary.year || "—"}</dd>
-                    <dt style={{ color: "#6b6558" }}>Medium</dt><dd style={{ margin: 0 }}>{primary.medium || "—"}</dd>
-                    <dt style={{ color: "#6b6558" }}>Dimensions</dt><dd style={{ margin: 0 }}>{primary.dimensions || "—"}</dd>
-                    <dt style={{ color: "#6b6558" }}>Description</dt><dd style={{ margin: 0 }}>{primary.description || "—"}</dd>
+                    <dt style={{ color: "#6b6558" }}>Artist</dt><dd style={{ margin: 0 }}>{primary.artist || "N/A"}</dd>
+                    <dt style={{ color: "#6b6558" }}>Year</dt><dd style={{ margin: 0 }}>{primary.year || "N/A"}</dd>
+                    <dt style={{ color: "#6b6558" }}>Medium</dt><dd style={{ margin: 0 }}>{primary.medium || "N/A"}</dd>
+                    <dt style={{ color: "#6b6558" }}>Dimensions</dt><dd style={{ margin: 0 }}>{primary.dimensions || "N/A"}</dd>
+                    <dt style={{ color: "#6b6558" }}>Description</dt><dd style={{ margin: 0 }}>{primary.description || "N/A"}</dd>
                     <dt style={{ color: "#6b6558" }}>Exhibition</dt><dd style={{ margin: 0 }}>{primary.exhibitionTitle}</dd>
                   </dl>
                 )}
@@ -820,12 +820,12 @@ export default function ArtInContext({
 
   // ======================= STEP 2 — Photography ===========================
   function StepPhotography() {
-    if (!primary) return <div style={cardStyle}><p>No artwork selected yet — go back to step 1.</p></div>;
+    if (!primary) return <div style={cardStyle}><p>No artwork selected yet. Go back to step 1.</p></div>;
     const edits = photoEdits.filter((r) => r.artworkId === primary.id);
     const done = edits.length > 0 || data.photoFinal[primary.id] === true;
     return (
       <div style={cardStyle}>
-        {stepHeader(2, "Photography — clean the photo", "Open the work in Photography Lab, straighten and fix the light, and save the edit. The wizard watches for a saved photo-edit on this artwork — or you can mark the original as final.")}
+        {stepHeader(2, "Photography: clean the photo", "Open the work in Photography Lab, straighten and fix the light, and save the edit. The wizard watches for a saved photo-edit on this artwork, or you can mark the original as final.")}
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "start" }}>
           {primary.imageUrl && <img src={primary.imageUrl} alt={primary.title} style={{ width: 200, height: 200, objectFit: "contain", background: "#f5f2eb", border: "1px solid #e8e2d4" }} />}
           <div style={{ flex: "1 1 300px" }}>
@@ -853,7 +853,7 @@ export default function ArtInContext({
                 checked={data.photoFinal[primary.id] === true}
                 onChange={(e) => updateData({ photoFinal: { ...data.photoFinal, [primary.id]: e.target.checked } })}
               />
-              The original photo is final — no edit needed
+              The original photo is final, no edit needed
             </label>
             {done && <p style={{ fontSize: 13, color: "#2e6b34" }}>Step complete: a photo-edit exists, or the original was marked final.</p>}
           </div>
@@ -864,7 +864,7 @@ export default function ArtInContext({
 
   // ========================= STEP 3 — Colour ==============================
   function StepColour() {
-    if (!primary) return <div style={cardStyle}><p>No artwork selected yet — go back to step 1.</p></div>;
+    if (!primary) return <div style={cardStyle}><p>No artwork selected yet. Go back to step 1.</p></div>;
     const savedPalette = paletteFor(primary.id);
     const stored = data.palette?.artworkId === primary.id ? data.palette : null;
     const shown = stored ?? (savedPalette ? { artworkId: primary.id, colors: paletteColorsOf(savedPalette), wallColors: [] } : null);
@@ -879,7 +879,7 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(3, "Colour — read the palette", "Run Colour Intelligence on the artwork and bring its palette back here. The wizard stores the palette in the project and suggests the wall colours that let the work shine.")}
+        {stepHeader(3, "Colour: read the palette", "Run Colour Intelligence on the artwork and bring its palette back here. The wizard stores the palette in the project and suggests the wall colours that let the work shine.")}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           <Link href={`/tools/color-intelligence?artworkId=${primary.id}`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
             Open in Colour Intelligence →
@@ -911,7 +911,7 @@ export default function ArtInContext({
             <p style={{ fontSize: 13, color: "#6b6558" }}>Paper white and warm gallery white first; the two palest tints come from the work&apos;s own dominant colours.</p>
           </div>
         ) : (
-          <p style={{ fontSize: 14 }}>No palette stored yet. Open Colour Intelligence above, analyse <strong>{primary.title}</strong>, save the palette there — then come back and press Refresh.</p>
+          <p style={{ fontSize: 14 }}>No palette stored yet. Open Colour Intelligence above, analyse <strong>{primary.title}</strong>, save the palette there, then come back and press Refresh.</p>
         )}
         {palettes.length > 0 && (
           <div style={{ marginTop: 20, borderTop: "1px solid #e8e2d4", paddingTop: 16 }}>
@@ -944,7 +944,7 @@ export default function ArtInContext({
     const [picked, setPicked] = useState<string | null>(null);
     const [frameMsg, setFrameMsg] = useState<string | null>(null);
     const [frameBusy, setFrameBusy] = useState(false);
-    if (!primary) return <div style={cardStyle}><p>No artwork selected yet — go back to step 1.</p></div>;
+    if (!primary) return <div style={cardStyle}><p>No artwork selected yet. Go back to step 1.</p></div>;
     const current = picked ?? primary.frame;
     const variants = Object.entries(FRAME_VARIANTS) as [FrameVariant, (typeof FRAME_VARIANTS)[FrameVariant]][];
 
@@ -964,7 +964,7 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(4, "Frames — choose the frame", "All 28 frame styles from Frame Studio, previewed on your own work. Pick one and save it — the frame is written to the real artwork row, so the 3D gallery and the public exhibition show the same frame.")}
+        {stepHeader(4, "Frames: choose the frame", "All 28 frame styles from Frame Studio, previewed on your own work. Pick one and save it, the frame is written to the real artwork row, so the 3D gallery and the public exhibition show the same frame.")}
         <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>
           Saved frame: <strong>{FRAME_VARIANTS[primary.frame as FrameVariant]?.label ?? primary.frame}</strong> · {statusBadge(statuses[3])}
           {" "}· <Link href={`/tools/frame-studio?artworkId=${primary.id}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open the full Frame Studio for custom widths, mats and glass →</Link>
@@ -1005,11 +1005,11 @@ export default function ArtInContext({
 
   // ========================= STEP 5 — Mockups =============================
   function StepMockups() {
-    if (!primary) return <div style={cardStyle}><p>No artwork selected yet — go back to step 1.</p></div>;
+    if (!primary) return <div style={cardStyle}><p>No artwork selected yet. Go back to step 1.</p></div>;
     const mine = mockups.filter((r) => selectedArtworks.some((a) => r.artworkId === a.id || (Array.isArray(r.data.artworkIds) && (r.data.artworkIds as unknown[]).includes(a.id))));
     return (
       <div style={cardStyle}>
-        {stepHeader(5, "Mockups — hang it in a room", "Place the work in a real interior in Mockup Studio and save the mockup. Saved mockups are collected into this project, and the high-resolution exports are reused again at step 10.")}
+        {stepHeader(5, "Mockups: hang it in a room", "Place the work in a real interior in Mockup Studio and save the mockup. Saved mockups are collected into this project, and the high-resolution exports are reused again at step 10.")}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           <Link href={`/tools/mockup-studio?artworkId=${primary.id}`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
             Open in Mockup Studio →
@@ -1019,7 +1019,7 @@ export default function ArtInContext({
         {linkedLoading ? (
           <p style={{ fontSize: 13, color: "#6b6558" }}>Checking saved mockups…</p>
         ) : mine.length === 0 ? (
-          <p style={{ fontSize: 14 }}>No saved mockups for these artworks yet. Open Mockup Studio above, hang <strong>{primary.title}</strong> in an interior, and save the mockup — then come back and press Refresh.</p>
+          <p style={{ fontSize: 14 }}>No saved mockups for these artworks yet. Open Mockup Studio above, hang <strong>{primary.title}</strong> in an interior, and save the mockup, then come back and press Refresh.</p>
         ) : (
           <div>
             <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>{mine.length} saved mockup{mine.length > 1 ? "s" : ""} for this project · {statusBadge(statuses[4])}</p>
@@ -1121,7 +1121,7 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(6, "Composition — arrange the set", "Combine artworks into one hanging — a diptych, a triptych, a grid, or a salon-style cluster. Set the spacing and the wall, preview it, and save the arrangement in the project. This is the arrangement the 3D gallery and the catalogue build from.")}
+        {stepHeader(6, "Composition: arrange the set", "Combine artworks into one hanging: a diptych, a triptych, a grid, or a salon-style cluster. Set the spacing and the wall, preview it, and save the arrangement in the project. This is the arrangement the 3D gallery and the catalogue build from.")}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
           {artworks.map((art) => {
             const on = pickedIds.includes(art.id);
@@ -1154,14 +1154,14 @@ export default function ArtInContext({
           <div>
             <label style={labelStyle} htmlFor="aic-layout">Layout</label>
             <select id="aic-layout" style={inputStyle} value={layout} onChange={(e) => setLayout(e.target.value as ArrangementLayout)}>
-              <option value="diptych">Diptych — two works side by side</option>
-              <option value="triptych">Triptych — three works in a row</option>
-              <option value="grid">Grid — two by two</option>
-              <option value="salon">Salon-style — clustered, varied sizes</option>
+              <option value="diptych">Diptych: two works side by side</option>
+              <option value="triptych">Triptych: three works in a row</option>
+              <option value="grid">Grid: two by two</option>
+              <option value="salon">Salon-style: clustered, varied sizes</option>
             </select>
           </div>
           <div>
-            <label style={labelStyle} htmlFor="aic-spacing">Spacing — {spacing}px</label>
+            <label style={labelStyle} htmlFor="aic-spacing">Spacing: {spacing}px</label>
             <input id="aic-spacing" type="range" min={0} max={60} step={4} value={spacing} onChange={(e) => setSpacing(Number(e.target.value))} style={{ width: 160 }} />
           </div>
           <div>
@@ -1200,7 +1200,7 @@ export default function ArtInContext({
       // title be set before the show is finished.
       const title =
         data.exhibitionDetails.title.trim() ||
-        (artworks[0] ? `${artworks[0].title} — Art in Context` : "Art in Context exhibition");
+        (artworks[0] ? `${artworks[0].title}: Art in Context` : "Art in Context exhibition");
       try {
         const res = await fetch("/api/exhibitions", {
           method: "POST",
@@ -1211,7 +1211,7 @@ export default function ArtInContext({
         const { exhibition } = (await res.json()) as { exhibition: { id: string; title: string; slug: string; status: string; description: string } };
         setExhibitions((prev) => [{ id: exhibition.id, title: exhibition.title, slug: exhibition.slug, status: exhibition.status, description: exhibition.description, roomNames: ["Room 1"], artworks: [] }, ...prev]);
         updateData({ exhibitionId: exhibition.id });
-        setGalleryMsg("Exhibition created — now add the works to it below.");
+        setGalleryMsg("Exhibition created. Now add the works to it below.");
       } catch (err) {
         setGalleryMsg(err instanceof Error ? err.message : "Could not create the exhibition.");
       }
@@ -1242,7 +1242,7 @@ export default function ArtInContext({
         setExhibitions((prev) =>
           prev.map((e) => (e.id === exhibition.id ? { ...e, artworks: [...e.artworks, { id: artwork.id, title: artwork.title, imageUrl: artwork.imageUrl }] } : e)),
         );
-        setGalleryMsg(`“${art.title}” added to “${exhibition.title}” — same image, dimensions, frame and metadata. Open the 3D editor to hang it on the wall.`);
+        setGalleryMsg(`“${art.title}” added to “${exhibition.title}”, same image, dimensions, frame and metadata. Open the 3D editor to hang it on the wall.`);
       } catch (err) {
         setGalleryMsg(err instanceof Error ? err.message : "Could not add the work.");
       } finally {
@@ -1252,12 +1252,12 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(7, "3D Gallery — place it in the room", "Pick the exhibition this project hangs in, then make sure every selected work is actually in it. Works already there are read from the real exhibition rows; a work that lives in another exhibition is added as a copy — same image, dimensions, frame and metadata — so the original never moves. Then open the 3D editor to hang it.")}
+        {stepHeader(7, "3D Gallery: place it in the room", "Pick the exhibition this project hangs in, then make sure every selected work is actually in it. Works already there are read from the real exhibition rows; a work that lives in another exhibition is added as a copy (same image, dimensions, frame and metadata), so the original never moves. Then open the 3D editor to hang it.")}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end", marginBottom: 16 }}>
           <div style={{ flex: "1 1 260px" }}>
             <label style={labelStyle} htmlFor="aic-exhibition">Exhibition for this project</label>
             <select id="aic-exhibition" style={inputStyle} value={data.exhibitionId ?? ""} onChange={(e) => updateData({ exhibitionId: e.target.value || null })}>
-              <option value="">— Pick an exhibition —</option>
+              <option value="">Pick an exhibition</option>
               {exhibitions.map((e) => (
                 <option key={e.id} value={e.id}>{e.title} ({e.status === "public" ? "published" : "draft"} · {e.artworks.length} works)</option>
               ))}
@@ -1274,7 +1274,7 @@ export default function ArtInContext({
         {exhibition ? (
           <div>
             <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>
-              “{exhibition.title}” — rooms: {exhibition.roomNames.join(", ") || "Room 1"} · {statusBadge(statuses[6])}
+              “{exhibition.title}”, rooms: {exhibition.roomNames.join(", ") || "Room 1"} · {statusBadge(statuses[6])}
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 8 }}>
               {selectedArtworks.map((art) => {
@@ -1296,7 +1296,7 @@ export default function ArtInContext({
                   </li>
                 );
               })}
-              {selectedArtworks.length === 0 && <li style={{ fontSize: 13, color: "#6b6558" }}>No artworks in this project yet — go back to step 1.</li>}
+              {selectedArtworks.length === 0 && <li style={{ fontSize: 13, color: "#6b6558" }}>No artworks in this project yet. Go back to step 1.</li>}
             </ul>
           </div>
         ) : (
@@ -1318,7 +1318,7 @@ export default function ArtInContext({
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeId]);
 
-    if (!exhibition) return <div style={cardStyle}><p>No exhibition linked yet — pick or create one in step 7.</p></div>;
+    if (!exhibition) return <div style={cardStyle}><p>No exhibition linked yet. Pick or create one in step 7.</p></div>;
 
     const importPlan = (id: string) => {
       setPlanId(id);
@@ -1338,7 +1338,7 @@ export default function ArtInContext({
         statement: str(d.statement) || prev.statement,
         labels,
       }));
-      setExMsg(`Imported “${row.title}” from Exhibition Planner — review it, then save.`);
+      setExMsg(`Imported “${row.title}” from Exhibition Planner, review it, then save.`);
     };
 
     const saveExhibition = async () => {
@@ -1354,7 +1354,7 @@ export default function ArtInContext({
         if (!res.ok) throw new Error("Could not save the exhibition.");
         setExhibitions((prev) => prev.map((e) => (e.id === exhibition.id ? { ...e, title, description: details.statement } : e)));
         updateData({ exhibitionDetails: details });
-        setExMsg("Saved — title and curatorial statement are on the real exhibition row; the rest lives in this project.");
+        setExMsg("Saved, title and curatorial statement are on the real exhibition row; the rest lives in this project.");
       } catch (err) {
         setExMsg(err instanceof Error ? err.message : "Could not save.");
       } finally {
@@ -1367,13 +1367,13 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(8, "Exhibition — write the show", "Finish the exhibition from the selected works: title, curatorial statement, artists, wall labels, room structure, lighting notes, a guided tour and visitor information. The title and statement save to the real exhibition row.")}
+        {stepHeader(8, "Exhibition: write the show", "Finish the exhibition from the selected works: title, curatorial statement, artists, wall labels, room structure, lighting notes, a guided tour and visitor information. The title and statement save to the real exhibition row.")}
         {plans.length > 0 && (
           <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap", marginBottom: 16, padding: 12, background: "#f7f1e3", border: "1px solid #e8e2d4", borderRadius: 2 }}>
             <div style={{ flex: "1 1 260px" }}>
               <label style={labelStyle} htmlFor="aic-plan">Import from Exhibition Planner</label>
               <select id="aic-plan" style={inputStyle} value={planId} onChange={(e) => importPlan(e.target.value)}>
-                <option value="">— Pick a saved plan —</option>
+                <option value="">Pick a saved plan</option>
                 {plans.map((p) => (
                   <option key={p.id} value={p.id}>{p.title}</option>
                 ))}
@@ -1403,13 +1403,13 @@ export default function ArtInContext({
                   style={{ ...inputStyle, minHeight: 52 }}
                   value={details.labels[art.id] ?? ""}
                   onChange={(e) => setDetails((prev) => ({ ...prev, labels: { ...prev.labels, [art.id]: e.target.value } }))}
-                  placeholder={[art.title, art.artist, art.year].filter(Boolean).join(", ") + (art.medium || art.dimensions ? ` — ${[art.medium, art.dimensions].filter(Boolean).join(" · ")}` : "")}
+                  placeholder={[art.title, art.artist, art.year].filter(Boolean).join(", ") + (art.medium || art.dimensions ? `, ${[art.medium, art.dimensions].filter(Boolean).join(" · ")}` : "")}
                 />
               </div>
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 13, color: "#6b6558" }}>Rooms: {exhibition.roomNames.join(", ") || "Room 1"} — room structure is edited in the 3D editor. <Link href={`/editor/${exhibition.id}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open the editor →</Link></p>
+        <p style={{ fontSize: 13, color: "#6b6558" }}>Rooms: {exhibition.roomNames.join(", ") || "Room 1"}. Room structure is edited in the 3D editor. <Link href={`/editor/${exhibition.id}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open the editor →</Link></p>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <button type="button" style={btnGold} disabled={exBusy} onClick={saveExhibition}>{exBusy ? "Saving…" : "Save exhibition"}</button>
           <span style={{ fontSize: 13 }}>{statusBadge(statuses[7])}</span>
@@ -1436,7 +1436,7 @@ export default function ArtInContext({
       }
     }, [exhibition, origin]);
 
-    if (!exhibition) return <div style={cardStyle}><p>No exhibition linked yet — pick or create one in step 7.</p></div>;
+    if (!exhibition) return <div style={cardStyle}><p>No exhibition linked yet. Pick or create one in step 7.</p></div>;
     const publicUrl = origin ? `${origin}/exhibition/${exhibition.slug}` : `/exhibition/${exhibition.slug}`;
     const isPublic = exhibition.status === "public";
 
@@ -1448,7 +1448,7 @@ export default function ArtInContext({
         if (!res.ok) throw new Error("Could not change the publication state.");
         const { status } = (await res.json()) as { status: string };
         setExhibitions((prev) => prev.map((e) => (e.id === exhibition.id ? { ...e, status } : e)));
-        setPubMsg(status === "public" ? "Published — the exhibition is live at its public URL." : "Unpublished — the exhibition is a draft again.");
+        setPubMsg(status === "public" ? "Published, the exhibition is live at its public URL." : "Unpublished, the exhibition is a draft again.");
       } catch (err) {
         setPubMsg(err instanceof Error ? err.message : "Could not publish.");
       } finally {
@@ -1458,7 +1458,7 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(9, "Publication — publish & share", "Publish the exhibition and generate everything a visitor needs: the public link, a QR code, the social preview and the catalogue link.")}
+        {stepHeader(9, "Publication: publish & share", "Publish the exhibition and generate everything a visitor needs: the public link, a QR code, the social preview and the catalogue link.")}
         <p style={{ fontSize: 14 }}>
           <strong>{exhibition.title}</strong> · {isPublic ? <span style={{ color: "#2e6b34", fontWeight: 600 }}>Published ✓</span> : <span style={{ color: GOLD, fontWeight: 600 }}>Draft</span>} · {statusBadge(statuses[8])}
         </p>
@@ -1513,7 +1513,7 @@ export default function ArtInContext({
 
   // ==================== STEP 10 — Export & Promotion ======================
   function StepPromotion() {
-    if (!exhibition) return <div style={cardStyle}><p>No exhibition linked yet — pick or create one in step 7.</p></div>;
+    if (!exhibition) return <div style={cardStyle}><p>No exhibition linked yet. Pick or create one in step 7.</p></div>;
     const catalogueDone = data.promotion.catalogue || presentations.some((r) => String(r.data.exhibitionId ?? "") === exhibition.id);
     const posterDone = data.promotion.poster || marketingAssets.some((r) => String(r.data.exhibitionId ?? "") === exhibition.id);
     const videoDone = data.promotion.video || videoProjects.some((r) => String((r.data as Record<string, unknown>).exhibitionId ?? "") === exhibition.id);
@@ -1527,7 +1527,7 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(10, "Export & Promotion — send it out", "The outputs of the whole journey, in one place: the saved mockups, the exhibition images, the PDF catalogue, the wall labels, the promotional poster and the walkthrough video.")}
+        {stepHeader(10, "Export & Promotion: send it out", "The outputs of the whole journey, in one place: the saved mockups, the exhibition images, the PDF catalogue, the wall labels, the promotional poster and the walkthrough video.")}
         <div style={{ display: "grid", gap: 16 }}>
           <section>
             <h3 style={{ fontFamily: "Fraunces, serif", margin: "0 0 8px" }}>High-resolution mockups</h3>
@@ -1538,9 +1538,9 @@ export default function ArtInContext({
                 ))}
               </ul>
             ) : (
-              <p style={{ fontSize: 13, color: "#6b6558", margin: 0 }}>No mockups collected yet — see step 5. <Link href={`/tools/mockup-studio?artworkId=${primary?.id ?? ""}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open Mockup Studio →</Link></p>
+              <p style={{ fontSize: 13, color: "#6b6558", margin: 0 }}>No mockups collected yet, see step 5. <Link href={`/tools/mockup-studio?artworkId=${primary?.id ?? ""}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open Mockup Studio →</Link></p>
             )}
-            <p style={{ fontSize: 13, color: "#6b6558" }}>Export the full-resolution file from Mockup Studio — the saved mockup keeps your scene, frame and light.</p>
+            <p style={{ fontSize: 13, color: "#6b6558" }}>Export the full-resolution file from Mockup Studio, the saved mockup keeps your scene, frame and light.</p>
           </section>
 
           <section>
@@ -1557,7 +1557,7 @@ export default function ArtInContext({
 
           <section style={{ borderTop: "1px solid #e8e2d4", paddingTop: 16 }}>
             <h3 style={{ fontFamily: "Fraunces, serif", margin: "0 0 8px" }}>PDF catalogue {catalogueDone ? <span style={{ color: "#2e6b34", fontSize: 13 }}>✓</span> : null}</h3>
-            <p style={{ fontSize: 14, margin: "0 0 8px" }}>Built from the Presentation Designer data — the same works, captions and curatorial text as the show.</p>
+            <p style={{ fontSize: 14, margin: "0 0 8px" }}>Built from the Presentation Designer data, the same works, captions and curatorial text as the show.</p>
             <Link href={`/tools/presentation-designer?exhibitionId=${exhibition.id}`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
               Open Presentation Designer →
             </Link>
@@ -1568,7 +1568,7 @@ export default function ArtInContext({
 
           <section style={{ borderTop: "1px solid #e8e2d4", paddingTop: 16 }}>
             <h3 style={{ fontFamily: "Fraunces, serif", margin: "0 0 8px" }}>Wall labels</h3>
-            <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>From the planner labels (step 8) — or the artwork record where no label was written. Print this page for the install.</p>
+            <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>From the planner labels (step 8), or the artwork record where no label was written. Print this page for the install.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
               {selectedArtworks.map((art) => (
                 <div key={art.id} style={{ border: "1px solid #d8d2c4", padding: 14, background: "#fff" }}>
@@ -1593,7 +1593,7 @@ export default function ArtInContext({
 
           <section style={{ borderTop: "1px solid #e8e2d4", paddingTop: 16 }}>
             <h3 style={{ fontFamily: "Fraunces, serif", margin: "0 0 8px" }}>Walkthrough video {videoDone ? <span style={{ color: "#2e6b34", fontSize: 13 }}>✓</span> : null}</h3>
-            <p style={{ fontSize: 14, margin: "0 0 8px" }}>Video Generator opens with this exhibition already selected — build the shot list and record the real 3D room.</p>
+            <p style={{ fontSize: 14, margin: "0 0 8px" }}>Video Generator opens with this exhibition already selected, build the shot list and record the real 3D room.</p>
             <Link href={`/tools/video-generator?exhibitionId=${exhibition.id}`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
               Open Video Generator →
             </Link>
@@ -1603,7 +1603,7 @@ export default function ArtInContext({
           </section>
         </div>
         <p style={{ fontSize: 13, color: "#6b6558", marginTop: 20 }}>
-          Step status: {statusBadge(statuses[9])} — done when the catalogue, the poster and the video are all produced (a saved presentation, marketing asset or video project for this exhibition counts, as does ticking the boxes above).
+          Step status: {statusBadge(statuses[9])}, done when the catalogue, the poster and the video are all produced (a saved presentation, marketing asset or video project for this exhibition counts, as does ticking the boxes above).
         </p>
       </div>
     );

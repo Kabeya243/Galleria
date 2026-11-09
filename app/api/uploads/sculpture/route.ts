@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) return NextResponse.json({ error: "Choose a sculpture file." }, { status: 400 });
   const name = file.name.toLowerCase();
   if (!name.endsWith(".glb")) {
-    return NextResponse.json({ error: "Upload a .glb file. A .gltf file cannot be stored on its own — re-export it as .glb in Blender." }, { status: 415 });
+    return NextResponse.json({ error: "Upload a .glb file. A .gltf file cannot be stored on its own. Re-export it as .glb in Blender." }, { status: 415 });
   }
   const contentType = file.type.toLowerCase();
   const extension = SCULPTURE_MIME_TYPES[contentType];

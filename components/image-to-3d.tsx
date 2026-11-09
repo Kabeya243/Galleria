@@ -209,7 +209,7 @@ export default function ImageTo3D() {
   const [message, setMessage] = useState<string | null>(null);
 
   // Manual add form
-  const [form, setForm] = useState({ name: "", creator: "", license: "CC0 — Public Domain" as AssetLicense, attribution: "", sourceUrl: "", notes: "" });
+  const [form, setForm] = useState({ name: "", creator: "", license: "CC0: Public Domain" as AssetLicense, attribution: "", sourceUrl: "", notes: "" });
 
   // Fab catalogue form — metadata only, link out. The licence is required
   // and never assumed; paid assets are labelled PAID and never included
@@ -343,26 +343,26 @@ export default function ImageTo3D() {
       mode: "reference",
     };
     await saveAsset(record, record.name);
-    setForm({ name: "", creator: "", license: "CC0 — Public Domain", attribution: "", sourceUrl: "", notes: "" });
+    setForm({ name: "", creator: "", license: "CC0: Public Domain", attribution: "", sourceUrl: "", notes: "" });
   }
 
   async function addFabAsset() {
     setFabError(null);
     const url = fabForm.url.trim();
     if (!url || !/fab\.com/i.test(url)) {
-      setFabError("Paste the Fab asset page URL (a fab.com link). Lakisa catalogues the metadata and links out — it never downloads or re-hosts the file.");
+      setFabError("Paste the Fab asset page URL (a fab.com link). Lakisa catalogues the metadata and links out, it never downloads or re-hosts the file.");
       return;
     }
     if (!fabForm.name.trim()) {
-      setFabError("Give the asset a title first — copy it from the Fab listing.");
+      setFabError("Give the asset a title first, copy it from the Fab listing.");
       return;
     }
     if (!fabForm.license) {
-      setFabError("Choose the licence exactly as shown on the Fab listing. Never assume an asset is free to use — “free” on Fab does not mean usable for anything.");
+      setFabError("Choose the licence exactly as shown on the Fab listing. Never assume an asset is free to use, “free” on Fab does not mean usable for anything.");
       return;
     }
     if (fabForm.price === "paid" && !fabForm.priceAmount.trim()) {
-      setFabError("This asset is paid — record its price as shown on the Fab listing.");
+      setFabError("This asset is paid, record its price as shown on the Fab listing.");
       return;
     }
     if (fabForm.license && fabLicenseRequiresAttribution(fabForm.license) && !fabForm.attribution.trim()) {
@@ -470,7 +470,7 @@ export default function ImageTo3D() {
         mode: "imported-glb",
         sculptureUrl: result.url,
         transform: { scale: modelScale, rotationY: modelRotation, tint: modelTint },
-        notes: "Stored in R2 — add it to an exhibition from here or from the editor's library picker.",
+        notes: "Stored in R2, add it to an exhibition from here or from the editor's library picker.",
       };
       await saveAsset(record, record.name);
       setSavedSculptureUrl(result.url);
@@ -529,7 +529,7 @@ export default function ImageTo3D() {
       });
       const result = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(result.error ?? "Could not add this sculpture to the exhibition.");
-      setMessage(`Added “${savedSculptureName || "Sculpture"}” to the exhibition — open the editor to move its pedestal.`);
+      setMessage(`Added “${savedSculptureName || "Sculpture"}” to the exhibition, open the editor to move its pedestal.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not add this sculpture to the exhibition.");
     } finally {
@@ -596,7 +596,7 @@ export default function ImageTo3D() {
       depthStrength: mode === "depth-approximation" ? depthStrength : undefined,
       notes:
         mode === "2d-texture"
-          ? "2D texture: the image applied to a panel. Flat — no geometry reconstructed."
+          ? "2D texture: the image applied to a panel. Flat, no geometry reconstructed."
           : "Depth approximation from brightness. An artistic relief, not a true reconstruction.",
     };
     await saveAsset(record, record.name);
@@ -693,11 +693,11 @@ export default function ImageTo3D() {
                     <p style={{ margin: "0 0 6px" }}>
                       {asset.data.price === "paid" ? (
                         <span style={{ display: "inline-block", background: "#fbe9e7", color: "#8f1d1d", border: "1px solid #d98a7a", borderRadius: 4, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>
-                          PAID{asset.data.priceAmount ? ` — ${asset.data.priceAmount}` : ""} · requires purchase, not included by default
+                          PAID{asset.data.priceAmount ? `: ${asset.data.priceAmount}` : ""} · requires purchase, not included by default
                         </span>
                       ) : (
                         <span style={{ display: "inline-block", background: "#e8f3e8", color: "#1e5c1e", border: "1px solid #9cc79c", borderRadius: 4, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>
-                          FREE on Fab — check the licence before use
+                          FREE on Fab, check the licence before use
                         </span>
                       )}
                     </p>
@@ -720,7 +720,7 @@ export default function ImageTo3D() {
                   </p>
                   {asset.data.sculptureUrl && (
                     <p style={{ margin: "0 0 8px", fontSize: 11, color: "var(--ink)" }}>
-                      GLB stored — ready to add to an exhibition (editor&apos;s library picker, or the Import tab).
+                      GLB stored, ready to add to an exhibition (editor&apos;s library picker, or the Import tab).
                     </p>
                   )}
                   {asset.data.attribution && <p style={{ margin: "0 0 8px", fontSize: 11 }}>Attribution: {asset.data.attribution}</p>}
@@ -768,7 +768,7 @@ export default function ImageTo3D() {
               <input className="full-input" placeholder="Notes" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} aria-label="Notes" />
             </div>
             <p style={{ margin: "8px 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-              Record the licence exactly as the source states it. Never claim an asset is free to use without its licence — when in doubt, pick “Unknown — do not use commercially”.
+              Record the licence exactly as the source states it. Never claim an asset is free to use without its licence, when in doubt, pick “Unknown: do not use commercially”.
             </p>
             <button className="galleries-open-button" disabled={busy} onClick={() => void addManualAsset()}>
               {busy ? "Saving…" : "Add to library"}
@@ -776,25 +776,25 @@ export default function ImageTo3D() {
           </div>
 
           <div className="property-section">
-            <label>CATALOGUE A FAB ASSET — METADATA ONLY, LINK OUT</label>
+            <label>CATALOGUE A FAB ASSET: METADATA ONLY, LINK OUT</label>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
               Fab (fab.com) is Epic Games&apos; marketplace for 3D models, textures, materials and environments. Browse
-              and acquire each asset on Fab itself — Lakisa records the listing&apos;s metadata and links back to it. It
+              and acquire each asset on Fab itself, Lakisa records the listing&apos;s metadata and links back to it. It
               never copies, hotlinks or re-hosts Fab files, and there is no public Fab download API. Prefer Fab&apos;s
               FREE assets: use the price filter on fab.com. A paid asset is labelled PAID here and is never included by
-              default. &ldquo;Free&rdquo; does not mean usable for anything — the licence on the listing decides.
+              default. &ldquo;Free&rdquo; does not mean usable for anything, the licence on the listing decides.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
-              <input className="full-input" placeholder="Fab asset URL — fab.com/… *" value={fabForm.url} onChange={(event) => setFabForm({ ...fabForm, url: event.target.value })} aria-label="Fab asset URL" />
+              <input className="full-input" placeholder="Fab asset URL: fab.com/… *" value={fabForm.url} onChange={(event) => setFabForm({ ...fabForm, url: event.target.value })} aria-label="Fab asset URL" />
               <input className="full-input" placeholder="Asset title (from the listing) *" value={fabForm.name} onChange={(event) => setFabForm({ ...fabForm, name: event.target.value })} aria-label="Fab asset title" />
               <input className="full-input" placeholder="Creator / author" value={fabForm.creator} onChange={(event) => setFabForm({ ...fabForm, creator: event.target.value })} aria-label="Fab asset creator" />
               <select
                 className="full-input"
                 value={fabForm.license}
                 onChange={(event) => setFabForm({ ...fabForm, license: event.target.value as AssetLicense | "" })}
-                aria-label="Fab licence — required"
+                aria-label="Fab licence: required"
               >
-                <option value="">Licence (from the listing) — required *</option>
+                <option value="">Licence (from the listing): required *</option>
                 {FAB_LICENSES.map((license) => (
                   <option key={license} value={license}>
                     {license}
@@ -803,7 +803,7 @@ export default function ImageTo3D() {
               </select>
               <select className="full-input" value={fabForm.price} onChange={(event) => setFabForm({ ...fabForm, price: event.target.value as "free" | "paid" })} aria-label="Price on Fab">
                 <option value="free">FREE on Fab</option>
-                <option value="paid">PAID — requires purchase</option>
+                <option value="paid">PAID: requires purchase</option>
               </select>
               {fabForm.price === "paid" && (
                 <input className="full-input" placeholder="Price as listed, e.g. $12.00 *" value={fabForm.priceAmount} onChange={(event) => setFabForm({ ...fabForm, priceAmount: event.target.value })} aria-label="Price as listed" />
@@ -820,11 +820,11 @@ export default function ImageTo3D() {
               <input className="full-input" placeholder="Notes" value={fabForm.notes} onChange={(event) => setFabForm({ ...fabForm, notes: event.target.value })} aria-label="Fab notes" />
             </div>
             <p style={{ margin: "8px 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-              Licence rules, from Epic&apos;s Fab docs: the Fab Standard License (Personal / Professional tiers — Professional
+              Licence rules, from Epic&apos;s Fab docs: the Fab Standard License (Personal / Professional tiers: Professional
               once you have generated more than $100,000 USD gross revenue from commercial activity in the last 12
               months) allows commercial use in a work but not reselling or redistributing the asset on its own, and does
               not require attribution. CC-BY is free but requires credit, a link to the licence, and a note of any
-              changes. When in doubt, pick &ldquo;Fab Standard — tier not confirmed&rdquo; and check the listing before
+              changes. When in doubt, pick &ldquo;Fab Standard: tier not confirmed&rdquo; and check the listing before
               using the asset.
             </p>
             {fabError && (
@@ -838,9 +838,9 @@ export default function ImageTo3D() {
           </div>
 
           <div className="property-section">
-            <label>REFERENCE LINKS — LINK OUT, DO NOT RE-HOST</label>
+            <label>REFERENCE LINKS: LINK OUT, DO NOT RE-HOST</label>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-              Starter sources for free 3D assets, plus marketplaces below. These are links to other sites — Lakisa does not copy or host their files. Always check the licence on the file page itself before using an asset.
+              Starter sources for free 3D assets, plus marketplaces below. These are links to other sites, Lakisa does not copy or host their files. Always check the licence on the file page itself before using an asset.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {PUBLIC_DOMAIN_REFERENCES.map((ref) => (
@@ -856,10 +856,10 @@ export default function ImageTo3D() {
                 </li>
               ))}
             </ul>
-            <h3 style={{ fontSize: 13, margin: "18px 0 6px" }}>Marketplaces — per-asset licence, link out only</h3>
+            <h3 style={{ fontSize: 13, margin: "18px 0 6px" }}>Marketplaces: per-asset licence, link out only</h3>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
               Marketplace assets are not free by default: each one has its own licence and price. Record the asset URL
-              and licence in your library like any other source — Lakisa never re-hosts marketplace files.
+              and licence in your library like any other source, Lakisa never re-hosts marketplace files.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {MARKETPLACE_REFERENCES.map((ref) => (
@@ -883,7 +883,7 @@ export default function ImageTo3D() {
       {tab === "import" && (
         <div>
           <div className="property-section">
-            <label>UPLOAD A .GLB / .GLTF MODEL — MAX {formatBytes(MAX_ASSET_FILE_BYTES)}</label>
+            <label>UPLOAD A .GLB / .GLTF MODEL: MAX {formatBytes(MAX_ASSET_FILE_BYTES)}</label>
             <input
               ref={modelInputRef}
               type="file"
@@ -932,13 +932,13 @@ export default function ImageTo3D() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <div className="property-section">
                   <label>
-                    SCALE — {modelScale.toFixed(2)}×
+                    SCALE: {modelScale.toFixed(2)}×
                   </label>
                   <input type="range" min={0.1} max={5} step={0.05} value={modelScale} onChange={(event) => setModelScale(Number(event.target.value))} style={{ width: "100%" }} aria-label="Scale" />
                 </div>
                 <div className="property-section">
                   <label>
-                    ROTATION — {Math.round((modelRotation * 180) / Math.PI)}°
+                    ROTATION: {Math.round((modelRotation * 180) / Math.PI)}°
                   </label>
                   <input type="range" min={0} max={6.283} step={0.05} value={modelRotation} onChange={(event) => setModelRotation(Number(event.target.value))} style={{ width: "100%" }} aria-label="Rotation" />
                 </div>
@@ -966,9 +966,9 @@ export default function ImageTo3D() {
                   </button>
                 </div>
                 <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-                  Saving uploads the .glb itself to your storage (4.5 MB maximum — compress it with Draco or meshopt in Blender if it is
+                  Saving uploads the .glb itself to your storage (4.5 MB maximum, compress it with Draco or meshopt in Blender if it is
                   larger) and records it in your library, so it can be added to an exhibition without re-attaching the file. A .gltf previews
-                  here but cannot be stored — re-export it as .glb first.
+                  here but cannot be stored, re-export it as .glb first.
                 </p>
               </div>
 
@@ -976,7 +976,7 @@ export default function ImageTo3D() {
                 <div className="property-section">
                   <label>ADD TO AN EXHIBITION</label>
                   <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-                    “{savedSculptureName}” is saved. Add it to an exhibition — it stands on its pedestal at the first room&apos;s centre, and
+                    “{savedSculptureName}” is saved. Add it to an exhibition, it stands on its pedestal at the first room&apos;s centre, and
                     you move the pedestal in the editor.
                   </p>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1012,7 +1012,7 @@ export default function ImageTo3D() {
                   )}
                   {exhibitions.length === 0 && !exhibitionsLoading && !exhibitionsError && (
                     <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11 }}>
-                      No exhibitions yet — create one from the dashboard first, or add the sculpture later from the editor&apos;s library picker.
+                      No exhibitions yet. Create one from the dashboard first, or add the sculpture later from the editor&apos;s library picker.
                     </p>
                   )}
                 </div>
@@ -1035,7 +1035,7 @@ export default function ImageTo3D() {
           <div className={styles.emptyBox} style={{ marginBottom: 16 }}>
             <strong>One honest limit, up front.</strong>
             <p>
-              A single image cannot reconstruct hidden geometry — the back of an object, what sits behind it, or its true depth are not in the
+              A single image cannot reconstruct hidden geometry: the back of an object, what sits behind it, or its true depth are not in the
               picture. What Lakisa does here, without any external service, is a 2D texture and a depth-from-brightness approximation. True
               reconstruction needs several photos or a hosted AI service (see the provider section below).
             </p>
@@ -1044,7 +1044,7 @@ export default function ImageTo3D() {
           <div className="property-section">
             <label>PROVIDER</label>
             <select className="full-input" value={providerId} onChange={(event) => setProviderId(event.target.value)} aria-label="Image-to-3D provider">
-              {[{ id: "none", label: localApproximationProvider.label }, ...EXTERNAL_PROVIDER_SLOTS.map((slot) => ({ id: slot.id, label: `${slot.label} — not connected` }))].map((option) => (
+              {[{ id: "none", label: localApproximationProvider.label }, ...EXTERNAL_PROVIDER_SLOTS.map((slot) => ({ id: slot.id, label: `${slot.label}: not connected` }))].map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
                 </option>
@@ -1053,7 +1053,7 @@ export default function ImageTo3D() {
             <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
               {selectedSlot ? (
                 <>
-                  <strong style={{ color: "var(--ink)" }}>Not connected — setup required.</strong> {selectedSlot.setup ?? selectedSlot.note}
+                  <strong style={{ color: "var(--ink)" }}>Not connected, setup required.</strong> {selectedSlot.setup ?? selectedSlot.note}
                   <br />
                   <a href={selectedSlot.docs} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
                     {selectedSlot.docs} ↗
@@ -1066,14 +1066,14 @@ export default function ImageTo3D() {
           </div>
 
           <div className="property-section">
-            <label>MODE — WHAT EACH ONE REALLY DOES</label>
+            <label>MODE: WHAT EACH ONE REALLY DOES</label>
             <div style={{ display: "grid", gap: 8 }}>
               {IMAGE3D_MODES.map((item) => (
                 <label key={item.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", border: "1px solid var(--border)", borderRadius: 6, padding: 10, opacity: item.available ? 1 : 0.6, cursor: item.available ? "pointer" : "not-allowed" }}>
                   <input type="radio" name="image3d-mode" checked={mode === item.id} disabled={!item.available} onChange={() => setMode(item.id)} style={{ marginTop: 3 }} />
                   <span>
                     <strong style={{ fontSize: 13 }}>
-                      {item.label} {!item.available && "— needs an external service"}
+                      {item.label} {!item.available && "Needs an external service"}
                     </strong>
                     <br />
                     <span style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>{item.description}</span>
@@ -1084,7 +1084,7 @@ export default function ImageTo3D() {
           </div>
 
           <div className="property-section">
-            <label>UPLOAD AN IMAGE — JPG, PNG OR WEBP, MAX {formatBytes(MAX_ASSET_FILE_BYTES)}</label>
+            <label>UPLOAD AN IMAGE: JPG, PNG OR WEBP, MAX {formatBytes(MAX_ASSET_FILE_BYTES)}</label>
             <input
               ref={imageInputRef}
               type="file"
@@ -1133,10 +1133,10 @@ export default function ImageTo3D() {
               {mode === "depth-approximation" && (
                 <div className="property-section">
                   <label>
-                    RELIEF DEPTH — {Math.round(depthStrength * 100)}%
+                    RELIEF DEPTH: {Math.round(depthStrength * 100)}%
                   </label>
                   <input type="range" min={0.1} max={1} step={0.05} value={depthStrength} onChange={(event) => setDepthStrength(Number(event.target.value))} style={{ width: "100%", maxWidth: 320 }} aria-label="Relief depth" />
-                  <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11 }}>Bright areas rise, dark areas sink. This is an artistic relief — it guesses depth from brightness and cannot know the real shape.</p>
+                  <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 11 }}>Bright areas rise, dark areas sink. This is an artistic relief, it guesses depth from brightness and cannot know the real shape.</p>
                 </div>
               )}
 
@@ -1152,7 +1152,7 @@ export default function ImageTo3D() {
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button className="galleries-open-button" disabled={imageBusy} onClick={() => void runImageTo3D()}>
-                  {imageBusy ? "Working…" : `Generate — ${selectedMode?.label ?? mode}`}
+                  {imageBusy ? "Working…" : `Generate: ${selectedMode?.label ?? mode}`}
                 </button>
                 <button className="galleries-open-button" style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--border)" }} disabled={busy} onClick={() => void saveImageResult()}>
                   {busy ? "Saving…" : "Save result to library"}
@@ -1164,7 +1164,7 @@ export default function ImageTo3D() {
                 </p>
               )}
               <p style={{ margin: "10px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
-                Saving keeps the image/texture in your library. It is not a GLB sculpture — for a 3D model in an exhibition, use the Import
+                Saving keeps the image/texture in your library. It is not a GLB sculpture, for a 3D model in an exhibition, use the Import
                 tab with a .glb file (Blender export, RealityScan, or a downloaded model).
               </p>
             </div>
@@ -1177,18 +1177,18 @@ export default function ImageTo3D() {
           )}
 
           <div className="property-section">
-            <label>CONNECT AN EXTERNAL SERVICE — DOCUMENTED SLOTS</label>
+            <label>CONNECT AN EXTERNAL SERVICE: DOCUMENTED SLOTS</label>
             <p style={{ margin: "0 0 10px", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
               No external provider is connected yet, so the three reconstruction modes stay unavailable rather than pretending to work. To enable
               one, implement the <code>Image3DProvider</code> interface in <code>lib/asset-library.ts</code> and register it in{" "}
               <code>image3DProviders</code>. Cloud services need their own account and API key, billed per generation; RealityCapture /
-              RealityScan is different — it is desktop software licensed through an Epic Games account, with no API key at all.
+              RealityScan is different, it is desktop software licensed through an Epic Games account, with no API key at all.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {EXTERNAL_PROVIDER_SLOTS.map((slot) => (
                 <li key={slot.id} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 12 }}>
                   <strong style={{ fontSize: 13 }}>
-                    {slot.label} — not connected
+                    {slot.label}: not connected
                   </strong>
                   <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.6 }}>
                     {slot.setup ?? slot.note}
@@ -1209,14 +1209,14 @@ export default function ImageTo3D() {
           </div>
 
           <div className="property-section">
-            <label>PHOTOGRAMMETRY WORKFLOW — REALITYCAPTURE / REALITYSCAN (FREE)</label>
+            <label>PHOTOGRAMMETRY WORKFLOW: REALITYCAPTURE / REALITYSCAN (FREE)</label>
             <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, background: "#f6f1ea", border: "1px solid var(--border)", borderRadius: 6, padding: 10 }}>
               <strong>Runs OUTSIDE the browser, on your own computer.</strong> Nothing in this workflow is simulated
               inside Lakisa: you photograph a real space or object, RealityScan (Epic Games&apos; desktop
-              photogrammetry app, formerly RealityCapture — renamed at version 2.0, June 2025) rebuilds it into a 3D
+              photogrammetry app, formerly RealityCapture, renamed at version 2.0, June 2025) rebuilds it into a 3D
               model on your machine, and you import the finished .glb back here. RealityScan is free for students,
               educators and individuals / businesses under $1M USD annual gross revenue; above that it is a paid seat
-              per user per year — the licensing page is the price of record. It runs on 64-bit Windows, and on Linux
+              per user per year, the licensing page is the price of record. It runs on 64-bit Windows, and on Linux
               for command-line workflows only (no macOS version). Install it from the Epic Games Launcher (Unreal
               Engine section) with an Epic Games account. There is also RealityScan Mobile, a free phone app for iOS
               and Android that captures and processes on the device.
@@ -1224,26 +1224,26 @@ export default function ImageTo3D() {
             <ol style={{ margin: "0 0 12px", paddingLeft: 20, fontSize: 12, lineHeight: 1.8, display: "grid", gap: 12 }}>
               <li>
                 <strong>1 · Photograph the space or object.</strong> Walk around the subject and photograph it from
-                every angle — front, back, top, sides and diagonals, at several heights. A small object typically takes
+                every angle: front, back, top, sides and diagonals, at several heights. A small object typically takes
                 dozens of photos; a whole gallery room takes many more. Every point of the subject should appear in at
                 least two photos, and consecutive shots should overlap by about 60–80% (Epic&apos;s Capturing Reality
-                team recommends up to 80% overlap in every direction). Light it evenly and diffusely — an overcast day
-                outdoors, or soft even light indoors — and keep the light constant while you shoot. Avoid hard shadows,
+                team recommends up to 80% overlap in every direction). Light it evenly and diffusely (an overcast day
+                outdoors, or soft even light indoors) and keep the light constant while you shoot. Avoid hard shadows,
                 reflections, shiny or transparent surfaces, and anything moving. Use sharp, well-exposed photos at low
                 ISO with no motion blur; a fixed focal length helps, and the subject should fill most of the frame.
                 What to photograph: a real gallery space (walls, floor, openings) or a single artwork / object you want
                 as a 3D model.
               </li>
               <li>
-                <strong>2 · Process in RealityScan (desktop).</strong> Import the photos, then run <em>Align</em> — the
-                software finds where each photo was taken — then reconstruct the mesh and calculate the texture. Check
+                <strong>2 · Process in RealityScan (desktop).</strong> Import the photos, then run <em>Align</em>, the
+                software finds where each photo was taken, then reconstruct the mesh and calculate the texture. Check
                 the alignment first: if the photos split into separate unaligned groups, add more overlapping shots of
                 the gaps and align again. This is the heavy step and it is GPU-accelerated (NVIDIA, and AMD since
                 version 2.2), so it runs on a machine with a real graphics card. A headless command-line build exists
                 for scripted processing on Windows or Linux.
               </li>
               <li>
-                <strong>3 · Simplify the mesh for the web.</strong> A raw scan has millions of triangles — far too
+                <strong>3 · Simplify the mesh for the web.</strong> A raw scan has millions of triangles, far too
                 many for a browser. In RealityScan, go to SCENE 3D / TOOLS → <em>Simplify</em> and set an absolute
                 target triangle count; it creates a new simplified model and keeps the original. Then <em>retexture</em>{" "}
                 the simplified model: a simplified model must be retextured before its textures can be exported with
@@ -1253,18 +1253,18 @@ export default function ImageTo3D() {
                 <strong>4 · Export mesh + textures as GLB / glTF.</strong> Export → Model &amp; Point Cloud → Binary
                 GL Transmission Format (.glb), with &ldquo;Export textures&rdquo; on. GLB is one file with the textures
                 embedded, which is why Lakisa imports it directly. (RealityScan also exports OBJ, FBX, USD, PLY, STL
-                and more — GLB is the web-ready choice.) RealityScan Mobile exports GLB directly on Android, and USDZ
+                and more, GLB is the web-ready choice.) RealityScan Mobile exports GLB directly on Android, and USDZ
                 / OBJ on iOS.
               </li>
               <li>
                 <strong>5 · Import the GLB into Lakisa.</strong> Open the &ldquo;Import .glb / .gltf&rdquo; tab above,
                 choose the exported .glb (max 50 MB), preview it with orbit controls, adjust scale, rotation and tint,
-                then save it to your asset library. The library keeps the name, file details and transform — keep the
+                then save it to your asset library. The library keeps the name, file details and transform, keep the
                 original .glb file on disk and re-attach it to preview again.
               </li>
             </ol>
             <p style={{ margin: 0, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
-              Sources: Epic&apos;s RealityScan pages —{" "}
+              Sources: Epic&apos;s RealityScan pages,{" "}
               <a href="https://www.realityscan.com" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
                 realityscan.com ↗
               </a>{" "}
@@ -1277,8 +1277,8 @@ export default function ImageTo3D() {
                 Model export help ↗
               </a>
               . Capture guidance (overlap, lighting, coverage) follows Epic&apos;s Capturing Reality team
-              recommendations in the Epic Developer Community forums; where Epic gives no exact number — such as how
-              many photos a room needs — this guide says so instead of inventing one.
+              recommendations in the Epic Developer Community forums; where Epic gives no exact number (such as how
+              many photos a room needs), this guide says so instead of inventing one.
             </p>
           </div>
         </div>

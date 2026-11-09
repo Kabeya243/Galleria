@@ -8,9 +8,9 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Marketing Studio — Lakisa Tools",
+  title: "Marketing Studio: Lakisa Tools",
   description:
-    "Generate exhibition marketing assets from your own artworks — posters, social graphics, invitation cards, press kits and announcements, with live preview and real-size PNG/JPEG export.",
+    "Generate exhibition marketing assets from your own artworks, posters, social graphics, invitation cards, press kits and announcements, with live preview and real-size PNG/JPEG export.",
 };
 
 export default async function MarketingStudioRoute({
@@ -59,7 +59,7 @@ export default async function MarketingStudioRoute({
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Marketing assets are built from your own work. Open an exhibition in the editor and add your first artwork — it will show up here as soon as it exists.</p>
+          <p>Marketing assets are built from your own work. Open an exhibition in the editor and add your first artwork, it will show up here as soon as it exists.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

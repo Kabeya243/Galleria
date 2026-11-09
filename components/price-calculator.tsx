@@ -136,13 +136,13 @@ export default function PriceCalculator() {
           </div>
           <div>
             <dt>Price per cm²</dt>
-            <dd>{result.perCm2 > 0 ? `$${result.perCm2.toFixed(2)}` : "—"}</dd>
+            <dd>{result.perCm2 > 0 ? `$${result.perCm2.toFixed(2)}` : "N/A"}</dd>
           </div>
         </dl>
         <p className={styles.resultNote}>
           A starting point, not a market price. Compare with similar works, your exhibition
           history and what your collectors have paid. A gallery usually takes around 40–50%
-          of the sale price — doubling your cost means you still cover what the piece cost
+          of the sale price, doubling your cost means you still cover what the piece cost
           you to make.
         </p>
 
@@ -152,7 +152,7 @@ export default function PriceCalculator() {
           {rates.status === "loading" && <p className={styles.ratesNote}>Loading exchange rates…</p>}
           {rates.status === "unavailable" && (
             <p className={styles.ratesNote}>
-              Exchange rates are unavailable right now — prices are shown in US dollars only.
+              Exchange rates are unavailable right now. Prices are shown in US dollars only.
             </p>
           )}
           {rates.status === "ready" && (
@@ -180,7 +180,7 @@ export default function PriceCalculator() {
                 ECB reference rates of {formatRateDate(rates.date)}, via Frankfurter (free, no
                 sign-up). Converted figures are approximate.
                 {rates.stale
-                  ? " Frankfurter did not answer — showing the last rates we have."
+                  ? " Frankfurter did not answer, showing the last rates we have."
                   : ""}
               </p>
             </>

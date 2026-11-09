@@ -3,8 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Feed — Lakisa",
-  description: "Published exhibitions from artists across Lakisa — step inside and walk through them.",
+  title: "Feed: Lakisa",
+  description: "Published exhibitions from artists across Lakisa, step inside and walk through them.",
 };
 
 // The publication feed reads live from GET /api/social/feed on the

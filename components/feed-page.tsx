@@ -226,7 +226,7 @@ export default function FeedPage({
       <main className="galleries-page">
         <header className="galleries-header">
           <Link className="brand-lockup" href="/">
-            <BrandLogo variant="horizontal" height={36} />
+            <BrandLogo variant="horizontal" height={52} />
           </Link>
           <nav className="galleries-nav">
             <Link href="/galleries">{t("explore", "galleries")}</Link>

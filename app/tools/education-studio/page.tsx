@@ -8,9 +8,9 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Art Education Studio — Lakisa Tools",
+  title: "Art Education Studio: Lakisa Tools",
   description:
-    "Build educational packs for your exhibitions: learner labels, learning guides, curatorial questions, interactive quizzes, analysis prompts and guided learning paths — printable and exportable.",
+    "Build educational packs for your exhibitions: learner labels, learning guides, curatorial questions, interactive quizzes, analysis prompts and guided learning paths, printable and exportable.",
 };
 
 export default async function EducationStudioRoute() {
@@ -53,7 +53,7 @@ export default async function EducationStudioRoute() {
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No exhibitions yet.</strong>
-          <p>Create an exhibition and add artworks first — the education pack is built per exhibition, artwork by artwork.</p>
+          <p>Create an exhibition and add artworks first, the education pack is built per exhibition, artwork by artwork.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

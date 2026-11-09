@@ -550,7 +550,7 @@ export default function PresentationDesigner({
   const contentBlocks: { key: "bio" | "curatorialText" | "projectDescription" | "exhibitionOverview"; label: string; hint: string }[] = [
     { key: "bio", label: "Artist biography", hint: "Who you are, where you work, what your work is about." },
     { key: "curatorialText", label: "Curatorial text", hint: "The idea that holds the works together." },
-    { key: "projectDescription", label: "Project description", hint: "What you propose to make, show or do — and why now." },
+    { key: "projectDescription", label: "Project description", hint: "What you propose to make, show or do, and why now." },
     { key: "exhibitionOverview", label: "Exhibition overview", hint: "How the show hangs together: rooms, sequence, scale." },
   ];
 
@@ -561,7 +561,7 @@ export default function PresentationDesigner({
           <div className="pd-empty">
             <strong>No artworks yet.</strong>
             <p>
-              A presentation needs your works. Open an exhibition in the editor and add your first artwork — it will
+              A presentation needs your works. Open an exhibition in the editor and add your first artwork, it will
               show up here as soon as you save it.
             </p>
             <Link href="/exhibitions" className="galleries-open-button">
@@ -712,19 +712,19 @@ export default function PresentationDesigner({
                 {slide.layout !== "title" && slide.layout !== "text" ? (
                   <div className="pd-grid">
                     <label className="pd-field">
-                      <span>Caption — title</span>
+                      <span>Caption: title</span>
                       <input value={slide.capTitle} onChange={(e) => updateSlide(slide.id, { capTitle: e.target.value })} placeholder="Artwork title" />
                     </label>
                     <label className="pd-field">
-                      <span>Caption — year</span>
+                      <span>Caption: year</span>
                       <input value={slide.capYear} onChange={(e) => updateSlide(slide.id, { capYear: e.target.value })} placeholder="2026" />
                     </label>
                     <label className="pd-field">
-                      <span>Caption — medium</span>
+                      <span>Caption: medium</span>
                       <input value={slide.capMedium} onChange={(e) => updateSlide(slide.id, { capMedium: e.target.value })} placeholder="Charcoal on paper" />
                     </label>
                     <label className="pd-field">
-                      <span>Caption — dimensions</span>
+                      <span>Caption: dimensions</span>
                       <input value={slide.capDims} onChange={(e) => updateSlide(slide.id, { capDims: e.target.value })} placeholder="130 × 94 cm" />
                     </label>
                   </div>
@@ -732,19 +732,19 @@ export default function PresentationDesigner({
                 {slide.layout === "two-art" ? (
                   <div className="pd-grid">
                     <label className="pd-field">
-                      <span>Second caption — title</span>
+                      <span>Second caption: title</span>
                       <input value={slide.capTitle2} onChange={(e) => updateSlide(slide.id, { capTitle2: e.target.value })} placeholder="Artwork title" />
                     </label>
                     <label className="pd-field">
-                      <span>Second caption — year</span>
+                      <span>Second caption: year</span>
                       <input value={slide.capYear2} onChange={(e) => updateSlide(slide.id, { capYear2: e.target.value })} placeholder="2026" />
                     </label>
                     <label className="pd-field">
-                      <span>Second caption — medium</span>
+                      <span>Second caption: medium</span>
                       <input value={slide.capMedium2} onChange={(e) => updateSlide(slide.id, { capMedium2: e.target.value })} placeholder="Charcoal on paper" />
                     </label>
                     <label className="pd-field">
-                      <span>Second caption — dimensions</span>
+                      <span>Second caption: dimensions</span>
                       <input value={slide.capDims2} onChange={(e) => updateSlide(slide.id, { capDims2: e.target.value })} placeholder="130 × 94 cm" />
                     </label>
                   </div>
@@ -765,7 +765,7 @@ export default function PresentationDesigner({
                     }
                   />
                 </label>
-                <p className="pd-hint">Captions are filled in automatically from the artwork you pick — edit them here if the record needs a correction for this presentation only.</p>
+                <p className="pd-hint">Captions are filled in automatically from the artwork you pick. Edit them here if the record needs a correction for this presentation only.</p>
               </div>
             ) : null}
           </div>
@@ -863,7 +863,7 @@ export default function PresentationDesigner({
             </button>
           </div>
           <p className="pd-hint">
-            “Download PDF” opens your browser’s print dialog — choose <strong>Save as PDF</strong>, paper size{" "}
+            “Download PDF” opens your browser’s print dialog, choose <strong>Save as PDF</strong>, paper size{" "}
             <strong>A4</strong>, orientation <strong>landscape</strong>, and turn off headers and footers. Each slide
             prints as one page.
           </p>
@@ -877,7 +877,7 @@ export default function PresentationDesigner({
               {savedError} <button type="button" className="pd-link-button" onClick={() => void refreshSaved()}>Try again</button>
             </p>
           ) : saved.length === 0 ? (
-            <p className="pd-hint">Nothing saved yet — save this deck above and it will appear here.</p>
+            <p className="pd-hint">Nothing saved yet. Save this deck above and it will appear here.</p>
           ) : (
             <ul className="pd-saved-list">
               {saved.map((row) => (
@@ -951,7 +951,7 @@ export default function PresentationDesigner({
           <div key={s.id} className="pd-print-page">
             <SlideView slide={s} deck={deck} artworks={artworks} />
             <p className="pd-print-footer">
-              {deck.artistName} — {deck.title} · {i + 1} / {deck.slides.length}
+              {deck.artistName}, {deck.title} · {i + 1} / {deck.slides.length}
             </p>
           </div>
         ))}

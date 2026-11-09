@@ -52,7 +52,7 @@ export default function PaletteSwatches({
             type="button"
             className="wall-swatch"
             style={{ backgroundColor: hex, width: size, height: size }}
-            title={`${index === 0 ? "Dominant — " : ""}${hex} (click to copy)`}
+            title={`${index === 0 ? "Dominant: " : ""}${hex} (click to copy)`}
             aria-label={`${index === 0 ? "Dominant colour" : "Palette colour"} ${hex}, click to copy`}
             onClick={() => void copyHex(hex)}
           />

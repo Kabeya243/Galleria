@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Digital Twin, VR & AR — Lakisa Tools",
+  title: "Digital Twin, VR & AR: Lakisa Tools",
   description:
     "Build a measured digital twin of a physical room, compare planned vs measured values, plan the installation, walk the room in VR, and preview artworks in AR or on a photo of your own wall.",
 };
@@ -51,7 +51,7 @@ export default async function DigitalTwinRoute() {
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
           <p>
-            The twin builder works with your own artworks, so create an exhibition and add at least one work first — the
+            The twin builder works with your own artworks, so create an exhibition and add at least one work first, the
             builder reads its real dimensions and image for the 3D twin, the VR walk and the AR preview.
           </p>
           <Link href="/exhibitions" className="galleries-open-button">

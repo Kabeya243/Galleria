@@ -35,17 +35,17 @@ type TemplateId = "classic" | "bold" | "minimal";
 type PosterSize = "A3" | "A4";
 
 const ASSET_KINDS: { id: AssetKind; label: string; blurb: string }[] = [
-  { id: "poster", label: "Poster", blurb: "A3 or A4 at 150 dpi — print-ready PNG or PDF." },
-  { id: "social-square", label: "Social — Square 1:1", blurb: "1080 × 1080 px for Instagram / Facebook feeds." },
-  { id: "social-story", label: "Social — Story 9:16", blurb: "1080 × 1920 px for Instagram / WhatsApp stories." },
-  { id: "social-landscape", label: "Social — Landscape 16:9", blurb: "1200 × 628 px for X, Facebook and email headers." },
-  { id: "invitation", label: "Invitation card", blurb: "A5 landscape at 300 dpi — print or share digitally." },
-  { id: "press-kit", label: "Press kit", blurb: "Exhibition text, artwork list and contact — print to PDF." },
+  { id: "poster", label: "Poster", blurb: "A3 or A4 at 150 dpi, print-ready PNG or PDF." },
+  { id: "social-square", label: "Social: Square 1:1", blurb: "1080 × 1080 px for Instagram / Facebook feeds." },
+  { id: "social-story", label: "Social: Story 9:16", blurb: "1080 × 1920 px for Instagram / WhatsApp stories." },
+  { id: "social-landscape", label: "Social: Landscape 16:9", blurb: "1200 × 628 px for X, Facebook and email headers." },
+  { id: "invitation", label: "Invitation card", blurb: "A5 landscape at 300 dpi, print or share digitally." },
+  { id: "press-kit", label: "Press kit", blurb: "Exhibition text, artwork list and contact. Print to PDF." },
   { id: "announcement", label: "Announcement", blurb: "1200 × 628 px banner for a new show or opening." },
 ];
 
 const TEMPLATES: { id: TemplateId; label: string; blurb: string }[] = [
-  { id: "classic", label: "Classic", blurb: "Centred artwork, serif headline, gold rule — the gallery look." },
+  { id: "classic", label: "Classic", blurb: "Centred artwork, serif headline, gold rule, the gallery look." },
   { id: "bold", label: "Bold", blurb: "Big colour block and oversized type. Loud, for a launch." },
   { id: "minimal", label: "Minimal", blurb: "Small type, lots of white space. Quiet and confident." },
 ];
@@ -523,7 +523,7 @@ export default function MarketingStudio({
         a.download = `${(cfgRef.current.headline || "marketing-asset").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "marketing-asset"}-${w}x${h}.${format === "png" ? "png" : "jpg"}`;
         a.click();
         URL.revokeObjectURL(url);
-        setExportMsg(`Exported ${w} × ${h} px ${format.toUpperCase()} — drawn at full size, not upscaled.`);
+        setExportMsg(`Exported ${w} × ${h} px ${format.toUpperCase()}, drawn at full size, not upscaled.`);
       } catch (err) {
         setExportMsg(err instanceof Error ? err.message : "Export failed.");
       } finally {
@@ -545,7 +545,7 @@ export default function MarketingStudio({
       cfg.pressText,
       "",
       `Works (${pressArtworks.length}):`,
-      ...pressArtworks.map((a) => `— ${a.title}${a.year ? `, ${a.year}` : ""}${a.medium ? ` — ${a.medium}` : ""}${a.dimensions ? ` (${a.dimensions})` : ""}`),
+      ...pressArtworks.map((a) => `• ${a.title}${a.year ? `, ${a.year}` : ""}${a.medium ? `, ${a.medium}` : ""}${a.dimensions ? ` (${a.dimensions})` : ""}`),
       "",
       `Contact: ${cfg.artistName}${cfg.dateText ? ` · ${cfg.dateText}` : ""}${cfg.venueText ? ` · ${cfg.venueText}` : ""}`,
     ].join("\n");
@@ -553,7 +553,7 @@ export default function MarketingStudio({
       await navigator.clipboard.writeText(lines);
       setExportMsg("Press kit text copied to the clipboard.");
     } catch {
-      setExportMsg("Could not copy — select the text in the preview and copy it manually.");
+      setExportMsg("Could not copy. Select the text in the preview and copy it manually.");
     }
   }, [cfg, pressArtworks]);
 
@@ -574,8 +574,8 @@ export default function MarketingStudio({
             <label className={styles.field}>
               Poster size
               <select value={cfg.posterSize} onChange={(e) => update({ posterSize: e.target.value as PosterSize })}>
-                <option value="A3">A3 — 1754 × 2480 px @ 150 dpi</option>
-                <option value="A4">A4 — 1240 × 1754 px @ 150 dpi</option>
+                <option value="A3">A3: 1754 × 2480 px @ 150 dpi</option>
+                <option value="A4">A4: 1240 × 1754 px @ 150 dpi</option>
               </select>
             </label>
           )}
@@ -608,7 +608,7 @@ export default function MarketingStudio({
             Featured artwork
             <select value={cfg.artworkId} onChange={(e) => update({ artworkId: e.target.value })}>
               {artworks.map((a) => (
-                <option key={a.id} value={a.id}>{a.title} — {a.exhibitionTitle}</option>
+                <option key={a.id} value={a.id}>{a.title}, {a.exhibitionTitle}</option>
               ))}
             </select>
           </label>
@@ -750,10 +750,10 @@ export default function MarketingStudio({
         </div>
         {isPressKit ? (
           <div className="mk-press print-area">
-            <p className="mk-press-eyebrow">Press kit — {cfg.artistName}</p>
+            <p className="mk-press-eyebrow">Press kit: {cfg.artistName}</p>
             <h2>{cfg.headline || "Exhibition"}</h2>
             <p className="mk-press-meta">{[cfg.dateText, cfg.venueText].filter(Boolean).join(" · ")}</p>
-            <p className="mk-press-text">{cfg.pressText || "No exhibition text yet — write it in the Content panel."}</p>
+            <p className="mk-press-text">{cfg.pressText || "No exhibition text yet. Write it in the Content panel."}</p>
             <h3>Works in the exhibition ({pressArtworks.length})</h3>
             {pressArtworks.length === 0 ? (
               <p className="mk-note">No artworks in this exhibition yet.</p>
@@ -762,7 +762,7 @@ export default function MarketingStudio({
                 {pressArtworks.map((a) => (
                   <li key={a.id}>
                     <strong>{a.title}</strong>
-                    {a.year ? `, ${a.year}` : ""}{a.medium ? ` — ${a.medium}` : ""}{a.dimensions ? ` (${a.dimensions})` : ""}
+                    {a.year ? `, ${a.year}` : ""}{a.medium ? `, ${a.medium}` : ""}{a.dimensions ? ` (${a.dimensions})` : ""}
                   </li>
                 ))}
               </ul>

@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Publish — Lakisa",
+  title: "Publish: Lakisa",
   description:
     "Put your work in front of people: viewing rooms, portfolio sites, marketing, print and the marketplace.",
 };

@@ -74,7 +74,7 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
       <div className="editor-shell">
         <header className="editor-topbar">
           <a className="editor-brand" href="/" title="Retour à l'accueil">
-            <BrandLogo variant="horizontal" height={30} />
+            <BrandLogo variant="horizontal" height={48} />
           </a>
           <div className="top-divider" />
           <div className="project-title-wrap">

@@ -6,7 +6,7 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Documents — Lakisa Tools",
+  title: "Documents: Lakisa Tools",
   description: "Certificates of authenticity, labels and artwork sheets, ready to print.",
 };
 

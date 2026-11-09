@@ -4,9 +4,9 @@ import { ALL_CURRENCIES, formatRateDate, type CurrencyCode } from "@/lib/currenc
 import { useDisplayCurrency, useExchangeRates } from "@/lib/use-exchange-rates";
 
 const LABELS: Record<CurrencyCode, string> = {
-  USD: "USD — $",
-  EUR: "EUR — €",
-  GBP: "GBP — £",
+  USD: "USD: $",
+  EUR: "EUR: €",
+  GBP: "GBP: £",
   CHF: "CHF",
   UGX: "UGX",
   KES: "KES",
@@ -64,14 +64,14 @@ export function RatesNote() {
   if (rates.status === "unavailable") {
     return (
       <span style={{ fontSize: 12, color: "var(--muted)" }}>
-        Exchange rates are unavailable right now — prices are shown in their listing currency.
+        Exchange rates are unavailable right now. Prices are shown in their listing currency.
       </span>
     );
   }
   return (
     <span style={{ fontSize: 12, color: "var(--muted)" }}>
       Converted at the ECB reference rates of {formatRateDate(rates.date)} (via Frankfurter)
-      {rates.stale ? " — Frankfurter did not answer, showing the last rates we have." : "."}
+      {rates.stale ? ", Frankfurter did not answer, showing the last rates we have." : "."}
     </span>
   );
 }

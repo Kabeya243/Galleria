@@ -39,7 +39,7 @@ export type VisitStats = {
 type ChartDay = { label: string; full: string; count: number; isRecentWeek: boolean };
 
 function formatDuration(seconds: number | null): string {
-  if (seconds == null) return "—";
+  if (seconds == null) return "N/A";
   if (seconds < 60) return `${seconds} s`;
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
@@ -298,7 +298,7 @@ export default function Dashboard({
                 <span className="eyebrow">{t("stats", "visits")}</span>
                 <h2>{t("stats", "visitorStats")}</h2>
                 <p className={styles.cardSub}>
-                  {t("stats", "visits")} · {visitStats.totalVisits} — {t("stats", "avgVisitTime")} ·{" "}
+                  {t("stats", "visits")} · {visitStats.totalVisits}, {t("stats", "avgVisitTime")} ·{" "}
                   {formatDuration(visitStats.avgDurationSeconds)}
                 </p>
               </div>
@@ -320,7 +320,7 @@ export default function Dashboard({
                         <li key={artwork.id}>
                           <span>
                             {artwork.title}
-                            <small> — {artwork.exhibitionTitle}</small>
+                            <small>, {artwork.exhibitionTitle}</small>
                           </span>
                           <strong>
                             {artwork.views} {t("stats", "views")}

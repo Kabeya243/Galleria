@@ -8,8 +8,8 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Mockup Studio — Lakisa Tools",
-  description: "See your artwork on a real wall before you hang it — eight interiors, frames, lighting and print-ready exports.",
+  title: "Mockup Studio: Lakisa Tools",
+  description: "See your artwork on a real wall before you hang it, eight interiors, frames, lighting and print-ready exports.",
 };
 
 export default async function MockupStudioRoute({
@@ -51,7 +51,7 @@ export default async function MockupStudioRoute({
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Open an exhibition in the editor and add your first work — it will show up here as soon as it exists.</p>
+          <p>Open an exhibition in the editor and add your first work, it will show up here as soon as it exists.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

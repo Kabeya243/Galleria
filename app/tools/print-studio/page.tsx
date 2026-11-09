@@ -8,9 +8,9 @@ import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
 
 export const metadata = {
-  title: "Print Production Studio — Lakisa Tools",
+  title: "Print Production Studio: Lakisa Tools",
   description:
-    "Production-ready print materials from your own artworks — posters, wall labels, catalogue pages and certificates, with real dimensions, bleed, a DPI check from the image's actual pixel size, and a production PDF with crop marks.",
+    "Production-ready print materials from your own artworks, posters, wall labels, catalogue pages and certificates, with real dimensions, bleed, a DPI check from the image's actual pixel size, and a production PDF with crop marks.",
 };
 
 export default async function PrintStudioRoute() {
@@ -49,7 +49,7 @@ export default async function PrintStudioRoute() {
       {artworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
-          <p>Print jobs are built from your own work. Open an exhibition in the editor and add your first artwork — it will show up here as soon as it exists.</p>
+          <p>Print jobs are built from your own work. Open an exhibition in the editor and add your first artwork, it will show up here as soon as it exists.</p>
           <Link href="/exhibitions" className="galleries-open-button">
             Go to your exhibitions
           </Link>

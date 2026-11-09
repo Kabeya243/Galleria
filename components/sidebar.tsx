@@ -292,8 +292,8 @@ export default function Sidebar({
       >
         <div className="sidebar-top-row">
           <Link className="brand-lockup" href="/" aria-label={t("nav", "sanaaHome")} onClick={() => setOpen(false)}>
-            <BrandLogo variant="horizontal" height={36} />
-            <BrandLogo variant="icon" height={30} />
+            <BrandLogo variant="horizontal" height={52} />
+            <BrandLogo variant="icon" height={44} />
           </Link>
           {collapsible ? (
             <button

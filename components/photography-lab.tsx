@@ -452,13 +452,13 @@ export default function PhotographyLab({
         const coverage = rect.w * rect.h;
         if (coverage > 0.95 || coverage < 0.05) {
           setDetectNote(
-            "No clear edge found — the photo may already fill the frame, or the background is not light enough for detection. Adjust the crop by hand.",
+            "No clear edge found. The photo may already fill the frame, or the background is not light enough for detection. Adjust the crop by hand.",
           );
         } else {
           setSettings((s) => ({ ...s, crop: rect }));
           setMode("crop");
           setDetectNote(
-            "Edges detected — this is an estimate. Drag the rectangle to adjust it, then switch back to Edit to see the result.",
+            "Edges detected. This is an estimate. Drag the rectangle to adjust it, then switch back to Edit to see the result.",
           );
         }
       } catch {
@@ -569,7 +569,7 @@ export default function PhotographyLab({
           (blob) => {
             setExporting(false);
             if (!blob) {
-              setExportNote("Export failed — the browser could not write the file. Try PNG.");
+              setExportNote("Export failed. The browser could not write the file. Try PNG.");
               return;
             }
             const base = (source.title || "artwork").replace(/[^a-zA-Z0-9-_]+/g, "-").replace(/^-+|-+$/g, "") || "artwork";
@@ -582,7 +582,7 @@ export default function PhotographyLab({
             a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 5000);
             setExportNote(
-              `Exported ${size.w} × ${size.h} px ${exportFormat.toUpperCase()} — the true resolution of this file, never upscaled. Your original is untouched.`,
+              `Exported ${size.w} × ${size.h} px ${exportFormat.toUpperCase()}, the true resolution of this file, never upscaled. Your original is untouched.`,
             );
           },
           mime,
@@ -604,7 +604,7 @@ export default function PhotographyLab({
         if (!cancelled) setSaved((json.saved ?? []) as SavedEdit[]);
       })
       .catch(() => {
-        if (!cancelled) setNotice("Saved edits could not be loaded — saving may still work.");
+        if (!cancelled) setNotice("Saved edits could not be loaded. Saving may still work.");
       })
       .finally(() => {
         if (!cancelled) setSavedLoading(false);
@@ -616,7 +616,7 @@ export default function PhotographyLab({
 
   const saveEdit = useCallback(async () => {
     if (!img || !source) return;
-    const title = saveName.trim() || `${source.title} — edit`;
+    const title = saveName.trim() || `${source.title}: edit`;
     setSaving(true);
     setNotice(null);
     try {
@@ -755,8 +755,8 @@ export default function PhotographyLab({
       <div className="plab-section plab-source">
         <h3>1 · Choose a photo</h3>
         <p>
-          Pick one of your artworks, or upload a photo from this device. The original file is never changed —
-          edits live as settings until you export.
+          Pick one of your artworks, or upload a photo from this device. The original file is never changed.
+          Edits live as settings until you export.
         </p>
         <div className="plab-row">
           <select
@@ -772,7 +772,7 @@ export default function PhotographyLab({
               <option key={a.id} value={a.id}>
                 {a.title}
                 {a.year ? ` (${a.year})` : ""}
-                {a.medium ? ` — ${a.medium}` : ""}
+                {a.medium ? `, ${a.medium}` : ""}
               </option>
             ))}
           </select>
@@ -807,8 +807,8 @@ export default function PhotographyLab({
               <div className="plab-empty">
                 <strong>No photo open yet.</strong>
                 Choose one of your artworks above, or upload a photo of a work on paper. For the best result,
-                photograph the work straight on, in even daylight, with the whole sheet — including its white
-                border — in the frame. The lab will help you straighten it, crop to the edge, and clean the
+                photograph the work straight on, in even daylight, with the whole sheet (including its white
+                border) in the frame. The lab will help you straighten it, crop to the edge, and clean the
                 background.
               </div>
             )}
@@ -836,7 +836,7 @@ export default function PhotographyLab({
                     onPointerUp={endCropDrag}
                     onPointerCancel={endCropDrag}
                     role="group"
-                    aria-label="Crop rectangle — drag to move, drag a corner to resize"
+                    aria-label="Crop rectangle: drag to move, drag a corner to resize"
                   >
                     {(["nw", "ne", "sw", "se"] as const).map((h) => (
                       <span
@@ -898,7 +898,7 @@ export default function PhotographyLab({
             <h3>2 · Crop &amp; straighten</h3>
             <p>
               Fix the framing first. Edge detection scans in from the borders for the first non-white row and
-              column — it is an estimate, so check the rectangle before you export.
+              column. It is an estimate, so check the rectangle before you export.
             </p>
             <div className="plab-row" style={{ marginBottom: 12 }}>
               {ASPECTS.map((a) => (
@@ -935,8 +935,8 @@ export default function PhotographyLab({
             </div>
             {detectNote && <p className="plab-note">{detectNote}</p>}
             <Slider label="Rotate" value={settings.rotate} min={-45} max={45} step={0.1} unit="°" onChange={(v) => set("rotate", v)} />
-            <Slider label="Skew — horizontal" value={settings.skewX} min={-30} max={30} step={0.1} unit="°" onChange={(v) => set("skewX", v)} />
-            <Slider label="Skew — vertical" value={settings.skewY} min={-30} max={30} step={0.1} unit="°" onChange={(v) => set("skewY", v)} />
+            <Slider label="Skew: horizontal" value={settings.skewX} min={-30} max={30} step={0.1} unit="°" onChange={(v) => set("skewX", v)} />
+            <Slider label="Skew: vertical" value={settings.skewY} min={-30} max={30} step={0.1} unit="°" onChange={(v) => set("skewY", v)} />
           </fieldset>
 
           <fieldset className="plab-section" disabled={!img} style={{ border: "1px solid var(--line)" }}>
@@ -956,8 +956,8 @@ export default function PhotographyLab({
           <fieldset className="plab-section" disabled={!img} style={{ border: "1px solid var(--line)" }}>
             <h3>4 · Clean background</h3>
             <p>
-              For photos of works on white paper. Pixels brighter than the threshold drift toward pure white —
-              it only ever touches near-white areas, never the artwork itself. Keep the strength low if the paper
+              For photos of works on white paper. Pixels brighter than the threshold drift toward pure white.
+              It only ever touches near-white areas, never the artwork itself. Keep the strength low if the paper
               has warm tones you want to keep.
             </p>
             <Slider label="Strength" value={settings.cleanBg} min={0} max={100} step={1} unit="%" onChange={(v) => set("cleanBg", v)} />
@@ -1004,7 +1004,7 @@ export default function PhotographyLab({
                 <input
                   className="plab-input"
                   type="text"
-                  placeholder="Name this edit — e.g. “Nose Ring, catalogue crop”"
+                  placeholder="Name this edit: e.g. “Nose Ring, catalogue crop”"
                   value={saveName}
                   onChange={(e) => setSaveName(e.target.value)}
                   disabled={!img}
@@ -1086,7 +1086,7 @@ export default function PhotographyLab({
                 ))}
               </div>
               <p className="plab-note" style={{ marginTop: 10 }}>
-                To change a saved edit, apply it, adjust the settings, and save it again under the same name —
+                To change a saved edit, apply it, adjust the settings, and save it again under the same name,
                 then delete the older copy.
               </p>
             </div>

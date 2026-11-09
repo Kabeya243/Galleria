@@ -43,12 +43,12 @@ const LAYOUTS: { id: LayoutId; label: string; blurb: string }[] = [
 ];
 
 const PAPER_SIZES: { id: string; label: string; wCm: number; hCm: number }[] = [
-  { id: "A0", label: "A0 — 84.1 × 118.9 cm", wCm: 84.1, hCm: 118.9 },
-  { id: "A1", label: "A1 — 59.4 × 84.1 cm", wCm: 59.4, hCm: 84.1 },
-  { id: "A2", label: "A2 — 42.0 × 59.4 cm", wCm: 42, hCm: 59.4 },
-  { id: "A3", label: "A3 — 29.7 × 42.0 cm", wCm: 29.7, hCm: 42 },
-  { id: "A4", label: "A4 — 21.0 × 29.7 cm", wCm: 21, hCm: 29.7 },
-  { id: "A5", label: "A5 — 14.8 × 21.0 cm", wCm: 14.8, hCm: 21 },
+  { id: "A0", label: "A0: 84.1 × 118.9 cm", wCm: 84.1, hCm: 118.9 },
+  { id: "A1", label: "A1: 59.4 × 84.1 cm", wCm: 59.4, hCm: 84.1 },
+  { id: "A2", label: "A2: 42.0 × 59.4 cm", wCm: 42, hCm: 59.4 },
+  { id: "A3", label: "A3: 29.7 × 42.0 cm", wCm: 29.7, hCm: 42 },
+  { id: "A4", label: "A4: 21.0 × 29.7 cm", wCm: 21, hCm: 29.7 },
+  { id: "A5", label: "A5: 14.8 × 21.0 cm", wCm: 14.8, hCm: 21 },
   { id: "custom", label: "Custom size…", wCm: 30, hCm: 40 },
 ];
 
@@ -167,11 +167,11 @@ export default function PrintStudio({
   const dpiVerdict = useMemo(() => {
     if (!dpi) return null;
     const min = Math.min(dpi.w, dpi.h);
-    if (min >= 300) return { tone: "good", text: `Excellent — ${dpi.w} × ${dpi.h} dpi. Crisp at this size.` };
-    if (min >= 200) return { tone: "good", text: `Good — ${dpi.w} × ${dpi.h} dpi. Fine for print at this size.` };
-    if (min >= 150) return { tone: "warn", text: `Acceptable — ${dpi.w} × ${dpi.h} dpi. Fine for a poster viewed at a distance, but not for close inspection.` };
-    if (min >= 100) return { tone: "warn", text: `Low — ${dpi.w} × ${dpi.h} dpi. The print will look soft up close. Use a smaller print size or a higher-resolution file.` };
-    return { tone: "bad", text: `Too low — ${dpi.w} × ${dpi.h} dpi. This will print visibly pixelated at ${job.widthCm} × ${job.heightCm} cm. Print smaller or re-scan the work.` };
+    if (min >= 300) return { tone: "good", text: `Excellent, ${dpi.w} × ${dpi.h} dpi. Crisp at this size.` };
+    if (min >= 200) return { tone: "good", text: `Good, ${dpi.w} × ${dpi.h} dpi. Fine for print at this size.` };
+    if (min >= 150) return { tone: "warn", text: `Acceptable, ${dpi.w} × ${dpi.h} dpi. Fine for a poster viewed at a distance, but not for close inspection.` };
+    if (min >= 100) return { tone: "warn", text: `Low, ${dpi.w} × ${dpi.h} dpi. The print will look soft up close. Use a smaller print size or a higher-resolution file.` };
+    return { tone: "bad", text: `Too low, ${dpi.w} × ${dpi.h} dpi. This will print visibly pixelated at ${job.widthCm} × ${job.heightCm} cm. Print smaller or re-scan the work.` };
   }, [dpi, job.widthCm, job.heightCm]);
 
   const refreshSaved = useCallback(async () => {
@@ -314,7 +314,7 @@ export default function PrintStudio({
             Artwork
             <select value={job.artworkId} onChange={(e) => pickArtwork(e.target.value)}>
               {artworks.map((a) => (
-                <option key={a.id} value={a.id}>{a.title} — {a.exhibitionTitle}</option>
+                <option key={a.id} value={a.id}>{a.title}, {a.exhibitionTitle}</option>
               ))}
             </select>
           </label>
@@ -369,7 +369,7 @@ export default function PrintStudio({
           <h2>Resolution check</h2>
           {imgState === "none" && <p className="pr-note">This artwork has no uploaded image, so no DPI can be computed. The preview uses a colour stand-in.</p>}
           {imgState === "loading" && <p className="pr-note">Reading the image's pixel size…</p>}
-          {imgState === "error" && <p className="pr-error">Could not read this image's pixel size. The DPI check is unavailable — check the file in the editor.</p>}
+          {imgState === "error" && <p className="pr-error">Could not read this image's pixel size. The DPI check is unavailable. Check the file in the editor.</p>}
           {imgState === "ok" && imgSize && (
             <>
               <p className="pr-note">Image file: {imgSize.w} × {imgSize.h} px. At {job.widthCm} × {job.heightCm} cm that is {dpi?.w} × {dpi?.h} dpi.</p>
@@ -382,10 +382,10 @@ export default function PrintStudio({
         <section className="pr-card">
           <h2>Colour profile</h2>
           <p className="pr-note">
-            Everything in this studio is <strong>sRGB</strong> — the colour space of screens and of the image files Lakisa stores.
+            Everything in this studio is <strong>sRGB</strong>, the colour space of screens and of the image files Lakisa stores.
             There is <strong>no true CMYK conversion in the browser</strong>: the PDF you print from here is still sRGB, and a print shop
             converts it with its own profile. If your printer asks for CMYK, convert the file in Photoshop, Affinity or with the
-            printer's own ICC profile — this tool does not pretend to do it. Printer requirements (paper, ICC profile, finishing)
+            printer's own ICC profile. This tool does not pretend to do it. Printer requirements (paper, ICC profile, finishing)
             vary, so always confirm the spec sheet with your printer before a run.
           </p>
         </section>
@@ -525,7 +525,7 @@ export default function PrintStudio({
                     )}
                   </div>
                   <h3>{job.title}</h3>
-                  <p className="pr-dim">{job.artistName}{job.caption ? ` — ${job.caption}` : ""}</p>
+                  <p className="pr-dim">{job.artistName}{job.caption ? `, ${job.caption}` : ""}</p>
                   {job.bodyText && <p className="pr-body">{job.bodyText}</p>}
                 </div>
               )}
@@ -540,14 +540,14 @@ export default function PrintStudio({
                     <span>Artist signature</span>
                     <span>Date</span>
                   </div>
-                  <p className="pr-cert-foot">This certificate confirms the authenticity of the work described above. sRGB file — no CMYK conversion applied in-browser.</p>
+                  <p className="pr-cert-foot">This certificate confirms the authenticity of the work described above. sRGB file, no CMYK conversion applied in-browser.</p>
                 </div>
               )}
             </div>
           </div>
         </div>
         <p className="pr-note pr-limit">
-          Limits: no true CMYK conversion in-browser; the PDF is sRGB. Printer-specific requirements (ICC profile, paper, finishing) vary — confirm with your printer.
+          Limits: no true CMYK conversion in-browser; the PDF is sRGB. Printer-specific requirements (ICC profile, paper, finishing) vary, so confirm with your printer.
         </p>
       </div>
 

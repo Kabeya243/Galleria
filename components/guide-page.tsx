@@ -73,7 +73,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
     {
       id: "create-exhibition",
       title: "2. Create an exhibition",
-      intro: "An exhibition starts with a title and a first room. Everything else — more rooms, artworks, colours — happens in the editor.",
+      intro: "An exhibition starts with a title and a first room. Everything else (more rooms, artworks, colours) happens in the editor.",
       steps: [
         {
           title: "Open Create",
@@ -81,7 +81,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Give it a title",
-          text: "The title is mandatory — it is what visitors see first. You can change it later.",
+          text: "The title is mandatory. It is what visitors see first. You can change it later.",
         },
         {
           title: "Pick a room for the first room",
@@ -100,7 +100,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
       steps: [
         {
           title: "Upload your works",
-          text: "Open “My artworks” (/artworks) to upload images of your work with their title, medium and dimensions. The library is shared across all your exhibitions — upload once, hang anywhere.",
+          text: "Open “My artworks” (/artworks) to upload images of your work with their title, medium and dimensions. The library is shared across all your exhibitions: upload once, hang anywhere.",
         },
         {
           title: "Add a work to a wall",
@@ -116,7 +116,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Save",
-          text: "Save your work in the editor before you leave — and save again before you publish.",
+          text: "Save your work in the editor before you leave, and save again before you publish.",
         },
       ],
     },
@@ -131,7 +131,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Add rooms in the editor",
-          text: "In the editor, add rooms to your exhibition and choose a model for each. Rooms keep the layout they were designed with — you choose the room, you do not redraw it.",
+          text: "In the editor, add rooms to your exhibition and choose a model for each. Rooms keep the layout they were designed with: you choose the room, you do not redraw it.",
         },
         {
           title: "Move between rooms while you work",
@@ -154,7 +154,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Private link",
-          text: "The exhibition is published but never listed. Only people with the direct link can open it. Anyone who receives the link can pass it on — if it spreads further than you intended, set a password or return the exhibition to draft.",
+          text: "The exhibition is published but never listed. Only people with the direct link can open it. Anyone who receives the link can pass it on, and if it spreads further than you intended, set a password or return the exhibition to draft.",
         },
         {
           title: "Password",
@@ -208,7 +208,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Manage your exhibitions",
-          text: "“My exhibitions” (/exhibitions) lists everything you have built — drafts and published shows. Open any of them in the editor, change its visibility, or unpublish it.",
+          text: "“My exhibitions” (/exhibitions) lists everything you have built, drafts and published shows. Open any of them in the editor, change its visibility, or unpublish it.",
         },
         {
           title: "Change your password",
@@ -216,7 +216,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Delete your account",
-          text: "You can delete your account from Settings. Deleting it deletes your exhibitions, your artworks and your profile with them — permanently. Keep a copy of your original files outside Lakisa first.",
+          text: "You can delete your account from Settings. Deleting it deletes your exhibitions, your artworks and your profile with them, permanently. Keep a copy of your original files outside Lakisa first.",
         },
       ],
     },
@@ -248,7 +248,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
     {
       id: "create-exhibition",
       title: "2. Créer une exposition",
-      intro: "Une exposition commence par un titre et une première salle. Tout le reste — d'autres salles, les œuvres, les couleurs — se fait dans l'éditeur.",
+      intro: "Une exposition commence par un titre et une première salle. Tout le reste (d'autres salles, les œuvres, les couleurs) se fait dans l'éditeur.",
       steps: [
         {
           title: "Ouvrir Créer",
@@ -256,7 +256,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Donner un titre",
-          text: "Le titre est obligatoire — c'est ce que les visiteurs voient en premier. Vous pourrez le modifier plus tard.",
+          text: "Le titre est obligatoire. C'est ce que les visiteurs voient en premier. Vous pourrez le modifier plus tard.",
         },
         {
           title: "Choisir une salle pour la première salle",
@@ -275,7 +275,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
       steps: [
         {
           title: "Mettre vos œuvres en ligne",
-          text: "Ouvrez « Mes œuvres » (/artworks) pour mettre en ligne les images de vos œuvres, avec leur titre, leur technique et leurs dimensions. La bibliothèque est partagée par toutes vos expositions — on met en ligne une fois, on accroche partout.",
+          text: "Ouvrez « Mes œuvres » (/artworks) pour mettre en ligne les images de vos œuvres, avec leur titre, leur technique et leurs dimensions. La bibliothèque est partagée par toutes vos expositions : on met en ligne une fois, on accroche partout.",
         },
         {
           title: "Ajouter une œuvre à un mur",
@@ -291,7 +291,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Enregistrer",
-          text: "Enregistrez votre travail dans l'éditeur avant de partir — et enregistrez à nouveau avant de publier.",
+          text: "Enregistrez votre travail dans l'éditeur avant de partir, et enregistrez à nouveau avant de publier.",
         },
       ],
     },
@@ -306,7 +306,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Ajouter des salles dans l'éditeur",
-          text: "Dans l'éditeur, ajoutez des salles à votre exposition et choisissez un modèle pour chacune. Les salles gardent le plan pour lequel elles ont été conçues — vous choisissez la salle, vous ne la redessinez pas.",
+          text: "Dans l'éditeur, ajoutez des salles à votre exposition et choisissez un modèle pour chacune. Les salles gardent le plan pour lequel elles ont été conçues : vous choisissez la salle, vous ne la redessinez pas.",
         },
         {
           title: "Passer d'une salle à l'autre pendant le travail",
@@ -329,7 +329,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Lien privé",
-          text: "L'exposition est publiée mais jamais listée. Seules les personnes qui ont le lien direct peuvent l'ouvrir. Toute personne qui reçoit le lien peut le transmettre — s'il circule plus loin que prévu, mettez un mot de passe ou repassez l'exposition en brouillon.",
+          text: "L'exposition est publiée mais jamais listée. Seules les personnes qui ont le lien direct peuvent l'ouvrir. Toute personne qui reçoit le lien peut le transmettre, et s'il circule plus loin que prévu, mettez un mot de passe ou repassez l'exposition en brouillon.",
         },
         {
           title: "Mot de passe",
@@ -383,7 +383,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Gérer ses expositions",
-          text: "« Mes expositions » (/exhibitions) liste tout ce que vous avez construit — brouillons et expositions publiées. Ouvrez chacune dans l'éditeur, changez sa visibilité, ou dépubliez-la.",
+          text: "« Mes expositions » (/exhibitions) liste tout ce que vous avez construit, brouillons et expositions publiées. Ouvrez chacune dans l'éditeur, changez sa visibilité, ou dépubliez-la.",
         },
         {
           title: "Changer son mot de passe",
@@ -391,7 +391,7 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
         },
         {
           title: "Supprimer son compte",
-          text: "Vous pouvez supprimer votre compte depuis les Paramètres. Sa suppression supprime aussi vos expositions, vos œuvres et votre profil — définitivement. Gardez d'abord une copie de vos fichiers originaux hors de Lakisa.",
+          text: "Vous pouvez supprimer votre compte depuis les Paramètres. Sa suppression supprime aussi vos expositions, vos œuvres et votre profil, définitivement. Gardez d'abord une copie de vos fichiers originaux hors de Lakisa.",
         },
       ],
     },
@@ -409,7 +409,7 @@ export default function GuidePage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={34} />
+          <BrandLogo variant="horizontal" theme="dark" height={52} />
         </Link>
         <Link href="/" className={styles.backLink}>
           <ArrowLeft size={15} /> {t("guide", "backHome")}
@@ -438,7 +438,7 @@ export default function GuidePage() {
             <ol>
               {section.steps.map((step, index) => (
                 <li key={index}>
-                  <strong>{step.title}</strong> — {step.text}
+                  <strong>{step.title}</strong>: {step.text}
                 </li>
               ))}
             </ol>

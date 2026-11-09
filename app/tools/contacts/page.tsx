@@ -6,8 +6,8 @@ import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Contacts — Lakisa Tools",
-  description: "Collectors, curators, galleries and advisors — who they are and how to reach them.",
+  title: "Contacts: Lakisa Tools",
+  description: "Collectors, curators, galleries and advisors, who they are and how to reach them.",
 };
 
 export default async function ContactsRoute() {

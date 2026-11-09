@@ -230,7 +230,7 @@ export default function FrameStudio({
         >
           {artworks.map((artwork) => (
             <option key={artwork.id} value={artwork.id}>
-              {artwork.title} — {artwork.exhibitionTitle}
+              {artwork.title}, {artwork.exhibitionTitle}
             </option>
           ))}
         </select>
@@ -271,7 +271,7 @@ export default function FrameStudio({
           <p style={{ margin: "0 0 12px", color: "var(--muted)", fontSize: "9px", lineHeight: 1.6 }}>
             {isCustomFrame(frameValue)
               ? `A custom frame, based on ${FRAME_VARIANTS[frameConfig?.base ?? "wood"]?.label ?? frameConfig?.base}.`
-              : "A built-in frame style — pick another below, or customise this one."}
+              : "A built-in frame style. Pick another below, or customise this one."}
           </p>
           <div className="property-actions" style={{ paddingTop: 0 }}>
             <button
@@ -290,7 +290,7 @@ export default function FrameStudio({
           </div>
           {saveState === "saved" && (
             <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "9px" }}>
-              Saved — “{selected.title}” now hangs in {currentLabel} in the editor and in the public exhibition.
+              Saved. “{selected.title}” now hangs in {currentLabel} in the editor and in the public exhibition.
             </p>
           )}
           {saveState === "error" && saveError && (
@@ -307,7 +307,7 @@ export default function FrameStudio({
           )}
           {dirty && saveState !== "saving" && (
             <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "9px" }}>
-              Unsaved changes — save to apply this frame to the artwork.
+              Unsaved changes. Save to apply this frame to the artwork.
             </p>
           )}
         </div>
@@ -367,7 +367,7 @@ export default function FrameStudio({
         </div>
         {comparing && (
           <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
-            Comparing — click frames in the catalogue above to add or remove them (up to 4), then apply one below.
+            Comparing: click frames in the catalogue above to add or remove them (up to 4), then apply one below.
           </p>
         )}
       </div>
@@ -642,7 +642,7 @@ export default function FrameStudio({
       </div>
 
       <p style={{ margin: "16px 0 0", color: "var(--muted)", fontSize: "9px", lineHeight: 1.7 }}>
-        The frame you save here is the same frame the 3D editor shows and the public exhibition hangs — no need to re-frame the work in
+        The frame you save here is the same frame the 3D editor shows and the public exhibition hangs. No need to re-frame the work in
         two places.
       </p>
     </div>

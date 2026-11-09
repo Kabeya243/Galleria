@@ -693,7 +693,7 @@ export default function Editor({
     } else if (force) {
       setCaptionMessage({
         artworkId,
-        text: "You already have your own description and alt-text here — clear a field to let a suggestion fill it.",
+        text: "You already have your own description and alt-text here, clear a field to let a suggestion fill it.",
       });
     }
   }
@@ -735,7 +735,7 @@ export default function Editor({
     if (!caption) {
       setCaptionMessage({
         artworkId: selected.id,
-        text: "Gemini did not answer — the current suggestion is kept.",
+        text: "Gemini did not answer, the current suggestion is kept.",
       });
       return;
     }
@@ -1726,7 +1726,7 @@ export default function Editor({
   function addSunlightElement(type: SunlightElementType) {
     if (!activeRoom) return;
     if (type === "spot" && currentSunlightElements.filter((element) => element.type === "spot").length >= SUNLIGHT_MAX_SPOTS) {
-      setSunlightMessage(`Maximum ${SUNLIGHT_MAX_SPOTS} spotlights — remove one to add another.`);
+      setSunlightMessage(`Maximum ${SUNLIGHT_MAX_SPOTS} spotlights, remove one to add another.`);
       return;
     }
     setSunlightMessage(null);
@@ -3463,7 +3463,7 @@ async function compressImage(file: File): Promise<File> {
       <header className="editor-topbar">
         <div className="editor-brand-group">
           <Link href="/" className="editor-back" aria-label="Back to dashboard"><ArrowLeft size={18} /></Link>
-          <Link className="brand-lockup editor-brand" href="/"><BrandLogo variant="horizontal" height={30} /></Link>
+          <Link className="brand-lockup editor-brand" href="/"><BrandLogo variant="horizontal" height={48} /></Link>
           <span className="editor-separator" />
           {editingTitle ? (
             <input
@@ -3541,7 +3541,7 @@ async function compressImage(file: File): Promise<File> {
           <div className="panel-tabs">
             <button className={panelTab === "artworks" ? "active" : ""} onClick={() => setPanelTab("artworks")}>Artworks <span>{currentArtworks.length}</span></button>
             <button className={panelTab === "elements" ? "active" : ""} onClick={() => setPanelTab("elements")}>Elements <span>{currentElements.length}</span></button>
-            <button className={panelTab === "layers" ? "active" : ""} onClick={() => setPanelTab("layers")} title="Layers — rooms, artworks and elements with visibility and lock"><Layers size={12} /> Layers <span>{artworks.length + rooms.reduce((count, room) => count + room.elements.length, 0)}</span></button>
+            <button className={panelTab === "layers" ? "active" : ""} onClick={() => setPanelTab("layers")} title="Layers: rooms, artworks and elements with visibility and lock"><Layers size={12} /> Layers <span>{artworks.length + rooms.reduce((count, room) => count + room.elements.length, 0)}</span></button>
           </div>
           {panelTab === "artworks" ? (
             <>
@@ -3630,7 +3630,7 @@ async function compressImage(file: File): Promise<File> {
                   <button className="add-to-room" style={{ flex: 1, marginTop: 0 }} onClick={addCuratorialText}>Add to wall</button>
                   <button className="add-to-room" style={{ flex: 1, marginTop: 0 }} onClick={modifyCuratorialText}>Modify selected text</button>
                 </div>
-                <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 8, lineHeight: 1.6 }}>The text goes on the wall the camera is looking at — any wall, including a partition you added. Select a text artwork to edit its wording and typeface.</p>
+                <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 8, lineHeight: 1.6 }}>The text goes on the wall the camera is looking at, any wall, including a partition you added. Select a text artwork to edit its wording and typeface.</p>
                 {sunlightMessage && <div className="asset-upload-error" role="alert">{sunlightMessage}</div>}
               </div>
             </>
@@ -3638,7 +3638,7 @@ async function compressImage(file: File): Promise<File> {
             <>
               <div className="element-palette">
                 {ELEMENT_PALETTE.map(({ type, label }) => (
-                  <button key={type} className="element-palette-item" draggable onDragStart={(event) => { event.dataTransfer.setData("application/x-sanaa-element", type); event.dataTransfer.effectAllowed = "copy"; }} onClick={() => addElement(type)} title={`Add a ${label.toLowerCase()} to this room — or drag it into the room`}>
+                  <button key={type} className="element-palette-item" draggable onDragStart={(event) => { event.dataTransfer.setData("application/x-sanaa-element", type); event.dataTransfer.effectAllowed = "copy"; }} onClick={() => addElement(type)} title={`Add a ${label.toLowerCase()} to this room, or drag it into the room`}>
                     <ElementThumbnail type={type} size={26} />
                     <span>{label}</span>
                   </button>
@@ -3659,7 +3659,7 @@ async function compressImage(file: File): Promise<File> {
                   );
                 })}
                 {currentElements.length === 0 && (
-                  <p className="element-empty-note">No elements yet. Add a partition wall, a bench, a plinth or a track light above — then drag it around the room.</p>
+                  <p className="element-empty-note">No elements yet. Add a partition wall, a bench, a plinth or a track light above, then drag it around the room.</p>
                 )}
               </div>
               {/* Sunlight 3D elements — the reference room's own pieces
@@ -3672,7 +3672,7 @@ async function compressImage(file: File): Promise<File> {
               {activeRoom?.layout === "sunlight" && (
               <div className="property-section">
                 <label>3D ELEMENTS <span>REFERENCE ROOM</span></label>
-                <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: 8, lineHeight: 1.6 }}>Partitions, columns, plinths, vitrines, benches, armchairs and spotlights from the reference room — placed 3 m in front of the camera.</p>
+                <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: 8, lineHeight: 1.6 }}>Partitions, columns, plinths, vitrines, benches, armchairs and spotlights from the reference room, placed 3 m in front of the camera.</p>
                 <div style={{ display: "flex", gap: 8 }}>
                   <select className="full-input" style={{ flex: 1 }} value={sunlightElementType} onChange={(event) => setSunlightElementType(event.target.value as SunlightElementType)} aria-label="3D element type">
                     {SUNLIGHT_ELEMENT_TYPES.map((type) => (
@@ -3693,7 +3693,7 @@ async function compressImage(file: File): Promise<File> {
                     </div>
                   ))}
                   {currentSunlightElements.length === 0 && (
-                    <p className="element-empty-note">No 3D elements yet. Pick a type above and add it — it lands 3 m in front of the camera, then drag it around the floor.</p>
+                    <p className="element-empty-note">No 3D elements yet. Pick a type above and add it, it lands 3 m in front of the camera, then drag it around the floor.</p>
                   )}
                 </div>
               </div>
@@ -3711,7 +3711,7 @@ async function compressImage(file: File): Promise<File> {
               onToggleLocked={toggleLocked}
             />
           )}
-          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong> — double-click (or double-tap) an artwork, an element or a wall to select it; Shift-click adds to the selection.</li><li><strong>Move</strong> — drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong> — click a wall, then pick a colour.</li><li><strong>Undo / redo</strong> — Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong> — WASD or the arrow keys to move, drag elsewhere to look, click the floor to walk to a spot.</li><li><strong>Floor plan</strong> — open the plan at the bottom left to jump between rooms and artworks.</li><li><strong>Publish</strong> — Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. WASD moves you through the room; click the floor to walk to a spot. Click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
+          <div className="left-panel-bottom">{showGuide ? (<div className="tip-card editor-guide" role="dialog" aria-label="Editor guide"><div className="tip-heading"><Lightbulb size={14} /> EDITOR GUIDE</div><ol><li><strong>Select</strong>: double-click (or double-tap) an artwork, an element or a wall to select it; Shift-click adds to the selection.</li><li><strong>Move</strong>: drag a selected item; drag an element from the palette straight into the room.</li><li><strong>Paint a wall</strong>: click a wall, then pick a colour.</li><li><strong>Undo / redo</strong>: Ctrl+Z / Ctrl+Shift+Z (Cmd on Mac).</li><li><strong>Walk</strong>: WASD or the arrow keys to move, drag elsewhere to look, click the floor to walk to a spot.</li><li><strong>Floor plan</strong>: open the plan at the bottom left to jump between rooms and artworks.</li><li><strong>Publish</strong>: Save, then Publish to share your exhibition.</li></ol><button type="button" className="editor-guide-close" onClick={() => setShowGuide(false)}>Close guide</button></div>) : (<div className="tip-card"><div className="tip-heading"><Lightbulb size={14} /> QUICK TIP</div><p>Double-click an artwork, an element or a wall to select it. Drag a selected item to move it, drag an element from the palette above straight into the room, and drag anywhere else to look around. WASD moves you through the room; click the floor to walk to a spot. Click a wall to paint it.</p></div>)}<button className="panel-help-link" aria-expanded={showGuide} onClick={() => setShowGuide((value) => !value)}><CircleHelp size={15} /> {showGuide ? "Hide editor guide" : "Editor guide"} <ArrowRight size={13} /></button></div>
         </aside>
 
         <section className="editor-stage">
@@ -3737,10 +3737,10 @@ async function compressImage(file: File): Promise<File> {
               {/* Phase 8: collapses the floating build panel on small
                   screens. Hidden on desktop via globals.css. */}
               <button className="tool-button mobile-panel-toggle" aria-label={mobilePanelOpen ? "Hide build panel" : "Show build panel"} aria-expanded={mobilePanelOpen} title={mobilePanelOpen ? "Hide build panel" : "Show build panel"} onClick={() => setMobilePanelOpen((value) => !value)}><PanelLeft size={16} /></button>
-              <button className={`tool-button${showGrid ? " active" : ""}`} aria-label="Toggle grid" aria-pressed={showGrid} title="Toggle grid — 0.5 m grid; drags snap to 0.25 m" onClick={() => setShowGrid((value) => !value)}><Grid2X2 size={16} /></button>
-              <button className={`tool-button${showMeasure ? " active" : ""}`} aria-label="Measure" aria-pressed={showMeasure} title="Measure — distances between neighbouring artworks" onClick={() => setShowMeasure((value) => !value)}><Ruler size={16} /></button>
-              <button className={`tool-button${showStageSettings ? " active" : ""}`} aria-label="Toggle stage settings" aria-pressed={showStageSettings} title="Stage settings — room dimensions, walls, floor and ceiling" onClick={() => { const next = !showStageSettings; setShowStageSettings(next); if (next) clearSelection(); }}><Settings2 size={16} /></button>
-              <button className={`tool-button${showHistory ? " active" : ""}`} aria-label="Version history" aria-pressed={showHistory} title="Version history — the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><History size={16} /></button>
+              <button className={`tool-button${showGrid ? " active" : ""}`} aria-label="Toggle grid" aria-pressed={showGrid} title="Toggle grid: 0.5 m grid; drags snap to 0.25 m" onClick={() => setShowGrid((value) => !value)}><Grid2X2 size={16} /></button>
+              <button className={`tool-button${showMeasure ? " active" : ""}`} aria-label="Measure" aria-pressed={showMeasure} title="Measure: distances between neighbouring artworks" onClick={() => setShowMeasure((value) => !value)}><Ruler size={16} /></button>
+              <button className={`tool-button${showStageSettings ? " active" : ""}`} aria-label="Toggle stage settings" aria-pressed={showStageSettings} title="Stage settings: room dimensions, walls, floor and ceiling" onClick={() => { const next = !showStageSettings; setShowStageSettings(next); if (next) clearSelection(); }}><Settings2 size={16} /></button>
+              <button className={`tool-button${showHistory ? " active" : ""}`} aria-label="Version history" aria-pressed={showHistory} title="Version history: the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><History size={16} /></button>
               <button className="tool-button" aria-label="Fullscreen" onClick={() => document.querySelector(".scene-wrap")?.requestFullscreen()}><Expand size={16} /></button>
             </div>
           </div>
@@ -3753,7 +3753,7 @@ async function compressImage(file: File): Promise<File> {
                 <button type="button" title="Delete all selected items" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--danger, #b3261e)", fontSize: "9px", cursor: "pointer" }} onClick={deleteSelection}><Trash2 size={12} /> Delete</button>
               )}
               {composeCandidates.length >= 2 && (
-                <button type="button" title="Compose the selected artworks on a wall — one row at eye level, 12 cm apart" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={openComposePanel}><LayoutGrid size={12} /> Compose wall</button>
+                <button type="button" title="Compose the selected artworks on a wall: one row at eye level, 12 cm apart" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={openComposePanel}><LayoutGrid size={12} /> Compose wall</button>
               )}
               <span style={{ color: "var(--muted)" }}>Shift-click in 3D or in Layers adds to the selection; dragging moves all selected items together.</span>
             </div>
@@ -3809,18 +3809,18 @@ async function compressImage(file: File): Promise<File> {
             <div className="stage-tools-float"><button onClick={() => moveArtwork(1, 0.15)} title="Move up" aria-label="Move selected artwork up"><Plus size={14} /></button><button onClick={() => moveArtwork(1, -0.15)} title="Move down" aria-label="Move selected artwork down"><Minus size={14} /></button><span /><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.min(3, artwork.scale + 0.1) })); }} title="Increase scale" aria-label="Increase scale of selected artwork"><Expand size={14} /></button><button onClick={() => { if (!selected) return; snapshot(); updateArtwork(selected.id, (artwork) => ({ ...artwork, scale: Math.max(0.5, artwork.scale - 0.1) })); }} title="Decrease scale" aria-label="Decrease scale of selected artwork"><Minus size={14} /></button></div>
             <div className="stage-add-button"><button onClick={() => uploadRef.current?.click()}><Plus size={14} /> Add artwork</button></div>
           </div>
-          <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLabel(activeRoom.layout) : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks{showGrid ? <><span className="status-dot-separator">·</span> Grid on — drags snap to 0.25 m</> : null}</span><span>{autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
+          <div className="editor-statusbar"><span><span className="status-online" /> Scene ready</span><span>{activeRoom ? roomLabel(activeRoom.layout) : "Gallery"} <span className="status-dot-separator">·</span> {rooms.length} rooms <span className="status-dot-separator">·</span> {currentArtworks.length} artworks{showGrid ? <><span className="status-dot-separator">·</span> Grid on, drags snap to 0.25 m</> : null}</span><span>{autosaveState === "saving" ? "Saving…" : saved ? `All changes saved ✓${lastSavedAt ? ` ${lastSavedAt}` : ""}` : "Unsaved changes"}</span></div>
         </section>
 
         <aside className="editor-properties-panel">
-          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedSunlightElement ? "3D element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="Version history" aria-expanded={showHistory} aria-pressed={showHistory} title="Version history — the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><Info size={15} /></button></div>
+          <div className="properties-header"><div><span className="panel-kicker">INSPECTOR</span><h2>{selected ? "Artwork details" : selectedElement ? "Element details" : selectedSunlightElement ? "3D element details" : selectedWallId ? "Wall paint" : "Room settings"}</h2></div><button className="tiny-icon-button" aria-label="Version history" aria-expanded={showHistory} aria-pressed={showHistory} title="Version history: the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><Info size={15} /></button></div>
           {showHistory && (
             <div className="property-section">
               <label>VERSION HISTORY <span>LAST 10 SAVES</span></label>
               <p style={{ margin: "0 0 8px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
-                Every save — manual or autosave — keeps a snapshot. Restoring replaces what is in the editor now and marks the exhibition unsaved.
+                Every save (manual or autosave) keeps a snapshot. Restoring replaces what is in the editor now and marks the exhibition unsaved.
               </p>
-              {history.length === 0 && <p style={{ margin: 0, color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No snapshots yet — save the exhibition to create one.</p>}
+              {history.length === 0 && <p style={{ margin: 0, color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No snapshots yet, save the exhibition to create one.</p>}
               {history.map((version) => (
                 <div key={version.id} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
                   <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink)", fontSize: "9px" }}>{version.title}</span>
@@ -3882,20 +3882,20 @@ async function compressImage(file: File): Promise<File> {
                         <p style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>
                           {sameFamilyWallNeighbours.map((item) => item.title).join(", ")}{" "}
                           {sameFamilyWallNeighbours.length === 1 ? "shares" : "share"} this dominant colour on the same
-                          wall — consider spacing them apart.
+                          wall, consider spacing them apart.
                         </p>
                       )}
                       {colourMatches.length > 0 && (
                         <>
                           <p style={{ margin: "10px 0 6px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
-                            HARMONISES WITH — CLICK TO SELECT
+                            HARMONISES WITH: CLICK TO SELECT
                           </p>
                           {colourMatches.map(({ artwork, harmony }) => (
                             <button
                               key={artwork.id}
                               type="button"
                               onClick={() => selectArtwork(artwork.id)}
-                              title={`${artwork.title} — ${HARMONY_LABELS[harmony]} with ${selected.title}`}
+                              title={`${artwork.title}, ${HARMONY_LABELS[harmony]} with ${selected.title}`}
                               style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", padding: "4px 0", border: 0, borderBottom: "1px solid var(--border)", background: "none", color: "var(--ink)", fontSize: "9px", cursor: "pointer", textAlign: "left" }}
                             >
                               <span style={{ width: "12px", height: "12px", borderRadius: "2px", backgroundColor: artwork.palette![0], flexShrink: 0, border: "1px solid rgba(0,0,0,0.15)" }} />
@@ -3908,12 +3908,12 @@ async function compressImage(file: File): Promise<File> {
                       {wallSuggestion && frameSuggestion && (
                         <>
                           <p style={{ margin: "10px 0 6px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
-                            SUGGESTIONS — NEVER IMPOSED
+                            SUGGESTIONS: NEVER IMPOSED
                           </p>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                             <span style={{ width: "12px", height: "12px", borderRadius: "2px", backgroundColor: wallSuggestion.hex, flexShrink: 0, border: "1px solid rgba(0,0,0,0.15)" }} />
                             <span style={{ flex: 1, color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>
-                              Wall — try {wallSuggestion.hex}. {wallSuggestion.reason}
+                              Wall: try {wallSuggestion.hex}. {wallSuggestion.reason}
                             </span>
                             {activeRoom && activeRoom.wallColor.toLowerCase() !== wallSuggestion.hex.toLowerCase() && (
                               <button
@@ -3927,7 +3927,7 @@ async function compressImage(file: File): Promise<File> {
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <span style={{ flex: 1, color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>
-                              Frame — {FRAME_VARIANTS[frameSuggestion.variant]?.label ?? frameSuggestion.variant}. {frameSuggestion.reason}
+                              Frame: {FRAME_VARIANTS[frameSuggestion.variant]?.label ?? frameSuggestion.variant}. {frameSuggestion.reason}
                             </span>
                             {(selected.frame ?? "wood") !== frameSuggestion.variant && (
                               <button
@@ -3954,7 +3954,7 @@ async function compressImage(file: File): Promise<File> {
                 <div className="property-section"><label>MEASUREMENTS <span>FROM REAL POSITIONS</span></label>
                   <p style={{ margin: "0 0 6px", color: "var(--ink)", fontSize: "9px" }}>Centre height: {Math.round(selected.position[1] * 100)} cm</p>
                   {neighbourMeasurements(selected).length === 0 ? (
-                    <p style={{ margin: 0, color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No neighbours on this wall — hang another artwork on the same wall to see distances.</p>
+                    <p style={{ margin: 0, color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No neighbours on this wall, hang another artwork on the same wall to see distances.</p>
                   ) : (
                     neighbourMeasurements(selected).map((neighbour) => (
                       <p key={neighbour.name} style={{ margin: "0 0 6px", color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>
@@ -3999,13 +3999,13 @@ async function compressImage(file: File): Promise<File> {
                       {captionStatus?.artworkId === selected.id && (
                         <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
                           {captionStatus.status === "loading-model"
-                            ? "Loading the description model (first time only — it is then cached)…"
+                            ? "Loading the description model (first time only, it is then cached)…"
                             : "Describing this image…"}
                         </p>
                       )}
                       {captionSuggestion?.artworkId === selected.id && (
                         <p style={{ margin: "8px 0 0", color: "var(--ink)", fontSize: "8px", lineHeight: 1.6 }}>
-                          Suggested by {captionSuggestion.source === "caption" ? "the description model" : "Gemini"} — edit or discard before saving.{" "}
+                          Suggested by {captionSuggestion.source === "caption" ? "the description model" : "Gemini"}, edit or discard before saving.{" "}
                           <button type="button" onClick={discardCaptionSuggestion} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: "8px", cursor: "pointer", textDecoration: "underline", padding: 0 }}>
                             Discard suggestion
                           </button>
@@ -4026,7 +4026,7 @@ async function compressImage(file: File): Promise<File> {
                       </div>
                       {geminiSuggestion?.artworkId === selected.id && (
                         <div style={{ marginTop: "10px", padding: "8px", border: "1px solid var(--border)", borderRadius: "4px" }}>
-                          <p style={{ margin: "0 0 6px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>GEMINI SUGGESTS — CLICK TO USE</p>
+                          <p style={{ margin: "0 0 6px", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>GEMINI SUGGESTS: CLICK TO USE</p>
                           <p style={{ margin: "0 0 4px", color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>Alt-text: {geminiSuggestion.altText}</p>
                           <p style={{ margin: "0 0 8px", color: "var(--ink)", fontSize: "9px", lineHeight: 1.5 }}>{geminiSuggestion.description}</p>
                           <div className="property-actions">
@@ -4067,13 +4067,13 @@ async function compressImage(file: File): Promise<File> {
                   })}</div>
                   {isCustomFrame(selected.frame) && frameConfig && (
                     <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
-                      Custom frame — based on {FRAME_VARIANTS[frameConfig.base]?.label ?? frameConfig.base}.{" "}
+                      Custom frame, based on {FRAME_VARIANTS[frameConfig.base]?.label ?? frameConfig.base}.{" "}
                       <button type="button" style={{ padding: 0, border: 0, background: "none", color: "var(--accent)", fontSize: "8px", textDecoration: "underline", cursor: "pointer" }} onClick={() => applyFrameValue(frameConfig.base)}>Reset to the built-in style</button>
                     </p>
                   )}
                   {comparingFrames && (
                     <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>
-                      Comparing — click frames in the grid above to add or remove them (up to 4), then apply one below.
+                      Comparing, click frames in the grid above to add or remove them (up to 4), then apply one below.
                     </p>
                   )}
                   <div className="property-actions">
@@ -4090,7 +4090,7 @@ async function compressImage(file: File): Promise<File> {
                     {framePresetsLoading && <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px" }}>Loading your presets…</p>}
                     {framePresetsError && <p style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "8px", lineHeight: 1.6 }}>{framePresetsError} <button type="button" style={{ padding: 0, border: 0, background: "none", color: "var(--accent)", fontSize: "8px", textDecoration: "underline", cursor: "pointer" }} onClick={() => void loadFramePresets()}>Retry</button></p>}
                     {!framePresetsLoading && !framePresetsError && framePresets.length === 0 && (
-                      <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No saved presets yet — customise a frame below and save it with a name.</p>
+                      <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No saved presets yet, customise a frame below and save it with a name.</p>
                     )}
                     {!framePresetsLoading && !framePresetsError && framePresets.length > 0 && (
                       <div style={{ marginTop: "8px" }}>
@@ -4143,7 +4143,7 @@ async function compressImage(file: File): Promise<File> {
                   {comparingFrames && (
                     <div className="property-section"><label>COMPARE FRAMES <span>{compareFrames.length}/4</span></label>
                       {compareFrames.length === 0 ? (
-                        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No frames selected yet. Click frames in the grid above — or Compare on a saved preset — to add up to 4 here.</p>
+                        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>No frames selected yet. Click frames in the grid above (or Compare on a saved preset) to add up to 4 here.</p>
                       ) : (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", marginTop: "8px" }}>
                           {compareFrames.map((value) => {
@@ -4231,7 +4231,7 @@ async function compressImage(file: File): Promise<File> {
                   )}
                   <div className="property-section"><label>COLOUR</label><div className="room-color-control"><input type="color" aria-label="3D element colour" {...editSessionProps} value={selectedSunlightElement.color} onChange={(event) => updateSunlightElement(selectedSunlightElement.id, { color: event.target.value })} /><span>{selectedSunlightElement.color}</span></div></div>
                   <div className="property-actions"><button className="delete-action" aria-label="Delete 3D element" onClick={removeSunlightElement}><Trash2 size={14} /></button></div>
-                  <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>Drag it on the floor to move it. A cloison or suspendu is a wall — artworks and curatorial text can hang on it.</p>
+                  <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "8px", lineHeight: 1.6 }}>Drag it on the floor to move it. A cloison or suspendu is a wall, artworks and curatorial text can hang on it.</p>
                 </>
               ) : selectedWallId ? (
                 <>

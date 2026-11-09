@@ -401,7 +401,10 @@ const CONTENT: Record<"en" | "fr", GuideSection[]> = {
 export default function GuidePage() {
   const t = useT();
   const { locale } = useLocale();
-  const sections = CONTENT[locale];
+  // The guide body is written in English and French only; every other
+  // language falls back to English (the dictionary chrome around it is
+  // translated into all eleven languages).
+  const sections = CONTENT[locale === "fr" ? "fr" : "en"];
   return (
     <main className={styles.page}>
       <header className={styles.header}>

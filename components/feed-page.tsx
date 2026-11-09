@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Sidebar from "@/components/sidebar";
 import BrandLogo from "@/components/brand-logo";
 import ThemeToggle from "@/components/theme-toggle";
-import { useLocale, useT, type Locale } from "@/lib/i18n";
+import { LOCALE_TAGS, useLocale, useT, type Locale } from "@/lib/i18n";
 import styles from "./feed-page.module.css";
 
 // Publication feed (/feed) — adapted from the standalone scaffold
@@ -32,7 +32,7 @@ type Post = {
 type FeedResponse = { posts: Post[]; nextCursor: string | null };
 
 function formatDate(value: string, locale: Locale) {
-  return new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en", {
+  return new Intl.DateTimeFormat(LOCALE_TAGS[locale], {
     day: "numeric",
     month: "long",
     year: "numeric",

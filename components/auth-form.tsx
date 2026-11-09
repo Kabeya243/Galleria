@@ -374,6 +374,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                     <Link href="/terms">{t("footer", "terms")}</Link>
                     {t("auth", "agreeTermsAnd")}
                     <Link href="/privacy">{t("footer", "privacy")}</Link>
+                    {t("auth", "agreeTermsSuffix")}
                   </span>
                 </label>
               </div>

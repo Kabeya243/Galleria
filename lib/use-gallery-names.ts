@@ -50,7 +50,7 @@ export function useGalleryNames(initial?: Partial<GalleryNamesMap>): Partial<Gal
   return overrides;
 }
 
-/** Display name for a gallery in the current locale. */
+/** Display name for a gallery. Proper names never translate: the same name shows in every language. */
 export function useGalleryLabel(layout: RoomLayout, initial?: Partial<GalleryNamesMap>): string {
   const { locale } = useLocale();
   const overrides = useGalleryNames(initial);

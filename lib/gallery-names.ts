@@ -1,12 +1,13 @@
-// Gallery names — English + French defaults, admin-overridable.
+// Gallery names — one canonical name per room template, admin-overridable.
 //
 // The twenty-one room templates live in code (lib/rooms.ts) and their
-// `label` is the English name. This module carries both languages:
-// the English name is what visitors see by default, the French name
-// is used when the visitor switches the site to French (see
-// lib/i18n.ts). The owner can rename any gallery in the admin
-// dashboard; renames are stored in the database (model GalleryName,
-// see lib/gallery-names-server.ts) and win over these defaults.
+// `label` is the name. This module carries the canonical name: gallery
+// names are proper names and are NEVER translated — the same name shows
+// in every language (see lib/i18n.ts). The owner can rename any gallery
+// in the admin dashboard; renames are stored in the database (model
+// GalleryName, see lib/gallery-names-server.ts) and win over these
+// defaults. (The stored French name is kept for compatibility but no
+// longer displayed anywhere.)
 //
 // Pure data + a pure helper — no database import, so client components
 // can import this file safely.
@@ -19,37 +20,42 @@ export type GalleryNamesMap = Record<RoomLayout, GalleryNameEntry>;
 
 export const GALLERY_NAME_DEFAULTS: GalleryNamesMap = {
   sunlight: { en: "Sunlight Gallery", fr: "Sunlight Gallery" },
-  serpentine: { en: "The Serpentine", fr: "La Serpentine" },
-  vitrine: { en: "The Vitrine", fr: "La Vitrine" },
-  loft: { en: "The Concrete Loft", fr: "Le Loft Béton" },
-  halle: { en: "The Design Hall", fr: "La Halle Design" },
-  arche: { en: "The Arch", fr: "L'Arche" },
-  musee: { en: "The Blue Museum", fr: "Le Musée Bleu" },
-  "claire-voie": { en: "The Clerestory", fr: "La Claire-Voie" },
-  parquet: { en: "The Parquet", fr: "Le Parquet" },
-  verriere: { en: "The Glass Roof", fr: "La Verrière" },
-  pavillon: { en: "Pavilion of Light", fr: "Pavillon de lumière" },
-  classique: { en: "The Classical Gallery", fr: "Galerie classique" },
-  "atrium-blanc": { en: "The White Atrium", fr: "Atrium blanc" },
-  patio: { en: "The Oval Patio", fr: "Patio ovale" },
-  escalier: { en: "The Stair Hall", fr: "Hall à escalier" },
-  "salles-vertes": { en: "The Green Rooms", fr: "Salles vertes" },
-  "couloir-sombre": { en: "Elegant Gallery", fr: "Galerie élégante" },
-  "couloir-dore": { en: "The Golden Corridor", fr: "Couloir doré" },
-  voutes: { en: "The Vaulted Ceiling", fr: "Plafond à voûtes" },
-  courbes: { en: "White Curves", fr: "Courbes blanches" },
-  "atrium-lattes": { en: "The Slatted Atrium", fr: "Atrium à lattes" },
+  serpentine: { en: "The Serpentine", fr: "The Serpentine" },
+  vitrine: { en: "The Vitrine", fr: "The Vitrine" },
+  loft: { en: "The Concrete Loft", fr: "The Concrete Loft" },
+  halle: { en: "The Design Hall", fr: "The Design Hall" },
+  arche: { en: "The Arch", fr: "The Arch" },
+  musee: { en: "The Blue Museum", fr: "The Blue Museum" },
+  "claire-voie": { en: "The Clerestory", fr: "The Clerestory" },
+  parquet: { en: "The Parquet", fr: "The Parquet" },
+  verriere: { en: "The Glass Roof", fr: "The Glass Roof" },
+  pavillon: { en: "Pavilion of Light", fr: "Pavilion of Light" },
+  classique: { en: "The Classical Gallery", fr: "The Classical Gallery" },
+  "atrium-blanc": { en: "The White Atrium", fr: "The White Atrium" },
+  patio: { en: "The Oval Patio", fr: "The Oval Patio" },
+  escalier: { en: "The Stair Hall", fr: "The Stair Hall" },
+  "salles-vertes": { en: "The Green Rooms", fr: "The Green Rooms" },
+  "couloir-sombre": { en: "Elegant Gallery", fr: "Elegant Gallery" },
+  "couloir-dore": { en: "The Golden Corridor", fr: "The Golden Corridor" },
+  voutes: { en: "The Vaulted Ceiling", fr: "The Vaulted Ceiling" },
+  courbes: { en: "White Curves", fr: "White Curves" },
+  "atrium-lattes": { en: "The Slatted Atrium", fr: "The Slatted Atrium" },
 };
 
-/** Display name for a gallery: admin override → default → room label. */
+/**
+ * Display name for a gallery: admin override → default → room label.
+ * The name is a proper name: it is identical in every language, so
+ * `locale` is accepted for call-site compatibility but intentionally
+ * ignored — the canonical (English) name is always returned.
+ */
 export function galleryLabel(
   layout: RoomLayout,
-  locale: Locale,
+  _locale: Locale,
   overrides?: Partial<GalleryNamesMap> | null,
 ): string {
   return (
-    overrides?.[layout]?.[locale] ??
-    GALLERY_NAME_DEFAULTS[layout]?.[locale] ??
+    overrides?.[layout]?.en ??
+    GALLERY_NAME_DEFAULTS[layout]?.en ??
     roomLayouts[layout]?.label ??
     layout
   );

@@ -8,7 +8,7 @@ import Avatar from "@/components/avatar";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import LanguageSwitcher from "@/components/language-switcher";
-import { useLocale, useT } from "@/lib/i18n";
+import { LOCALE_TAGS, useLocale, useT } from "@/lib/i18n";
 import { applyTheme, getStoredTheme, type ThemeChoice } from "@/lib/theme";
 
 // Square-crop an image file to a 512 px JPEG (centre crop) in the browser,
@@ -64,7 +64,7 @@ export default function SettingsPage({
   }, []);
 
   const memberSince = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB", {
+    ? new Date(user.createdAt).toLocaleDateString(locale === "en" ? "en-GB" : LOCALE_TAGS[locale], {
         day: "numeric",
         month: "long",
         year: "numeric",

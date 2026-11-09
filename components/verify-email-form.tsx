@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import BrandLogo from "@/components/brand-logo";
-import { AsteriskMark } from "@/components/auth-form";
 import { useT } from "@/lib/i18n";
 
 // Email verification landing page (Nov 2026): confirms the link sent
@@ -65,8 +64,8 @@ export default function VerifyEmailForm({ token }: { token: string }) {
         <Link className="auth-noir-brand" href="/">
           <BrandLogo variant="horizontal" theme="dark" height={60} />
         </Link>
-        <div className="auth-noir-star">
-          <AsteriskMark />
+        <div className="auth-noir-mark">
+          <BrandLogo variant="principal" theme="dark" />
         </div>
         <p className="auth-noir-copy">© 2026 Lakisa Studio. All rights reserved.</p>
       </section>

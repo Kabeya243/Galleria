@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import BrandLogo from "@/components/brand-logo";
-import { AsteriskMark } from "@/components/auth-form";
 
 export default function ResetPasswordForm({ token }: { token: string }) {
   const [newPassword, setNewPassword] = useState("");
@@ -42,8 +41,8 @@ export default function ResetPasswordForm({ token }: { token: string }) {
         <Link className="auth-noir-brand" href="/">
           <BrandLogo variant="horizontal" theme="dark" height={60} />
         </Link>
-        <div className="auth-noir-star">
-          <AsteriskMark />
+        <div className="auth-noir-mark">
+          <BrandLogo variant="principal" theme="dark" />
         </div>
         <p className="auth-noir-copy">© 2026 Lakisa Studio. All rights reserved.</p>
       </section>

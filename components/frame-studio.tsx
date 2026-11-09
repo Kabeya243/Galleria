@@ -218,7 +218,24 @@ export default function FrameStudio({
   if (!selected) return null;
 
   return (
-    <div>
+    <div className="fs-layout">
+      <style>{`
+        .fs-layout { display: grid; grid-template-columns: minmax(340px, 460px) 1fr; gap: 20px; align-items: start; }
+        @media (max-width: 900px) { .fs-layout { grid-template-columns: 1fr; } }
+        /* Desktop: the studio fills the viewport (same 100dvh frame as
+           the certificate tool): the preview workspace never scrolls
+           (the framed artwork is centred and fits), and only the
+           controls panel scrolls, with a hidden scrollbar. Below
+           900 px the columns stack and everything flows naturally. */
+        @media (min-width: 901px) {
+          .fs-layout { height: calc(100dvh - 280px); min-height: 560px; align-items: stretch; }
+          .fs-panel { min-height: 0; overflow-y: auto; scrollbar-width: none; }
+          .fs-panel::-webkit-scrollbar { display: none; }
+          .fs-workspace { min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        }
+        .fs-workspace { min-width: 0; }
+      `}</style>
+      <div className="fs-panel">
       {/* Artwork picker. */}
       <div className="property-section">
         <label>ARTWORK</label>
@@ -240,77 +257,6 @@ export default function FrameStudio({
             Open in the 3D editor
           </Link>
         </p>
-      </div>
-
-      {/* Live preview of the artwork in the current frame, and save. */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "20px",
-          alignItems: "flex-start",
-          padding: "16px 0",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ flex: "0 0 auto", maxWidth: "100%" }}>
-          <FrameThumbnail
-            variant={previewVariant}
-            config={custom}
-            imageUrl={selected.imageUrl}
-            artworkColor={selected.color}
-            width={320}
-            height={240}
-          />
-        </div>
-        <div style={{ flex: "1 1 220px", minWidth: "220px" }}>
-          <p className="eyebrow" style={{ margin: "0 0 6px" }}>
-            <span className="status-dot" /> CURRENT FRAME
-          </p>
-          <h3 style={{ margin: "0 0 6px", fontSize: "18px" }}>{currentLabel}</h3>
-          <p style={{ margin: "0 0 12px", color: "var(--muted)", fontSize: "9px", lineHeight: 1.6 }}>
-            {isCustomFrame(frameValue)
-              ? `A custom frame, based on ${FRAME_VARIANTS[frameConfig?.base ?? "wood"]?.label ?? frameConfig?.base}.`
-              : "A built-in frame style. Pick another below, or customise this one."}
-          </p>
-          <div className="property-actions" style={{ paddingTop: 0 }}>
-            <button
-              type="button"
-              disabled={!dirty || saveState === "saving"}
-              onClick={() => void saveFrame()}
-              style={{ minWidth: "150px", height: "32px", fontSize: "9px", fontWeight: 600 }}
-            >
-              {saveState === "saving" ? "Saving…" : dirty ? "Save frame to artwork" : "Frame saved"}
-            </button>
-            {isCustomFrame(frameValue) && (
-              <button type="button" onClick={() => applyFrameValue(frameConfig?.base ?? "wood")}>
-                Reset to the built-in style
-              </button>
-            )}
-          </div>
-          {saveState === "saved" && (
-            <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "9px" }}>
-              Saved. “{selected.title}” now hangs in {currentLabel} in the editor and in the public exhibition.
-            </p>
-          )}
-          {saveState === "error" && saveError && (
-            <p style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "9px", lineHeight: 1.6 }}>
-              {saveError}{" "}
-              <button
-                type="button"
-                style={{ padding: 0, border: 0, background: "none", color: "var(--accent)", fontSize: "9px", textDecoration: "underline", cursor: "pointer" }}
-                onClick={() => void saveFrame()}
-              >
-                Retry
-              </button>
-            </p>
-          )}
-          {dirty && saveState !== "saving" && (
-            <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "9px" }}>
-              Unsaved changes. Save to apply this frame to the artwork.
-            </p>
-          )}
-        </div>
       </div>
 
       {/* Frame catalogue: all 28 styles, with faithful previews. */}
@@ -645,6 +591,79 @@ export default function FrameStudio({
         The frame you save here is the same frame the 3D editor shows and the public exhibition hangs. No need to re-frame the work in
         two places.
       </p>
+      </div>
+      <div className="fs-workspace">
+      {/* Live preview of the artwork in the current frame, and save. */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "20px",
+          alignItems: "flex-start",
+          padding: "16px 0",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <div style={{ flex: "0 0 auto", maxWidth: "100%" }}>
+          <FrameThumbnail
+            variant={previewVariant}
+            config={custom}
+            imageUrl={selected.imageUrl}
+            artworkColor={selected.color}
+            width={320}
+            height={240}
+          />
+        </div>
+        <div style={{ flex: "1 1 220px", minWidth: "220px" }}>
+          <p className="eyebrow" style={{ margin: "0 0 6px" }}>
+            <span className="status-dot" /> CURRENT FRAME
+          </p>
+          <h3 style={{ margin: "0 0 6px", fontSize: "18px" }}>{currentLabel}</h3>
+          <p style={{ margin: "0 0 12px", color: "var(--muted)", fontSize: "9px", lineHeight: 1.6 }}>
+            {isCustomFrame(frameValue)
+              ? `A custom frame, based on ${FRAME_VARIANTS[frameConfig?.base ?? "wood"]?.label ?? frameConfig?.base}.`
+              : "A built-in frame style. Pick another below, or customise this one."}
+          </p>
+          <div className="property-actions" style={{ paddingTop: 0 }}>
+            <button
+              type="button"
+              disabled={!dirty || saveState === "saving"}
+              onClick={() => void saveFrame()}
+              style={{ minWidth: "150px", height: "32px", fontSize: "9px", fontWeight: 600 }}
+            >
+              {saveState === "saving" ? "Saving…" : dirty ? "Save frame to artwork" : "Frame saved"}
+            </button>
+            {isCustomFrame(frameValue) && (
+              <button type="button" onClick={() => applyFrameValue(frameConfig?.base ?? "wood")}>
+                Reset to the built-in style
+              </button>
+            )}
+          </div>
+          {saveState === "saved" && (
+            <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "9px" }}>
+              Saved. “{selected.title}” now hangs in {currentLabel} in the editor and in the public exhibition.
+            </p>
+          )}
+          {saveState === "error" && saveError && (
+            <p style={{ margin: "8px 0 0", color: "var(--danger, #b3261e)", fontSize: "9px", lineHeight: 1.6 }}>
+              {saveError}{" "}
+              <button
+                type="button"
+                style={{ padding: 0, border: 0, background: "none", color: "var(--accent)", fontSize: "9px", textDecoration: "underline", cursor: "pointer" }}
+                onClick={() => void saveFrame()}
+              >
+                Retry
+              </button>
+            </p>
+          )}
+          {dirty && saveState !== "saving" && (
+            <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: "9px" }}>
+              Unsaved changes. Save to apply this frame to the artwork.
+            </p>
+          )}
+        </div>
+      </div>
+      </div>
     </div>
   );
 }

@@ -318,6 +318,12 @@ export default function MarketingStudio({
   const [exporting, setExporting] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const previewRef = useRef<HTMLCanvasElement | null>(null);
+  // Press-kit fit: the A4 press sheet is scaled down (never up) so it
+  // fits the preview column without scrolling — see the effect below.
+  const pressWrapRef = useRef<HTMLDivElement | null>(null);
+  const pressRef = useRef<HTMLDivElement | null>(null);
+  const [pressScale, setPressScale] = useState(1);
+  const [pressHeight, setPressHeight] = useState(0);
   const cfgRef = useRef(cfg);
   cfgRef.current = cfg;
   const imgRef = useRef(img);
@@ -378,6 +384,36 @@ export default function MarketingStudio({
     drawAsset(ctx, size.w, size.h, cfg, selectedArt, img);
     ctx.restore();
   }, [cfg, selectedArt, img, size.w, size.h, isPressKit]);
+
+  // Fit the press sheet inside the preview column on desktop: measure
+  // the space the preview gives it and scale the sheet down (never up)
+  // so it fits without the preview scrolling. Below 1080 px the columns
+  // stack and the sheet keeps its natural size (scale 1).
+  useEffect(() => {
+    if (!isPressKit) return;
+    const wrap = pressWrapRef.current;
+    const press = pressRef.current;
+    if (!wrap || !press) return;
+    const measure = () => {
+      if (!window.matchMedia("(min-width: 1081px)").matches) {
+        setPressScale(1);
+        setPressHeight(0);
+        return;
+      }
+      const naturalW = press.offsetWidth;
+      const naturalH = press.offsetHeight;
+      const availW = wrap.clientWidth;
+      const availH = wrap.clientHeight;
+      if (!naturalW || !naturalH || !availW || !availH) return;
+      setPressHeight(naturalH);
+      setPressScale(Math.min(1, availW / naturalW, availH / naturalH));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrap);
+    observer.observe(press);
+    return () => observer.disconnect();
+  }, [isPressKit]);
 
   const refreshSaved = useCallback(async () => {
     setSavedLoading(true);
@@ -749,7 +785,16 @@ export default function MarketingStudio({
           <span className="mk-muted">{isPressKit ? "A4 press sheet" : `${size.label} · preview scaled`}</span>
         </div>
         {isPressKit ? (
-          <div className="mk-press print-area">
+          <div
+            className="mk-press-scaler"
+            ref={pressWrapRef}
+            style={pressHeight ? { height: Math.max(1, Math.round(pressHeight * pressScale)) } : undefined}
+          >
+          <div
+            className="mk-press print-area"
+            ref={pressRef}
+            style={pressScale === 1 ? undefined : { transform: `scale(${pressScale})`, transformOrigin: "top center" }}
+          >
             <p className="mk-press-eyebrow">Press kit: {cfg.artistName}</p>
             <h2>{cfg.headline || "Exhibition"}</h2>
             <p className="mk-press-meta">{[cfg.dateText, cfg.venueText].filter(Boolean).join(" · ")}</p>
@@ -770,6 +815,7 @@ export default function MarketingStudio({
             <h3>Contact</h3>
             <p>{cfg.artistName}{cfg.dateText ? ` · ${cfg.dateText}` : ""}{cfg.venueText ? ` · ${cfg.venueText}` : ""}</p>
           </div>
+          </div>
         ) : (
           <div className="mk-canvas-wrap print-area">
             <canvas ref={previewRef} aria-label="Marketing asset preview" />
@@ -780,6 +826,21 @@ export default function MarketingStudio({
       <style>{`
         .mk { display: grid; grid-template-columns: minmax(340px, 460px) 1fr; gap: 28px; align-items: start; }
         @media (max-width: 1080px) { .mk { grid-template-columns: 1fr; } }
+        /* Desktop: the studio fills the viewport (same 100dvh frame as
+           the certificate tool): the preview column never scrolls (the
+           canvas scales down to fit it, the press sheet is scaled by
+           the ResizeObserver above), and only the editor scrolls, with
+           a hidden scrollbar. Below 1080 px the columns stack and
+           everything flows naturally again. */
+        @media (min-width: 1081px) {
+          .mk { height: calc(100dvh - 280px); min-height: 560px; align-items: stretch; }
+          .mk-editor { min-height: 0; overflow-y: auto; scrollbar-width: none; }
+          .mk-editor::-webkit-scrollbar { display: none; }
+          .mk-preview-col { min-height: 0; overflow: hidden; display: flex; flex-direction: column; position: static; }
+          .mk-canvas-wrap { flex: 1; min-height: 0; overflow: hidden; }
+          .mk-canvas-wrap canvas { max-height: 100%; width: auto; }
+          .mk-press-scaler { flex: 1; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; }
+        }
         .mk-editor { display: flex; flex-direction: column; gap: 18px; }
         .mk-card { border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 20px; display: flex; flex-direction: column; gap: 12px; }
         .mk-card h2 { margin: 0; font-size: 17px; font-family: Fraunces, Georgia, serif; }
@@ -833,8 +894,9 @@ export default function MarketingStudio({
         @media print {
           body * { visibility: hidden !important; }
           .print-area, .print-area * { visibility: visible !important; }
-          .print-area { position: absolute !important; inset: 0 auto auto 0 !important; width: 100% !important; max-width: none !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+          .print-area { position: absolute !important; inset: 0 auto auto 0 !important; width: 100% !important; max-width: none !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; transform: none !important; }
           .print-area canvas { max-width: 100% !important; box-shadow: none !important; }
+          .mk-press-scaler { height: auto !important; overflow: visible !important; }
         }
       `}</style>
     </div>

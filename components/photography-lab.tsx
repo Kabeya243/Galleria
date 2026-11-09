@@ -703,6 +703,23 @@ export default function PhotographyLab({
         .plab { display: grid; gap: 24px; }
         .plab-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr); gap: 28px; align-items: start; }
         @media (max-width: 860px) { .plab-grid { grid-template-columns: 1fr; } }
+        /* Desktop: the lab fills the viewport (same 100dvh frame as the
+           certificate tool): the source picker stays on top, the grid
+           takes the rest, the preview column never scrolls (the stage
+           stays tightly wrapped around the photo so crop dragging
+           keeps working, the canvas scales down to fit), and only the
+           controls scroll, with a hidden scrollbar. Below 860 px
+           everything stacks and flows naturally. */
+        @media (min-width: 861px) {
+          .plab { height: calc(100dvh - 280px); min-height: 560px; grid-template-rows: auto minmax(0, 1fr); }
+          .plab-grid { min-height: 0; align-items: stretch; }
+          .plab-preview-col { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+          .plab-stage { flex: 0 1 auto; min-height: 0; }
+          .plab-stage-inner { max-width: 100%; max-height: 100%; }
+          .plab-stage canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; }
+          .plab-controls { min-height: 0; overflow-y: auto; scrollbar-width: none; }
+          .plab-controls::-webkit-scrollbar { display: none; }
+        }
         .plab-stage { position: relative; border: 1px solid var(--line); border-radius: 8px; background: var(--room-color); min-height: 320px; display: grid; place-items: center; overflow: hidden; padding: 16px; }
         .plab-stage canvas { max-width: 100%; height: auto; display: block; background: #fdfdfc; box-shadow: 0 1px 6px rgba(0,0,0,.08); }
         .plab-stage-inner { position: relative; line-height: 0; }
@@ -801,7 +818,7 @@ export default function PhotographyLab({
 
       <div className="plab-grid">
         {/* ---- Preview ---- */}
-        <div>
+        <div className="plab-preview-col">
           <div className="plab-stage" ref={stageRef}>
             {!img && !loadingImage && (
               <div className="plab-empty">

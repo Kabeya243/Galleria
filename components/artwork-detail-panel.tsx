@@ -16,12 +16,18 @@ import { useT } from "@/lib/i18n";
 export default function ArtworkDetailPanel({
   artwork,
   exhibitionId,
+  ownerId,
   ownerName,
   index,
   onClose,
 }: {
   artwork: Artwork;
   exhibitionId: string;
+  // The exhibition owner, so a signed-in visitor can open a private
+  // conversation with them about this artwork (see /messages/new).
+  // Anonymous visitors still use the "Contact the artist" form below,
+  // which goes through the inquiries system instead.
+  ownerId: string;
   ownerName: string;
   index: number;
   onClose: () => void;
@@ -295,6 +301,16 @@ export default function ArtworkDetailPanel({
         <button type="button" className="artwork-detail-contact" onClick={() => setShowForm(true)}>
           <Mail size={14} /> {t("artwork", "contactArtist")}
         </button>
+      )}
+      {!showForm && !sent && (
+        <p style={{ margin: "10px 0 0", fontSize: 13 }}>
+          <a
+            href={`/messages/new?to=${encodeURIComponent(ownerId)}&exhibitionId=${encodeURIComponent(exhibitionId)}&artworkId=${encodeURIComponent(artwork.id)}`}
+            style={{ color: "var(--accent)", fontWeight: 600 }}
+          >
+            Send a message to {ownerName} (requires an account)
+          </a>
+        </p>
       )}
       {showForm && !sent && (
         <form className="artwork-detail-form" onSubmit={submitContact}>

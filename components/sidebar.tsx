@@ -17,6 +17,7 @@ import {
   Home,
   Image,
   Menu,
+  MessageSquare,
   Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
@@ -49,6 +50,9 @@ type NavItem = {
   icon: LucideIcon;
   adminOnly?: boolean;
   count?: boolean;
+  // Unread-messages badge: fetched client-side (see the effect below),
+  // so no page has to thread the count through as a prop.
+  unread?: boolean;
 };
 
 type NavGroup = {
@@ -66,6 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "explore", href: "/explore", label: "explore", icon: Compass },
       { id: "feed", href: "/feed", label: "feed", icon: Newspaper },
+      { id: "messages", href: "/messages", label: "messages", icon: MessageSquare, unread: true },
       { id: "templates", href: "/galleries", label: "templates", icon: GalleryVerticalEnd },
       { id: "home", href: "/", label: "home", icon: Home },
     ],
@@ -144,6 +149,7 @@ const LEGACY_ACTIVE: Record<string, string> = {
   artworks: "my-artworks",
   explore: "explore",
   feed: "feed",
+  messages: "messages",
   galleries: "templates",
   tools: "tools-hub",
   settings: "settings",
@@ -158,6 +164,7 @@ export type SidebarActive =
   | "artworks"
   | "explore"
   | "feed"
+  | "messages"
   | "tools"
   | "admin"
   | "discover"
@@ -192,6 +199,26 @@ export default function Sidebar({
   const t = useT();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(collapsible ?? false);
+  // Unread-messages badge (Nov 2026): fetched once per sidebar mount
+  // so the inbox count stays live without threading a prop through
+  // every page that renders the sidebar. A failed fetch just hides
+  // the badge; the inbox itself always shows the true counts.
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/messages/unread", { credentials: "same-origin", cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result) => {
+        if (!cancelled && result && typeof result.unreadCount === "number") {
+          setUnreadMessages(result.unreadCount);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Hover open/close (collapsible mode, desktop only): the rail unfolds
   // while the mouse is over it and folds back shortly after the mouse
@@ -343,6 +370,9 @@ export default function Sidebar({
                           <item.icon size={17} />
                           <span className="nav-item-label">{t("nav", item.label)}</span>
                           {item.count && <span className="nav-count">{exhibitionCount}</span>}
+                          {item.unread && unreadMessages > 0 && (
+                            <span className="nav-count">{unreadMessages}</span>
+                          )}
                         </button>
                       ) : (
                         <Link
@@ -353,6 +383,9 @@ export default function Sidebar({
                         >
                           <item.icon size={17} /> <span className="nav-item-label">{t("nav", item.label)}</span>
                           {item.count && <span className="nav-count">{exhibitionCount}</span>}
+                          {item.unread && unreadMessages > 0 && (
+                            <span className="nav-count">{unreadMessages}</span>
+                          )}
                         </Link>
                       ),
                     )}

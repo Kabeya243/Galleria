@@ -31,6 +31,11 @@ model User {
   emailVerifiedAt DateTime?
   resetTokens  PasswordResetToken[]
   verificationTokens EmailVerificationToken[]
+  // Private messaging (Nov 2026): conversations as participant A or B,
+  // and messages sent. See Conversation / Message below.
+  conversationsAsA Conversation[] @relation("ConversationAsA")
+  conversationsAsB Conversation[] @relation("ConversationAsB")
+  messagesSent    Message[]
   savedWorks   SavedWork[]
   listings     Listing[]
   libraryWorks LibraryWork[]
@@ -77,6 +82,45 @@ model EmailVerificationToken {
   @@index([userId])
 }
 
+// Private messaging (Nov 2026): one conversation per pair of users
+// plus an optional context (an exhibition or an artwork the message is
+// about, i.e. an inquiry). The two participants are stored in id order
+// so the pair is unique, and the context makes asking about two
+// different works open two threads. Messages are private: only the two
+// participants can read them. Applied by `prisma db push` on deploy
+// (see vercel.json); no data migration — the tables start empty.
+model Conversation {
+  id             String    @id @default(cuid())
+  participantAId String
+  participantA   User      @relation("ConversationAsA", fields: [participantAId], references: [id], onDelete: Cascade)
+  participantBId String
+  participantB   User      @relation("ConversationAsB", fields: [participantBId], references: [id], onDelete: Cascade)
+  exhibitionId   String?
+  exhibition     Exhibition? @relation(fields: [exhibitionId], references: [id], onDelete: SetNull)
+  artworkId      String?
+  artwork        Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  messages       Message[]
+
+  @@index([participantAId])
+  @@index([participantBId])
+  @@index([updatedAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+
+  @@index([conversationId, createdAt])
+}
+
 model Exhibition {
   id          String     @id @default(cuid())
   title       String
@@ -115,6 +159,7 @@ model Exhibition {
   owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   artworks    Artwork[]
   posts       Post[]
+  conversations Conversation[]
 
   @@index([ownerId])
   @@index([status, slug])
@@ -217,6 +262,7 @@ model Artwork {
   createdAt    DateTime   @default(now())
   exhibitionId String
   exhibition   Exhibition @relation(fields: [exhibitionId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
 
   @@index([exhibitionId])
 }

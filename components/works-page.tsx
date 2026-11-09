@@ -93,6 +93,14 @@ export default function WorksPage({
                 <Link href="/exhibitions">{t("works", "manageExhibitions")}</Link>
               </>
             )}
+            {!isOwner && (
+              <>
+                {" · "}
+                <Link href={`/messages/new?to=${encodeURIComponent(creator.id)}`}>
+                  Send a message to {creator.name}
+                </Link>
+              </>
+            )}
           </p>
         </div>
       </header>

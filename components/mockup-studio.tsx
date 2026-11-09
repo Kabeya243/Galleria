@@ -1721,6 +1721,18 @@ export default function MockupStudio({
         .ms-layout { display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 20px; align-items: start; }
         @media (min-width: 1301px) { .ms-layout { grid-template-columns: minmax(0, 1fr) 640px; } }
         @media (max-width: 900px) { .ms-layout { grid-template-columns: 1fr; } }
+        /* Desktop: the studio fills the viewport (same 100dvh frame as
+           the certificate tool): the preview column never scrolls and
+           the canvas scales down to fit it, while the controls panel
+           is the only thing that scrolls, with a hidden scrollbar.
+           Below 900 px the columns stack and everything flows. */
+        @media (min-width: 901px) {
+          .ms-layout { height: calc(100dvh - 280px); min-height: 560px; align-items: stretch; }
+          .ms-preview { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+          .ms-preview canvas { min-height: 0; max-height: 100%; width: auto; max-width: 100%; height: auto; object-fit: contain; }
+          .ms-panel { min-height: 0; max-height: none; overflow-y: auto; scrollbar-width: none; }
+          .ms-panel::-webkit-scrollbar { display: none; }
+        }
         .ms-preview { background: #fff; border: 1px solid #e8e2d6; border-radius: 12px; padding: 12px; }
         .ms-preview canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: #f4f2ee; }
         .ms-caption { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: #6b655c; }

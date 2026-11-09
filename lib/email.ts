@@ -66,3 +66,29 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
   });
   return true;
 }
+
+// New-message notification (Nov 2026): tells the recipient someone
+// wrote to them on Lakisa, with a short excerpt and a link to the
+// conversation. Returns false — without throwing — when SMTP is not
+// configured, so a missing mail setup never breaks sending the
+// message itself; the message is already stored and visible in the
+// inbox either way.
+export async function sendNewMessageEmail(
+  to: string,
+  senderName: string,
+  excerpt: string,
+  conversationUrl: string,
+): Promise<boolean> {
+  const transporter = getTransporter();
+  if (!transporter) return false;
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "noreply@lakisa.example";
+  const short = excerpt.length > 200 ? `${excerpt.slice(0, 200)}…` : excerpt;
+  await transporter.sendMail({
+    from: `Lakisa <${from}>`,
+    to,
+    subject: `New message from ${senderName} on Lakisa`,
+    text: `Hello,\n\n${senderName} sent you a message on Lakisa:\n\n"${short}"\n\nRead and reply here:\n\n${conversationUrl}\n\nLakisa`,
+    html: `<p>Hello,</p><p><strong>${senderName}</strong> sent you a message on Lakisa:</p><blockquote>${short}</blockquote><p><a href="${conversationUrl}">Read and reply</a></p><p>Lakisa</p>`,
+  });
+  return true;
+}

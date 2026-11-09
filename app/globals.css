@@ -1211,8 +1211,11 @@ button { font-weight: 600; }
 .auth-noir-left:after { right: 28%; transform: rotate(24deg); }
 .auth-noir-brand { color: #ffffff; font: 800 15px "DM Sans", sans-serif; letter-spacing: .02em; }
 .auth-noir-brand sup { font-size: 8px; }
-.auth-noir-star { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(46%, 230px); color: #ffffff; }
-.auth-noir-star svg { display: block; width: 100%; height: auto; }
+/* Centred Lakisa emblem on the black auth panel: the official
+   principal logo (white on the fixed black panel), not the old
+   asterisk mark. Height driven by CSS so it shrinks on mobile. */
+.auth-noir-mark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.auth-noir-mark .brand-logo-principal { height: 200px; }
 .auth-noir-copy { margin: auto 0 0; color: #6f6e66; font-size: 9px; letter-spacing: .04em; }
 .auth-noir-panel { position: relative; display: flex; flex-direction: column; justify-content: center; margin: 14px 14px 14px 0; padding: 48px 52px; border-radius: 10px; background: #121212; }
 .auth-noir-switch-top { position: absolute; top: 26px; right: 30px; color: rgba(255, 255, 255, 0.55); font-size: 11px; }
@@ -1269,7 +1272,7 @@ button { font-weight: 600; }
 @media (max-width: 850px) {
   .auth-noir { grid-template-columns: 1fr; }
   .auth-noir-left { min-height: 190px; padding: 22px; }
-  .auth-noir-star { width: 120px; }
+  .auth-noir-mark .brand-logo-principal { height: 120px; }
   .auth-noir-panel { margin: 0 12px 12px; padding: 36px 24px 130px; }
   .auth-noir-form-wrap h1 { font-size: 34px; }
   .auth-noir-submit { right: 24px; bottom: 24px; width: 84px; height: 84px; }

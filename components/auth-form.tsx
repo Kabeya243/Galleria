@@ -37,19 +37,6 @@ function GoogleButton() {
   );
 }
 
-export function AsteriskMark() {
-  return (
-    <svg viewBox="0 0 200 200" fill="none" aria-hidden="true">
-      <g stroke="currentColor" strokeWidth="9" strokeLinecap="square">
-        <line x1="100" y1="8" x2="100" y2="192" />
-        <line x1="8" y1="100" x2="192" y2="100" />
-        <line x1="35" y1="35" x2="165" y2="165" />
-        <line x1="165" y1="35" x2="35" y2="165" />
-      </g>
-    </svg>
-  );
-}
-
 export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const t = useT();
   const [name, setName] = useState("");
@@ -157,8 +144,8 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         <Link className="auth-noir-brand" href="/">
           <BrandLogo variant="horizontal" theme="dark" height={60} />
         </Link>
-        <div className="auth-noir-star">
-          <AsteriskMark />
+        <div className="auth-noir-mark">
+          <BrandLogo variant="principal" theme="dark" />
         </div>
         <p className="auth-noir-copy">© 2026 Lakisa Studio. All rights reserved.</p>
       </section>

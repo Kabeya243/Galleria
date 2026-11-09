@@ -127,6 +127,10 @@ export default function PrintStudio({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const jobRef = useRef(job);
   jobRef.current = job;
+  // Sheet fit: the live preview is scaled down (never up) so the whole
+  // studio fits the viewport without scrolling — see the effect below.
+  const sheetWrapRef = useRef<HTMLDivElement | null>(null);
+  const [sheetScale, setSheetScale] = useState(1);
 
   const selectedArt = useMemo(() => artworks.find((a) => a.id === job.artworkId), [artworks, job.artworkId]);
 
@@ -305,6 +309,32 @@ export default function PrintStudio({
   const sheetWpx = Math.round(totalW * 10 * previewScale);
   const sheetHpx = Math.round(totalH * 10 * previewScale);
 
+  // Fit the sheet inside the preview column on desktop: measure the
+  // space the sheet wrap gives it and scale the sheet down (never up)
+  // so it fits without the preview scrolling. The sheet's layout size
+  // is fixed by its print dimensions, so a transform scale is enough —
+  // the wrapper is given the scaled size so no empty space is left
+  // behind. Below 1080 px the columns stack and the sheet keeps its
+  // natural size (scale 1).
+  useEffect(() => {
+    const wrap = sheetWrapRef.current;
+    if (!wrap) return;
+    const measure = () => {
+      if (!window.matchMedia("(min-width: 1081px)").matches) {
+        setSheetScale(1);
+        return;
+      }
+      const availW = wrap.clientWidth - 40; // wrap padding
+      const availH = wrap.clientHeight - 40;
+      if (!availW || !availH || !sheetWpx || !sheetHpx) return;
+      setSheetScale(Math.min(1, availW / sheetWpx, availH / sheetHpx));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [sheetWpx, sheetHpx]);
+
   return (
     <div className="pr">
       <div className="pr-editor">
@@ -472,10 +502,11 @@ export default function PrintStudio({
           <strong>Print preview</strong>
           <span className="pr-muted">{totalW.toFixed(1)} × {totalH.toFixed(1)} cm incl. bleed · preview scaled</span>
         </div>
-        <div className="pr-sheet-wrap">
+        <div className="pr-sheet-wrap" ref={sheetWrapRef}>
+          <div style={{ width: Math.max(1, Math.round(sheetWpx * sheetScale)), height: Math.max(1, Math.round(sheetHpx * sheetScale)) }}>
           <div
             className="pr-sheet print-area"
-            style={{ width: sheetWpx, height: sheetHpx, ["--bleed-px" as string]: `${bleedCm * 10 * previewScale}px`, ["--safe-px" as string]: `${job.safeMm * previewScale}px` }}
+            style={{ width: sheetWpx, height: sheetHpx, ["--bleed-px" as string]: `${bleedCm * 10 * previewScale}px`, ["--safe-px" as string]: `${job.safeMm * previewScale}px`, transform: sheetScale === 1 ? undefined : `scale(${sheetScale})`, transformOrigin: "top left" }}
             data-print-w={`${totalW}cm`}
             data-print-h={`${totalH}cm`}
           >
@@ -545,6 +576,7 @@ export default function PrintStudio({
               )}
             </div>
           </div>
+          </div>
         </div>
         <p className="pr-note pr-limit">
           Limits: no true CMYK conversion in-browser; the PDF is sRGB. Printer-specific requirements (ICC profile, paper, finishing) vary, so confirm with your printer.
@@ -554,6 +586,19 @@ export default function PrintStudio({
       <style>{`
         .pr { display: grid; grid-template-columns: minmax(340px, 460px) 1fr; gap: 28px; align-items: start; }
         @media (max-width: 1080px) { .pr { grid-template-columns: 1fr; } }
+        /* Desktop: the studio fills the viewport (same 100dvh frame as
+           the certificate tool): the preview column never scrolls (the
+           sheet is scaled down to fit it, see the ResizeObserver
+           above), and only the editor scrolls, with a hidden
+           scrollbar. Below 1080 px the columns stack and everything
+           flows naturally again. */
+        @media (min-width: 1081px) {
+          .pr { height: calc(100dvh - 280px); min-height: 560px; align-items: stretch; }
+          .pr-editor { min-height: 0; overflow-y: auto; scrollbar-width: none; }
+          .pr-editor::-webkit-scrollbar { display: none; }
+          .pr-preview-col { min-height: 0; overflow: hidden; display: flex; flex-direction: column; position: static; }
+          .pr-sheet-wrap { flex: 1; min-height: 0; overflow: hidden; }
+        }
         .pr-editor { display: flex; flex-direction: column; gap: 18px; }
         .pr-card { border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 20px; display: flex; flex-direction: column; gap: 12px; }
         .pr-card h2 { margin: 0; font-size: 17px; font-family: Fraunces, Georgia, serif; }
@@ -622,7 +667,7 @@ export default function PrintStudio({
         @media print {
           body * { visibility: hidden !important; }
           .print-area, .print-area * { visibility: visible !important; }
-          .print-area { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; box-shadow: none !important; }
+          .print-area { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; box-shadow: none !important; transform: none !important; }
           .print-area .pr-bleed { border: none !important; }
         }
       `}</style>

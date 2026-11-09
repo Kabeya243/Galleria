@@ -106,6 +106,7 @@ export async function loadPublicExhibition(slug: string): Promise<{
     slug: string;
     title: string;
     description: string;
+    ownerId: string;
     ownerName: string;
     ownerAvatarUrl?: string | null;
     visibility: string;
@@ -128,6 +129,7 @@ export async function loadPublicExhibition(slug: string): Promise<{
       slug: exhibition.slug,
       title: exhibition.title,
       description: exhibition.description,
+      ownerId: exhibition.ownerId,
       ownerName: exhibition.owner.name,
       ownerAvatarUrl: (await getUserProfile(exhibition.ownerId)).avatarUrl,
       visibility: exhibition.visibility,

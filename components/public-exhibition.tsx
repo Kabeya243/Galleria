@@ -89,6 +89,7 @@ export default function PublicExhibition({
     slug: string;
     title: string;
     description: string;
+    ownerId: string;
     ownerName: string;
     ownerAvatarUrl?: string | null;
     visibility: string;
@@ -581,6 +582,7 @@ export default function PublicExhibition({
         <ArtworkDetailPanel
           artwork={selected}
           exhibitionId={exhibition.id}
+          ownerId={exhibition.ownerId}
           ownerName={exhibition.ownerName}
           index={roomArtworks.indexOf(selected) + 1}
           onClose={() => setSelected(undefined)}
@@ -611,6 +613,14 @@ export default function PublicExhibition({
           <p className="public-art-meta">Curated by {exhibition.ownerName}</p>
           <p>{exhibition.description || "A collection of artworks, brought together in a space of its own."}</p>
           <span className="public-art-meta">{exhibition.artworks.length} artworks · {exhibition.rooms.length} rooms</span>
+          <p style={{ margin: "14px 0 0" }}>
+            <Link
+              href={`/messages/new?to=${encodeURIComponent(exhibition.ownerId)}&exhibitionId=${encodeURIComponent(exhibition.id)}`}
+              style={{ color: "var(--accent)", fontSize: 13, fontWeight: 600 }}
+            >
+              Send a message to {exhibition.ownerName}
+            </Link>
+          </p>
         </aside>
       )}
       {showAccessibility && accessibilityPack && (

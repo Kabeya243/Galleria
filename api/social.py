@@ -214,7 +214,7 @@ def _reconcile_feed_posts(db: Session, request: Request) -> None:
                 continue
             created_at = row[2] if len(row) > 2 and row[2] is not None else datetime.now(timezone.utc)
             to_create.append(
-                Post(exhibitionId=ex_id, authorId=row[1], coverImageUrl=cover, isVisible=True, createdAt=created_at)
+                Post(exhibitionId=ex_id, authorId=row[1], coverImageUrl=cover, isVisible=True, createdAt=created_at, updatedAt=created_at)
             )
         if to_create:
             db.add_all(to_create)
@@ -296,7 +296,7 @@ def _feed_posts_from_exhibitions(db: Session, request: Request, exhibition, user
             post_id = existing_posts.get(ex_id)
             if post_id is None:
                 to_create.append(
-                    Post(exhibitionId=ex_id, authorId=row[1], coverImageUrl=cover, isVisible=True, createdAt=created_at)
+                    Post(exhibitionId=ex_id, authorId=row[1], coverImageUrl=cover, isVisible=True, createdAt=created_at, updatedAt=created_at)
                 )
             posts.append(
                 {

@@ -1438,6 +1438,21 @@ button { font-weight: 600; }
    work as designed. */
 html:has(.ad-root), html:has(.ad-root) body { overflow-y: auto; }
 
+/* Published artist sites (/sites/[slug], sub-pages, owner preview) and
+   the legacy simple-builder sites (/sites/[id]) are plain long pages
+   outside .app-shell, with no inner scroll container of their own,
+   the same trap as the Admin had: the locked window
+   (html, body { overflow: hidden }) made everything below the first
+   viewport unreachable, so a generated site could not be scrolled at
+   all. Restore normal window scrolling whenever one of these pages is
+   on screen (:has keeps every other page on the locked-window shell).
+   The height reset matters too: with html/body stuck at height: 100%,
+   only the body element scrolled (window.scrollTo stayed at 0 and
+   keyboard scrolling targeted a document with nothing to scroll);
+   height: auto lets the document itself grow and scroll normally. */
+html:has(.published-site), html:has(.published-site) body,
+html:has(.legacy-site-page), html:has(.legacy-site-page) body { overflow-y: auto; height: auto; }
+
 .ad-root {
   --ad-bg: #0a0a0b;
   --ad-card: #161618;

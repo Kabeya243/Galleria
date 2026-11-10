@@ -254,8 +254,13 @@ export function PublishedSiteView({ site, pageSlug }: { site: PublishedSiteData;
           const image = readString(block.content, "image");
           const type = block.type;
           if (type === "divider") return <hr key={block.id} />;
-          const headingSize = section.blocks[0]?.id === block.id ? theme.typography.h2 : theme.typography.h3;
-          const publishedHeadingSize = `clamp(28px, ${section.blocks[0]?.id === block.id ? theme.typography.h1 : headingSize}px, 82px)`;
+          // Heading size: the theme size is the desktop cap, but the
+          // preferred value must scale with the viewport (vw), the old
+          // fixed-pixel clamp (e.g. clamp(28px, 58px, 82px)) kept a 58 px
+          // h1 on a 390 px phone, far too big and overflowing its column.
+          const isFirstBlock = section.blocks[0]?.id === block.id;
+          const headingSize = isFirstBlock ? theme.typography.h1 : theme.typography.h2;
+          const publishedHeadingSize = `clamp(${isFirstBlock ? 28 : 24}px, ${(headingSize / 10).toFixed(1)}vw, ${headingSize}px)`;
           const galleryItems = isRecord(block.content) && Array.isArray(block.content.items)
             ? block.content.items.filter((item): item is string => typeof item === "string")
             : ["Étude de lumière", "Matière en mouvement", "Paysage intérieur"];

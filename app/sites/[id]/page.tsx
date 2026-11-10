@@ -95,7 +95,7 @@ export default async function PublicSitePage({ params }: RouteProps) {
   const site = await findSite(id);
   if (!site) notFound();
   return (
-    <main style={{ background: "#ece9e3", minHeight: "100vh", padding: "24px 12px" }}>
+    <main className="legacy-site-page" style={{ background: "#ece9e3", minHeight: "100vh", padding: "24px 12px" }}>
       <SitePreview config={site.config} exhibitions={site.exhibitions} />
     </main>
   );

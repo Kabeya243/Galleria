@@ -17,10 +17,10 @@
 .published-page { max-width: 1280px; min-height: 76vh; margin: auto; padding: 16px 5% 70px; }
 .published-section { padding: clamp(44px, 8vw, 110px) 5%; border-bottom: 1px solid color-mix(in srgb, var(--published-text) 10%, transparent); }
 .published-block { max-width: 1000px; margin: auto; }
-.published-block h1 { margin: 0 0 20px; font: 500 clamp(38px, 7vw, 82px)/1.02 var(--published-heading-font), Georgia, serif; letter-spacing: -.045em; }
-.published-block h2 { margin: 0 0 20px; font: 500 clamp(28px, 4vw, 44px)/1.08 var(--published-heading-font), Georgia, serif; letter-spacing: -.02em; }
+.published-block h1 { margin: 0 0 20px; font: 500 clamp(38px, 7vw, 82px)/1.02 var(--published-heading-font), Georgia, serif; letter-spacing: -.045em; overflow-wrap: break-word; }
+.published-block h2 { margin: 0 0 20px; font: 500 clamp(28px, 4vw, 44px)/1.08 var(--published-heading-font), Georgia, serif; letter-spacing: -.02em; overflow-wrap: break-word; }
 .published-eyebrow { color: var(--published-primary); text-transform: uppercase; letter-spacing: .15em; font-size: 11px; margin: 0 0 22px; }
-.published-copy { max-width: 660px; font-size: clamp(16px, 2vw, 19px); line-height: 1.8; opacity: .85; }
+.published-copy { max-width: 660px; font-size: clamp(16px, 2vw, 19px); line-height: 1.8; opacity: .85; overflow-wrap: break-word; }
 .published-button { display: inline-block; margin-top: 20px; background: var(--published-button-bg); color: var(--published-button-text); border: 1px solid var(--published-primary); text-decoration: none; border-radius: var(--published-radius); padding: 14px 22px; font-size: 13px; }
 .published-button svg { vertical-align: -2px; margin-left: 6px; }
 .published-image { display: block; max-width: 100%; max-height: 680px; margin-top: 35px; object-fit: cover; }
@@ -255,6 +255,12 @@
   .design-movement .published-section:has(.block-hero), .design-craft .published-section:has(.block-hero) { min-height: 610px; padding: 285px 7% 45px; }
   .design-lookbook .block-hero .published-image, .design-stage .block-hero .published-image,
   .design-movement .block-hero .published-image, .design-craft .block-hero .published-image { top: -250px; right: 0; width: 76%; height: 225px; }
+  /* Lookbook only: its .block-hero is position: static, so the image
+     anchors to the section, not to the block, top: -250px put it 250 px
+     above the section, overlapping the header and mostly off-screen on
+     phones. The section reserves 285 px of top padding for it, so 35 px
+     from the section top leaves it fully visible above the text. */
+  .design-lookbook .block-hero .published-image { top: 35px; }
   .design-lookbook .block-hero h1, .design-stage .block-hero h1, .design-movement .block-hero h1,
   .design-craft .block-hero h1, .design-lookbook .block-hero .published-copy, .design-stage .block-hero .published-copy,
   .design-movement .block-hero .published-copy, .design-craft .block-hero .published-copy { width: 100%; }
@@ -267,6 +273,9 @@
   .design-canvas .block-hero .published-image, .design-collective .block-hero .published-image { top: auto; right: 0; bottom: -250px; width: 68%; height: 220px; }
   .design-minimal .published-section:has(.block-hero), .design-literary .published-section:has(.block-hero) { padding: 65px 8%; }
   .design-minimal .block-hero .published-image { width: 100%; height: 260px; }
+  /* Literary hero image is floated right at 27% on desktop; on a phone
+     that leaves a tiny image beside wrapped text, full width instead. */
+  .design-literary .block-hero .published-image { float: none; width: 100%; height: 260px; margin: 24px 0 0; }
   .design-cinema .published-section:has(.block-hero) { min-height: 470px; padding: 290px 7% 45px; }
   .design-cinema .block-hero .published-image { height: 350px; }
   .design-lookbook .published-gallery, .design-stage .published-gallery, .design-cinema .published-gallery,
@@ -300,7 +309,10 @@
    the footer stacks. The 680 px rules above keep refining small phones. */
 @media (max-width: 768px) {
   .published-burger { display: inline-flex; }
-  .published-header { flex-wrap: wrap; row-gap: 12px; }
+  /* Brand and burger share one row on phones: the 680 px rule stacks the
+     header in a column (written before the burger existed), which pushed
+     the burger under the brand and made the header needlessly tall. */
+  .published-header { flex-wrap: wrap; flex-direction: row; align-items: center; row-gap: 12px; }
   .published-header nav { display: none; width: 100%; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 0 2px; }
   .published-header nav[data-open="true"] { display: flex; }
   .published-header nav a { padding: 10px 4px; font-size: 14px; }

@@ -2,17 +2,39 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ListingInquiryForm from "@/components/marketplace-inquiry-form";
+import MarketplaceOfferBox from "@/components/marketplace-offer";
 import CurrencySelector, { RatesNote } from "@/components/currency-selector";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
 import ListingPrice from "@/components/listing-price";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  PAYMENT_FEE_RATES,
+  commissionRateForPlan,
+  getSellerPlanSlug,
+  toClientOffer,
+  toClientOrder,
+  type ClientOffer,
+  type ClientOrder,
+} from "@/lib/marketplace-sales";
 
 type RouteProps = { params: Promise<{ id: string }> };
 
 function kindLabel(kind: string): string {
   return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${amount} ${currency}`;
+  }
 }
 
 export async function generateMetadata({ params }: RouteProps): Promise<Metadata> {
@@ -26,9 +48,11 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
 }
 
 // Public listing detail. The seller's name and the work's details are
-// public; the inquiry form is the working path to a sale. Checkout is
-// deliberately NOT a button: there is no payment provider connected,
-// so the page says so plainly and names what connecting Stripe needs.
+// public; the inquiry form and the offer box are the working paths to
+// a sale. Checkout is a labelled Flutterwave integration point: there
+// is no payment provider connected, so an order is recorded as
+// pending payment and no money moves on this page. Stripe is not
+// used: it cannot operate from Uganda.
 export default async function ListingDetailPage({ params }: RouteProps) {
   const { id } = await params;
   const listing = await db.listing.findUnique({
@@ -40,6 +64,44 @@ export default async function ListingDetailPage({ params }: RouteProps) {
   const user = await getCurrentUser();
   const isOwner = user?.id === listing.sellerId;
   const openToInquiries = listing.status === "active" || listing.status === "reserved";
+
+  // The buyer's own offer and pending order on this listing, plus the
+  // seller's plan at the time of the page load, so the fee split can
+  // be shown before confirming. The fees are recomputed server-side
+  // when the order is created; the page only previews them.
+  let myOffer: ClientOffer | null = null;
+  let myOrder: ClientOrder | null = null;
+  let commissionRate = 0.1;
+  if (user && !isOwner) {
+    const planSlug = await getSellerPlanSlug(listing.sellerId);
+    commissionRate = commissionRateForPlan(planSlug);
+    const [offer, order] = await Promise.all([
+      db.offer.findFirst({
+        where: {
+          listingId: listing.id,
+          buyerId: user.id,
+          status: { in: ["open", "countered", "accepted"] },
+        },
+        include: {
+          listing: { select: { title: true, currency: true } },
+          buyer: { select: { name: true } },
+          seller: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.order.findFirst({
+        where: { listingId: listing.id, buyerId: user.id, status: "pending_payment" },
+        include: {
+          listing: { select: { title: true } },
+          buyer: { select: { name: true } },
+          seller: { select: { name: true } },
+        },
+      }),
+    ]);
+    myOffer = offer ? toClientOffer(offer) : null;
+    myOrder = order ? toClientOrder(order) : null;
+  }
+  const openToOffers = listing.status === "active" || myOrder !== null;
 
   return (
     <main className="galleries-page">
@@ -116,12 +178,44 @@ export default async function ListingDetailPage({ params }: RouteProps) {
                 <dt>Status</dt>
                 <dd>{listing.status === "active" ? "For sale" : listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}</dd>
               </div>
+              {listing.minPrice !== null && listing.price !== null && (
+                <div>
+                  <dt>Price range</dt>
+                  <dd>
+                    From {formatMoney(listing.minPrice, listing.currency)} to {formatMoney(listing.price, listing.currency)}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt>Shipping</dt>
+                <dd>{listing.shippingIncluded ? "Included in the price" : "Not included"}</dd>
+              </div>
+              {listing.shippingDelay && (
+                <div>
+                  <dt>Ships within</dt>
+                  <dd>{listing.shippingDelay}</dd>
+                </div>
+              )}
+              <div>
+                <dt>Returns</dt>
+                <dd>{listing.returnsAccepted ? "Accepted" : "Not accepted"}</dd>
+              </div>
+              <div>
+                <dt>Payment</dt>
+                <dd>{listing.oneTimePayment ? "In one payment" : "Payment in instalments possible"}</dd>
+              </div>
               <div>
                 <dt>Listed</dt>
                 <dd>{new Date(listing.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}</dd>
               </div>
             </dl>
             {listing.description && <p className="mp-detail-description">{listing.description}</p>}
+            {listing.saleConditions && (
+              <div className="mp-detail-conditions">
+                <h2>Sale conditions</h2>
+                <p>{listing.saleConditions}</p>
+              </div>
+            )}
             {isOwner && (
               <p className="mp-detail-owner-note">
                 This is your listing.{" "}
@@ -132,8 +226,25 @@ export default async function ListingDetailPage({ params }: RouteProps) {
         </div>
 
         <div className="mp-detail-lower">
-          <div>
-            {openToInquiries && !isOwner ? (
+          <div className="mp-detail-lower-left">
+            {openToOffers && user && !isOwner ? (
+              <>
+                <MarketplaceOfferBox
+                  listingId={listing.id}
+                  price={listing.price}
+                  minPrice={listing.minPrice}
+                  currency={listing.currency}
+                  commissionRate={commissionRate}
+                  cardFeeRate={PAYMENT_FEE_RATES.card}
+                  mobileFeeRate={PAYMENT_FEE_RATES.mobile_money}
+                  myOffer={myOffer}
+                  myOrder={myOrder}
+                />
+                <div className="mp-detail-inquiry-wrap">
+                  <ListingInquiryForm listingId={listing.id} listingTitle={listing.title} />
+                </div>
+              </>
+            ) : openToInquiries && !isOwner ? (
               <ListingInquiryForm listingId={listing.id} listingTitle={listing.title} />
             ) : listing.status === "sold" ? (
               <div className="mp-detail-note">
@@ -143,7 +254,7 @@ export default async function ListingDetailPage({ params }: RouteProps) {
             ) : isOwner ? (
               <div className="mp-detail-note">
                 <strong>Your listing.</strong>
-                <p>Visitors see the inquiry form here; their messages arrive in your Marketplace tool.</p>
+                <p>Visitors see the offer and buy box here; their offers arrive in your Marketplace tool.</p>
               </div>
             ) : (
               <div className="mp-detail-note">
@@ -154,23 +265,24 @@ export default async function ListingDetailPage({ params }: RouteProps) {
           </div>
 
           <aside className="mp-checkout-box">
-            <h2>Checkout: Stripe integration point (not connected)</h2>
+            <h2>Checkout: Flutterwave integration point (not connected)</h2>
             <p>
-              There is no payment provider connected to Lakisa yet, so this listing has no checkout
-              button and no money moves on this page. The inquiry above is the complete working
-              path to a sale: you and the seller agree the price, shipping and payment directly.
+              Buying goes through Lakisa: you agree the price with the seller, then pay Lakisa.
+              Lakisa keeps its commission, pays the payment fee, and sends the rest to the seller.
+              No real payment passes yet: no payment provider is connected to Lakisa, so an order
+              is recorded as pending payment and you are not charged.
             </p>
             <p>To turn this into a real checkout, the platform needs:</p>
             <ul>
-              <li>A Stripe account for the seller or the platform.</li>
+              <li>A Flutterwave account for the platform, with its keys in the Vercel project environment.</li>
               <li>
-                <code>STRIPE_SECRET_KEY</code> set in the Vercel project environment.
+                Payment confirmation wired into the pending order, so the work is marked sold only
+                when the payment clears.
               </li>
-              <li>A Checkout Session created server-side for this listing, with the listing id as metadata.</li>
             </ul>
             <p className="mp-checkout-note">
-              Until then, never send payment details through the inquiry form, agree payment with
-              the seller by email first.
+              Until then, never send payment details through the inquiry form, and agree payment
+              with the seller by email first.
             </p>
             <Link href="/marketplace" className="galleries-open-button">
               Back to the marketplace
@@ -196,6 +308,10 @@ export default async function ListingDetailPage({ params }: RouteProps) {
         .mp-detail-owner-note { margin: 20px 0 0; padding: 12px 14px; border: 1px solid #c8b98a; border-radius: 8px; background: #f7f1e3; font-size: 13px; line-height: 1.6; }
         .mp-detail-owner-note a { color: var(--ink); }
         .mp-detail-lower { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; align-items: start; }
+        .mp-detail-lower-left { display: grid; gap: 24px; }
+        .mp-detail-conditions { margin: 20px 0 0; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-3); }
+        .mp-detail-conditions h2 { margin: 0 0 6px; font: 450 16px/1.3 var(--font-display), Georgia, serif; }
+        .mp-detail-conditions p { margin: 0; line-height: 1.7; white-space: pre-wrap; }
         .mp-detail-note { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-3); }
         .mp-detail-note p { margin: 6px 0 0; color: var(--muted); line-height: 1.6; }
         .mp-checkout-box { padding: 20px; border: 1px dashed #a67c37; border-radius: 12px; background: #fbf7ef; }

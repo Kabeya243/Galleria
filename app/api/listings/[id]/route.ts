@@ -23,6 +23,13 @@ const updateSchema = z.object({
   description: z.string().max(4000).optional(),
   imageUrl: z.string().max(1000).nullable().optional(),
   price: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  // Sale terms (Nov 2026): see POST /api/listings for the meaning.
+  minPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  saleConditions: z.string().max(4000).optional(),
+  shippingIncluded: z.boolean().optional(),
+  shippingDelay: z.string().max(200).optional(),
+  returnsAccepted: z.boolean().optional(),
+  oneTimePayment: z.boolean().optional(),
   currency: z.enum(CURRENCIES).optional(),
   kind: z.enum(KINDS).optional(),
   editionSize: z.number().int().min(1).max(10000).nullable().optional(),
@@ -57,6 +64,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Check the listing details and try again." }, { status: 400 });
+
+  // The minimum price can never sit above the maximum (shown) price.
+  const nextPrice = parsed.data.price !== undefined ? parsed.data.price : existing.price;
+  const nextMin = parsed.data.minPrice !== undefined ? parsed.data.minPrice : existing.minPrice;
+  if (nextMin !== null && nextPrice !== null && nextMin > nextPrice) {
+    return NextResponse.json({ error: "The minimum price cannot be above the maximum price." }, { status: 400 });
+  }
 
   const row = await db.listing.update({
     where: { id: existing.id },

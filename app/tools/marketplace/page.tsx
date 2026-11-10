@@ -4,10 +4,11 @@ import MarketplaceTool from "@/components/marketplace";
 import { getCurrentUser } from "@/lib/auth";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
+import { toClientOffer, toClientOrder } from "@/lib/marketplace-sales";
 
 export const metadata = {
   title: "Marketplace: Lakisa Tools",
-  description: "List your works for sale, manage prices and status, and answer purchase inquiries.",
+  description: "List your works for sale, manage offers, orders and fees, and answer purchase inquiries.",
 };
 
 export default async function MarketplaceRoute() {
@@ -15,7 +16,7 @@ export default async function MarketplaceRoute() {
   if (!user) redirect("/login");
   await logToolUse("marketplace", user.id);
 
-  const [exhibitionCount, exhibitions, listings, inquiries] = await Promise.all([
+  const [exhibitionCount, exhibitions, listings, inquiries, offers, orders] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.exhibition.findMany({
       where: { ownerId: user.id },
@@ -37,6 +38,26 @@ export default async function MarketplaceRoute() {
     db.inquiry.findMany({
       where: { listing: { sellerId: user.id } },
       include: { listing: { select: { title: true, price: true, currency: true, status: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    db.offer.findMany({
+      where: { sellerId: user.id },
+      include: {
+        listing: { select: { title: true, currency: true } },
+        buyer: { select: { name: true } },
+        seller: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    db.order.findMany({
+      where: { sellerId: user.id },
+      include: {
+        listing: { select: { title: true } },
+        buyer: { select: { name: true } },
+        seller: { select: { name: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
@@ -69,6 +90,12 @@ export default async function MarketplaceRoute() {
           description: row.description,
           imageUrl: row.imageUrl,
           price: row.price,
+          minPrice: row.minPrice,
+          saleConditions: row.saleConditions,
+          shippingIncluded: row.shippingIncluded,
+          shippingDelay: row.shippingDelay,
+          returnsAccepted: row.returnsAccepted,
+          oneTimePayment: row.oneTimePayment,
           currency: row.currency,
           kind: row.kind,
           editionSize: row.editionSize,
@@ -92,6 +119,8 @@ export default async function MarketplaceRoute() {
           status: row.status,
           createdAt: row.createdAt.toISOString(),
         }))}
+        offers={offers.map((row) => toClientOffer(row))}
+        orders={orders.map((row) => toClientOrder(row))}
       />
     </ToolsShell>
   );

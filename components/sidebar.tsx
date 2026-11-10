@@ -25,6 +25,7 @@ import {
   PanelLeftOpen,
   Settings2,
   ShieldCheck,
+  ShoppingBag,
   Users,
   Wrench,
   X,
@@ -137,6 +138,9 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "dashboard", href: "/", label: "dashboard", icon: Grid2X2 },
       { id: "my-plan", href: "/dashboard/plan", label: "myPlan", icon: CreditCard },
+      // Marketplace orders (Nov 2026): what the user bought and sold,
+      // with the fee split of each order.
+      { id: "my-orders", href: "/dashboard/orders", label: "myOrders", icon: ShoppingBag },
       { id: "settings", href: "/settings", label: "settings", icon: Settings2 },
     ],
   },
@@ -148,6 +152,7 @@ const NAV_GROUPS: NavGroup[] = [
 const LEGACY_ACTIVE: Record<string, string> = {
   overview: "dashboard",
   plan: "my-plan",
+  orders: "my-orders",
   analytics: "insights",
   exhibitions: "exhibitions",
   artworks: "my-artworks",
@@ -163,6 +168,7 @@ const LEGACY_ACTIVE: Record<string, string> = {
 export type SidebarActive =
   | "overview"
   | "plan"
+  | "orders"
   | "analytics"
   | "settings"
   | "galleries"

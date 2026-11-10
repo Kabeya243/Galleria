@@ -86,6 +86,12 @@ model User {
   // account was invited by someone).
   referralsGiven   Referral[] @relation("ReferralReferrer")
   referralReceived Referral?  @relation("ReferralReferred")
+  // Marketplace orders and offers (Nov 2026): orders as buyer and as
+  // seller, offers made and received. See Offer / Order below.
+  ordersAsBuyer  Order[] @relation("OrderBuyer")
+  ordersAsSeller Order[] @relation("OrderSeller")
+  offersMade     Offer[] @relation("OfferBuyer")
+  offersReceived Offer[] @relation("OfferSeller")
 }
 
 model PasswordResetToken {
@@ -516,7 +522,21 @@ model Listing {
   status        String    @default("active")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  inquiries     Inquiry[]
+  // Sale terms (Nov 2026): the maximum price is `price` (shown on the
+  // listing); minPrice is the lowest price the seller accepts, and
+  // offers below it are refused automatically. saleConditions is the
+  // seller's own sale terms in free text; the flags below are the
+  // structured part (shipping included or not, shipping delay,
+  // returns accepted or not, one-time payment).
+  minPrice         Int?
+  saleConditions   String  @default("")
+  shippingIncluded Boolean @default(false)
+  shippingDelay    String  @default("")
+  returnsAccepted  Boolean @default(false)
+  oneTimePayment   Boolean @default(true)
+  offers           Offer[]
+  orders           Order[]
+  inquiries        Inquiry[]
 
   @@index([sellerId])
   @@index([status])
@@ -543,6 +563,81 @@ model Inquiry {
   @@index([listingId])
   @@index([exhibitionId])
   @@index([artworkId])
+}
+
+// Marketplace offers (Nov 2026): negotiation on a listing. The buyer
+// proposes a price; the seller accepts, proposes another price
+// (counterAmount, status countered), or declines. One active offer
+// (open or countered) per buyer per listing: making a new offer
+// withdraws the previous active one. The accepted offer's price is
+// amount, or counterAmount when the buyer accepted a counter. An
+// offer below the listing's minPrice is refused at creation, with a
+// clear message. Applied by `prisma db push` on deploy; no data
+// migration — the table starts empty.
+model Offer {
+  id            String   @id @default(cuid())
+  listingId     String
+  listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId       String
+  buyer         User     @relation("OfferBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId      String
+  seller        User     @relation("OfferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  amount        Int
+  counterAmount Int?
+  message       String   @default("")
+  status        String   @default("open")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+// Marketplace orders (Nov 2026): a purchase that goes through Lakisa.
+// The buyer pays Lakisa (Flutterwave, once connected), Lakisa keeps
+// its commission and pays the payment fee, and the seller receives the
+// net amount. Money is stored in whole currency units, like Listing
+// price. Statuses: pending_payment (order created, no real payment
+// yet — Flutterwave is not connected), paid, shipped, delivered,
+// completed, cancelled, refunded. Only pending_payment and cancelled
+// are reachable until billing connects; the rest are set by the
+// payment webhook and the seller later. Applied by `prisma db push`
+// on deploy; no data migration — the table starts empty.
+model Order {
+  id               String   @id @default(cuid())
+  listingId        String
+  listing          Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId          String
+  buyer            User     @relation("OrderBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId         String
+  seller           User     @relation("OrderSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  offerId          String?
+  offer            Offer?   @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  title            String   @default("")
+  finalPrice       Int
+  currency         String   @default("USD")
+  commissionRate   Float
+  commissionAmount Int
+  paymentMethod    String   @default("card")
+  paymentFeeRate   Float
+  paymentFeeAmount Int
+  sellerNet        Int
+  status           String   @default("pending_payment")
+  paidAt           DateTime?
+  shippedAt        DateTime?
+  deliveredAt      DateTime?
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([listingId])
+  @@index([status])
 }
 
 // Team collaboration (Phase 6). A team owns shared exhibition access

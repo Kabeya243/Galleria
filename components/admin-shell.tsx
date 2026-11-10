@@ -13,6 +13,7 @@ import {
   Menu,
   Search,
   ShieldCheck,
+  ShoppingBag,
   Users,
   Wrench,
   Image as ImageIcon,
@@ -30,7 +31,7 @@ type NavItem = {
   badge?: number;
 };
 
-type ShellCounts = { users: number; exhibitions: number; artworks: number; tools?: number };
+type ShellCounts = { users: number; exhibitions: number; artworks: number; tools?: number; orders?: number };
 
 // Section routes, in nav order. The active section is derived from the
 // current path, so the shell never needs an `active` prop from the page.
@@ -43,6 +44,7 @@ const SECTION_ROUTES: Record<string, string> = {
   tools: "/admin/tools",
   "test-reports": "/admin/test-reports",
   subscriptions: "/admin/subscriptions",
+  orders: "/admin/orders",
   "sub-admins": "/admin/sub-admins",
 };
 
@@ -189,6 +191,13 @@ export default function AdminShell({
       label: "Subscriptions",
       href: "/admin/subscriptions",
       icon: <CreditCard size={18} />,
+    },
+    {
+      id: "orders",
+      label: "Orders",
+      href: "/admin/orders",
+      icon: <ShoppingBag size={18} />,
+      badge: liveCounts?.orders,
     },
     {
       id: "sub-admins",

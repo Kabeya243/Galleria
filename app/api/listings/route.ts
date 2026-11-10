@@ -8,8 +8,8 @@ import { toClientListing } from "@/lib/listings";
 // GET is public: only active listings, with search / kind / price / sort.
 // POST is owner-only: the seller creates a listing from one of their own
 // artworks (prefilled) or with manual details. No payment is taken here —
-// the inquiry flow is the path to a sale; checkout is a labelled Stripe
-// integration point on the listing page, not a real charge.
+// the offer and order flow is the path to a sale; checkout is a labelled
+// Flutterwave integration point on the listing page, not a real charge.
 
 const KINDS = ["original", "edition", "print", "digital"] as const;
 const CURRENCIES = ["USD", "EUR", "GBP", "UGX", "KES", "ZAR", "XOF", "CHF"] as const;
@@ -24,6 +24,16 @@ const createSchema = z.object({
   description: z.string().max(4000).optional(),
   imageUrl: z.string().max(1000).optional(),
   price: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  // Sale terms (Nov 2026): price is the maximum price, shown on the
+  // listing; minPrice is the lowest price the seller accepts, and
+  // offers below it are refused automatically. The conditions are the
+  // seller's own sale terms in free text, plus the structured flags.
+  minPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  saleConditions: z.string().max(4000).optional(),
+  shippingIncluded: z.boolean().optional(),
+  shippingDelay: z.string().max(200).optional(),
+  returnsAccepted: z.boolean().optional(),
+  oneTimePayment: z.boolean().optional(),
   currency: z.enum(CURRENCIES).optional(),
   kind: z.enum(KINDS).optional(),
   editionSize: z.number().int().min(1).max(10000).nullable().optional(),
@@ -100,6 +110,11 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Check the listing details and try again." }, { status: 400 });
   const data = parsed.data;
 
+  // The minimum price can never sit above the maximum (shown) price.
+  if (data.minPrice !== null && data.minPrice !== undefined && data.price !== null && data.price !== undefined && data.minPrice > data.price) {
+    return NextResponse.json({ error: "The minimum price cannot be above the maximum price." }, { status: 400 });
+  }
+
   // An artworkId must belong to the seller — no listing someone else's work.
   let artwork: { id: string; title: string; artist: string; year: string; medium: string; dimensions: string; description: string; imageUrl: string | null } | null = null;
   if (data.artworkId) {
@@ -122,6 +137,12 @@ export async function POST(request: Request) {
       description: data.description ?? artwork?.description ?? "",
       imageUrl: data.imageUrl ?? artwork?.imageUrl ?? null,
       price: data.price ?? null,
+      minPrice: data.minPrice ?? null,
+      saleConditions: data.saleConditions ?? "",
+      shippingIncluded: data.shippingIncluded ?? false,
+      shippingDelay: data.shippingDelay ?? "",
+      returnsAccepted: data.returnsAccepted ?? false,
+      oneTimePayment: data.oneTimePayment ?? true,
       currency: data.currency ?? "USD",
       kind: data.kind ?? "original",
       editionSize: data.editionSize ?? null,

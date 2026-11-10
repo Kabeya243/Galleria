@@ -13,6 +13,12 @@ export function toClientListing(row: {
   description: string;
   imageUrl: string | null;
   price: number | null;
+  minPrice: number | null;
+  saleConditions: string;
+  shippingIncluded: boolean;
+  shippingDelay: string;
+  returnsAccepted: boolean;
+  oneTimePayment: boolean;
   currency: string;
   kind: string;
   editionSize: number | null;
@@ -36,6 +42,12 @@ export function toClientListing(row: {
     description: row.description,
     imageUrl: row.imageUrl,
     price: row.price,
+    minPrice: row.minPrice,
+    saleConditions: row.saleConditions,
+    shippingIncluded: row.shippingIncluded,
+    shippingDelay: row.shippingDelay,
+    returnsAccepted: row.returnsAccepted,
+    oneTimePayment: row.oneTimePayment,
     currency: row.currency,
     kind: row.kind,
     editionSize: row.editionSize,

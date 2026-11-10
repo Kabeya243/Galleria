@@ -27,6 +27,7 @@ export function adminSections(access: AdminAccess): string[] {
     ...(hasAdminPermission(access, "artworks.view") ? ["artworks"] : []),
     ...(hasAdminPermission(access, "galleries.view") ? ["galleries"] : []),
     ...(hasAdminPermission(access, "subscriptions.view") ? ["subscriptions"] : []),
+    ...(hasAdminPermission(access, "orders.view") ? ["orders"] : []),
     ...(access.isManager ? ["sub-admins"] : []),
   ];
 }
@@ -41,13 +42,14 @@ export async function getAdminContext() {
 // Nav badge counts for the admin shell (cheap count() queries, run on
 // every admin page so the sidebar badges stay true).
 export async function loadAdminShellCounts() {
-  const [users, exhibitions, artworks, tools] = await Promise.all([
+  const [users, exhibitions, artworks, tools, orders] = await Promise.all([
     db.user.count(),
     db.exhibition.count(),
     db.artwork.count(),
     db.toolUse.count(),
+    db.order.count(),
   ]);
-  return { users, exhibitions, artworks, tools };
+  return { users, exhibitions, artworks, tools, orders };
 }
 
 export function formatBytes(bytes: number): string {
@@ -711,5 +713,65 @@ export async function loadAdminSubscriptions() {
     allSubscriptionsCount: allSubscriptions.length,
     promoCodes: promoCodeRows,
     referralStats,
+  };
+}
+
+// ---- Orders (/admin/orders) ----
+
+// Every marketplace order, with the fee split and the platform totals
+// (grouped by currency, since orders can be priced in different
+// currencies). Commission collected counts live orders only
+// (cancelled and refunded orders are excluded); "to pay out" counts
+// the seller share of orders whose payment cleared, and "waiting for
+// payment" the seller share of pending orders. Until Flutterwave is
+// connected every order is pending payment, so the collected and
+// paid-out totals are zero and the pending total is the amount that
+// will be due to sellers once payments clear.
+export async function loadAdminOrders() {
+  const rows = await db.order.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 500,
+    include: {
+      listing: { select: { title: true } },
+      buyer: { select: { name: true, email: true } },
+      seller: { select: { name: true, email: true } },
+    },
+  });
+  const live = rows.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
+  const paid = live.filter((o) => o.status !== "pending_payment");
+  const pending = live.filter((o) => o.status === "pending_payment");
+  const sumByCurrency = (list: typeof rows, field: "commissionAmount" | "sellerNet") => {
+    const map = new Map<string, number>();
+    for (const o of list) {
+      map.set(o.currency, (map.get(o.currency) ?? 0) + o[field]);
+    }
+    return [...map.entries()].map(([currency, amount]) => ({ currency, amount }));
+  };
+  return {
+    orders: rows.map((o) => ({
+      id: o.id,
+      listingId: o.listingId,
+      listingTitle: o.listing.title,
+      buyerName: o.buyer.name,
+      buyerEmail: o.buyer.email,
+      sellerName: o.seller.name,
+      sellerEmail: o.seller.email,
+      finalPrice: o.finalPrice,
+      currency: o.currency,
+      commissionRate: o.commissionRate,
+      commissionAmount: o.commissionAmount,
+      paymentMethod: o.paymentMethod,
+      paymentFeeRate: o.paymentFeeRate,
+      paymentFeeAmount: o.paymentFeeAmount,
+      sellerNet: o.sellerNet,
+      status: o.status,
+      createdAt: o.createdAt.toISOString(),
+    })),
+    totals: {
+      commission: sumByCurrency(live, "commissionAmount"),
+      toPayOut: sumByCurrency(paid, "sellerNet"),
+      waitingPayment: sumByCurrency(pending, "sellerNet"),
+    },
+    orderCount: rows.length,
   };
 }

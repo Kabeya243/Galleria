@@ -3,6 +3,7 @@ import Link from "next/link";
 import InventoryTable from "@/components/inventory-table";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
@@ -15,6 +16,7 @@ export const metadata = {
 export default async function InventoryRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "inventory");
   await logToolUse("inventory", user.id);
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),

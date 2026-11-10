@@ -17,6 +17,7 @@ import { redirect } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import AtelierEditor from "@/components/atelier-editor";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
@@ -33,6 +34,7 @@ export default async function PortfolioPdfRoute({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "portfolio-pdf");
   await logToolUse("portfolio-pdf", user.id);
   const params = await searchParams;
   const projectId = typeof params.project === "string" ? params.project : "";

@@ -7,14 +7,14 @@ import LanguageSwitcher from "@/components/language-switcher";
 import { useT } from "@/lib/i18n";
 import styles from "./site-footer.module.css";
 
-// Shared Lakisa footer — public homepage and /about. Original copy and
+// Shared Lakisa footer: public homepage and /about. Original copy and
 // design: four link columns (About, Resources, Partnerships, Help), a
 // brand block with social icons, and a legal bar with the language
 // switcher. /terms, /privacy and /guide exist (phase C created them);
 // the links point straight at them.
 //
 // Social accounts: Lakisa has no public accounts yet. The icons link to
-// "#" on purpose — TODO: replace each href with the real Lakisa account
+// "#" on purpose: TODO: replace each href with the real Lakisa account
 // URL once the accounts exist. No fake account URL is invented here.
 
 const SOCIALS = [
@@ -64,6 +64,7 @@ export default function SiteFooter() {
             <h3>{t("footer", "resources")}</h3>
             <Link href="/guide">{t("footer", "userGuide")}</Link>
             <Link href="/tools">{t("footer", "allTools")}</Link>
+            <Link href="/pricing">{t("footer", "pricing")}</Link>
             <Link href="/tools/price-your-work">{t("tools", "priceYourWork")}</Link>
             <Link href="/tools/portfolio-pdf">{t("tools", "portfolioPdf")}</Link>
           </div>

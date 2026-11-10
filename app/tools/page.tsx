@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import ToolsPage from "@/components/tools-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { PAYWALL_ENABLED, getUserPlanSlug } from "@/lib/subscriptions";
 
 export const metadata = {
   title: "Tools: Lakisa",
@@ -12,6 +13,9 @@ export const metadata = {
 export default async function ToolsRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const exhibitionCount = await db.exhibition.count({ where: { ownerId: user.id } });
-  return <ToolsPage user={user} exhibitionCount={exhibitionCount} />;
+  const [exhibitionCount, planSlug] = await Promise.all([
+    db.exhibition.count({ where: { ownerId: user.id } }),
+    getUserPlanSlug(user.id),
+  ]);
+  return <ToolsPage user={user} exhibitionCount={exhibitionCount} planSlug={planSlug} paywallEnabled={PAYWALL_ENABLED} />;
 }

@@ -4,6 +4,7 @@ import InDevelopmentBox from "@/components/in-development-box";
 import ToolsShell from "@/components/tools-shell";
 import VideoGenerator, { type VideoExhibition } from "@/components/video-generator";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
@@ -22,6 +23,7 @@ export default async function VideoGeneratorRoute({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "video-generator");
   await logToolUse("video-generator", user.id);
   const { exhibitionId } = await searchParams;
   const exhibitions = await db.exhibition.findMany({

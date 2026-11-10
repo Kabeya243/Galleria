@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import PhotographyLab from "@/components/photography-lab";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
@@ -18,6 +19,7 @@ export default async function PhotographyLabRoute({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "photography-lab");
   await logToolUse("photography-lab", user.id);
   const { artworkId } = await searchParams;
   const [exhibitionCount, artworks] = await Promise.all([

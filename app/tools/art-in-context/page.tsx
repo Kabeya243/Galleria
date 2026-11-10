@@ -3,6 +3,7 @@ import Link from "next/link";
 import ToolsShell from "@/components/tools-shell";
 import ArtInContext from "@/components/art-in-context";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
@@ -17,6 +18,7 @@ export const metadata = {
 export default async function ArtInContextRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "art-in-context");
   await logToolUse("art-in-context", user.id);
 
   const [exhibitionCount, artworks, exhibitions, projects] = await Promise.all([

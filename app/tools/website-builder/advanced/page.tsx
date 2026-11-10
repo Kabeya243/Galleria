@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import AdvancedSiteEditor from "@/components/advanced-site-editor";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { getSiteTemplates, listAdvancedSites } from "@/lib/advanced-sites";
 import { templates as bundledTemplates } from "@/lib/advanced-site-templates";
@@ -18,6 +19,7 @@ export const metadata = {
 export default async function AdvancedWebsiteBuilderRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "website-builder-advanced");
   await logToolUse("website-builder-advanced", user.id);
 
   // Templates come from the Template table (seeded on first call);

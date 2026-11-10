@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Avatar from "@/components/avatar";
+import PlanCard from "@/components/plan-card";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import VisitorAnalytics, {
@@ -219,6 +220,8 @@ export default function Dashboard({
               </article>
             ))}
           </section>
+
+          <PlanCard />
 
           <section className={styles.card} aria-label="Your activity">
             <div className="section-heading">

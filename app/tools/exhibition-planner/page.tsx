@@ -3,6 +3,7 @@ import Link from "next/link";
 import ToolsShell from "@/components/tools-shell";
 import ExhibitionPlanner from "@/components/exhibition-planner";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
@@ -16,6 +17,7 @@ export const metadata = {
 export default async function ExhibitionPlannerRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "exhibition-planner");
   await logToolUse("exhibition-planner", user.id);
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),

@@ -3,6 +3,7 @@ import Link from "next/link";
 import ToolsShell from "@/components/tools-shell";
 import FramesWallsTool from "@/components/frames-walls-tool";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 import styles from "@/components/tools.module.css";
@@ -21,6 +22,7 @@ export default async function FramesWallsRoute({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "frames-walls");
   await logToolUse("frames-walls", user.id);
   const { artworkId, view } = await searchParams;
   const [exhibitionCount, artworks] = await Promise.all([

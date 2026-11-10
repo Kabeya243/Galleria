@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import ContactsTool from "@/components/contacts-tool";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
@@ -13,6 +14,7 @@ export const metadata = {
 export default async function ContactsRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "contacts");
   await logToolUse("contacts", user.id);
   const exhibitionCount = await db.exhibition.count({ where: { ownerId: user.id } });
   return (

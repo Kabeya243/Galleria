@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import ToolsShell from "@/components/tools-shell";
 import ImageTo3D from "@/components/image-to-3d";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
 
@@ -14,6 +15,7 @@ export const metadata = {
 export default async function ImageTo3DRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "image-to-3d");
   await logToolUse("image-to-3d", user.id);
   const exhibitionCount = await db.exhibition.count({ where: { ownerId: user.id } });
 

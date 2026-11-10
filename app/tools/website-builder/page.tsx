@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { requireToolAccess } from "@/lib/subscriptions";
 
 // The simple website builder was removed on 8 Nov 2026 (Kabeya's
 // decision: keep only the advanced builder). This route now redirects
@@ -9,5 +10,6 @@ import { getCurrentUser } from "@/lib/auth";
 export default async function WebsiteBuilderRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  await requireToolAccess(user, "website-builder");
   redirect("/tools/website-builder/advanced");
 }

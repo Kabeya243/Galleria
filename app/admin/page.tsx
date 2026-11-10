@@ -2,11 +2,13 @@ import Link from "next/link";
 import AdminGalleries from "@/components/admin-galleries";
 import AdminGalleryNames from "@/components/admin-gallery-names";
 import AdminShell from "@/components/admin-shell";
+import AdminSubscriptions from "@/components/admin-subscriptions";
 import SubAdmins from "@/components/sub-admins";
 import { hasAdminPermission, requireAdminAccess } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { getGalleryNames } from "@/lib/gallery-names-server";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
+import { getAllPlans } from "@/lib/subscriptions";
 import { HIDDEN_LAYOUT_KEYS, ROOM_MODELS, roomLayouts, type RoomLayout } from "@/lib/rooms";
 import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
 
@@ -185,6 +187,8 @@ export default async function AdminRoute({
   const canArtworks = hasAdminPermission(access, "artworks.view");
   const canGalleries = hasAdminPermission(access, "galleries.view");
   const canManageGalleries = hasAdminPermission(access, "galleries.manage");
+  const canSubscriptions = hasAdminPermission(access, "subscriptions.view");
+  const canManageSubscriptions = hasAdminPermission(access, "subscriptions.manage");
   const { q } = await searchParams;
   const query = (q ?? "").trim();
   const now = new Date();
@@ -221,6 +225,9 @@ export default async function AdminRoute({
     hiddenRoomLayouts,
     galleryNames,
     testReport,
+    plans,
+    allSubscriptions,
+    subscriptionCounts,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -401,6 +408,18 @@ export default async function AdminRoute({
     getGalleryNames(),
     // Feature-test report (see the Test reports section below).
     readTestReport(),
+    // Subscriptions (Nov 2026): the plans, every account's subscription
+    // and the subscriber count per plan (see the Subscriptions section).
+    getAllPlans(),
+    db.subscription.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 500,
+      include: {
+        user: { select: { id: true, name: true, email: true, createdAt: true } },
+        plan: true,
+      },
+    }),
+    db.subscription.groupBy({ by: ["planId"], _count: { _all: true } }),
   ]);
 
   const userCount = userDates.length;
@@ -586,6 +605,27 @@ export default async function AdminRoute({
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, 8);
 
+  // Subscriptions per plan (Nov 2026): subscriber counts for the
+  // Subscriptions section, from the plan rows and the group-by counts.
+  const subscriptionStats = plans.map((p) => ({
+    name: p.name,
+    count: subscriptionCounts.find((c) => c.planId === p.id)?._count._all ?? 0,
+  }));
+  const subscriptionMax = Math.max(...subscriptionStats.map((s) => s.count), 1);
+  const subscriptionRows = allSubscriptions.map((s) => ({
+    userId: s.user.id,
+    name: s.user.name,
+    email: s.user.email,
+    joinedAt: s.user.createdAt.toISOString(),
+    planId: s.plan.id,
+    planSlug: s.plan.slug,
+    planName: s.plan.name,
+    status: s.status,
+    billingCycle: s.billingCycle,
+    source: s.source,
+    startedAt: s.startedAt.toISOString(),
+  }));
+
   const todayLabel = now.toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -626,6 +666,7 @@ export default async function AdminRoute({
         ...(canExhibitions ? ["exhibitions"] : []),
         ...(canArtworks ? ["artworks"] : []),
         ...(canGalleries ? ["galleries"] : []),
+        ...(canSubscriptions ? ["subscriptions"] : []),
         ...(access.isManager ? ["sub-admins"] : []),
       ]}
     >
@@ -1378,6 +1419,57 @@ export default async function AdminRoute({
             </table>
           </div>
         )}
+      </section>
+      )}
+
+      {/* Subscriptions — the plans, subscribers per plan, every
+          account's plan, and plan editing. Free trial: the paywall is
+          off, so every tool is open to every account; this section
+          manages the structure billing will use later. */}
+      {canSubscriptions && (
+      <section id="subscriptions" className="ad-section">
+        <div className="ad-section-head">
+          <h2>Subscriptions</h2>
+          <p>
+            {allSubscriptions.length} subscribers. Everything is free to try for now: the paywall is
+            off, so every tool is open to every account. These plans are the structure billing will
+            use later, once a payment provider is connected.
+          </p>
+        </div>
+        <div className="ad-layout-half">
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Subscribers per plan</h2>
+                <p className="ad-card-sub">Accounts on each plan</p>
+              </div>
+            </div>
+            {subscriptionStats.length === 0 ? (
+              <EmptyBox title="No plans yet." body="Plans are seeded automatically on first read." />
+            ) : (
+              <ShareBars items={subscriptionStats} max={subscriptionMax} />
+            )}
+          </section>
+
+          <section className="ad-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>Paywall status</h2>
+                <p className="ad-card-sub">Free trial mode</p>
+              </div>
+            </div>
+            <p style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.6 }}>
+              The paywall is <strong>off</strong>: every account can use every tool for free, no
+              card, no payment. Plan changes (below, or by the user on the pricing page) are free
+              and immediate. To turn billing on later, connect a payment provider first, then set{" "}
+              <code>LAKISA_PAYWALL_ENABLED=true</code> in Vercel.
+            </p>
+            <a className="ad-card-link" href="/pricing" target="_blank" rel="noreferrer">
+              See the public pricing page
+            </a>
+          </section>
+        </div>
+        <AdminSubscriptions plans={plans} subscriptions={subscriptionRows} canManage={canManageSubscriptions} />
       </section>
       )}
 

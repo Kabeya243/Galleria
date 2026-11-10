@@ -62,6 +62,11 @@ model User {
   // Open calls (Nov 2026): calls for applications the user creates
   // in /tools/open-calls. See OpenCall below.
   openCalls     OpenCall[]
+  // Subscription (Nov 2026): one row per account, the plan the account
+  // is on. Every account starts on Discovery (free); the row is created
+  // lazily on first read by lib/subscriptions.ts. See SubscriptionPlan
+  // and Subscription below.
+  subscription Subscription?
 }
 
 model PasswordResetToken {
@@ -655,6 +660,66 @@ model SubAdmin {
   permissions Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Subscriptions (Nov 2026): the three Lakisa plans from the budget and
+// monetisation dossier (Lakisa_Budget_Monetisation.docx, §3.2-3.3) —
+// Discovery (free), Creator (8 $/month, 80 $/year), Studio (25 $/month,
+// 250 $/year). Plans are rows so the manager can rename them, change
+// prices and edit the included tools from the admin dashboard; the code
+// defaults in lib/subscriptions.ts seed the three rows once and never
+// overwrite an admin edit. A Subscription is one row per account: every
+// account starts on Discovery, the row is created lazily on first read.
+// No payment is integrated in this lot: the paywall is OFF by default
+// (LAKISA_PAYWALL_ENABLED, see lib/subscriptions.ts), so every tool
+// stays open to everyone while the structure is in place. Billing
+// (Flutterwave / Pesapal) comes later and flips the same switch.
+// Applied by `prisma db push` on deploy (see vercel.json); no data
+// migration — the tables start empty and are seeded on first read.
+// ---------------------------------------------------------------------------
+model SubscriptionPlan {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  tagline         String   @default("")
+  description     String   @default("")
+  monthlyPriceUsd Float    @default(0)
+  yearlyPriceUsd  Float    @default(0)
+  // Feature lines shown on the pricing page, in display order.
+  features        Json     @default("[]")
+  // Limits, null = unlimited: exhibitions, artworks, storageGb,
+  // contacts, inventory, aiActionsPerMonth (0 = not included).
+  limits          Json     @default("{}")
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  subscriptions   Subscription[]
+
+  @@index([sortOrder])
+}
+
+model Subscription {
+  id           String           @id @default(cuid())
+  userId       String           @unique
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId       String
+  plan         SubscriptionPlan @relation(fields: [planId], references: [id])
+  // active, cancelled (kept on the plan until the period ends),
+  // past_due (only once billing exists).
+  status       String           @default("active")
+  billingCycle String           @default("monthly")
+  // trial (free trial period, no payment yet), admin (set by the
+  // manager), billing (set by a real payment, later).
+  source       String           @default("trial")
+  startedAt    DateTime         @default(now())
+  endsAt       DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([planId])
+  @@index([status])
 }
 
 // ---------------------------------------------------------------------------

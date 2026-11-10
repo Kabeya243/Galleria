@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   ClipboardCheck,
+  CreditCard,
   Images,
   LayoutDashboard,
   LayoutGrid,
@@ -67,7 +68,7 @@ export default function AdminShell({
   // Track which section is on screen, so the matching menu item is
   // highlighted (like the reference's active Dashboard row).
   useEffect(() => {
-    const ids = ["overview", "users", "exhibitions", "artworks", "galleries", "tools", "test-reports", "sub-admins"];
+    const ids = ["overview", "users", "exhibitions", "artworks", "galleries", "tools", "test-reports", "subscriptions", "sub-admins"];
     const elements = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -135,6 +136,12 @@ export default function AdminShell({
       label: "Test reports",
       href: "#test-reports",
       icon: <ClipboardCheck size={18} />,
+    },
+    {
+      id: "subscriptions",
+      label: "Subscriptions",
+      href: "#subscriptions",
+      icon: <CreditCard size={18} />,
     },
     {
       id: "sub-admins",

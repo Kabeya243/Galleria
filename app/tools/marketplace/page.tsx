@@ -3,6 +3,7 @@ import ToolsShell from "@/components/tools-shell";
 import MarketplaceTool from "@/components/marketplace";
 import { getCurrentUser } from "@/lib/auth";
 import { logToolUse } from "@/lib/tool-use";
+import { requireToolAccess } from "@/lib/subscriptions";
 import { db } from "@/lib/db";
 import { toClientOffer, toClientOrder } from "@/lib/marketplace-sales";
 
@@ -14,6 +15,10 @@ export const metadata = {
 export default async function MarketplaceRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  // The Marketplace tool is a Creator tool (TOOL_PLAN in
+  // lib/subscriptions.ts): without this gate a Discovery account could
+  // open it with the paywall on, while every other tool redirected.
+  await requireToolAccess(user, "marketplace");
   await logToolUse("marketplace", user.id);
 
   const [exhibitionCount, exhibitions, listings, inquiries, offers, orders] = await Promise.all([

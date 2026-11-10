@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale, useT } from "@/lib/i18n";
 import { BuyerGuide } from "@/components/marketplace-guides";
+import { isManualOrder, ManualPaymentBuyerBox, PaymentMethodLabel } from "@/components/manual-payment";
 import type { ClientOffer, ClientOrder } from "@/lib/marketplace-sales";
 
 // Buy and make an offer, on a public listing page. The buyer can buy
@@ -66,7 +67,7 @@ export default function MarketplaceOfferBox({
 
   const [myOffer, setMyOffer] = useState<ClientOffer | null>(initialOffer);
   const [myOrder, setMyOrder] = useState<ClientOrder | null>(initialOrder);
-  const [method, setMethod] = useState<"card" | "mobile_money">("card");
+  const [method, setMethod] = useState<"card" | "mobile_money" | "manual_momo" | "manual_bank">("card");
   const [offerOpen, setOfferOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
   const [offerAmount, setOfferAmount] = useState("");
@@ -120,10 +121,21 @@ export default function MarketplaceOfferBox({
   }
 
   function feeSplit(amount: number) {
-    const feeRate = method === "mobile_money" ? mobileFeeRate : cardFeeRate;
+    // Manual payments go outside Lakisa, so there is no payment fee.
+    const feeRate =
+      method === "mobile_money" ? mobileFeeRate : method === "card" ? cardFeeRate : 0;
     const commission = Math.round(amount * commissionRate);
     const fee = Math.round(amount * feeRate);
     return { feeRate, commission, fee, net: amount - commission - fee };
+  }
+
+  function feeRateText(feeRate: number): string {
+    if (feeRate <= 0) return t("marketplaceSales", "noPaymentFee");
+    return `${Math.round(feeRate * 100)}%, ${t("marketplaceSales", "indicativeRates").toLowerCase()}`;
+  }
+
+  function isManualMethod(value: string): boolean {
+    return value === "manual_momo" || value === "manual_bank";
   }
 
   async function submitOffer(event: React.FormEvent) {
@@ -193,7 +205,12 @@ export default function MarketplaceOfferBox({
       });
       setMyOrder(result.order);
       setBuyOpen(false);
-      setNotice(t("marketplaceSales", "orderCreated"));
+      setNotice(
+        t(
+          "marketplaceSales",
+          isManualMethod(method) ? "manualOrderCreated" : "orderCreated",
+        ),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not place the order.");
     } finally {
@@ -257,9 +274,10 @@ export default function MarketplaceOfferBox({
         <div className="mp-order-card">
           <strong>Order pending payment</strong>
           <p>
-            {money(myOrder.finalPrice, myOrder.currency)} for this work. No real payment passes
-            yet: Flutterwave is not connected, so the order stays pending payment and you will not
-            be charged now.
+            {money(myOrder.finalPrice, myOrder.currency)} for this work.{" "}
+            {isManualOrder(myOrder)
+              ? t("marketplaceSales", "manualOrderNote")
+              : t("marketplaceSales", "orderPendingNote")}
           </p>
           <dl className="mp-fees">
             <div>
@@ -274,8 +292,8 @@ export default function MarketplaceOfferBox({
             </div>
             <div>
               <dt>
-                {t("marketplaceSales", "paymentFee")} ({myOrder.paymentMethod === "mobile_money" ? "Mobile Money" : "Card"},{" "}
-                {Math.round(myOrder.paymentFeeRate * 100)}%, {t("marketplaceSales", "indicativeRates").toLowerCase()})
+                {t("marketplaceSales", "paymentFee")} (<PaymentMethodLabel method={myOrder.paymentMethod} />,{" "}
+                {feeRateText(myOrder.paymentFeeRate)})
               </dt>
               <dd>-{money(myOrder.paymentFeeAmount, myOrder.currency)}</dd>
             </div>
@@ -284,6 +302,7 @@ export default function MarketplaceOfferBox({
               <dd>{money(myOrder.sellerNet, myOrder.currency)}</dd>
             </div>
           </dl>
+          <ManualPaymentBuyerBox order={myOrder} onUpdated={setMyOrder} />
           <button type="button" className="mp-small-button mp-small-button-quiet" disabled={busy} onClick={() => void cancelOrder()}>
             {t("marketplaceSales", "cancelOrder")}
           </button>
@@ -308,9 +327,8 @@ export default function MarketplaceOfferBox({
                   </div>
                   <div>
                     <dt>
-                      {t("marketplaceSales", "paymentFee")} (
-                      {method === "mobile_money" ? "Mobile Money" : "Card"}, {Math.round(split.feeRate * 100)}%,{" "}
-                      {t("marketplaceSales", "indicativeRates").toLowerCase()})
+                      {t("marketplaceSales", "paymentFee")} (<PaymentMethodLabel method={method} />,{" "}
+                      {feeRateText(split.feeRate)})
                     </dt>
                     <dd>-{money(split.fee, currency)}</dd>
                   </div>
@@ -326,12 +344,23 @@ export default function MarketplaceOfferBox({
               )}
               <label>
                 <span>{t("marketplaceSales", "paymentMethod")}</span>
-                <select value={method} onChange={(e) => setMethod(e.target.value as "card" | "mobile_money")}>
+                <select
+                  value={method}
+                  onChange={(e) =>
+                    setMethod(e.target.value as "card" | "mobile_money" | "manual_momo" | "manual_bank")
+                  }
+                >
                   <option value="card">{t("marketplaceSales", "card")}</option>
                   <option value="mobile_money">{t("marketplaceSales", "mobileMoney")}</option>
+                  <option value="manual_momo">{t("marketplaceSales", "manualMomo")}</option>
+                  <option value="manual_bank">{t("marketplaceSales", "manualBank")}</option>
                 </select>
               </label>
-              <p className="mp-offer-note">{t("marketplaceSales", "orderPendingNote")}</p>
+              <p className="mp-offer-note">
+                {isManualMethod(method)
+                  ? t("marketplaceSales", "manualOrderNote")
+                  : t("marketplaceSales", "orderPendingNote")}
+              </p>
               <button type="button" className="primary-button" disabled={busy} onClick={() => void placeOrder(myOffer.id)}>
                 {busy ? "Placing…" : t("marketplaceSales", "placeOrder")}
               </button>
@@ -385,9 +414,8 @@ export default function MarketplaceOfferBox({
                           </div>
                           <div>
                             <dt>
-                              {t("marketplaceSales", "paymentFee")} (
-                              {method === "mobile_money" ? "Mobile Money" : "Card"}, {Math.round(split.feeRate * 100)}%,{" "}
-                              {t("marketplaceSales", "indicativeRates").toLowerCase()})
+                              {t("marketplaceSales", "paymentFee")} (<PaymentMethodLabel method={method} />,{" "}
+                              {feeRateText(split.feeRate)})
                             </dt>
                             <dd>-{money(split.fee, currency)}</dd>
                           </div>
@@ -403,12 +431,23 @@ export default function MarketplaceOfferBox({
                       )}
                       <label>
                         <span>{t("marketplaceSales", "paymentMethod")}</span>
-                        <select value={method} onChange={(e) => setMethod(e.target.value as "card" | "mobile_money")}>
+                        <select
+                          value={method}
+                          onChange={(e) =>
+                            setMethod(e.target.value as "card" | "mobile_money" | "manual_momo" | "manual_bank")
+                          }
+                        >
                           <option value="card">{t("marketplaceSales", "card")}</option>
                           <option value="mobile_money">{t("marketplaceSales", "mobileMoney")}</option>
+                          <option value="manual_momo">{t("marketplaceSales", "manualMomo")}</option>
+                          <option value="manual_bank">{t("marketplaceSales", "manualBank")}</option>
                         </select>
                       </label>
-                      <p className="mp-offer-note">{t("marketplaceSales", "orderPendingNote")}</p>
+                      <p className="mp-offer-note">
+                        {isManualMethod(method)
+                          ? t("marketplaceSales", "manualOrderNote")
+                          : t("marketplaceSales", "orderPendingNote")}
+                      </p>
                       <button type="button" className="primary-button" disabled={busy} onClick={() => void placeOrder(null)}>
                         {busy ? "Placing…" : t("marketplaceSales", "placeOrder")}
                       </button>

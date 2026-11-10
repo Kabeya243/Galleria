@@ -13,17 +13,22 @@ import {
 // Marketplace orders (Nov 2026): a purchase that goes through
 // Lakisa. GET ?mine=1 lists the caller's orders, as buyer and as
 // seller. POST creates an order in pending_payment, from an accepted
-// offer or from a direct buy at the listed price. No real payment
-// moves here: Flutterwave is not connected, so the order stays
-// pending payment until billing connects. The fees are computed from
-// the seller's plan at the time of the sale and recorded on the
-// order, so the split never changes afterwards.
+// offer or from a direct buy at the listed price. Automatic methods
+// (card, Mobile Money via Flutterwave) stay pending payment until
+// billing connects, because no real payment moves yet. Manual methods
+// (manual_momo, manual_bank) are the temporary system: the buyer pays
+// the seller directly, outside Lakisa, sends the transaction
+// reference, and the seller or an admin confirms receipt by hand;
+// the payment fee is 0 for manual payments, only the Lakisa
+// commission is deducted. The fees are computed from the seller's
+// plan at the time of the sale and recorded on the order, so the
+// split never changes afterwards.
 
 const createSchema = z.object({
   listingId: z.string().min(1).max(100),
   offerId: z.string().min(1).max(100).optional(),
   buyNow: z.boolean().optional(),
-  paymentMethod: z.enum(["card", "mobile_money"]).optional(),
+  paymentMethod: z.enum(["card", "mobile_money", "manual_momo", "manual_bank"]).optional(),
 });
 
 export async function GET(request: Request) {
@@ -134,13 +139,16 @@ export async function POST(request: Request) {
   // else can buy it in the meantime.
   await db.listing.update({ where: { id: listing.id }, data: { status: "reserved" } });
   const origin = new URL(request.url).origin;
+  const manual = method === "manual_momo" || method === "manual_bank";
   await postSaleMessage({
     senderId: user.id,
     senderName: user.name,
     recipientId: listing.sellerId,
     recipientEmail: listing.seller.email,
     artworkId: listing.artworkId,
-    body: `New order: ${finalPrice} ${listing.currency} for "${listing.title}" (pending payment). Lakisa commission ${fees.commissionAmount}, payment fee ${fees.paymentFeeAmount}, you receive ${fees.sellerNet}.`,
+    body: manual
+      ? `New order: ${finalPrice} ${listing.currency} for "${listing.title}" (manual payment, pending). Lakisa commission ${fees.commissionAmount}, no payment fee, you receive ${fees.sellerNet}. The buyer pays you directly by ${method === "manual_momo" ? "Mobile Money (MTN/Airtel)" : "bank transfer"} and will send the transaction reference. Confirm receipt in your Orders when the money arrives.`
+      : `New order: ${finalPrice} ${listing.currency} for "${listing.title}" (pending payment). Lakisa commission ${fees.commissionAmount}, payment fee ${fees.paymentFeeAmount}, you receive ${fees.sellerNet}.`,
     origin,
   });
   return NextResponse.json({ order: toClientOrder(order) }, { status: 201 });

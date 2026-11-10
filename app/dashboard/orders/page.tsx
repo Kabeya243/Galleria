@@ -39,9 +39,11 @@ export default async function DashboardOrdersRoute() {
               <h1>My orders</h1>
               <p className="welcome-copy">
                 The works you bought and sold on Lakisa. The buyer pays Lakisa, Lakisa keeps its
-                commission, pays the payment fee, and sends the rest to the seller. No payment
-                provider is connected yet, so every order is pending payment and no money has
-                moved.
+                commission, pays the payment fee, and sends the rest to the seller. Automatic
+                payment is not connected yet, so orders by card stay pending payment; until then,
+                a buyer can pay the seller directly by Mobile Money or bank transfer, send the
+                transaction reference, and the seller confirms receipt by hand. A manual payment
+                carries no payment fee, only the Lakisa commission.
               </p>
             </div>
           </div>

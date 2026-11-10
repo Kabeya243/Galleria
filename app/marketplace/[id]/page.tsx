@@ -50,8 +50,10 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
 // Public listing detail. The seller's name and the work's details are
 // public; the inquiry form and the offer box are the working paths to
 // a sale. Checkout is a labelled Flutterwave integration point: there
-// is no payment provider connected, so an order is recorded as
-// pending payment and no money moves on this page. Stripe is not
+// is no payment provider connected, so an order by card is recorded
+// as pending payment and no money moves on this page. A manual
+// payment (Mobile Money or bank transfer, outside Lakisa) is the
+// temporary way to complete a sale, confirmed by hand. Stripe is not
 // used: it cannot operate from Uganda.
 export default async function ListingDetailPage({ params }: RouteProps) {
   const { id } = await params;
@@ -269,10 +271,17 @@ export default async function ListingDetailPage({ params }: RouteProps) {
             <p>
               Buying goes through Lakisa: you agree the price with the seller, then pay Lakisa.
               Lakisa keeps its commission, pays the payment fee, and sends the rest to the seller.
-              No real payment passes yet: no payment provider is connected to Lakisa, so an order
-              is recorded as pending payment and you are not charged.
+              Automatic payment is not open yet: no payment provider is connected to Lakisa, so an
+              order by card stays pending payment and you are not charged.
             </p>
-            <p>To turn this into a real checkout, the platform needs:</p>
+            <p>
+              Until then, you can pay the seller directly, outside Lakisa, by Mobile Money
+              (MTN/Airtel) or bank transfer, using the payment details in the sale conditions, and
+              send the transaction reference on your order. The seller confirms receipt by hand,
+              and the order moves to paid. A manual payment carries no payment fee, only the
+              Lakisa commission.
+            </p>
+            <p>To turn this into a real automatic checkout, the platform needs:</p>
             <ul>
               <li>A Flutterwave account for the platform, with its keys in the Vercel project environment.</li>
               <li>

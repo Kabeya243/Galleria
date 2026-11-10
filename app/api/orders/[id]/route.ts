@@ -3,19 +3,30 @@ import { z } from "zod";
 import { requireAdminPermission } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { postSaleMessage, toClientOrder } from "@/lib/marketplace-sales";
+import { isManualPaymentMethod, postSaleMessage, toClientOrder } from "@/lib/marketplace-sales";
 
 // One order: read it (buyer, seller, or an admin with orders.view),
-// or cancel it while it is still pending payment. Cancelling reopens
-// the accepted offer, so the buyer can pay again later, and puts the
-// listing back for sale when no other pending order holds it. Paid,
-// shipped, delivered and completed are set later, by the payment
-// webhook and the seller, once Flutterwave is connected; they are not
-// reachable from this route today.
+// or change it while it is still pending payment:
+// - cancel: buyer, seller or an admin with orders.manage. Cancelling
+//   reopens the accepted offer, so the buyer can pay again later, and
+//   puts the listing back for sale when no other pending order holds
+//   it.
+// - submitReference: the buyer, on a manual payment only. The buyer
+//   paid the seller directly, outside Lakisa, and sends the
+//   transaction reference as proof.
+// - markPaid: the seller, or an admin with orders.manage, on a manual
+//   payment only. The seller confirms the money arrived; the order
+//   moves to paid and the work is marked sold. A reference is
+//   required: the one the buyer sent, or one entered here. Automatic
+//   (Flutterwave) orders are never marked paid by hand: their
+//   confirmation comes from the payment webhook once it is connected.
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const patchSchema = z.object({ action: z.literal("cancel") });
+const patchSchema = z.object({
+  action: z.enum(["cancel", "submitReference", "markPaid"]),
+  paymentReference: z.string().trim().min(1).max(200).optional(),
+});
 
 async function loadOrder(userId: string, id: string) {
   const order = await db.order.findUnique({
@@ -53,8 +64,95 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Only cancelling is available for now." }, { status: 400 });
+    return NextResponse.json({ error: "Check the action and try again." }, { status: 400 });
   }
+  const action = parsed.data.action;
+  const origin = new URL(request.url).origin;
+
+  // --- The buyer sends the transaction reference (manual only) -----
+  if (action === "submitReference") {
+    if (order.buyerId !== user.id) {
+      return NextResponse.json({ error: "Only the buyer can send the payment reference." }, { status: 403 });
+    }
+    if (order.status !== "pending_payment") {
+      return NextResponse.json({ error: "Only a pending order can receive a payment reference." }, { status: 400 });
+    }
+    if (!isManualPaymentMethod(order.paymentMethod)) {
+      return NextResponse.json({ error: "This order is paid automatically, not manually." }, { status: 400 });
+    }
+    const reference = parsed.data.paymentReference;
+    if (!reference) {
+      return NextResponse.json({ error: "A transaction reference is required." }, { status: 400 });
+    }
+    const updated = await db.order.update({
+      where: { id: order.id },
+      data: { paymentReference: reference },
+      include: {
+        listing: { select: { title: true } },
+        buyer: { select: { name: true } },
+        seller: { select: { name: true } },
+      },
+    });
+    await postSaleMessage({
+      senderId: user.id,
+      senderName: user.name,
+      recipientId: order.sellerId,
+      recipientEmail: order.seller.email,
+      artworkId: order.listing.artworkId,
+      body: `Payment reference received for "${order.listing.title}" (${order.finalPrice} ${order.currency}): ${reference}. Please check that the money arrived, then confirm receipt in your Orders.`,
+      origin,
+    });
+    return NextResponse.json({ order: toClientOrder(updated) });
+  }
+
+  // --- The seller or an admin confirms receipt (manual only) -------
+  if (action === "markPaid") {
+    const isSeller = order.sellerId === user.id;
+    const access = isSeller ? null : await requireAdminPermission("orders.manage");
+    if (!isSeller && !access) {
+      return NextResponse.json({ error: "Only the seller or an admin can confirm this payment." }, { status: 403 });
+    }
+    if (order.status !== "pending_payment") {
+      return NextResponse.json({ error: "Only a pending order can be marked paid." }, { status: 400 });
+    }
+    if (!isManualPaymentMethod(order.paymentMethod)) {
+      return NextResponse.json({ error: "Only a manual payment can be confirmed by hand." }, { status: 400 });
+    }
+    const reference = order.paymentReference ?? parsed.data.paymentReference;
+    if (!reference) {
+      return NextResponse.json({ error: "A transaction reference is required to confirm payment." }, { status: 400 });
+    }
+    const now = new Date();
+    const updated = await db.order.update({
+      where: { id: order.id },
+      data: {
+        status: "paid",
+        paidAt: now,
+        paidConfirmedBy: user.id,
+        paidConfirmedAt: now,
+        paymentReference: reference,
+      },
+      include: {
+        listing: { select: { title: true } },
+        buyer: { select: { name: true } },
+        seller: { select: { name: true } },
+      },
+    });
+    // The work is sold when the payment is confirmed.
+    await db.listing.update({ where: { id: order.listingId }, data: { status: "sold" } });
+    await postSaleMessage({
+      senderId: user.id,
+      senderName: user.name,
+      recipientId: order.buyerId,
+      recipientEmail: order.buyer.email,
+      artworkId: order.listing.artworkId,
+      body: `Payment confirmed for "${order.listing.title}" (${order.finalPrice} ${order.currency}, reference ${reference}). The work is sold; the seller will send it as agreed.`,
+      origin,
+    });
+    return NextResponse.json({ order: toClientOrder(updated) });
+  }
+
+  // --- Cancel --------------------------------------------------------
   const isParty = order.buyerId === user.id || order.sellerId === user.id;
   const access = isParty ? null : await requireAdminPermission("orders.manage");
   if (!isParty && !access) {
@@ -87,7 +185,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (!otherPending) {
     await db.listing.update({ where: { id: order.listingId }, data: { status: "active" } });
   }
-  const origin = new URL(request.url).origin;
   const otherId = order.buyerId === user.id ? order.sellerId : order.buyerId;
   const otherEmail = order.buyerId === user.id ? order.seller.email : order.buyer.email;
   await postSaleMessage({

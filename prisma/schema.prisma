@@ -626,6 +626,12 @@ model Order {
   paymentFeeAmount Int
   sellerNet        Int
   status           String   @default("pending_payment")
+  // Manual payment (temporary, Nov 2026): the buyer pays outside
+  // Lakisa (Mobile Money or bank transfer) and sends the transaction
+  // reference; the seller or an admin confirms receipt by hand.
+  paymentReference String?
+  paidConfirmedBy  String?
+  paidConfirmedAt  DateTime?
   paidAt           DateTime?
   shippedAt        DateTime?
   deliveredAt      DateTime?

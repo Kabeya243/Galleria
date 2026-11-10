@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import ListingPrice from "@/components/listing-price";
 import { SellerGuide } from "@/components/marketplace-guides";
+import { ManualPaymentSellerBox, PaymentMethodLabel } from "@/components/manual-payment";
 import type { ClientOffer, ClientOrder } from "@/lib/marketplace-sales";
 
 // Marketplace — the seller's tool. Create listings from your own
@@ -438,7 +439,9 @@ export default function MarketplaceTool({
           Pick one of your own artworks to prefill the details, or list a work manually. It appears
           on the public marketplace at <Link href="/marketplace">/marketplace</Link> as soon as you
           save it. Buyers pay Lakisa, not you directly: Lakisa keeps its commission, pays the
-          payment fee, and sends you the rest once the payment clears.{" "}
+          payment fee, and sends you the rest once the payment clears. Until automatic payments
+          open, a buyer can also pay you directly by Mobile Money or bank transfer: put your
+          payment details in your sale conditions, and confirm receipt in your Orders.{" "}
           <button type="button" className="mp-link-button" onClick={() => setShowSellerGuide(true)}>
             How selling works
           </button>
@@ -816,8 +819,11 @@ export default function MarketplaceTool({
         </h2>
         <p className="mp-hint">
           When a buyer pays, the money goes through Lakisa: the price minus the Lakisa commission
-          minus the payment fee is yours. Orders stay pending payment until Flutterwave is
-          connected, so no money moves yet. Once the payment clears, the work is marked sold.
+          minus the payment fee is yours. Automatic orders stay pending payment until Flutterwave
+          is connected, so no money moves yet. For a manual payment (Mobile Money or bank
+          transfer, outside Lakisa), the buyer sends you the transaction reference and you confirm
+          receipt below: the order moves to paid and the work is marked sold. Manual payments
+          carry no payment fee, only the Lakisa commission.
         </p>
         {orders.length > 0 && (
           <div className="mp-totals">
@@ -861,9 +867,12 @@ export default function MarketplaceTool({
                   <span className={`mp-badge mp-badge-${order.status}`}>{order.status.replace(/_/g, " ")}</span>
                 </div>
                 <p className="mp-inquiry-listing">
-                  Buyer: {order.buyerName} · {order.paymentMethod === "mobile_money" ? "Mobile Money" : "Card"} ·{" "}
+                  Buyer: {order.buyerName} · <PaymentMethodLabel method={order.paymentMethod} /> ·{" "}
                   {new Date(order.createdAt).toLocaleString()}
                 </p>
+                {order.paymentReference && (
+                  <p className="mp-inquiry-listing">Transaction reference: {order.paymentReference}</p>
+                )}
                 <dl className="mp-fees">
                   <div>
                     <dt>Agreed price</dt>
@@ -874,7 +883,13 @@ export default function MarketplaceTool({
                     <dd>-{formatPrice(order.commissionAmount, order.currency)}</dd>
                   </div>
                   <div>
-                    <dt>Payment fee ({Math.round(order.paymentFeeRate * 100)}%, indicative)</dt>
+                    <dt>
+                      Payment fee (
+                      {order.paymentFeeRate > 0
+                        ? `${Math.round(order.paymentFeeRate * 100)}%, indicative`
+                        : "no payment fee"}
+                      )
+                    </dt>
                     <dd>-{formatPrice(order.paymentFeeAmount, order.currency)}</dd>
                   </div>
                   <div>
@@ -882,6 +897,14 @@ export default function MarketplaceTool({
                     <dd>{formatPrice(order.sellerNet, order.currency)}</dd>
                   </div>
                 </dl>
+                {order.status === "pending_payment" && (
+                  <ManualPaymentSellerBox
+                    order={order}
+                    onUpdated={(updated) =>
+                      setOrders((current) => current.map((o) => (o.id === updated.id ? updated : o)))
+                    }
+                  />
+                )}
                 {order.status === "pending_payment" && (
                   <div className="mp-actions">
                     <button type="button" className="mp-small-button" disabled={busy} onClick={() => void cancelOrder(order.id)}>

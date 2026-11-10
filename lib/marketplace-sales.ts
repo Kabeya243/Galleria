@@ -6,14 +6,22 @@
 // from the seller's plan at the time of the sale.
 // (b) Flutterwave payment fee: about 4.8% by card, 3% by Mobile Money
 // in Uganda (indicative rates, always shown as such).
+// Manual payment (temporary, Nov 2026): the buyer pays outside
+// Lakisa, by Mobile Money (MTN/Airtel) or bank transfer, so there is
+// no payment provider and the payment fee is 0; only the Lakisa
+// commission is deducted.
 // The seller receives the final price minus the commission minus the
 // payment fee. Money is whole currency units, like Listing price;
 // each fee is rounded to the nearest unit. Example: a 1,500 $ sale on
 // Creator by card: commission 150 $, payment fee 72 $, seller 1,278 $.
+// The same sale paid manually: commission 150 $, payment fee 0 $,
+// seller 1,350 $.
 //
 // No payment is taken here: these are the numbers the checkout shows
-// and the order records. Flutterwave is not connected yet, so orders
-// stay pending_payment until billing connects.
+// and the order records. Flutterwave is not connected yet, so
+// automatic orders stay pending_payment until billing connects;
+// manual orders move to paid when the seller or an admin confirms
+// receipt by hand.
 
 import { db } from "@/lib/db";
 import { findOrCreateConversation, notifyRecipient } from "@/lib/messages";
@@ -24,13 +32,22 @@ export const PAYMENT_FEE_RATE_CARD = 0.048;
 export const PAYMENT_FEE_RATE_MOBILE_MONEY = 0.03;
 
 // The same rates as a map, for pages that pass them to the client
-// (the offer box shows the fee split before confirming).
+// (the offer box shows the fee split before confirming). Manual
+// methods cost no payment fee.
 export const PAYMENT_FEE_RATES: Record<PaymentMethod, number> = {
   card: PAYMENT_FEE_RATE_CARD,
   mobile_money: PAYMENT_FEE_RATE_MOBILE_MONEY,
+  manual_momo: 0,
+  manual_bank: 0,
 };
 
-export type PaymentMethod = "card" | "mobile_money";
+export type PaymentMethod = "card" | "mobile_money" | "manual_momo" | "manual_bank";
+
+// Manual methods (Nov 2026): the buyer pays outside Lakisa, so no
+// payment provider takes a fee.
+export function isManualPaymentMethod(method: string): boolean {
+  return method === "manual_momo" || method === "manual_bank";
+}
 
 export const ORDER_STATUSES = [
   "pending_payment",
@@ -43,7 +60,12 @@ export const ORDER_STATUSES = [
 ] as const;
 
 export function isPaymentMethod(value: unknown): value is PaymentMethod {
-  return value === "card" || value === "mobile_money";
+  return (
+    value === "card" ||
+    value === "mobile_money" ||
+    value === "manual_momo" ||
+    value === "manual_bank"
+  );
 }
 
 export function commissionRateForPlan(planSlug: string | null | undefined): number {
@@ -51,11 +73,21 @@ export function commissionRateForPlan(planSlug: string | null | undefined): numb
 }
 
 export function paymentFeeRateForMethod(method: PaymentMethod): number {
+  if (method === "manual_momo" || method === "manual_bank") return 0;
   return method === "mobile_money" ? PAYMENT_FEE_RATE_MOBILE_MONEY : PAYMENT_FEE_RATE_CARD;
 }
 
 export function paymentMethodLabel(method: string): string {
-  return method === "mobile_money" ? "Mobile Money" : "Card";
+  switch (method) {
+    case "mobile_money":
+      return "Mobile Money";
+    case "manual_momo":
+      return "Mobile Money (manual, MTN/Airtel)";
+    case "manual_bank":
+      return "Bank transfer (manual)";
+    default:
+      return "Card";
+  }
 }
 
 export function computeFees(
@@ -205,6 +237,10 @@ export type ClientOrder = {
   paymentFeeAmount: number;
   sellerNet: number;
   status: string;
+  // Manual payment (Nov 2026): the transaction reference the buyer
+  // sent, and when the receipt was confirmed by hand.
+  paymentReference: string | null;
+  paidConfirmedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -228,6 +264,8 @@ export function toClientOrder(row: {
   paymentFeeAmount: number;
   sellerNet: number;
   status: string;
+  paymentReference: string | null;
+  paidConfirmedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }): ClientOrder {
@@ -250,6 +288,8 @@ export function toClientOrder(row: {
     paymentFeeAmount: row.paymentFeeAmount,
     sellerNet: row.sellerNet,
     status: row.status,
+    paymentReference: row.paymentReference,
+    paidConfirmedAt: row.paidConfirmedAt ? row.paidConfirmedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

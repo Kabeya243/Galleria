@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  isManualOrder,
+  ManualPaymentBuyerBox,
+  ManualPaymentSellerBox,
+  PaymentMethodLabel,
+} from "@/components/manual-payment";
 import type { ClientOrder } from "@/lib/marketplace-sales";
 
 // The user's orders, as buyer and as seller. Each order shows the
 // fee split recorded at the time of the sale: the agreed price, the
-// Lakisa commission, the Flutterwave payment fee (indicative rate),
-// and what the seller receives. A pending order can be cancelled by
-// either side; the work goes back for sale and the accepted offer
-// reopens.
+// Lakisa commission, the payment fee (0 for a manual payment, only
+// the commission is deducted), and what the seller receives. A pending
+// order can be cancelled by either side; the work goes back for sale
+// and the accepted offer reopens. A manual payment is completed here:
+// the buyer sends the transaction reference, the seller confirms
+// receipt, and the order moves to paid.
 
 function money(amount: number, currency: string): string {
   try {
@@ -86,9 +94,12 @@ export default function OrdersList({
             </div>
             <p className="ord-meta">
               {asBuyer ? `You bought from ${order.sellerName}` : `You sold to ${order.buyerName}`} ·{" "}
-              {order.paymentMethod === "mobile_money" ? "Mobile Money" : "Card"} ·{" "}
+              <PaymentMethodLabel method={order.paymentMethod} /> ·{" "}
               {new Date(order.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}
             </p>
+            {order.paymentReference && (
+              <p className="ord-meta">Transaction reference: {order.paymentReference}</p>
+            )}
             <dl className="ord-fees">
               <div>
                 <dt>Agreed price</dt>
@@ -99,7 +110,13 @@ export default function OrdersList({
                 <dd>-{money(order.commissionAmount, order.currency)}</dd>
               </div>
               <div>
-                <dt>Payment fee ({Math.round(order.paymentFeeRate * 100)}%, indicative)</dt>
+                <dt>
+                  Payment fee (
+                  {order.paymentFeeRate > 0
+                    ? `${Math.round(order.paymentFeeRate * 100)}%, indicative`
+                    : "no payment fee"}
+                  )
+                </dt>
                 <dd>-{money(order.paymentFeeAmount, order.currency)}</dd>
               </div>
               <div>
@@ -109,10 +126,28 @@ export default function OrdersList({
             </dl>
             {order.status === "pending_payment" && (
               <>
-                <p className="ord-note">
-                  Pending payment: Flutterwave is not connected yet, so no money has moved. The work
-                  is reserved for this order.
-                </p>
+                {isManualOrder(order) ? (
+                  asBuyer ? (
+                    <ManualPaymentBuyerBox
+                      order={order}
+                      onUpdated={(updated) =>
+                        setOrders((current) => current.map((o) => (o.id === updated.id ? updated : o)))
+                      }
+                    />
+                  ) : (
+                    <ManualPaymentSellerBox
+                      order={order}
+                      onUpdated={(updated) =>
+                        setOrders((current) => current.map((o) => (o.id === updated.id ? updated : o)))
+                      }
+                    />
+                  )
+                ) : (
+                  <p className="ord-note">
+                    Pending payment: Flutterwave is not connected yet, so no money has moved. The work
+                    is reserved for this order.
+                  </p>
+                )}
                 <button
                   type="button"
                   className="ord-cancel"

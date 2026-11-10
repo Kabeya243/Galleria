@@ -62,6 +62,7 @@ export function SellerGuide({ onClose }: { onClose: () => void }) {
     [t("marketplaceGuides", "sellerFeesTitle"), t("marketplaceGuides", "sellerFeesText")],
     [t("marketplaceGuides", "sellerPaymentTitle"), t("marketplaceGuides", "sellerPaymentText")],
     [t("marketplaceGuides", "sellerShippingTitle"), t("marketplaceGuides", "sellerShippingText")],
+    [t("marketplaceGuides", "sellerManualTitle"), t("marketplaceGuides", "sellerManualText")],
   ];
   return (
     <GuideShell
@@ -87,6 +88,7 @@ export function BuyerGuide({ onClose }: { onClose: () => void }) {
     [t("marketplaceGuides", "buyerFeesTitle"), t("marketplaceGuides", "buyerFeesText")],
     [t("marketplaceGuides", "buyerAfterTitle"), t("marketplaceGuides", "buyerAfterText")],
     [t("marketplaceGuides", "buyerPendingTitle"), t("marketplaceGuides", "buyerPendingText")],
+    [t("marketplaceGuides", "buyerManualTitle"), t("marketplaceGuides", "buyerManualText")],
   ];
   return (
     <GuideShell

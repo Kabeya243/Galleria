@@ -723,10 +723,11 @@ export async function loadAdminSubscriptions() {
 // currencies). Commission collected counts live orders only
 // (cancelled and refunded orders are excluded); "to pay out" counts
 // the seller share of orders whose payment cleared, and "waiting for
-// payment" the seller share of pending orders. Until Flutterwave is
-// connected every order is pending payment, so the collected and
-// paid-out totals are zero and the pending total is the amount that
-// will be due to sellers once payments clear.
+// payment" the seller share of pending orders. Automatic orders stay
+// pending payment until Flutterwave is connected; manual orders move
+// to paid when the seller or an admin confirms receipt by hand.
+// "Awaiting confirmation" counts the manual pending orders whose
+// buyer already sent the transaction reference.
 export async function loadAdminOrders() {
   const rows = await db.order.findMany({
     orderBy: { createdAt: "desc" },
@@ -740,6 +741,11 @@ export async function loadAdminOrders() {
   const live = rows.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
   const paid = live.filter((o) => o.status !== "pending_payment");
   const pending = live.filter((o) => o.status === "pending_payment");
+  const awaitingConfirmation = pending.filter(
+    (o) =>
+      (o.paymentMethod === "manual_momo" || o.paymentMethod === "manual_bank") &&
+      o.paymentReference !== null,
+  ).length;
   const sumByCurrency = (list: typeof rows, field: "commissionAmount" | "sellerNet") => {
     const map = new Map<string, number>();
     for (const o of list) {
@@ -765,6 +771,10 @@ export async function loadAdminOrders() {
       paymentFeeAmount: o.paymentFeeAmount,
       sellerNet: o.sellerNet,
       status: o.status,
+      // Manual payment (Nov 2026): the transaction reference the
+      // buyer sent, and when receipt was confirmed by hand.
+      paymentReference: o.paymentReference,
+      paidConfirmedAt: o.paidConfirmedAt ? o.paidConfirmedAt.toISOString() : null,
       createdAt: o.createdAt.toISOString(),
     })),
     totals: {
@@ -773,5 +783,6 @@ export async function loadAdminOrders() {
       waitingPayment: sumByCurrency(pending, "sellerNet"),
     },
     orderCount: rows.length,
+    awaitingConfirmation,
   };
 }

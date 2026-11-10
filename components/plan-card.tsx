@@ -37,7 +37,12 @@ export default function PlanCard() {
         setMe(null);
         return;
       }
-      const meData = (await meRes.json()) as MeResponse;
+      const meData = (await meRes.json()) as MeResponse & { signedIn?: boolean };
+      // Anonymous visitors get { signedIn: false } (200, no console error).
+      if (meData.signedIn === false) {
+        setMe(null);
+        return;
+      }
       setMe(meData);
       if (plansRes.ok) {
         const plansData = (await plansRes.json()) as { plans: PlanDTO[] };

@@ -80,7 +80,13 @@ export default function PricingPage() {
         setMe(null);
         return;
       }
-      setMe((await res.json()) as MeResponse);
+      const data = (await res.json()) as MeResponse & { signedIn?: boolean };
+      // Anonymous visitors get { signedIn: false } (200, no console error).
+      if (data.signedIn === false) {
+        setMe(null);
+        return;
+      }
+      setMe(data);
     } catch {
       setMe(null);
     } finally {

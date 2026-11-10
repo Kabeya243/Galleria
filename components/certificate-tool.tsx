@@ -356,9 +356,18 @@ export default function CertificateTool({
   artworks: CertificateArtwork[];
 }) {
   const firstArtwork = artworks[0];
-  const [cfg, setCfg] = useState<CertificateConfig | null>(() =>
-    firstArtwork ? configForArtwork(firstArtwork, artistName) : configForBlank(artistName),
-  );
+  // The fresh certificate starts with an empty ID: minting a random ID
+  // during render would give the server and the client different IDs
+  // (Math.random in generateCertificateId), and React would throw a
+  // hydration error (minified error 418) on this page. The real ID is
+  // minted once, after mount, in the effect below.
+  const [cfg, setCfg] = useState<CertificateConfig | null>(() => {
+    const base = firstArtwork ? configForArtwork(firstArtwork, artistName) : configForBlank(artistName);
+    return { ...base, certificateId: "" };
+  });
+  useEffect(() => {
+    setCfg((prev) => (prev && prev.certificateId === "" ? { ...prev, certificateId: generateCertificateId() } : prev));
+  }, []);
   const [saved, setSaved] = useState<SavedCertificate[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);
   const [savedError, setSavedError] = useState<string | null>(null);

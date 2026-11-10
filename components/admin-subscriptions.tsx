@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AdminChangePlanDialog } from "@/components/subscription-dialogs";
+import { AdminChangePlanDialog, type AdminChangePayload } from "@/components/subscription-dialogs";
+import type { PromoCodeDTO } from "@/lib/promo-codes";
+import type { ReferralStats } from "@/lib/referrals";
 import type { PlanDTO, PlanSlug } from "@/lib/subscriptions";
 
 export type AdminSubscriptionRow = {
@@ -20,6 +22,11 @@ export type AdminSubscriptionRow = {
   endsAt: string | null;
 };
 
+export type AdminPromoCode = Omit<PromoCodeDTO, "expiresAt" | "createdAt"> & {
+  expiresAt: string | null;
+  createdAt: string;
+};
+
 function formatLimit(value: number | null): string {
   if (value === null) return "Unlimited";
   return String(value);
@@ -34,17 +41,21 @@ function parseLimitInput(value: string): number | null | undefined {
 }
 
 // Admin subscriptions section: every account's plan, the plan list with
-// editing, and the plan change flow. The manager (or a sub-admin with
-// subscriptions.manage) changes a plan through a confirmation popup; the
-// change is immediate and free while the paywall is off. Without the
-// manage permission the tables are read-only.
+// editing, the plan change flow, promo codes, and referrals. The manager
+// (or a sub-admin with subscriptions.manage) changes a plan through a
+// confirmation popup; the change is immediate and free while the paywall
+// is off. Without the manage permission the tables are read-only.
 export default function AdminSubscriptions({
   plans,
   subscriptions,
+  promoCodes,
+  referralStats,
   canManage,
 }: {
   plans: PlanDTO[];
   subscriptions: AdminSubscriptionRow[];
+  promoCodes: AdminPromoCode[];
+  referralStats: ReferralStats;
   canManage: boolean;
 }) {
   const router = useRouter();
@@ -71,6 +82,22 @@ export default function AdminSubscriptions({
     aiActions: "",
     isActive: true,
   });
+  // Promo codes (Nov 2026): create, edit and deactivate, with the
+  // number of people each code brought (usedCount).
+  const [promoFormOpen, setPromoFormOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<AdminPromoCode | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoSaving, setPromoSaving] = useState(false);
+  const [promoForm, setPromoForm] = useState({
+    code: "",
+    discountType: "percent" as "percent" | "free",
+    discountValue: "10",
+    planSlugs: [] as string[],
+    maxUses: "",
+    expiresAt: "",
+    accessDurationDays: "30",
+    isActive: true,
+  });
 
   const needle = query.trim().toLowerCase();
   const visible = useMemo(
@@ -92,12 +119,17 @@ export default function AdminSubscriptions({
     setChanging(row);
   }
 
-  async function confirmChange() {
+  async function confirmChange(payload: AdminChangePayload) {
     if (!changing) return;
     const res = await fetch(`/api/admin/subscriptions/${changing.userId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planSlug: targetPlanSlug }),
+      body: JSON.stringify({
+        planSlug: targetPlanSlug,
+        billingCycle: payload.billingCycle,
+        endsAt: payload.endsAt,
+        promoCode: payload.promoCode,
+      }),
     });
     if (!res.ok) {
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -194,6 +226,121 @@ export default function AdminSubscriptions({
     } finally {
       setEditSaving(false);
     }
+  }
+
+  function startPromoCreate() {
+    setPromoError(null);
+    setEditingPromo(null);
+    setPromoFormOpen(true);
+    setPromoForm({
+      code: "",
+      discountType: "percent",
+      discountValue: "10",
+      planSlugs: [],
+      maxUses: "",
+      expiresAt: "",
+      accessDurationDays: "30",
+      isActive: true,
+    });
+  }
+
+  function startPromoEdit(promo: AdminPromoCode) {
+    setPromoError(null);
+    setEditingPromo(promo);
+    setPromoFormOpen(true);
+    setPromoForm({
+      code: promo.code,
+      discountType: promo.discountType,
+      discountValue: String(promo.discountValue),
+      planSlugs: promo.applicablePlanSlugs,
+      maxUses: promo.maxUses === null ? "" : String(promo.maxUses),
+      expiresAt: promo.expiresAt ? promo.expiresAt.slice(0, 10) : "",
+      accessDurationDays: String(promo.accessDurationDays),
+      isActive: promo.isActive,
+    });
+  }
+
+  function generatePromoCodeValue() {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 8; i++) {
+      code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    setPromoForm({ ...promoForm, code });
+  }
+
+  async function savePromo(event: React.FormEvent) {
+    event.preventDefault();
+    const code = promoForm.code.trim().toUpperCase();
+    if (code.length < 3) {
+      setPromoError("The code needs at least 3 characters.");
+      return;
+    }
+    const discountValue = Number(promoForm.discountValue);
+    if (
+      promoForm.discountType === "percent" &&
+      (!Number.isInteger(discountValue) || discountValue < 1 || discountValue > 100)
+    ) {
+      setPromoError("A percent code needs a discount from 1 to 100%.");
+      return;
+    }
+    const maxUses = promoForm.maxUses.trim() === "" ? null : Number(promoForm.maxUses);
+    if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) {
+      setPromoError("Max uses must be a whole number, or empty for unlimited.");
+      return;
+    }
+    const accessDurationDays = Number(promoForm.accessDurationDays);
+    if (!Number.isInteger(accessDurationDays) || accessDurationDays < 1 || accessDurationDays > 365) {
+      setPromoError("Access duration must be 1 to 365 days.");
+      return;
+    }
+    setPromoError(null);
+    setPromoSaving(true);
+    try {
+      const payload = {
+        code,
+        discountType: promoForm.discountType,
+        discountValue: promoForm.discountType === "free" ? 0 : discountValue,
+        applicablePlanSlugs: promoForm.planSlugs,
+        maxUses,
+        expiresAt: promoForm.expiresAt ? new Date(`${promoForm.expiresAt}T00:00:00`).toISOString() : null,
+        accessDurationDays,
+        isActive: promoForm.isActive,
+      };
+      const res = await fetch(
+        editingPromo ? `/api/admin/promo-codes/${editingPromo.id}` : "/api/admin/promo-codes",
+        {
+          method: editingPromo ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not save the promo code.");
+      }
+      setEditingPromo(null);
+      setPromoFormOpen(false);
+      router.refresh();
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : "Could not save the promo code.");
+    } finally {
+      setPromoSaving(false);
+    }
+  }
+
+  async function togglePromoActive(promo: AdminPromoCode) {
+    const res = await fetch(`/api/admin/promo-codes/${promo.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !promo.isActive }),
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      setPromoError(data?.error ?? "Could not change the promo code.");
+      return;
+    }
+    router.refresh();
   }
 
   const targetPlan = plans.find((p) => p.slug === targetPlanSlug) ?? null;
@@ -450,6 +597,328 @@ export default function AdminSubscriptions({
                       </select>
                     </td>
                   )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="ad-section-head" style={{ marginTop: 28 }}>
+        <h3>Promo codes</h3>
+        <p>
+          Codes visitors apply in the plan-change popup, or the admin grants with a plan. A
+          percent code takes a percentage off the price shown; a free code grants access for its
+          duration, then the account returns to Discovery. One use per account per code. &ldquo;People
+          brought&rdquo; is the real use count from the database.
+        </p>
+      </div>
+      {promoError && (
+        <p role="alert" style={{ color: "#9a2b2b", fontSize: 14 }}>
+          {promoError}
+        </p>
+      )}
+      {promoCodes.length === 0 ? (
+        <p style={{ color: "var(--muted)", fontSize: 14 }}>No promo codes yet.</p>
+      ) : (
+        <div className="ad-card ad-table-wrap">
+          <table className="ad-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Discount</th>
+                <th>Plans</th>
+                <th>Uses</th>
+                <th>People brought</th>
+                <th>Expires</th>
+                <th>Access</th>
+                <th>Status</th>
+                {canManage && <th></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {promoCodes.map((promo) => (
+                <tr key={promo.id}>
+                  <td>
+                    <strong>{promo.code}</strong>
+                    <br />
+                    <span style={{ color: "var(--muted)", fontSize: 12 }}>
+                      by {promo.createdByName}
+                    </span>
+                  </td>
+                  <td>
+                    {promo.discountType === "free" ? "Free access" : `${promo.discountValue}% off`}
+                  </td>
+                  <td>
+                    {promo.applicablePlanSlugs.length === 0
+                      ? "All plans"
+                      : promo.applicablePlanSlugs.join(", ")}
+                  </td>
+                  <td>
+                    {promo.usedCount}
+                    {promo.maxUses !== null ? ` / ${promo.maxUses}` : " (unlimited)"}
+                  </td>
+                  <td>{promo.usedCount}</td>
+                  <td>
+                    {promo.expiresAt
+                      ? new Date(promo.expiresAt).toLocaleDateString("en-GB")
+                      : "Never"}
+                  </td>
+                  <td>{promo.accessDurationDays} days</td>
+                  <td>{promo.isActive ? "Active" : "Disabled"}</td>
+                  {canManage && (
+                    <td>
+                      <button type="button" className="ad-card-link" onClick={() => startPromoEdit(promo)}>
+                        Edit
+                      </button>{" "}
+                      <button
+                        type="button"
+                        className="ad-card-link"
+                        onClick={() => void togglePromoActive(promo)}
+                      >
+                        {promo.isActive ? "Disable" : "Enable"}
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {canManage && (
+        <div style={{ marginTop: 12 }}>
+          <button type="button" onClick={startPromoCreate}>
+            Create a promo code
+          </button>
+        </div>
+      )}
+      {canManage && promoFormOpen && (
+        <form className="ad-card" onSubmit={savePromo} style={{ marginTop: 16 }}>
+          <div className="ad-card-head">
+            <div>
+              <h2>{editingPromo ? `Edit promo code: ${editingPromo.code}` : "Create a promo code"}</h2>
+              <p className="ad-card-sub">
+                No payment is connected, so a code reduces the price shown or grants free access.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 12, maxWidth: 640 }}>
+            <label style={{ display: "grid", gap: 4, fontSize: 14 }}>
+              Code
+              <span style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={promoForm.code}
+                  onChange={(e) => setPromoForm({ ...promoForm, code: e.target.value.toUpperCase() })}
+                  required
+                  minLength={3}
+                  maxLength={20}
+                  style={{ flex: 1, textTransform: "uppercase" }}
+                />
+                <button type="button" onClick={generatePromoCodeValue}>
+                  Generate
+                </button>
+              </span>
+            </label>
+            <div style={{ display: "flex", gap: 12 }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 14, flex: 1 }}>
+                Discount type
+                <select
+                  value={promoForm.discountType}
+                  onChange={(e) =>
+                    setPromoForm({
+                      ...promoForm,
+                      discountType: e.target.value as "percent" | "free",
+                    })
+                  }
+                >
+                  <option value="percent">Percent off</option>
+                  <option value="free">Free access</option>
+                </select>
+              </label>
+              {promoForm.discountType === "percent" && (
+                <label style={{ display: "grid", gap: 4, fontSize: 14, flex: 1 }}>
+                  Discount (%)
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={promoForm.discountValue}
+                    onChange={(e) => setPromoForm({ ...promoForm, discountValue: e.target.value })}
+                    required
+                  />
+                </label>
+              )}
+              <label style={{ display: "grid", gap: 4, fontSize: 14, flex: 1 }}>
+                Access duration (days)
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  step="1"
+                  value={promoForm.accessDurationDays}
+                  onChange={(e) => setPromoForm({ ...promoForm, accessDurationDays: e.target.value })}
+                  required
+                />
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 16, fontSize: 14 }}>
+              <span style={{ color: "var(--muted)" }}>Applies to:</span>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="checkbox"
+                  checked={promoForm.planSlugs.includes("creator")}
+                  onChange={(e) =>
+                    setPromoForm({
+                      ...promoForm,
+                      planSlugs: e.target.checked
+                        ? [...promoForm.planSlugs, "creator"]
+                        : promoForm.planSlugs.filter((s) => s !== "creator"),
+                    })
+                  }
+                />
+                Creator
+              </label>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="checkbox"
+                  checked={promoForm.planSlugs.includes("studio")}
+                  onChange={(e) =>
+                    setPromoForm({
+                      ...promoForm,
+                      planSlugs: e.target.checked
+                        ? [...promoForm.planSlugs, "studio"]
+                        : promoForm.planSlugs.filter((s) => s !== "studio"),
+                    })
+                  }
+                />
+                Studio
+              </label>
+              <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                (none ticked = all plans)
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 14, flex: 1 }}>
+                Max uses (empty = unlimited)
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={promoForm.maxUses}
+                  onChange={(e) => setPromoForm({ ...promoForm, maxUses: e.target.value })}
+                />
+              </label>
+              <label style={{ display: "grid", gap: 4, fontSize: 14, flex: 1 }}>
+                Expires on (empty = never)
+                <input
+                  type="date"
+                  value={promoForm.expiresAt}
+                  onChange={(e) => setPromoForm({ ...promoForm, expiresAt: e.target.value })}
+                />
+              </label>
+            </div>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
+              <input
+                type="checkbox"
+                checked={promoForm.isActive}
+                onChange={(e) => setPromoForm({ ...promoForm, isActive: e.target.checked })}
+              />
+              Active
+            </label>
+            {promoError && (
+              <p role="alert" style={{ color: "#9a2b2b", fontSize: 14, margin: 0 }}>
+                {promoError}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button type="submit" disabled={promoSaving}>
+                {promoSaving ? "Saving…" : editingPromo ? "Save promo code" : "Create promo code"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPromoFormOpen(false);
+                  setEditingPromo(null);
+                }}
+                disabled={promoSaving}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      <div className="ad-section-head" style={{ marginTop: 28 }}>
+        <h3>Referrals</h3>
+        <p>
+          Every account has a referral code. When an invited friend takes a paid plan, the
+          referrer earns 1 free month. All numbers below are counted from the database.
+        </p>
+      </div>
+      {referralStats.byReferrer.length === 0 ? (
+        <p style={{ color: "var(--muted)", fontSize: 14 }}>
+          No referrals yet. Referral codes are created at signup and on the &ldquo;My plan&rdquo;
+          card.
+        </p>
+      ) : (
+        <div className="ad-card ad-table-wrap">
+          <table className="ad-table">
+            <thead>
+              <tr>
+                <th>Referrer</th>
+                <th>Code</th>
+                <th>People brought</th>
+                <th>Paid conversions</th>
+                <th>Rewards paid</th>
+              </tr>
+            </thead>
+            <tbody>
+              {referralStats.byReferrer.map((row) => (
+                <tr key={row.referrerId}>
+                  <td>
+                    {row.referrerName}
+                    <br />
+                    <span style={{ color: "var(--muted)", fontSize: 12 }}>{row.referrerEmail}</span>
+                  </td>
+                  <td>
+                    <strong>{row.referralCode ?? "Not set yet"}</strong>
+                  </td>
+                  <td>{row.signups}</td>
+                  <td>{row.paidConversions}</td>
+                  <td>{row.rewarded}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {referralStats.referrals.length > 0 && (
+        <div className="ad-card ad-table-wrap" style={{ marginTop: 12 }}>
+          <table className="ad-table">
+            <thead>
+              <tr>
+                <th>Referred account</th>
+                <th>Referrer</th>
+                <th>Their plan now</th>
+                <th>Status</th>
+                <th>Signed up</th>
+              </tr>
+            </thead>
+            <tbody>
+              {referralStats.referrals.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    {row.referredName}
+                    <br />
+                    <span style={{ color: "var(--muted)", fontSize: 12 }}>{row.referredEmail}</span>
+                  </td>
+                  <td>{row.referrerName}</td>
+                  <td>{row.referredPlanSlug ?? "No plan yet"}</td>
+                  <td>{row.status}</td>
+                  <td>{new Date(row.createdAt).toLocaleDateString("en-GB")}</td>
                 </tr>
               ))}
             </tbody>

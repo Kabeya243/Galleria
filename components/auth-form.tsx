@@ -37,13 +37,24 @@ function GoogleButton() {
   );
 }
 
-export default function AuthForm({ mode }: { mode: "login" | "register" }) {
+export default function AuthForm({
+  mode,
+  initialReferralCode,
+}: {
+  mode: "login" | "register";
+  // Prefilled from /register?ref=CODE when the visitor follows a
+  // referral link (Nov 2026).
+  initialReferralCode?: string;
+}) {
   const t = useT();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [country, setCountry] = useState("");
+  // Optional referral code (Nov 2026): the code of the account that
+  // invited this visitor. An unknown code is ignored by the server.
+  const [referralCode, setReferralCode] = useState(initialReferralCode ?? "");
   // Mandatory since Nov 2026: the visitor must tick "I agree to the
   // Terms of Use and Privacy Policy" — the submit button stays
   // disabled until then, and the server rejects the call anyway.
@@ -109,7 +120,15 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isRegister
-            ? { name, email, password, acceptTerms, role: role || undefined, country: country || undefined }
+            ? {
+                name,
+                email,
+                password,
+                acceptTerms,
+                role: role || undefined,
+                country: country || undefined,
+                referralCode: referralCode.trim() ? referralCode.trim().toUpperCase() : undefined,
+              }
             : { email, password, rememberMe },
         ),
       });
@@ -275,6 +294,21 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                       <option key={item} value={item} />
                     ))}
                   </datalist>
+                </div>
+              </div>
+            )}
+            {isRegister && (
+              <div className="auth-noir-field">
+                <label htmlFor="auth-referral">{t("pricing", "referralCodePlaceholder")}</label>
+                <div className="auth-noir-field-row">
+                  <input
+                    id="auth-referral"
+                    autoComplete="off"
+                    maxLength={20}
+                    value={referralCode}
+                    onChange={(event) => setReferralCode(event.target.value.toUpperCase())}
+                    placeholder={t("pricing", "referralCodePlaceholder")}
+                  />
                 </div>
               </div>
             )}

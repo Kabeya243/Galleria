@@ -50,11 +50,11 @@ export default function VisitorAnalytics({
   devices,
   referrers,
   countries,
-  // Where the exhibition selector navigates. The analytics live on the
-  // dashboard (since Nov 2026), so the default navigates to
-  // /?exhibitionId=…#visitor-analytics.
-  basePath = "/",
-  selectSuffix = "#visitor-analytics",
+  // Where the exhibition selector navigates. The analytics live on
+  // their own dashboard page (since Nov 2026), so the default
+  // navigates to /dashboard/analytics?exhibitionId=…
+  basePath = "/dashboard/analytics",
+  selectSuffix = "",
 }: {
   exhibitions: AnalyticsExhibition[];
   selectedId: string;

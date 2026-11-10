@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isAdminEmail } from "@/lib/auth";
 import { db, withDbRetry } from "@/lib/db";
 
 // Subscriptions (Nov 2026): the three Lakisa plans from the budget and
@@ -447,16 +448,40 @@ export type ToolAccess = {
   planSlug: PlanSlug;
   requiredPlanSlug: PlanSlug;
   paywallEnabled: boolean;
+  // The manager (platform owner) and sub-admins never pay and always
+  // have every tool, whatever plan their account shows (Nov 2026).
+  isAdmin: boolean;
 };
+
+// Is this account the platform owner or a sub-admin? The owner is the
+// account whose email is in ADMIN_EMAILS; a sub-admin holds a SubAdmin
+// grant. Checked on every call, so revoking a grant takes effect
+// immediately. Admin accounts never pay: their plan is only a label,
+// the access check below always lets them through.
+export async function isAdminAccount(userId: string): Promise<boolean> {
+  const user = await withDbRetry(() =>
+    db.user.findUnique({
+      where: { id: userId },
+      select: { email: true, subAdminGrant: { select: { id: true } } },
+    }),
+  );
+  if (!user) return false;
+  if (isAdminEmail(user.email)) return true;
+  return Boolean(user.subAdminGrant);
+}
 
 // Can this account open this tool? While the paywall is off, everything
 // is allowed (free trial). When it is on, the account needs at least the
-// tool's minimum plan.
+// tool's minimum plan, except admin accounts, which always pass.
 export async function getToolAccess(userId: string, toolSlug: string): Promise<ToolAccess> {
   const requiredPlanSlug = TOOL_PLAN[toolSlug] ?? "discovery";
-  const planSlug = await getUserPlanSlug(userId);
-  const allowed = !PAYWALL_ENABLED || planRank(planSlug) >= planRank(requiredPlanSlug);
-  return { allowed, planSlug, requiredPlanSlug, paywallEnabled: PAYWALL_ENABLED };
+  const [planSlug, isAdmin] = await Promise.all([
+    getUserPlanSlug(userId),
+    isAdminAccount(userId),
+  ]);
+  const allowed =
+    isAdmin || !PAYWALL_ENABLED || planRank(planSlug) >= planRank(requiredPlanSlug);
+  return { allowed, planSlug, requiredPlanSlug, paywallEnabled: PAYWALL_ENABLED, isAdmin };
 }
 
 // Server-side gate for tool pages: when the paywall is on and the
@@ -504,17 +529,19 @@ export type LimitCheck = {
 
 // Is there room left under the plan limit for one more of `key`? While
 // the paywall is off, everything is allowed (free trial) but the counts
-// are still reported, so the pricing page can show real usage.
+// are still reported, so the pricing page can show real usage. Admin
+// accounts are never blocked by a plan limit.
 export async function checkLimit(
   userId: string,
   key: "exhibitions" | "artworks" | "contacts",
 ): Promise<LimitCheck> {
-  const [{ plan }, usage] = await Promise.all([
+  const [{ plan }, usage, isAdmin] = await Promise.all([
     getUserSubscription(userId),
     getUserUsage(userId),
+    isAdminAccount(userId),
   ]);
   const limit = plan.limits[key];
   const used = usage[key];
-  const allowed = !PAYWALL_ENABLED || limit === null || used < limit;
+  const allowed = isAdmin || !PAYWALL_ENABLED || limit === null || used < limit;
   return { allowed, used, limit, paywallEnabled: PAYWALL_ENABLED };
 }

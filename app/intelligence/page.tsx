@@ -31,10 +31,10 @@ export default async function IntelligenceHub() {
     description: "adminStatsDesc",
           status: "owner-only",
         },
-    // Visitor analytics moved to the dashboard (Nov 2026): the full
-    // analytics live there under #visitor-analytics.
+    // Visitor analytics moved to their own dashboard page (Nov 2026):
+    // the full analytics live on /dashboard/analytics.
     {
-      href: "/#visitor-analytics",
+      href: "/dashboard/analytics",
       icon: BarChart3,
       title: "insights",
     description: "insightsDesc",

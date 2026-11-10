@@ -35,8 +35,9 @@ export type ExhibitionAnalytics = {
 // same definition as the dashboard's Visitor statistics, so the two
 // agree. Artwork-detail opens are counted separately, under Most
 // viewed artworks, and must not inflate the visit totals. Used by the
-// dashboard (the analytics now live there, see components/dashboard.tsx);
-// the old /tools/visitor-analytics page redirects to /#visitor-analytics.
+// dashboard (the analytics now live on /dashboard/analytics, see
+// app/dashboard/analytics/page.tsx); the old /tools/visitor-analytics
+// page redirects to /dashboard/analytics.
 export async function getExhibitionAnalytics(
   exhibitionId: string,
 ): Promise<ExhibitionAnalytics> {

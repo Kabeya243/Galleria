@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { db } from "@/lib/db";
 import { issueVerificationEmail } from "@/lib/email-verification";
+import { buildReferralCode, recordReferral } from "@/lib/referrals";
 import { registrationSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -14,6 +15,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
     }
 
+    // The account's own referral code, ready to share from the "My
+    // plan" card. The code is built from the name plus random
+    // characters; a collision (rare) retries with a fresh code instead
+    // of failing the signup.
+    let referralCode = buildReferralCode(input.name);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const taken = await db.user.findUnique({
+        where: { referralCode },
+        select: { id: true },
+      });
+      if (!taken) break;
+      referralCode = buildReferralCode(input.name);
+    }
     const user = await db.user.create({
       data: {
         email: input.email,
@@ -21,9 +35,23 @@ export async function POST(request: Request) {
         passwordHash: await hash(input.password, 12),
         role: input.role,
         country: input.country || undefined,
+        // Terms are mandatory at signup (acceptTerms in the schema),
+        // so the acceptance date is recorded here.
+        termsAcceptedAt: new Date(),
+        referralCode,
       },
       select: { id: true, email: true, name: true, role: true, country: true },
     });
+    // Referral (Nov 2026): an optional code entered at signup links
+    // this account to its referrer. An unknown or missing code is
+    // ignored, never a signup failure.
+    if (input.referralCode) {
+      try {
+        await recordReferral(input.referralCode, user.id);
+      } catch (error) {
+        console.error("Could not record the referral for signup.", error);
+      }
+    }
     // Email verification (Nov 2026): the account is created UNVERIFIED
     // and NO session is created here — the visitor must confirm the
     // link in their inbox first (see /api/auth/verify-email). The

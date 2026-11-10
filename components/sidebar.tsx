@@ -12,6 +12,7 @@ import {
   Boxes,
   Calculator,
   Compass,
+  CreditCard,
   FileText,
   GalleryVerticalEnd,
   Grid2X2,
@@ -122,10 +123,10 @@ const NAV_GROUPS: NavGroup[] = [
     hub: "/intelligence",
     label: "intelligence",
     items: [
-      // Visitor analytics moved to the dashboard (Nov 2026): the
-      // "insights" link goes to the dashboard section. Admin analytics
+      // Visitor analytics moved to their own page (Nov 2026): the
+      // "insights" link goes to /dashboard/analytics. Admin analytics
       // stays owner-only.
-      { id: "insights", href: "/#visitor-analytics", label: "insights", icon: BarChart3 },
+      { id: "insights", href: "/dashboard/analytics", label: "insights", icon: BarChart3 },
       { id: "analytics", href: "/admin", label: "adminAnalytics", icon: ShieldCheck, adminOnly: true },
     ],
   },
@@ -135,6 +136,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "studio",
     items: [
       { id: "dashboard", href: "/", label: "dashboard", icon: Grid2X2 },
+      { id: "my-plan", href: "/dashboard/plan", label: "myPlan", icon: CreditCard },
       { id: "settings", href: "/settings", label: "settings", icon: Settings2 },
     ],
   },
@@ -145,6 +147,8 @@ const NAV_GROUPS: NavGroup[] = [
 // header instead.
 const LEGACY_ACTIVE: Record<string, string> = {
   overview: "dashboard",
+  plan: "my-plan",
+  analytics: "insights",
   exhibitions: "exhibitions",
   artworks: "my-artworks",
   explore: "explore",
@@ -158,6 +162,8 @@ const LEGACY_ACTIVE: Record<string, string> = {
 
 export type SidebarActive =
   | "overview"
+  | "plan"
+  | "analytics"
   | "settings"
   | "galleries"
   | "exhibitions"

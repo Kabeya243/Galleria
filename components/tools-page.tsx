@@ -74,7 +74,7 @@ function planDisplayName(slug: PlanSlug): string {
 // Studio, AI Architect, Artwork Intelligence, AI Assistant, Marketing
 // Studio, Print Studio, Teams, Digital Twin (hidden for now).
 // Merged: Collection Manager into Inventory, Visitor Analytics into the
-// dashboard (/#visitor-analytics), Frame Studio + Mockup Studio into
+// dashboard (/dashboard/analytics), Frame Studio + Mockup Studio into
 // Frames & Art on Walls. The Website Builder opens in a new window,
 // fullscreen, as a standalone platform.
 const TOOLS = [

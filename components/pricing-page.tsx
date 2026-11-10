@@ -6,7 +6,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Check, X } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
 import SiteFooter from "@/components/site-footer";
-import { PlanChangeDialog, ToolLockedDialog } from "@/components/subscription-dialogs";
+import { PlanChangeDialog, ToolLockedDialog, type PlanChangePayload } from "@/components/subscription-dialogs";
 import { useLocale, useT, type DictionarySection } from "@/lib/i18n";
 import type { PlanDTO, PlanSlug, SubscriptionDTO } from "@/lib/subscriptions";
 import styles from "./pricing-page.module.css";
@@ -96,15 +96,38 @@ export default function PricingPage() {
   const formatUgx = (usd: number) =>
     new Intl.NumberFormat(locale).format(usd * UGX_PER_USD);
 
-  async function confirmChange() {
+  async function confirmChange(payload: PlanChangePayload) {
     if (!changeTarget) return;
     const res = await fetch("/api/subscriptions/change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planSlug: changeTarget.slug, billingCycle: cycle }),
+      body: JSON.stringify({
+        planSlug: changeTarget.slug,
+        billingCycle: cycle,
+        promoCode: payload.promoCode,
+        termsAccepted: payload.termsAccepted,
+      }),
     });
     if (!res.ok) {
       if (res.status === 409) throw new Error(t("pricing", "billingNotConnected"));
+      const data = (await res.json().catch(() => null)) as { error?: string; reason?: string } | null;
+      if (data?.error === "promo_invalid") {
+        const reason = data.reason ?? "not_found";
+        const key =
+          reason === "expired"
+            ? "promoExpired"
+            : reason === "already_used"
+              ? "promoAlreadyUsed"
+              : reason === "not_for_plan"
+                ? "promoNotForPlan"
+                : reason === "no_uses_left"
+                  ? "promoNoUsesLeft"
+                  : reason === "inactive"
+                    ? "promoInactive"
+                    : "promoInvalid";
+        throw new Error(t("pricing", key));
+      }
+      if (data?.error === "terms_required") throw new Error(t("pricing", "termsRequired"));
       throw new Error(t("pricing", "changeFailed"));
     }
     setChangeTarget(null);

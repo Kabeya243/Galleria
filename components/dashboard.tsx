@@ -1,16 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Avatar from "@/components/avatar";
-import PlanCard from "@/components/plan-card";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
-import VisitorAnalytics, {
-  type AnalyticsDay,
-  type AnalyticsExhibition,
-  type CountRow,
-  type TopArtwork,
-} from "@/components/visitor-analytics";
 import { useT } from "@/lib/i18n";
 import type { RoomModelId } from "@/lib/rooms";
 import {
@@ -22,7 +16,7 @@ import {
   Plus,
   Search,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./user-dashboard.module.css";
 
 type StatDelta = { value: number; delta: string; tone: "up" | "flat" };
@@ -36,26 +30,6 @@ type TopExhibition = {
   artworkCount: number;
 };
 
-// The full per-exhibition visitor analytics (merged here from the old
-// Visitor Analytics tool, Nov 2026). Null when the user has no
-// exhibition yet.
-export type DashboardVisitorAnalytics = {
-  exhibitions: AnalyticsExhibition[];
-  selectedId: string;
-  selectedSlug: string;
-  selectedTitle: string;
-  daily: AnalyticsDay[];
-  totalVisits30: number;
-  uniqueVisitors30: number;
-  totalVisitsAllTime: number;
-  uniqueVisitorsAllTime: number;
-  avgDurationSeconds: number | null;
-  topArtworks: TopArtwork[];
-  devices: CountRow[];
-  referrers: CountRow[];
-  countries: CountRow[];
-};
-
 type ChartDay = { label: string; full: string; count: number; isRecentWeek: boolean };
 
 export default function Dashboard({
@@ -66,7 +40,6 @@ export default function Dashboard({
   chartTotal,
   chartRange,
   topExhibitions,
-  visitorAnalytics,
 }: {
   user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   exhibitionCount: number;
@@ -80,14 +53,24 @@ export default function Dashboard({
   chartTotal: number;
   chartRange: string;
   topExhibitions: TopExhibition[];
-  visitorAnalytics: DashboardVisitorAnalytics | null;
 }) {
   const t = useT();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const firstName = user.name.split(" ")[0] || user.name;
+
+  // Legacy anchor (Nov 2026): the visitor analytics used to live on
+  // this page under #visitor-analytics. They are their own page now
+  // (/dashboard/analytics), so an old link landing here with that
+  // anchor is sent to the new page instead of nowhere.
+  useEffect(() => {
+    if (window.location.hash === "#visitor-analytics") {
+      router.replace("/dashboard/analytics");
+    }
+  }, [router]);
 
   const filteredExhibitions = topExhibitions.filter((exhibition) =>
     exhibition.title.toLowerCase().includes(query.trim().toLowerCase()),
@@ -221,8 +204,6 @@ export default function Dashboard({
             ))}
           </section>
 
-          <PlanCard />
-
           <section className={styles.card} aria-label="Your activity">
             <div className="section-heading">
               <div>
@@ -300,31 +281,6 @@ export default function Dashboard({
                   </tbody>
                 </table>
               </div>
-            )}
-          </section>
-
-          {/* Visitor analytics (merged here from the old Visitor
-              Analytics tool, Nov 2026): visits, unique visitors, most
-              viewed artworks, devices, traffic sources and countries,
-              per exhibition, with a CSV export. The anchor
-              #visitor-analytics is where /tools/visitor-analytics and
-              the Intelligence hub link to. */}
-          <section id="visitor-analytics" className={styles.card} aria-label={t("stats", "visitorStats")}>
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">{t("stats", "visits")}</span>
-                <h2>{t("stats", "visitorStats")}</h2>
-                <p className={styles.cardSub}>{t("stats", "visitorStatsDesc")}</p>
-              </div>
-            </div>
-            {visitorAnalytics === null ? (
-              <p className={styles.empty}>{t("stats", "noExhibitionsForStats")}</p>
-            ) : (
-              <VisitorAnalytics
-                {...visitorAnalytics}
-                basePath="/"
-                selectSuffix="#visitor-analytics"
-              />
             )}
           </section>
 

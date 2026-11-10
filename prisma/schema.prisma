@@ -67,6 +67,25 @@ model User {
   // lazily on first read by lib/subscriptions.ts. See SubscriptionPlan
   // and Subscription below.
   subscription Subscription?
+  // Terms acceptance (Nov 2026): set at signup (mandatory there) and
+  // again at every plan change, when the visitor ticks "I accept the
+  // Terms of Use and the Privacy Policy". Null for accounts created
+  // before this field existed.
+  termsAcceptedAt DateTime?
+  // Referral (Nov 2026): a unique code for this account (letters from
+  // the name plus random characters, uppercase), shown on the "My plan"
+  // card with a shareable link. referredById is the account whose code
+  // this account used at signup, if any. See Referral below.
+  referralCode String? @unique
+  referredById String?
+  // Promo codes created by this account (manager or sub-admin with
+  // subscriptions.manage) and promo code uses by this account.
+  promoCodesCreated PromoCode[] @relation("PromoCodeCreator")
+  promoCodeUses PromoCodeUse[]
+  // Referrals: given (this account invited others) and received (this
+  // account was invited by someone).
+  referralsGiven   Referral[] @relation("ReferralReferrer")
+  referralReceived Referral?  @relation("ReferralReferred")
 }
 
 model PasswordResetToken {
@@ -718,11 +737,89 @@ model Subscription {
   source       String           @default("trial")
   startedAt    DateTime         @default(now())
   endsAt       DateTime?
+  // Free months earned through referrals (Nov 2026): one month per
+  // referred friend who took a paid plan, credited while the account
+  // is already on a paid plan. No billing exists yet, so the credit is
+  // recorded here and applied as free months when billing starts.
+  freeMonths   Int              @default(0)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   @@index([planId])
   @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Promo codes and referrals (Nov 2026)
+// ---------------------------------------------------------------------------
+// A promo code reduces the displayed price of a plan change (percent
+// off) or grants free access for a number of days (free). The admin
+// creates them in the Subscriptions section of /admin; a visitor
+// applies one in the plan-change popup, and the admin can also grant a
+// plan to a specific account with a code and an explicit end date.
+// applicablePlanSlugs is the list of plan slugs the code works on;
+// empty means every plan. maxUses null means unlimited. usedCount is
+// the number of people the code brought (one use per account, enforced
+// by the unique constraint on PromoCodeUse). No payment is integrated
+// in this lot: a code reduces the price shown or grants free access,
+// nothing is charged. Applied by `prisma db push` on deploy (see
+// vercel.json); no data migration — the tables start empty.
+// ---------------------------------------------------------------------------
+model PromoCode {
+  id                 String         @id @default(cuid())
+  code               String         @unique
+  // "percent" (discountValue is the percentage off) or "free" (free
+  // access for accessDurationDays).
+  discountType       String         @default("percent")
+  discountValue      Int            @default(0)
+  applicablePlanSlugs Json          @default("[]")
+  maxUses            Int?
+  usedCount          Int            @default(0)
+  expiresAt          DateTime?
+  accessDurationDays Int            @default(30)
+  isActive           Boolean        @default(true)
+  createdById        String
+  createdBy          User           @relation("PromoCodeCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  uses               PromoCodeUse[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model PromoCodeUse {
+  id            String    @id @default(cuid())
+  promoCodeId   String
+  promoCode     PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planSlug      String
+  discountValue Int       @default(0)
+  usedAt        DateTime  @default(now())
+
+  @@unique([promoCodeId, userId])
+  @@index([promoCodeId])
+  @@index([userId])
+}
+
+// Referral (Nov 2026): one row per invited account. status is pending
+// at signup, then rewarded once the referred account takes a paid plan
+// and the referrer's reward is granted (1 free month of the referrer's
+// current plan, or 1 free month of Creator when the referrer is on
+// Discovery). See lib/referrals.ts. Applied by `prisma db push` on
+// deploy (see vercel.json); no data migration — the table starts empty.
+model Referral {
+  id             String   @id @default(cuid())
+  referrerId     String
+  referrer       User     @relation("ReferralReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId String   @unique
+  referredUser   User     @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([referrerId])
 }
 
 // ---------------------------------------------------------------------------

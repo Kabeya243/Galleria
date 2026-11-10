@@ -28,15 +28,18 @@ type NavItem = {
   badge?: number;
 };
 
-// Standalone shell for the Admin area (CRM): ONE single page, no SANAA app
-// sidebar and no SANAA navigation at all. The Admin has its own collapsible
-// sidebar menu (style: dark minimal dashboard sidebar — logo + title on
-// top, search field, grouped nav items with icons, active item highlighted,
-// account section at the bottom). A hamburger collapses it to a narrow
-// icon-only rail; the collapsed state persists in localStorage. Every admin
-// page is server-rendered and already checked the user's permissions before
-// rendering, so this shell trusts its props — `sections` lists the nav
-// items the viewer may open (a sub-admin only sees their own sections).
+// Standalone shell for the Admin area (CRM): one page per section, no
+// SANAA app sidebar and no SANAA navigation at all. The Admin has its
+// own collapsible sidebar menu (style: dark minimal dashboard sidebar
+// — logo + title on top, search field, grouped nav items with icons,
+// active item highlighted, account section at the bottom). A hamburger
+// collapses it to a narrow icon-only rail; the collapsed state persists
+// in localStorage. Every admin page is server-rendered and already
+// checked the user's permissions before rendering, so this shell trusts
+// its props — `sections` lists the nav items the viewer may open (a
+// sub-admin only sees their own sections), and `active` is the section
+// of the page being shown (each section is its own route now, so the
+// old scroll-tracking observer is gone).
 export default function AdminShell({
   user,
   title,
@@ -44,6 +47,7 @@ export default function AdminShell({
   description,
   counts,
   sections,
+  active,
   children,
 }: {
   user: { id: string; name: string; email: string };
@@ -53,36 +57,17 @@ export default function AdminShell({
   counts?: { users: number; exhibitions: number; artworks: number; tools?: number };
   // Nav ids the viewer may open; omitted = all (the manager).
   sections?: string[];
+  // The section of the page being shown (one of the nav ids).
+  active: string;
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [active, setActive] = useState("overview");
   const [query, setQuery] = useState("");
 
   // Read the pre-paint collapsed state (set by the inline script in
   // app/admin/layout.tsx, so the sidebar never flashes the wrong width).
   useEffect(() => {
     setCollapsed(document.documentElement.getAttribute("data-admin-collapsed") === "true");
-  }, []);
-
-  // Track which section is on screen, so the matching menu item is
-  // highlighted (like the reference's active Dashboard row).
-  useEffect(() => {
-    const ids = ["overview", "users", "exhibitions", "artworks", "galleries", "tools", "test-reports", "subscriptions", "sub-admins"];
-    const elements = ids
-      .map((id) => document.getElementById(id))
-      .filter((el): el is HTMLElement => el !== null);
-    if (elements.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActive(entry.target.id);
-        }
-      },
-      { rootMargin: "-20% 0px -70% 0px" },
-    );
-    for (const el of elements) observer.observe(el);
-    return () => observer.disconnect();
   }, []);
 
   function toggleCollapsed() {
@@ -102,51 +87,51 @@ export default function AdminShell({
   }
 
   const items: NavItem[] = [
-    { id: "overview", label: "Dashboard", href: "#overview", icon: <LayoutDashboard size={18} /> },
-    { id: "users", label: "All users", href: "#users", icon: <Users size={18} />, badge: counts?.users },
+    { id: "overview", label: "Dashboard", href: "/admin", icon: <LayoutDashboard size={18} /> },
+    { id: "users", label: "All users", href: "/admin/users", icon: <Users size={18} />, badge: counts?.users },
     {
       id: "exhibitions",
       label: "All exhibitions",
-      href: "#exhibitions",
+      href: "/admin/exhibitions",
       icon: <Images size={18} />,
       badge: counts?.exhibitions,
     },
     {
       id: "artworks",
       label: "All artworks",
-      href: "#artworks",
+      href: "/admin/artworks",
       icon: <ImageIcon size={18} />,
       badge: counts?.artworks,
     },
     {
       id: "galleries",
       label: "Galleries",
-      href: "#galleries",
+      href: "/admin/galleries",
       icon: <LayoutGrid size={18} />,
     },
     {
       id: "tools",
       label: "Tools used",
-      href: "#tools",
+      href: "/admin/tools",
       icon: <Wrench size={18} />,
       badge: counts?.tools,
     },
     {
       id: "test-reports",
       label: "Test reports",
-      href: "#test-reports",
+      href: "/admin/test-reports",
       icon: <ClipboardCheck size={18} />,
     },
     {
       id: "subscriptions",
       label: "Subscriptions",
-      href: "#subscriptions",
+      href: "/admin/subscriptions",
       icon: <CreditCard size={18} />,
     },
     {
       id: "sub-admins",
       label: "Sub-admins",
-      href: "#sub-admins",
+      href: "/admin/sub-admins",
       icon: <ShieldCheck size={18} />,
     },
   ].filter((item) => !sections || sections.includes(item.id));
@@ -197,7 +182,6 @@ export default function AdminShell({
                 href={item.href}
                 className={`ad-nav-item${active === item.id ? " ad-nav-active" : ""}`}
                 onClick={() => {
-                  setActive(item.id);
                   // On a small screen the sidebar is a drawer: close it after jumping.
                   if (window.innerWidth < 760) toggleCollapsed();
                 }}

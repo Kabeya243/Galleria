@@ -1453,6 +1453,18 @@ html:has(.ad-root), html:has(.ad-root) body { overflow-y: auto; }
 html:has(.published-site), html:has(.published-site) body,
 html:has(.legacy-site-page), html:has(.legacy-site-page) body { overflow-y: auto; height: auto; }
 
+/* Auth pages (/register, /login, /forgot-password, /reset-password) are
+   plain long pages outside .app-shell, with no inner scroll container
+   of their own — the same trap as the Admin and the published sites
+   had: the locked window (html, body { overflow: hidden }) made
+   everything below the first viewport unreachable. On mobile the
+   register form (name, email, password, confirm, terms, checklist)
+   is taller than the viewport, so the bottom of the form and the
+   round submit button could not be reached at all. Restore normal
+   window scrolling whenever an auth page is on screen (:has keeps
+   every other page on the locked-window shell). */
+html:has(.auth-noir), html:has(.auth-noir) body { overflow-y: auto; height: auto; }
+
 .ad-root {
   --ad-bg: #0a0a0b;
   --ad-card: #161618;

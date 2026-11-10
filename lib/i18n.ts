@@ -516,6 +516,7 @@ export const DICTIONARY = {
       ko: "대시보드",
       sw: "Dashibodi",
     },
+    myPlan: { fr: "Mon offre", en: "My plan" },
     settings: { fr: "Paramètres", en: "Settings",
       de: "Einstellungen",
       it: "Impostazioni",
@@ -2684,6 +2685,59 @@ export const DICTIONARY = {
     usageContacts: { fr: "Contacts", en: "Contacts" },
     changePlan: { fr: "Changer d'offre", en: "Change plan" },
     requiresPlan: { fr: "nécessite l'offre", en: "requires the plan" },
+    // Promo codes (Nov 2026): applied in the plan-change popup, before
+    // confirming. The validation reasons come from the server and are
+    // mapped to these sentences here, in the visitor's language.
+    promoCodeLabel: { fr: "Code promo", en: "Promo code" },
+    promoCodePlaceholder: { fr: "Ex. LAKISA10", en: "e.g. LAKISA10" },
+    promoApply: { fr: "Appliquer", en: "Apply" },
+    promoRemove: { fr: "Retirer", en: "Remove" },
+    promoDiscount: { fr: "Remise", en: "Discount" },
+    promoPriceAfter: { fr: "Prix après remise", en: "Price after discount" },
+    promoFreeFor: { fr: "Gratuit pendant", en: "Free for" },
+    promoDays: { fr: "jours", en: "days" },
+    promoInvalid: {
+      fr: "Code promo invalide ou expiré.",
+      en: "Promo code invalid or expired.",
+    },
+    promoInactive: {
+      fr: "Ce code promo est désactivé.",
+      en: "This promo code is disabled.",
+    },
+    promoExpired: {
+      fr: "Ce code promo a expiré.",
+      en: "This promo code has expired.",
+    },
+    promoNoUsesLeft: {
+      fr: "Ce code a atteint son nombre maximum d'utilisations.",
+      en: "This code has reached its maximum number of uses.",
+    },
+    promoAlreadyUsed: {
+      fr: "Vous avez déjà utilisé ce code.",
+      en: "You have already used this code.",
+    },
+    promoNotForPlan: {
+      fr: "Ce code ne s'applique pas à cette offre.",
+      en: "This code does not apply to this plan.",
+    },
+    // Terms acceptance before a plan change (Nov 2026): the checkbox
+    // text reuses the signup keys (auth.agreeTermsPrefix/And/Suffix)
+    // and the footer links, so the wording stays identical everywhere.
+    termsRequired: {
+      fr: "Vous devez accepter les Conditions d'utilisation et la Politique de confidentialité.",
+      en: "You must accept the Terms of Use and the Privacy Policy.",
+    },
+    // Referral (Nov 2026): the account's own code on the "My plan"
+    // card, with a shareable link. One referred friend on a paid plan
+    // earns 1 free month.
+    referralTitle: { fr: "Votre code de parrainage", en: "Your referral code" },
+    referralShare: {
+      fr: "Partagez ce lien : chaque ami qui prend une offre payante vous offre 1 mois gratuit.",
+      en: "Share this link: every friend who takes a paid plan earns you 1 free month.",
+    },
+    referralCopyLink: { fr: "Copier le lien", en: "Copy link" },
+    referralCopied: { fr: "Lien copié", en: "Link copied" },
+    referralCodePlaceholder: { fr: "Code de parrainage (facultatif)", en: "Referral code (optional)" },
   },
   // Legal pages (/terms, /privacy), chrome only; the legal body itself
   // is English (the language of Lakisa's legal documents) and lives in

@@ -43,6 +43,10 @@ export const registrationSchema = credentialsSchema.extend({
   // existed send nothing, and the account still works.
   role: z.enum(USER_ROLES).optional(),
   country: z.string().trim().max(80).optional(),
+  // Optional referral code (Nov 2026): the code of the account that
+  // invited this visitor. Unknown codes are ignored, never a signup
+  // failure; the code is uppercased and capped here.
+  referralCode: z.string().trim().toUpperCase().max(20).optional(),
 });
 
 export const profileUpdateSchema = z.object({

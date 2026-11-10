@@ -1,19 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PlanChangeDialog } from "@/components/subscription-dialogs";
+import { PlanChangeDialog, type PlanChangePayload } from "@/components/subscription-dialogs";
 import { useLocale, useT } from "@/lib/i18n";
 import type { PlanDTO, SubscriptionDTO } from "@/lib/subscriptions";
 
 // "My plan" card (Nov 2026): the account's current plan and its usage
-// against the plan limits, with a plan change flow. The parent decides
-// where to mount it. Logged out, or any load error, it renders nothing.
+// against the plan limits, with a plan change flow, and the account's
+// referral code with a shareable link. The parent decides where to
+// mount it. Logged out, or any load error, it renders nothing.
 
 type MeResponse = {
   paywallEnabled: boolean;
   plan: PlanDTO;
   subscription: SubscriptionDTO;
   usage: { exhibitions: number; artworks: number; contacts: number };
+  referralCode: string | null;
 };
 
 export default function PlanCard() {
@@ -23,6 +25,7 @@ export default function PlanCard() {
   const [plans, setPlans] = useState<PlanDTO[]>([]);
   const [targetSlug, setTargetSlug] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -60,18 +63,58 @@ export default function PlanCard() {
         ? ("single" as const)
         : ("monthly" as const);
 
-  async function confirmChange() {
+  async function confirmChange(payload: PlanChangePayload) {
     const res = await fetch("/api/subscriptions/change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planSlug: target?.slug, billingCycle }),
+      body: JSON.stringify({
+        planSlug: target?.slug,
+        billingCycle,
+        promoCode: payload.promoCode,
+        termsAccepted: payload.termsAccepted,
+      }),
     });
     if (!res.ok) {
       if (res.status === 409) throw new Error(t("pricing", "billingNotConnected"));
+      const data = (await res.json().catch(() => null)) as { error?: string; reason?: string } | null;
+      if (data?.error === "promo_invalid") {
+        const reason = data.reason ?? "not_found";
+        const key =
+          reason === "expired"
+            ? "promoExpired"
+            : reason === "already_used"
+              ? "promoAlreadyUsed"
+              : reason === "not_for_plan"
+                ? "promoNotForPlan"
+                : reason === "no_uses_left"
+                  ? "promoNoUsesLeft"
+                  : reason === "inactive"
+                    ? "promoInactive"
+                    : "promoInvalid";
+        throw new Error(t("pricing", key));
+      }
+      if (data?.error === "terms_required") throw new Error(t("pricing", "termsRequired"));
       throw new Error(t("pricing", "changeFailed"));
     }
     setDialogOpen(false);
     await load();
+  }
+
+  async function copyReferralLink() {
+    if (!me?.referralCode) return;
+    const link = `${window.location.origin}/register?ref=${me.referralCode}`;
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      const input = document.createElement("input");
+      input.value = link;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2500);
   }
 
   const usageRows: Array<{ label: string; used: number; limit: number | null }> = [
@@ -110,6 +153,41 @@ export default function PlanCard() {
           </div>
         ))}
       </dl>
+      {me.referralCode && (
+        <div
+          style={{
+            margin: "0 0 16px",
+            padding: 12,
+            border: "1px dashed var(--line)",
+            borderRadius: 10,
+          }}
+        >
+          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700 }}>
+            {t("pricing", "referralTitle")}
+          </p>
+          <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+            {t("pricing", "referralShare")}
+          </p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <code
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: 1,
+                padding: "6px 10px",
+                border: "1px solid var(--line)",
+                borderRadius: 8,
+                background: "var(--paper)",
+              }}
+            >
+              {me.referralCode}
+            </code>
+            <button type="button" className="publish-dialog-cancel" onClick={() => void copyReferralLink()}>
+              {copied ? t("pricing", "referralCopied") : t("pricing", "referralCopyLink")}
+            </button>
+          </div>
+        </div>
+      )}
       {target && (
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <select

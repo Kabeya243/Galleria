@@ -192,6 +192,37 @@ function configForArtwork(artwork: CertificateArtwork, artistName: string): Cert
   };
 }
 
+// A blank certificate, fillable by hand: used when there are no
+// artworks at all, and when the artist picks "No artwork" in the
+// picker. Same defaults as a fresh artwork certificate, only the
+// artwork fields start empty.
+function configForBlank(artistName: string): CertificateConfig {
+  return {
+    artworkId: "",
+    title: "",
+    artist: artistName,
+    year: "",
+    medium: "",
+    dimensions: "",
+    imageUrl: null,
+    editionNumber: "1",
+    editionSize: "1",
+    priceUsd: "",
+    issueDate: todayIso(),
+    place: "Kampala, Uganda",
+    signatureName: artistName,
+    signatureText: "",
+    certificateId: generateCertificateId(),
+    template: "classic",
+    paperSize: "A4",
+    orientation: "portrait",
+    border: "double",
+    goldAccent: true,
+    showImage: true,
+    verificationNote: DEFAULT_VERIFICATION_NOTE,
+  };
+}
+
 function configFromSaved(data: Record<string, unknown>, fallback: CertificateConfig): CertificateConfig {
   const merged = { ...fallback, ...(data as Partial<CertificateConfig>) };
   // Guard the enums against stale / hand-edited rows.
@@ -326,7 +357,7 @@ export default function CertificateTool({
 }) {
   const firstArtwork = artworks[0];
   const [cfg, setCfg] = useState<CertificateConfig | null>(() =>
-    firstArtwork ? configForArtwork(firstArtwork, artistName) : null,
+    firstArtwork ? configForArtwork(firstArtwork, artistName) : configForBlank(artistName),
   );
   const [saved, setSaved] = useState<SavedCertificate[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);
@@ -369,7 +400,10 @@ export default function CertificateTool({
   }, [cfg?.priceUsd]);
 
   const selectedArtwork = useMemo(
-    () => artworks.find((artwork) => artwork.id === cfg?.artworkId) ?? firstArtwork,
+    () =>
+      cfg?.artworkId
+        ? (artworks.find((artwork) => artwork.id === cfg.artworkId) ?? firstArtwork)
+        : undefined,
     [artworks, cfg?.artworkId, firstArtwork],
   );
 
@@ -448,7 +482,9 @@ export default function CertificateTool({
     return () => observer.disconnect();
   }, []);
 
-  if (!cfg || !selectedArtwork) {
+  // The form is always visible, even with no artworks: cfg starts as a
+  // blank certificate then, so there is nothing to wait for here.
+  if (!cfg) {
     return (
       <div className="certificate-scope">
         <div className={styles.emptyBox}>
@@ -466,6 +502,15 @@ export default function CertificateTool({
   };
 
   const pickArtwork = (artworkId: string) => {
+    if (!artworkId) {
+      // "No artwork": detach from the artwork but keep what the artist
+      // already typed by hand, only the image goes away with it.
+      setCfg((prev) => (prev ? { ...prev, artworkId: "", imageUrl: null } : prev));
+      setLoadedId(null);
+      setIssueMsg(null);
+      setIssueError(null);
+      return;
+    }
     const artwork = artworks.find((item) => item.id === artworkId);
     if (!artwork) return;
     setCfg((prev) => {
@@ -481,7 +526,7 @@ export default function CertificateTool({
   };
 
   const newCertificate = () => {
-    setCfg(configForArtwork(selectedArtwork, artistName));
+    setCfg(selectedArtwork ? configForArtwork(selectedArtwork, artistName) : configForBlank(artistName));
     setLoadedId(null);
     setIssueMsg(null);
     setIssueError(null);
@@ -502,7 +547,7 @@ export default function CertificateTool({
             kind: "certificate",
             title: `${cfg.title}: ${cfg.certificateId}`,
             data: cfg,
-            artworkId: cfg.artworkId,
+            artworkId: cfg.artworkId || undefined,
           }),
         });
         if (!res.ok) throw new Error("Could not issue the certificate. Sign in and try again.");
@@ -548,9 +593,10 @@ export default function CertificateTool({
   };
 
   const loadSaved = (row: SavedCertificate) => {
-    const fallback = row.artworkId
-      ? configForArtwork(artworks.find((item) => item.id === row.artworkId) ?? selectedArtwork, artistName)
-      : cfg;
+    const found = row.artworkId ? artworks.find((item) => item.id === row.artworkId) : undefined;
+    const fallback = found
+      ? configForArtwork(found, artistName)
+      : (cfg ?? configForBlank(artistName));
     setCfg(configFromSaved(row.data, fallback));
     setLoadedId(row.id);
     setIssueMsg(null);
@@ -740,6 +786,7 @@ export default function CertificateTool({
             <label className={styles.field}>
               <span>Artwork</span>
               <select value={cfg.artworkId} onChange={(event) => pickArtwork(event.target.value)}>
+                <option value="">No artwork (blank certificate)</option>
                 {artworks.map((artwork) => (
                   <option key={artwork.id} value={artwork.id}>
                     {artwork.title} ({artwork.year})

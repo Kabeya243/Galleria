@@ -2,43 +2,44 @@
 
 import Link from "next/link";
 import {
-  Accessibility,
   Aperture,
   Archive,
   ArrowRight,
-  BarChart3,
-  Bot,
   Box,
   Calculator,
   Clapperboard,
+  ClipboardCheck,
   ClipboardList,
   FileText,
   Frame,
   Gem,
   Globe,
-  GraduationCap,
-  Image,
   LayoutGrid,
-  Library,
-  Megaphone,
   Palette,
-  Presentation,
-  Printer,
   Route,
-  Scan,
-  ScanEye,
-  Sparkles,
+  Search,
   Store,
   Users,
 } from "lucide-react";
 import ToolsShell from "@/components/tools-shell";
 import { useT } from "@/lib/i18n";
+import { useState } from "react";
 import styles from "./tools.module.css";
 
 // Tools hub: the working tools for artists, curators, galleries and
 // collectors, and the pages that say what SANAA does for each of them.
 // Written in SANAA's own words — the tool ideas follow the same needs as
 // the big art platforms, the copy and the design are ours.
+//
+// Nov 2026 cleanup: the hub only lists tools that exist and work.
+// Removed (their routes redirect to /tools): Present & Sell, Color
+// Intelligence, Presentation Designer, Accessibility Studio, Education
+// Studio, AI Architect, Artwork Intelligence, AI Assistant, Marketing
+// Studio, Print Studio, Teams, Digital Twin (hidden for now).
+// Merged: Collection Manager into Inventory, Visitor Analytics into the
+// dashboard (/#visitor-analytics), Frame Studio + Mockup Studio into
+// Frames & Art on Walls. The Website Builder opens in a new window,
+// fullscreen, as a standalone platform.
 const TOOLS = [
   {
     href: "/tools/art-in-context",
@@ -65,28 +66,16 @@ const TOOLS = [
     description: "contactsDesc",
   },
   {
-    href: "/tools/present-sell",
-    icon: Presentation,
-    title: "presentSell",
-    description: "presentSellDesc",
-  },
-  {
     href: "/tools/documents",
     icon: FileText,
     title: "documents",
     description: "documentsDesc",
   },
   {
-    href: "/tools/frame-studio",
+    href: "/tools/frames-walls",
     icon: Frame,
-    title: "frameStudio",
-    description: "frameStudioDesc",
-  },
-  {
-    href: "/tools/mockup-studio",
-    icon: Image,
-    title: "mockupStudio",
-    description: "mockupStudioDesc",
+    title: "framesWalls",
+    description: "framesWallsDesc",
   },
   {
     href: "/tools/photography-lab",
@@ -95,64 +84,16 @@ const TOOLS = [
     description: "photographyLabDesc",
   },
   {
-    href: "/tools/color-intelligence",
-    icon: Palette,
-    title: "colorIntelligence",
-    description: "colorIntelligenceDesc",
-  },
-  {
-    href: "/tools/presentation-designer",
-    icon: Presentation,
-    title: "presentationDesigner",
-    description: "presentationDesignerDesc",
-  },
-  {
-    href: "/tools/collection-manager",
-    icon: Library,
-    title: "collectionManager",
-    description: "collectionManagerDesc",
-  },
-  {
     href: "/tools/exhibition-planner",
     icon: ClipboardList,
     title: "exhibitionPlanner",
     description: "exhibitionPlannerDesc",
   },
   {
-    href: "/tools/visitor-analytics",
-    icon: BarChart3,
-    title: "visitorAnalytics",
-    description: "visitorAnalyticsDesc",
-  },
-  {
-    href: "/tools/accessibility-studio",
-    icon: Accessibility,
-    title: "accessibilityStudio",
-    description: "accessibilityStudioDesc",
-  },
-  {
-    href: "/tools/education-studio",
-    icon: GraduationCap,
-    title: "educationStudio",
-    description: "educationStudioDesc",
-  },
-  {
-    href: "/tools/ai-architect",
-    icon: Sparkles,
-    title: "aiArchitect",
-    description: "aiArchitectDesc",
-  },
-  {
-    href: "/tools/artwork-intelligence",
-    icon: ScanEye,
-    title: "artworkIntelligence",
-    description: "artworkIntelligenceDesc",
-  },
-  {
-    href: "/tools/ai-assistant",
-    icon: Bot,
-    title: "aiAssistant",
-    description: "aiAssistantDesc",
+    href: "/tools/open-calls",
+    icon: ClipboardCheck,
+    title: "openCalls",
+    description: "openCallsDesc",
   },
   {
     href: "/tools/image-to-3d",
@@ -171,18 +112,8 @@ const TOOLS = [
     icon: Globe,
     title: "websiteBuilder",
     description: "websiteBuilderDesc",
-  },
-  {
-    href: "/tools/marketing-studio",
-    icon: Megaphone,
-    title: "marketingStudio",
-    description: "marketingStudioDesc",
-  },
-  {
-    href: "/tools/print-studio",
-    icon: Printer,
-    title: "printStudio",
-    description: "printStudioDesc",
+    // Opens in a new window, fullscreen, like a standalone platform.
+    newWindow: true,
   },
   {
     href: "/tools/portfolio-pdf",
@@ -195,18 +126,6 @@ const TOOLS = [
     icon: Store,
     title: "marketplace",
     description: "marketplaceDesc",
-  },
-  {
-    href: "/tools/teams",
-    icon: Users,
-    title: "teams",
-    description: "teamsDesc",
-  },
-  {
-    href: "/tools/digital-twin",
-    icon: Scan,
-    title: "digitalTwin",
-    description: "digitalTwinDesc",
   },
 ] as const;
 
@@ -245,6 +164,22 @@ export default function ToolsPage({
   exhibitionCount: number;
 }) {
   const t = useT();
+  // Local search (Nov 2026): this search only filters the cards on
+  // this page — tools and audiences — by their title and description.
+  // Every page has its own search; there is no global search yet.
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const matches = (title: string, description: string) =>
+    needle === "" ||
+    title.toLowerCase().includes(needle) ||
+    description.toLowerCase().includes(needle);
+  const visibleTools = TOOLS.filter((tool) =>
+    matches(t("tools", tool.title), t("tools", tool.description)),
+  );
+  const visibleAudiences = AUDIENCES.filter((audience) =>
+    matches(t("tools", audience.title), t("tools", audience.description)),
+  );
+
   return (
     <ToolsShell
       user={user}
@@ -253,49 +188,107 @@ export default function ToolsPage({
       eyebrow="toolsHubEyebrow"
       description="toolsHubDesc"
     >
-      <section className="galleries-grid">
-        {TOOLS.map((tool) => (
-          <article key={tool.href} className={`gallery-card ${styles.toolCard}`}>
-            <Link href={tool.href} className={styles.toolCardLink} aria-label={`${t("tools", "open")}, ${t("tools", tool.title)}`}>
-              <span className={styles.toolIcon}>
-                <tool.icon size={22} />
-              </span>
-              <h3>{t("tools", tool.title)}</h3>
-              <p>{t("tools", tool.description)}</p>
-              <span className={styles.toolOpen}>
-                {t("tools", "open")} <ArrowRight size={15} />
-              </span>
-            </Link>
-          </article>
-        ))}
-      </section>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          maxWidth: 420,
+          marginBottom: 20,
+          padding: "9px 12px",
+          border: "1px solid var(--line)",
+          borderRadius: 8,
+          background: "var(--card, transparent)",
+        }}
+      >
+        <Search size={16} aria-hidden="true" />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("tools", "searchTools")}
+          aria-label={t("tools", "searchTools")}
+          style={{
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            color: "inherit",
+            fontSize: 14,
+            width: "100%",
+          }}
+        />
+      </label>
 
-      <section className={styles.audienceSection}>
-        <p className="eyebrow">
-          <span className="status-dot" /> {t("tools", "whoItIsFor")}
-        </p>
-        <h2>{t("tools", "onePlatform")}</h2>
-        <div className="galleries-grid">
-          {AUDIENCES.map((audience) => (
-            <article key={audience.href} className={`gallery-card ${styles.toolCard}`}>
-              <Link
-                href={audience.href}
-                className={styles.toolCardLink}
-                aria-label={`Lakisa, ${t("tools", audience.title)}`}
-              >
-                <span className={styles.toolIcon}>
-                  <audience.icon size={22} />
-                </span>
-                <h3>{t("tools", audience.title)}</h3>
-                <p>{t("tools", audience.description)}</p>
-                <span className={styles.toolOpen}>
-                  Read more <ArrowRight size={15} />
-                </span>
-              </Link>
-            </article>
-          ))}
-        </div>
-      </section>
+      {visibleTools.length === 0 && visibleAudiences.length === 0 ? (
+        <p style={{ color: "var(--muted)", fontSize: 14 }}>{t("tools", "noToolsMatch")}</p>
+      ) : (
+        <>
+          <section className="galleries-grid">
+            {visibleTools.map((tool) => {
+              const label = `${t("tools", "open")}, ${t("tools", tool.title)}`;
+              const body = (
+                <>
+                  <span className={styles.toolIcon}>
+                    <tool.icon size={22} />
+                  </span>
+                  <h3>{t("tools", tool.title)}</h3>
+                  <p>{t("tools", tool.description)}</p>
+                  <span className={styles.toolOpen}>
+                    {t("tools", "open")} <ArrowRight size={15} />
+                  </span>
+                </>
+              );
+              return (
+                <article key={tool.href} className={`gallery-card ${styles.toolCard}`}>
+                  {"newWindow" in tool && tool.newWindow ? (
+                    <a
+                      href={tool.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={styles.toolCardLink}
+                      aria-label={label}
+                    >
+                      {body}
+                    </a>
+                  ) : (
+                    <Link href={tool.href} className={styles.toolCardLink} aria-label={label}>
+                      {body}
+                    </Link>
+                  )}
+                </article>
+              );
+            })}
+          </section>
+
+          {visibleAudiences.length > 0 && (
+            <section className={styles.audienceSection}>
+              <p className="eyebrow">
+                <span className="status-dot" /> {t("tools", "whoItIsFor")}
+              </p>
+              <h2>{t("tools", "onePlatform")}</h2>
+              <div className="galleries-grid">
+                {visibleAudiences.map((audience) => (
+                  <article key={audience.href} className={`gallery-card ${styles.toolCard}`}>
+                    <Link
+                      href={audience.href}
+                      className={styles.toolCardLink}
+                      aria-label={`Lakisa, ${t("tools", audience.title)}`}
+                    >
+                      <span className={styles.toolIcon}>
+                        <audience.icon size={22} />
+                      </span>
+                      <h3>{t("tools", audience.title)}</h3>
+                      <p>{t("tools", audience.description)}</p>
+                      <span className={styles.toolOpen}>
+                        Read more <ArrowRight size={15} />
+                      </span>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </ToolsShell>
   );
 }

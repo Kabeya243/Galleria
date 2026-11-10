@@ -46,9 +46,13 @@ const btnPrimary: React.CSSProperties = {
 export default function AdminGalleries({
   templates,
   hidden: initialHidden,
+  canManage = true,
 }: {
   templates: AdminGalleryTemplate[];
   hidden: string[];
+  // A sub-admin with galleries.view only sees the list; hiding and
+  // restoring need galleries.manage (checked again server-side).
+  canManage?: boolean;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set(initialHidden));
   // Layout id waiting for its delete to be confirmed (null = none).
@@ -128,7 +132,11 @@ export default function AdminGalleries({
                   </td>
                   <td>{isHidden ? "Hidden" : "Visible"}</td>
                   <td>
-                    {isHidden ? (
+                    {!canManage ? (
+                      <span style={{ color: "var(--ad-muted)", fontSize: 12 }}>
+                        Read only
+                      </span>
+                    ) : isHidden ? (
                       <button
                         type="button"
                         style={{ ...btnPrimary, opacity: isBusy ? 0.6 : 1 }}

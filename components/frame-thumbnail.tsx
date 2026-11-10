@@ -1,14 +1,62 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { FRAME_VARIANTS, specFromFrameConfig } from "@/lib/demo-data";
 import type { FrameConfig, FrameVariant } from "@/lib/demo-data";
+import {
+  drawInnerShadow,
+  loadImage,
+  paintBeads,
+  paintMatSide,
+  paintOrnaments,
+  paintPhotoBar,
+  paintProceduralBar,
+  paintProfile,
+  paintRingSides,
+  paintTrimSide,
+} from "@/components/mockup-studio";
 
-// A small faithful preview of a frame style: the same border width,
-// mat, trim and motif the 3D render uses, drawn as SVG so the user can
-// see the frame before choosing it. Accepts either a built-in variant
-// or a custom Frame Studio configuration, and optionally the artwork's
-// own image instead of the neutral placeholder — the compare view uses
-// the same drawing at a larger size, so what is compared is what hangs.
+// A faithful preview of a frame style, drawn on canvas with the same
+// render engine as Mockup Studio (and the same rules as the 3D gallery):
+// the real moulding photo strip, tiled without stretching along mitred
+// 45-degree bars when the frame carries one (`spec.photo`), otherwise
+// the procedural finish for its texture, plus profile relief, beads and
+// ornaments — never the old flat SVG motifs (wood / brushed / carved
+// gradients), which did not look like the real gallery frames.
+//
+// The frame never covers the artwork (C6): the canvas is sized to the
+// artwork's own aspect ratio, a neutral backing rectangle is painted
+// behind the image inside the opening, and the image is drawn
+// contain-fit inside the opening — letterboxed on neutral backing when
+// its ratio differs, never cropped, never overlapped by frame bars.
+// Accepts either a built-in variant or a custom Frame Studio
+// configuration, and optionally the artwork's own image instead of the
+// neutral placeholder.
+
+const imgCache = new Map<string, HTMLImageElement>();
+
+/** Load an image for display. Falls back to a plain (CORS-less) load when
+    the CORS load fails: the image still draws, the canvas is just not
+    exportable, which thumbnails never need. */
+function loadThumbImage(url: string): Promise<HTMLImageElement> {
+  const cached = imgCache.get(url);
+  if (cached) return Promise.resolve(cached);
+  return loadImage(url)
+    .catch(
+      () =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error(`Could not load image: ${url}`));
+          img.src = url;
+        }),
+    )
+    .then((img) => {
+      imgCache.set(url, img);
+      return img;
+    });
+}
+
 export default function FrameThumbnail({
   variant,
   config,
@@ -25,192 +73,211 @@ export default function FrameThumbnail({
   height?: number;
 }) {
   const spec = config ? specFromFrameConfig(config) : FRAME_VARIANTS[variant] ?? FRAME_VARIANTS.wood;
-  const key = config ? `custom-${config.base}-${config.width}-${config.color.replace("#", "")}` : variant;
-  const fw = Math.min(10, Math.max(0, 1.5 + spec.width * 45)); // frame band, px
-  const mw = spec.mat ? Math.min(9, Math.max(0, 1 + spec.mat.width * 28)) : 0; // mat, px
-  const fg = Math.min(5, spec.floatGap * 30); // float gap, px
-  const trimW = spec.trim ? Math.max(0.8, spec.trim.width * 40) : 0;
-  const x0 = 0.5;
-  const y0 = 0.5;
-  const ow = 47;
-  const oh = 35;
-  const opening = { x: x0 + fw, y: y0 + fw, w: ow - 2 * fw, h: oh - 2 * fw };
-  const art = {
-    x: x0 + fw + mw + fg,
-    y: y0 + fw + mw + fg,
-    w: ow - 2 * (fw + mw + fg),
-    h: oh - 2 * (fw + mw + fg),
-  };
-  const fillId = `frame-fill-${key}`;
-  const beadR = 0.9;
-  const beadYs = [y0 + fw - 1.1, y0 + oh - fw + 1.1];
-  const beadXs = [x0 + fw - 1.1, x0 + ow - fw + 1.1];
-  const beadTop: number[] = [];
-  for (let x = opening.x + 2.5; x < opening.x + opening.w - 1; x += 3.4) beadTop.push(x);
-  const beadSide: number[] = [];
-  for (let y = opening.y + 2.5; y < opening.y + opening.h - 1; y += 3.4) beadSide.push(y);
-  const isWood = spec.texture === "wood" || spec.texture === "oak" || spec.texture === "walnut" || spec.texture === "mahogany";
-  const isBrushed = spec.texture === "gold-brushed" || spec.texture === "silver-brushed" || spec.texture === "aluminium-brushed";
-  const glassOpacity = spec.glass === "clear" ? 0.14 : spec.glass === "non-reflective" ? 0.05 : spec.glass === "museum" ? 0.09 : 0;
-  // The inner-edge line that hints at the bar's edge profile.
-  const profileStroke =
-    spec.profile === "stepped"
-      ? "rgba(255,255,255,0.55)"
-      : spec.profile === "bevelled"
-        ? "rgba(0,0,0,0.4)"
-        : spec.profile === "rounded"
-          ? "rgba(255,255,255,0.35)"
-          : spec.profile === "scooped"
-            ? "rgba(0,0,0,0.5)"
-            : null;
+  const specKey = config ? `custom:${JSON.stringify(config)}` : variant;
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [artImg, setArtImg] = useState<HTMLImageElement | null>(null);
+  const [artFailed, setArtFailed] = useState(false);
+  const [photoImg, setPhotoImg] = useState<HTMLImageElement | null>(null);
+
+  // The artwork's own aspect ratio: the canvas is sized to it, so a
+  // portrait work gets a portrait opening instead of being squeezed into
+  // a landscape box with frame texture showing at the sides.
+  const ratio = artImg ? artImg.naturalWidth / Math.max(1, artImg.naturalHeight) : width / Math.max(1, height);
+  let cssW = width;
+  let cssH = cssW / Math.max(0.2, Math.min(5, ratio));
+  const MAX_H = 400;
+  if (cssH > MAX_H) {
+    cssH = MAX_H;
+    cssW = cssH * ratio;
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    setArtImg(null);
+    setArtFailed(false);
+    if (!imageUrl) return;
+    loadThumbImage(imageUrl)
+      .then((img) => {
+        if (!cancelled) setArtImg(img);
+      })
+      .catch(() => {
+        if (!cancelled) setArtFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPhotoImg(null);
+    if (!spec.photo) return;
+    loadThumbImage(spec.photo)
+      .then((img) => {
+        if (!cancelled) setPhotoImg(img);
+      })
+      .catch(() => {
+        if (!cancelled) setPhotoImg(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [spec.photo]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const dpr = Math.min(2, typeof window === "undefined" ? 1 : window.devicePixelRatio || 1);
+    canvas.width = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssH * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const W = cssW;
+    const H = cssH;
+    // Neutral backing behind the image: warm paper white, or the tray
+    // colour for shadow boxes. The frame texture never shows here.
+    const backing = spec.trayColor ?? "#f5f1e8";
+
+    if (variant === "none" && !config) {
+      ctx.fillStyle = backing;
+      ctx.fillRect(0, 0, W, H);
+      drawArtwork(ctx, artImg, artFailed, artworkColor, 0, 0, W, H);
+      ctx.strokeStyle = "#999";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+      ctx.setLineDash([]);
+      return;
+    }
+
+    // Frame band, mat and float gap, scaled to the thumbnail size.
+    let fw = spec.width <= 0 ? 0 : Math.max(2, Math.min(W * 0.22, W * spec.width * 1.05));
+    let mw = spec.mat ? Math.max(2, Math.min(W * 0.2, W * spec.mat.width * 0.9)) : 0;
+    let fg = spec.floatGap > 0 ? Math.max(2, Math.min(W * 0.18, W * spec.floatGap * 0.9)) : 0;
+    // Keep a usable opening on tiny thumbnails: shrink the insets
+    // proportionally instead of letting them swallow the artwork.
+    const inset = fw + mw + fg;
+    if (inset * 2 >= Math.min(W, H) - 6) {
+      const scale = (Math.min(W, H) / 2 - 3) / Math.max(1, inset);
+      fw *= scale;
+      mw *= scale;
+      fg *= scale;
+    }
+    const tw = spec.trim ? Math.max(1, Math.min(4, W * spec.trim.width * 0.9)) : 0;
+    const pxPerCm = W / 100;
+
+    // Backing for the whole opening, before any ring is painted.
+    ctx.fillStyle = backing;
+    ctx.fillRect(fw, fw, W - 2 * fw, H - 2 * fw);
+
+    // Frame border: the real moulding photo when the frame carries one,
+    // otherwise the procedural finish. Beads and ornaments are NOT drawn
+    // on photo frames — the photo already carries them.
+    if (fw > 0) {
+      const hasPhoto = !!photoImg && !!spec.photo;
+      ctx.save();
+      if (spec.texture === "acrylic") ctx.globalAlpha = spec.opacity ?? 0.4;
+      paintRingSides(ctx, 0, 0, W, H, fw, (c, len, w, side) => {
+        if (hasPhoto && photoImg) paintPhotoBar(c, photoImg, len, w);
+        else paintProceduralBar(c, spec, len, w, side);
+        paintProfile(c, spec.profile, len, w);
+        if (spec.bead && !spec.photo) paintBeads(c, spec, len, w);
+        if (spec.ornament && spec.ornament !== "none" && !spec.photo) {
+          paintOrnaments(c, spec, len, w, pxPerCm);
+        }
+      });
+      ctx.restore();
+    }
+
+    // Passe-partout ring (the tray gap stays tray-coloured, not mat).
+    if (mw > 0) {
+      paintRingSides(ctx, fw, fw, W - fw, H - fw, mw, (c, len, w, side) => {
+        paintMatSide(c, spec.mat?.color ?? "#f2ead8", spec.mat?.texture, len, w, side);
+      });
+    }
+    // Thin gold trim ring between frame and mat.
+    if (spec.trim && (spec.trim.at === "mat" || spec.trim.at === "both") && tw > 0) {
+      paintRingSides(ctx, fw + mw, fw + mw, W - fw - mw, H - fw - mw, tw, (c, len, w) => {
+        paintTrimSide(c, spec.trim?.color ?? "#d4af37", len, w);
+      });
+    }
+
+    // The artwork itself, strictly inside the opening: contain-fit on the
+    // neutral backing, so the frame can never overlap it.
+    const ax = fw + mw + fg;
+    const ay = fw + mw + fg;
+    const aw = W - 2 * (fw + mw + fg);
+    const ah = H - 2 * (fw + mw + fg);
+    ctx.fillStyle = backing;
+    ctx.fillRect(ax, ay, aw, ah);
+    drawArtwork(ctx, artImg, artFailed, artworkColor, ax, ay, aw, ah);
+
+    // Thin gold trim ring around the artwork.
+    if (spec.trim && (spec.trim.at === "artwork" || spec.trim.at === "both") && tw > 0) {
+      paintRingSides(ctx, ax - tw, ay - tw, ax + aw + tw, ay + ah + tw, tw, (c, len, w) => {
+        paintTrimSide(c, spec.trim?.color ?? "#d4af37", len, w);
+      });
+    }
+    // The mat opening shades the artwork just inside it.
+    if (mw > 0) {
+      drawInnerShadow(ctx, ax, ay, aw, ah, Math.max(3, mw * 0.18), 0.16);
+    }
+    // Glass: a faint diagonal sheen over the artwork only.
+    if (spec.glass === "clear") {
+      const g = ctx.createLinearGradient(ax, ay, ax + aw, ay + ah);
+      g.addColorStop(0, "rgba(255,255,255,0.16)");
+      g.addColorStop(0.4, "rgba(255,255,255,0.02)");
+      g.addColorStop(1, "rgba(255,255,255,0.06)");
+      ctx.fillStyle = g;
+      ctx.fillRect(ax, ay, aw, ah);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specKey, artImg, artFailed, photoImg, cssW, cssH]);
 
   return (
-    <svg width={width} height={height} viewBox="0 0 48 36" aria-hidden="true">
-      <defs>
-        <linearGradient id={`${fillId}-gold`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#e8c96a" />
-          <stop offset="0.5" stopColor={spec.color} />
-          <stop offset="1" stopColor="#8a6d1f" />
-        </linearGradient>
-        <linearGradient id={`${fillId}-yellow`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffe14d" />
-          <stop offset="0.5" stopColor="#f5c400" />
-          <stop offset="1" stopColor="#d9a800" />
-        </linearGradient>
-        <linearGradient id={`${fillId}-black`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#333333" />
-          <stop offset="0.5" stopColor="#161616" />
-          <stop offset="1" stopColor="#222222" />
-        </linearGradient>
-        <linearGradient id={`${fillId}-art`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#e8ddc9" />
-          <stop offset="0.5" stopColor="#cfc0a0" />
-          <stop offset="1" stopColor="#b3a284" />
-        </linearGradient>
-        <linearGradient id={`${fillId}-glass`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffffff" stopOpacity={glassOpacity} />
-          <stop offset="0.45" stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="1" stopColor="#ffffff" stopOpacity={glassOpacity * 0.6} />
-        </linearGradient>
-        <pattern id={`${fillId}-wood`} width="14" height="7" patternUnits="userSpaceOnUse">
-          <rect width="14" height="7" fill={spec.color} />
-          <path d="M0 2 Q 7 0 14 2" stroke="#000000" strokeWidth="0.8" fill="none" opacity="0.28" />
-          <path d="M0 5 Q 7 7 14 5" stroke="#ffffff" strokeWidth="0.8" fill="none" opacity="0.22" />
-        </pattern>
-        <pattern id={`${fillId}-carved`} width="10" height="10" patternUnits="userSpaceOnUse">
-          <rect width="10" height="10" fill="#a67c37" />
-          <circle cx="5" cy="5" r="3.2" fill="none" stroke="#6b4a1f" strokeWidth="1.6" />
-          <circle cx="5" cy="5" r="3.2" fill="none" stroke="#d4af37" strokeWidth="0.8" />
-          <circle cx="5" cy="5" r="1" fill="#8a6d1f" />
-        </pattern>
-        <pattern id={`${fillId}-brushed`} width="10" height="4" patternUnits="userSpaceOnUse">
-          <rect width="10" height="4" fill={spec.color} />
-          <line x1="0" y1="1" x2="10" y2="1" stroke="#ffffff" strokeWidth="0.7" opacity="0.5" />
-          <line x1="0" y1="3" x2="10" y2="3" stroke="#000000" strokeWidth="0.7" opacity="0.35" />
-        </pattern>
-        <pattern id={`${fillId}-matte`} width="6" height="6" patternUnits="userSpaceOnUse">
-          <rect width="6" height="6" fill="#1c1c1c" />
-          <circle cx="1.5" cy="1.5" r="0.5" fill="#333333" />
-          <circle cx="4.5" cy="4.5" r="0.5" fill="#000000" />
-        </pattern>
-        <clipPath id={`${fillId}-art-clip`}>
-          <rect x={art.x} y={art.y} width={art.w} height={art.h} />
-        </clipPath>
-      </defs>
-      {variant === "none" && !config ? (
-        <>
-          {imageUrl ? (
-            <image href={imageUrl} x={4} y={3} width={40} height={30} preserveAspectRatio="xMidYMid slice" />
-          ) : (
-            <rect x={4} y={3} width={40} height={30} fill={`url(#${fillId}-art)`} />
-          )}
-          <rect x={4} y={3} width={40} height={30} fill="none" stroke="#999" strokeWidth="0.8" strokeDasharray="3 2" />
-        </>
-      ) : (
-        <>
-          <rect
-            x={x0}
-            y={y0}
-            width={ow}
-            height={oh}
-            fill={
-              isWood
-                ? `url(#${fillId}-wood)`
-                : spec.texture === "gold-carved"
-                  ? `url(#${fillId}-carved)`
-                  : isBrushed
-                    ? `url(#${fillId}-brushed)`
-                    : spec.texture === "yellow-gloss"
-                      ? `url(#${fillId}-yellow)`
-                      : spec.texture === "black-gloss"
-                        ? `url(#${fillId}-black)`
-                        : spec.texture === "black-matte"
-                          ? `url(#${fillId}-matte)`
-                          : spec.texture === "acrylic"
-                            ? spec.color
-                            : spec.color
-            }
-            fillOpacity={spec.texture === "acrylic" ? 0.45 : 1}
-            stroke={spec.texture === "acrylic" ? "#ffffff" : "#00000033"}
-            strokeWidth="0.5"
-            strokeDasharray={spec.texture === "acrylic" ? "2 1.5" : undefined}
-          />
-          {/* Mat, or the dark tray a floated work hangs against. */}
-          {spec.mat ? (
-            <rect x={opening.x} y={opening.y} width={opening.w} height={opening.h} fill={spec.mat.color} />
-          ) : spec.floatGap > 0 ? (
-            <rect x={opening.x} y={opening.y} width={opening.w} height={opening.h} fill={spec.trayColor ?? "#2a2a2a"} />
-          ) : null}
-          {/* Beaded inner edge. */}
-          {spec.bead && (
-            <g fill="#d4af37">
-              {beadTop.map((x) => (
-                <circle key={`t${x}`} cx={x} cy={beadYs[0]} r={beadR} />
-              ))}
-              {beadTop.map((x) => (
-                <circle key={`b${x}`} cx={x} cy={beadYs[1]} r={beadR} />
-              ))}
-              {beadSide.map((y) => (
-                <circle key={`l${y}`} cx={beadXs[0]} cy={y} r={beadR} />
-              ))}
-              {beadSide.map((y) => (
-                <circle key={`r${y}`} cx={beadXs[1]} cy={y} r={beadR} />
-              ))}
-            </g>
-          )}
-          {/* Thin gold trim rings. */}
-          {spec.trim && (spec.trim.at === "mat" || spec.trim.at === "both") && (
-            <rect x={opening.x + trimW / 2} y={opening.y + trimW / 2} width={opening.w - trimW} height={opening.h - trimW} fill="none" stroke={spec.trim.color} strokeWidth={trimW} />
-          )}
-          {/* Edge profile hint: a line just inside the frame band. */}
-          {profileStroke && (
-            <rect x={opening.x} y={opening.y} width={opening.w} height={opening.h} fill="none" stroke={profileStroke} strokeWidth="1.2" rx={spec.profile === "rounded" ? 1 : 0} />
-          )}
-          {/* Artwork: the real image when available, else the placeholder. */}
-          {imageUrl ? (
-            <g clipPath={`url(#${fillId}-art-clip)`}>
-              <image href={imageUrl} x={art.x} y={art.y} width={art.w} height={art.h} preserveAspectRatio="xMidYMid slice" />
-            </g>
-          ) : (
-            <>
-              <rect x={art.x} y={art.y} width={art.w} height={art.h} fill={artworkColor ?? `url(#${fillId}-art)`} />
-              {!artworkColor && (
-                <>
-                  <circle cx={art.x + art.w * 0.32} cy={art.y + art.h * 0.36} r={Math.min(art.w, art.h) * 0.16} fill="#8a7a5c" opacity="0.55" />
-                  <rect x={art.x + art.w * 0.55} y={art.y + art.h * 0.6} width={art.w * 0.3} height={art.h * 0.14} fill="#d7c6a9" opacity="0.8" />
-                </>
-              )}
-            </>
-          )}
-          {spec.trim && (spec.trim.at === "artwork" || spec.trim.at === "both") && (
-            <rect x={art.x - trimW / 2} y={art.y - trimW / 2} width={art.w + trimW} height={art.h + trimW} fill="none" stroke={spec.trim.color} strokeWidth={trimW} />
-          )}
-          {/* Glass: a faint diagonal sheen over the artwork. */}
-          {glassOpacity > 0 && (
-            <rect x={art.x} y={art.y} width={art.w} height={art.h} fill={`url(#${fillId}-glass)`} />
-          )}
-        </>
-      )}
-    </svg>
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      style={{ width: cssW, height: cssH, display: "block", borderRadius: 1 }}
+    />
   );
+}
+
+/** Draw the artwork image contain-fit inside (x, y, w, h), centred on
+    the backing already painted there. Never crops, never overflows. */
+function drawArtwork(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  failed: boolean,
+  artworkColor: string | undefined,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  if (img && !failed) {
+    const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+    const dw = img.naturalWidth * scale;
+    const dh = img.naturalHeight * scale;
+    ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    return;
+  }
+  // Placeholder when there is no image: the artwork's own colour with a
+  // soft abstract composition, same as the mockup stand-in.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.fillStyle = artworkColor ?? "#e8ddc9";
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.arc(x + w * 0.32, y + h * 0.36, Math.min(w, h) * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.fillRect(x + w * 0.55, y + h * 0.6, w * 0.3, h * 0.14);
+  ctx.restore();
 }

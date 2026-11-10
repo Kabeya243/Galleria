@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   Calculator,
   ChevronDown,
+  ClipboardList,
   Clock,
   FileDown,
   FileText,
@@ -16,7 +17,6 @@ import {
   Images,
   Info,
   Menu,
-  Presentation,
   Users,
   X,
 } from "lucide-react";
@@ -34,9 +34,9 @@ const RESOURCE_TOOLS = [
   { href: "/tools/price-your-work", icon: Calculator, title: "priceYourWork" },
   { href: "/tools/inventory", icon: Archive, title: "inventory" },
   { href: "/tools/contacts", icon: Users, title: "contacts" },
-  { href: "/tools/present-sell", icon: Presentation, title: "presentSell" },
+  { href: "/tools/open-calls", icon: ClipboardList, title: "openCalls" },
   { href: "/tools/documents", icon: FileText, title: "documents" },
-  { href: "/tools/frame-studio", icon: Frame, title: "frameStudio" },
+  { href: "/tools/frames-walls", icon: Frame, title: "framesWalls" },
   { href: "/tools/photography-lab", icon: Aperture, title: "photographyLab" },
   { href: "/tools/portfolio-pdf", icon: FileDown, title: "portfolioPdf" },
 ] as const;

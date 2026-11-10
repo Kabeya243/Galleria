@@ -57,7 +57,7 @@ from fastapi.responses import JSONResponse, Response
 
 BASE_DIR = Path(__file__).resolve().parent
 FONTS_DIR = BASE_DIR / "atelier" / "fonts"
-R2_PUBLIC_URL = (os.environ.get("R2_PUBLIC_URL") or "").rstrip("/")
+R2_PUBLIC_URL = (os.environ.get("R2_PUBLIC_URL") or os.environ.get("NEXT_PUBLIC_R2_PUBLIC_URL") or "").rstrip("/")
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or ""
 COOKIE_NAME = "sanaa_session"
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
@@ -131,8 +131,6 @@ def validate_document(document):
                     raise ValueError("Paramètre d’élément invalide.")
                 if not math.isfinite(value) or abs(value) > 100000:
                     raise ValueError("Valeur de position ou de taille hors limite.")
-                if key in ("width", "height") and not 1 <= value <= 6000:
-                    raise ValueError("La taille d’un élément doit être comprise entre 1 et 6000 px.")
                 if key in ("scaleX", "scaleY") and (value == 0 or abs(value) > 100):
                     raise ValueError("Échelle d’élément invalide.")
                 if key == "opacity" and not 0 <= value <= 1:
@@ -146,10 +144,11 @@ def validate_document(document):
                 raise ValueError("Le texte dépasse la longueur maximale.")
             if obj.get("src"):
                 source = obj["src"]
+                # Any image source is accepted (Nov 2026, Kabeya): the
+                # export renders what it can fetch and a neutral
+                # placeholder for the rest, never an error.
                 if not isinstance(source, str) or len(source) > 20 * 1024 * 1024:
                     raise ValueError("Source d’image invalide.")
-                if not UPLOAD_SOURCE.fullmatch(source) and not DATA_SOURCE.match(source):
-                    raise ValueError("Les images doivent provenir de la bibliothèque SANAA.")
     return document
 
 # ---------------------------------------------------------------- image processing
@@ -428,21 +427,43 @@ def render_svg(content, output_size=None):
 # The editor stores images as same-origin serving URLs
 # (/api/r2/uploads/<userId>/<uuid>.ext for artworks,
 # /api/atelier/file/atelier/uploads/<userId>/<uuid>.ext for editor
-# uploads) or as inline data: URLs (abstract compositions). Server-side
-# there is no CORS, so every serving URL is resolved to its R2 public
-# URL and fetched directly. Nothing is read from local disk.
+# uploads), as absolute R2 public URLs, as absolute same-origin URLs,
+# or as inline data: URLs (abstract compositions). Server-side
+# there is no CORS, so serving URLs are resolved to their direct R2
+# public URL when the base is configured and absolute URLs are
+# fetched as-is. Nothing is read from local disk.
 
 
 def resolve_image_url(src):
+    """Map an editor image source to a URL fetch_image can download.
+
+    Sources seen in the wild: inline data: URLs (handled by the caller),
+    relative serving paths (/api/r2/..., /api/atelier/file/...), absolute
+    R2 public URLs (https://pub-....r2.dev/uploads/...), absolute
+    same-origin serving URLs (https://<site>/api/r2/...) and plain
+    external https:// image URLs. Server-side there is no CORS, so an
+    absolute URL is fetched as-is; a relative serving path is rewritten
+    to its direct R2 public URL when the base is configured. Anything
+    unrecognised returns None and the caller falls back silently, so a
+    missing image never breaks an export.
+    """
+    if not src or not isinstance(src, str):
+        return None
     if src.startswith("data:"):
         return None  # handled by the caller (decode / render_svg)
-    if src.startswith("/api/r2/"):
-        key = src[len("/api/r2/"):]
-        return f"{R2_PUBLIC_URL}/{key}" if R2_PUBLIC_URL else None
-    if src.startswith("/api/atelier/file/"):
-        key = src[len("/api/atelier/file/"):]
-        return f"{R2_PUBLIC_URL}/{key}" if R2_PUBLIC_URL else None
-    if R2_PUBLIC_URL and src.startswith(R2_PUBLIC_URL):
+    if src.startswith("//"):
+        src = "https:" + src
+    for prefix in ("/api/r2/", "/api/atelier/file/"):
+        idx = src.find(prefix)
+        if idx == -1:
+            continue
+        key = src[idx + len(prefix):]
+        if R2_PUBLIC_URL:
+            return f"{R2_PUBLIC_URL}/{key}"
+        # No R2 base configured: a relative path cannot be fetched, but
+        # an absolute same-origin URL can be fetched directly.
+        return src if src.startswith(("http://", "https://")) else None
+    if src.startswith(("http://", "https://")):
         return src
     return None
 
@@ -593,6 +614,12 @@ def _draw_pdf_text(pdf, obj, w, h, unit_x, unit_y, ghost_color=None):
             pdf.setStrokeColor(HexColor(fill))
             pdf.setLineWidth(max(0.5, size * 0.06))
             pdf.line(text_x, baseline - size * 0.12, text_x + line_width, baseline - size * 0.12)
+    if letter_spacing:
+        # Tc is graphics state, not text state: it survives ET, so
+        # without this reset a letter-spaced text would spread every
+        # string drawn after it on the page. Same fix as the
+        # certificate kicker below.
+        text_obj.setCharSpace(0)
     pdf.drawText(text_obj)
 
 
@@ -1064,6 +1091,11 @@ def export_certificate_pdf(cfg):
             text_obj.setCharSpace(spacing)
             text_obj.setTextOrigin(x, yy)
             text_obj.textOut(text)
+            # Tc is graphics state, not text state: it survives ET, so
+            # without this reset the kicker's wide tracking would spread
+            # every string drawn after it on the page (title, details,
+            # verification note), overflowing their wrapped widths.
+            text_obj.setCharSpace(0)
             pdf.drawText(text_obj)
         else:
             pdf.setFont(font, size)
@@ -1188,17 +1220,24 @@ def export_certificate_pdf(cfg):
         pdf.drawCentredString(page_w - margin - 55, 142, "ORIGINAL")
 
     # -- verification note + QR --------------------------------------------------
+    # The note always starts at the page margin (never at x = 0, which
+    # clipped it on centred templates) and wraps inside the space left
+    # of the QR code, so no line runs under the code or past the edge.
+    qr_size = 84
+    qr_gap = 16
+    note_x = margin
+    note_w = inner_w - qr_size - qr_gap
     note = str(cfg.get("verificationNote") or "")
-    note_lines = _wrap(note, "Helvetica", 8.5, inner_w - 130, pdf)
+    note_lines = _wrap(note, "Helvetica", 8.5, note_w, pdf)
     ny = 108
     for line in note_lines[:4]:
         pdf.setFont("Helvetica", 8.5)
         pdf.setFillColor(HexColor(muted))
-        pdf.drawString(x0, ny, line)
+        pdf.drawString(note_x, ny, line)
         ny -= 12
     pdf.setFont("Helvetica-Bold", 8.5)
     pdf.setFillColor(HexColor(ink))
-    pdf.drawString(x0, ny, f"Certificate ID: {cfg.get('certificateId', '')}")
+    pdf.drawString(note_x, ny, f"Certificate ID: {cfg.get('certificateId', '')}")
 
     # QR code: it points to the public verification page for this
     # certificate (/verify?id=…), when the client sends its verifyUrl
@@ -1218,10 +1257,14 @@ def export_certificate_pdf(cfg):
         qr.add_data(payload)
         qr.make()
         qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-        pdf.drawImage(ImageReader(qr_img), page_w - margin - 84, 52, 84, 84, mask="auto")
+        # The QR block sits clear of the bottom frame (frame edge at
+        # margin - 18): code from y 60, caption baseline at 52, so the
+        # caption is never cut off at the bottom of the page.
+        qr_x = page_w - margin - qr_size
+        pdf.drawImage(ImageReader(qr_img), qr_x, 60, qr_size, qr_size, mask="auto")
         pdf.setFont("Helvetica", 8)
         pdf.setFillColor(HexColor(muted))
-        pdf.drawCentredString(page_w - margin - 42, 44, "Scan to verify")
+        pdf.drawCentredString(qr_x + qr_size / 2, 52, "Scan to verify")
     except Exception:
         pass
 

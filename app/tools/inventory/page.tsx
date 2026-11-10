@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import InventoryTable from "@/components/inventory-table";
 import ToolsShell from "@/components/tools-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { logToolUse } from "@/lib/tool-use";
@@ -65,34 +66,7 @@ export default async function InventoryRoute() {
           </Link>
         </div>
       ) : (
-        <div className={styles.tableScroll}>
-          <table className={styles.inventoryTable}>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Medium</th>
-              <th>Dimensions</th>
-              <th>Year</th>
-              <th>Exhibition</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {artworks.map((artwork) => (
-              <tr key={artwork.id}>
-                <td>
-                  <Link href={`/editor/${artwork.exhibition.id}`}>{artwork.title}</Link>
-                </td>
-                <td>{artwork.medium}</td>
-                <td>{artwork.dimensions}</td>
-                <td>{artwork.year}</td>
-                <td>{artwork.exhibition.title}</td>
-                <td>{artwork.exhibition.status === "public" ? "Published" : "Draft"}</td>
-              </tr>
-            ))}
-          </tbody>
-          </table>
-        </div>
+        <InventoryTable artworks={artworks} />
       )}
     </ToolsShell>
   );

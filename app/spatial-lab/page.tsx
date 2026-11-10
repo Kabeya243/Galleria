@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Boxes, GalleryVerticalEnd, Scan } from "lucide-react";
+import { Boxes, GalleryVerticalEnd } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 export const metadata = {
   title: "Spatial Lab: Lakisa",
   description:
-    "The 3D side of the studio: gallery room templates, the editor where exhibitions take shape, and digital twins with VR and AR.",
+    "The 3D side of the studio: gallery room templates and the editor where exhibitions take shape.",
 };
 
 const CARDS: HubCard[] = [
@@ -23,13 +23,6 @@ const CARDS: HubCard[] = [
     icon: Boxes,
     title: "editor3d",
     description: "editor3dDesc",
-    status: "ready",
-  },
-  {
-    href: "/tools/digital-twin",
-    icon: Scan,
-    title: "digitalTwin",
-    description: "digitalTwinDesc",
     status: "ready",
   },
 ];

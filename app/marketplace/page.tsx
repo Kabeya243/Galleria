@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import CurrencySelector, { RatesNote } from "@/components/currency-selector";
+import InDevelopmentBox from "@/components/in-development-box";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
 import ListingPrice from "@/components/listing-price";
@@ -97,6 +98,11 @@ export default async function MarketplaceBrowsePage({ searchParams }: { searchPa
           one, send an inquiry, the seller replies directly, and price, shipping and payment are
           agreed between you.
         </p>
+        <InDevelopmentBox title="In development">
+          The marketplace is still being built. You can browse listings and send inquiries, but
+          buying, payments and shipping are not handled on Lakisa yet: price, shipping and payment
+          are agreed directly with the seller.
+        </InDevelopmentBox>
       </div>
 
       <form method="get" action="/marketplace" className="mp-browse-filters">

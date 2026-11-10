@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
-import ToolsShell from "@/components/tools-shell";
 import AdvancedSiteEditor from "@/components/advanced-site-editor";
 import { getCurrentUser } from "@/lib/auth";
 import { logToolUse } from "@/lib/tool-use";
-import { db } from "@/lib/db";
 import { getSiteTemplates, listAdvancedSites } from "@/lib/advanced-sites";
 import { templates as bundledTemplates } from "@/lib/advanced-site-templates";
 import type { SiteDocument, TemplateSummary } from "@/lib/advanced-site-types";
@@ -21,7 +19,6 @@ export default async function AdvancedWebsiteBuilderRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await logToolUse("website-builder-advanced", user.id);
-  const exhibitionCount = await db.exhibition.count({ where: { ownerId: user.id } });
 
   // Templates come from the Template table (seeded on first call);
   // sites are the user's own Site rows. If the database is unreachable
@@ -35,19 +32,9 @@ export default async function AdvancedWebsiteBuilderRoute() {
     console.error("Advanced website builder: database unavailable, using bundled templates.", error);
   }
 
-  return (
-    <ToolsShell
-      user={user}
-      exhibitionCount={exhibitionCount}
-      title="websiteBuilder"
-      eyebrowOverride="TOOLS · ADVANCED EDITOR: ÉDITEUR AVANCÉ"
-      description="websiteBuilderDesc"
-    >
-      <p style={{ margin: "0 0 12px", fontSize: 13, opacity: 0.75 }}>
-        Éditeur visuel : 11 modèles, plusieurs pages, 18 blocs, thème et SEO, aperçu
-        ordinateur / tablette / mobile. Les brouillons sont enregistrés dans votre compte.
-      </p>
-      <AdvancedSiteEditor initialSites={sites} templates={templates} />
-    </ToolsShell>
-  );
+  // Standalone fullscreen editor (Nov 2026): no Lakisa chrome here —
+  // no sidebar, no ToolsShell header. The editor fills the window like
+  // its own platform; it opens in a new tab from the tools hub. The
+  // editor itself (its own topbar, 100vh) is the whole page.
+  return <AdvancedSiteEditor initialSites={sites} templates={templates} />;
 }

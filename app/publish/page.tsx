@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Compass, Globe, Megaphone, Presentation, Printer, Store } from "lucide-react";
+import { Compass, Globe, Store } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,17 +7,10 @@ import { db } from "@/lib/db";
 export const metadata = {
   title: "Publish: Lakisa",
   description:
-    "Put your work in front of people: viewing rooms, portfolio sites, marketing, print and the marketplace.",
+    "Put your work in front of people: published exhibitions, portfolio sites and the marketplace.",
 };
 
 const CARDS: HubCard[] = [
-  {
-    href: "/tools/present-sell",
-    icon: Presentation,
-    title: "presentSell",
-    description: "presentSellDesc",
-    status: "ready",
-  },
   {
     href: "/explore",
     icon: Compass,
@@ -30,20 +23,6 @@ const CARDS: HubCard[] = [
     icon: Globe,
     title: "websiteBuilder",
     description: "websiteBuilderDesc",
-    status: "ready",
-  },
-  {
-    href: "/tools/marketing-studio",
-    icon: Megaphone,
-    title: "marketingStudio",
-    description: "marketingStudioDesc",
-    status: "ready",
-  },
-  {
-    href: "/tools/print-studio",
-    icon: Printer,
-    title: "printStudio",
-    description: "printStudioDesc",
     status: "ready",
   },
   {

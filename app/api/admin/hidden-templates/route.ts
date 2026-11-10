@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser, isAdminEmail } from "@/lib/auth";
+import { requireAdminPermission } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
 import { roomLayouts } from "@/lib/rooms";
@@ -12,15 +12,15 @@ import { roomLayouts } from "@/lib/rooms";
 // server-side — the UI never decides this on its own.
 const bodySchema = z.object({ layout: z.string().trim().min(1) });
 
-async function adminUser() {
-  const user = await getCurrentUser();
-  if (!user || !isAdminEmail(user.email)) return null;
-  return user;
+// Hiding a room template is a gallery-management action: the manager
+// holds it, and so does a sub-admin granted galleries.manage.
+async function canManageGalleries() {
+  return (await requireAdminPermission("galleries.manage")) !== null;
 }
 
 // Hide a template: POST { layout }.
 export async function POST(request: Request) {
-  if (!(await adminUser())) {
+  if (!(await canManageGalleries())) {
     return NextResponse.json({ error: "Admin only." }, { status: 403 });
   }
   let body: unknown = {};
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
 // Restore a hidden template: DELETE ?layout=<id>.
 export async function DELETE(request: Request) {
-  if (!(await adminUser())) {
+  if (!(await canManageGalleries())) {
     return NextResponse.json({ error: "Admin only." }, { status: 403 });
   }
   const layout = new URL(request.url).searchParams.get("layout")?.trim() ?? "";

@@ -51,7 +51,15 @@ function initialDraft(names: GalleryNamesMap): Draft {
   return draft;
 }
 
-export default function AdminGalleryNames({ names }: { names: GalleryNamesMap }) {
+export default function AdminGalleryNames({
+  names,
+  canManage = true,
+}: {
+  names: GalleryNamesMap;
+  // A sub-admin with galleries.view only sees the names; renaming
+  // needs galleries.manage (checked again server-side).
+  canManage?: boolean;
+}) {
   const [draft, setDraft] = useState<Draft>(() => initialDraft(names));
   // What the server last confirmed, per layout — the Save button stays
   // disabled until the row differs from it.
@@ -132,6 +140,7 @@ export default function AdminGalleryNames({ names }: { names: GalleryNamesMap })
                       style={inputStyle}
                       value={row.en}
                       maxLength={80}
+                      disabled={!canManage}
                       onChange={(event) =>
                         setDraft((current) => ({
                           ...current,
@@ -147,6 +156,7 @@ export default function AdminGalleryNames({ names }: { names: GalleryNamesMap })
                       style={inputStyle}
                       value={row.fr}
                       maxLength={80}
+                      disabled={!canManage}
                       onChange={(event) =>
                         setDraft((current) => ({
                           ...current,
@@ -156,7 +166,10 @@ export default function AdminGalleryNames({ names }: { names: GalleryNamesMap })
                     />
                   </td>
                   <td>
-                    <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                    {!canManage ? (
+                      <span style={{ color: "var(--ad-muted)", fontSize: 12 }}>Read only</span>
+                    ) : (
+                      <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                       <button
                         type="button"
                         style={{ ...btnPrimary, opacity: !changed || isSaving ? 0.6 : 1 }}
@@ -177,7 +190,8 @@ export default function AdminGalleryNames({ names }: { names: GalleryNamesMap })
                           {rowNote.text}
                         </span>
                       ) : null}
-                    </span>
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

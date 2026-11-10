@@ -916,13 +916,20 @@ export const DICTIONARY = {
   },
   stats: {
     visitorStats: { fr: "Statistiques des visiteurs", en: "Visitor statistics" },
+    visitorStatsDesc: {
+      fr: "Visites, visiteurs uniques, œuvres les plus vues, appareils, sources et pays, par exposition.",
+      en: "Visits, unique visitors, most viewed artworks, devices, sources and countries, per exhibition.",
+    },
+    noExhibitionsForStats: {
+      fr: "Créez une exposition et les visites seront comptées ici, jour par jour.",
+      en: "Create an exhibition and visits will be counted here, day by day.",
+    },
     visits: { fr: "Visites", en: "Visits" },
     avgVisitTime: { fr: "Temps moyen", en: "Average time" },
     topArtworks: { fr: "Œuvres les plus vues", en: "Most viewed artworks" },
     countries: { fr: "Pays des visiteurs", en: "Visitor countries" },
     noVisitsYet: { fr: "Aucune visite pour l'instant", en: "No visits yet" },
     views: { fr: "vues", en: "views" },
-    seeFullStats: { fr: "Voir les statistiques complètes", en: "See full statistics" },
   },
   create: {
     createExhibition: { fr: "Créer une exposition", en: "Create an exhibition" },
@@ -2798,6 +2805,9 @@ export const DICTIONARY = {
     visits: { fr: "visites", en: "visits" },
     couldNotCreate: { fr: "Impossible de créer une exposition.", en: "Could not create an exhibition." },
     couldNotDelete: { fr: "Impossible de supprimer cette exposition.", en: "Could not delete this exhibition." },
+    searchPlaceholder: { fr: "Rechercher une exposition…", en: "Search your exhibitions…" },
+    searchAria: { fr: "Rechercher vos expositions", en: "Search your exhibitions" },
+    noMatch: { fr: "Aucune exposition ne correspond à cette recherche.", en: "No exhibition matches this search." },
   },
   // Reusable artwork library (/artworks), "Mes œuvres".
   library: {
@@ -2834,6 +2844,25 @@ export const DICTIONARY = {
     couldNotLoad: { fr: "Impossible de charger vos œuvres.", en: "Could not load your artworks." },
     couldNotAdd: { fr: "Impossible d'ajouter cette œuvre à l'exposition.", en: "Could not add this artwork to the exhibition." },
     couldNotDelete: { fr: "Impossible de supprimer cette œuvre.", en: "Could not delete this artwork." },
+    addArtwork: { fr: "Ajouter une œuvre", en: "Add artwork" },
+    addArtworkCopy: {
+      fr: "Téléversez une œuvre directement dans votre bibliothèque : elle sera disponible partout, dans l'éditeur, les certificats et le PDF editor.",
+      en: "Upload an artwork straight into your library: it will be available everywhere, in the editor, certificates and the PDF editor.",
+    },
+    artworkImage: { fr: "Image de l'œuvre", en: "Artwork image" },
+    artworkTitle: { fr: "Titre", en: "Title" },
+    artworkTitlePlaceholder: { fr: "Titre de l'œuvre", en: "Artwork title" },
+    artworkArtist: { fr: "Artiste", en: "Artist" },
+    artworkYear: { fr: "Année", en: "Year" },
+    artworkMedium: { fr: "Technique", en: "Medium" },
+    artworkDimensions: { fr: "Dimensions", en: "Dimensions" },
+    artworkDescription: { fr: "Description (facultatif)", en: "Description (optional)" },
+    uploading: { fr: "Téléversement…", en: "Uploading…" },
+    savingArtwork: { fr: "Enregistrement…", en: "Saving…" },
+    chooseImageFirst: { fr: "Choisissez une image d'abord.", en: "Choose an image first." },
+    couldNotUpload: { fr: "Impossible de téléverser cette image.", en: "Could not upload this image." },
+    couldNotSaveArtwork: { fr: "Impossible d'enregistrer cette œuvre.", en: "Could not save this artwork." },
+    artworkAdded: { fr: "Œuvre ajoutée à votre bibliothèque.", en: "Artwork added to your library." },
     fromLibrary: { fr: "Depuis mes œuvres", en: "From my works" },
     chooseFromLibrary: { fr: "Choisir parmi mes œuvres", en: "Choose from my works" },
     libraryEmpty: {
@@ -3371,6 +3400,19 @@ export const DICTIONARY = {
       fr: "Un jumeau mesuré d'une vraie salle, des visites en VR et des aperçus en RA de votre œuvre sur un vrai mur.",
       en: "A measured twin of a real room, VR walkthroughs and AR previews of your work on a real wall.",
     },
+    framesWalls: { fr: "Cadres et art aux murs", en: "Frames & Art on Walls" },
+    framesWallsDesc: {
+      fr: "Encadrez vos œuvres avec de vrais cadres et voyez-les sur de vrais murs : salon, salle à manger, galerie, chambre ou bureau.",
+      en: "Frame your artworks with real frames and see them on real walls: living room, dining room, gallery, bedroom or office.",
+    },
+    openCalls: { fr: "Appels à candidatures", en: "Open Calls" },
+    openCallsEyebrow: { fr: "OUTILS · APPELS À CANDIDATURES", en: "TOOLS · OPEN CALLS" },
+    openCallsDesc: {
+      fr: "Créez un appel à candidatures, construisez son formulaire, publiez-le et recevez les candidatures.",
+      en: "Create an open call, build its form, publish it and receive applications.",
+    },
+    searchTools: { fr: "Rechercher un outil…", en: "Search tools…" },
+    noToolsMatch: { fr: "Aucun outil ne correspond à cette recherche.", en: "No tool matches this search." },
     forArtists: { fr: "Pour les artistes", en: "For Artists" },
     forArtistsDesc: {
       fr: "Gérez votre atelier depuis un seul endroit : inventaire, tarifs, ventes et documents.",
@@ -3475,6 +3517,11 @@ export const DICTIONARY = {
     frameStudioDesc: {
       fr: "Des cadres pour vos œuvres : 28 styles numérisés, contrôles et préréglages personnalisés, et comparaison côte à côte.",
       en: "Frames for your artworks: 28 digitised styles, custom controls and presets, and side-by-side comparison.",
+    },
+    framesWalls: { fr: "Cadres et art aux murs", en: "Frames & Art on Walls" },
+    framesWallsDesc: {
+      fr: "Encadrez vos œuvres avec de vrais cadres et voyez-les sur de vrais murs : salon, salle à manger, galerie, chambre ou bureau.",
+      en: "Frame your artworks with real frames and see them on real walls: living room, dining room, gallery, bedroom or office.",
     },
     mockupStudio: { fr: "Atelier maquettes", en: "Mockup Studio" },
     mockupStudioDesc: {
@@ -3731,6 +3778,12 @@ export const DICTIONARY = {
       fr: "Encadrez vos œuvres sans ouvrir l'éditeur 3D. Choisissez une œuvre, prévisualisez-la dans chaque style de cadre, affinez le cadre au millimètre, comparez-en jusqu'à quatre côte à côte, puis enregistrez le cadre directement sur l'œuvre.",
       en: "Frame your artworks without opening the 3D editor. Pick a work, preview it in every frame style, fine-tune the frame to the millimetre, compare up to four side by side, then save the frame straight onto the artwork.",
     },
+    framesWalls: { fr: "Cadres et art aux murs", en: "Frames & Art on Walls" },
+    framesWallsEyebrow: { fr: "OUTILS · CADRES ET ART AUX MURS", en: "TOOLS · FRAMES & ART ON WALLS" },
+    framesWallsDesc: {
+      fr: "Encadrez vos œuvres avec de vrais cadres et voyez-les sur de vrais murs : salon, salle à manger, galerie, chambre ou bureau.",
+      en: "Frame your artworks with real frames and see them on real walls: living room, dining room, gallery, bedroom or office.",
+    },
     imageTo3d: { fr: "Image vers 3D et bibliothèque", en: "Image-to-3D & Asset Library" },
     imageTo3dEyebrow: { fr: "OUTILS · IMAGE VERS 3D", en: "TOOLS · IMAGE-TO-3D" },
     imageTo3dDesc: {
@@ -3758,6 +3811,12 @@ export const DICTIONARY = {
     mockupStudioDesc: {
       fr: "Accrochez votre œuvre sur un vrai mur avant même qu'elle quitte l'atelier. Choisissez une œuvre, choisissez une salle, réglez le cadre et la lumière, puis exportez une maquette prête à imprimer à envoyer à un acheteur ou une galerie.",
       en: "Hang your work on a real wall before it ever leaves the studio. Pick an artwork, choose a room, set the frame and the light, then export a print-ready mockup to send to a buyer or a gallery.",
+    },
+    openCalls: { fr: "Appels à candidatures", en: "Open Calls" },
+    openCallsEyebrow: { fr: "OUTILS · APPELS À CANDIDATURES", en: "TOOLS · OPEN CALLS" },
+    openCallsDesc: {
+      fr: "Créez un appel à candidatures, construisez son formulaire, publiez-le et recevez les candidatures.",
+      en: "Create an open call, build its form, publish it and receive applications.",
     },
     photographyLab: { fr: "Laboratoire photo", en: "Photography Lab" },
     photographyLabEyebrow: { fr: "OUTILS · LABORATOIRE PHOTO", en: "TOOLS · PHOTOGRAPHY LAB" },

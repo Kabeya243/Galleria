@@ -67,7 +67,7 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const [user, profile] = await Promise.all([
+  const [user, profile, subAdmin] = await Promise.all([
     db.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, name: true, role: true, country: true },
@@ -76,11 +76,15 @@ export async function getCurrentUser() {
     // the User table — see lib/profile.ts. One indexed query, merged here
     // so every page sees user.avatarUrl / user.bio.
     getUserProfile(userId),
+    // Sub-admin grant (Nov 2026): one indexed lookup, so the sidebar can
+    // show the Admin link to sub-admins too. The grant is read fresh on
+    // every call, so a revoke takes effect immediately.
+    db.subAdmin.findUnique({ where: { userId }, select: { id: true } }),
   ]);
   if (!user) return null;
   // Carried on the user object so every page can show the Admin link
   // without threading a separate prop through the whole app.
-  return { ...user, avatarUrl: profile.avatarUrl, bio: profile.bio, isAdmin: isAdminEmail(user.email) };
+  return { ...user, avatarUrl: profile.avatarUrl, bio: profile.bio, isAdmin: isAdminEmail(user.email), isSubAdmin: subAdmin !== null };
 }
 
 // The exhibition access-password hash must never leave the server:

@@ -42,10 +42,12 @@ export const TOOL_SLUGS = [
   "print-studio",
   "portfolio-pdf",
   "marketplace",
+  "open-calls",
   "teams",
   "digital-twin",
   // Phase 7 — Art in Context
   "art-in-context",
+  "frames-walls",
 ] as const;
 
 export type ToolSlug = (typeof TOOL_SLUGS)[number];
@@ -83,11 +85,13 @@ export const TOOL_LABELS: Record<ToolSlug, string> = {
   "marketing-studio": "Marketing Studio",
   "print-studio": "Print Production Studio",
   "portfolio-pdf": "Portfolio PDF Builder",
+  "open-calls": "Open Calls",
   marketplace: "Marketplace",
   teams: "Teams & Collaboration",
   "digital-twin": "Digital Twin, VR & AR",
   // Phase 7 — Art in Context
   "art-in-context": "Art in Context",
+  "frames-walls": "Frames & Art on Walls",
 };
 
 // Record one tool page load. Logging must never break the tool page, so a

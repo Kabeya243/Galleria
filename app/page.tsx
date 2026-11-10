@@ -3,6 +3,7 @@ import PublicHome, { type FeaturedPreview, type PublicHomeExhibition } from "@/c
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
+import { getExhibitionAnalytics } from "@/lib/visitor-analytics-server";
 
 function countRooms(value: string): number {
   try {
@@ -88,7 +89,11 @@ function deltaText(recentCount: number): { delta: string; tone: "up" | "flat" } 
   return { delta: "No new in the last 7 days", tone: "flat" };
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ exhibitionId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) {
     const [exhibitions, featured] = await Promise.all([
@@ -97,6 +102,8 @@ export default async function HomePage() {
     ]);
     return <PublicHome exhibitions={exhibitions} featured={featured} />;
   }
+
+  const { exhibitionId } = await searchParams;
 
   const exhibitions = await db.exhibition.findMany({
     where: { ownerId: user.id },
@@ -157,65 +164,22 @@ export default async function HomePage() {
       artworkCount: exhibition._count.artworks,
     }));
 
-  // Creator visit statistics (feature 6): from VisitLog — exhibition-level
-  // rows only (artworkId null) for visits and duration, artwork rows for
-  // the most-viewed works. Country comes only from the Vercel geo header
-  // (x-vercel-ip-country); a missing country is never guessed.
-  const exhibitionIds = exhibitions.map((exhibition) => exhibition.id);
-  const [visitAggregate, topArtworkRows, topCountryRows] = await Promise.all([
-    db.visitLog.aggregate({
-      where: { exhibitionId: { in: exhibitionIds }, artworkId: null },
-      _count: { _all: true },
-      _avg: { durationSeconds: true },
-    }),
-    db.visitLog.groupBy({
-      by: ["artworkId"],
-      where: { exhibitionId: { in: exhibitionIds }, artworkId: { not: null } },
-      _count: { _all: true },
-      orderBy: { _count: { artworkId: "desc" } },
-      take: 5,
-    }),
-    db.visitLog.groupBy({
-      by: ["country"],
-      where: { exhibitionId: { in: exhibitionIds }, artworkId: null, country: { not: null } },
-      _count: { _all: true },
-      orderBy: { _count: { country: "desc" } },
-      take: 5,
-    }),
-  ]);
-  const topArtworkIds = topArtworkRows
-    .map((row) => row.artworkId)
-    .filter((id): id is string => id !== null);
-  const topArtworkDetails =
-    topArtworkIds.length > 0
-      ? await db.artwork.findMany({
-          where: { id: { in: topArtworkIds } },
-          select: { id: true, title: true, exhibition: { select: { title: true } } },
-        })
-      : [];
-  const visitStats = {
-    totalVisits: visitAggregate._count._all,
-    avgDurationSeconds:
-      visitAggregate._avg.durationSeconds != null
-        ? Math.round(visitAggregate._avg.durationSeconds)
-        : null,
-    topArtworks: topArtworkRows
-      .map((row) => {
-        const detail = topArtworkDetails.find((artwork) => artwork.id === row.artworkId);
-        if (!detail) return null;
-        return {
-          id: detail.id,
-          title: detail.title,
-          exhibitionTitle: detail.exhibition.title,
-          views: row._count._all,
-        };
-      })
-      .filter((row): row is NonNullable<typeof row> => row !== null),
-    topCountries: topCountryRows.map((row) => ({
-      country: row.country ?? "Unknown",
-      visits: row._count._all,
-    })),
-  };
+  // Visitor analytics (merged here from the old Visitor Analytics tool,
+  // Nov 2026): the full per-exhibition analytics live on the dashboard
+  // now, under #visitor-analytics. The selected exhibition comes from
+  // ?exhibitionId=, defaulting to the most recently updated one.
+  const analyticsExhibitions = exhibitions.map((exhibition) => ({
+    id: exhibition.id,
+    title: exhibition.title,
+    slug: exhibition.slug,
+    status: exhibition.status,
+    views: exhibition.views,
+  }));
+  const selectedAnalytics =
+    analyticsExhibitions.find((e) => e.id === exhibitionId) ?? analyticsExhibitions[0] ?? null;
+  const analytics = selectedAnalytics
+    ? await getExhibitionAnalytics(selectedAnalytics.id)
+    : null;
 
   return (
     <Dashboard
@@ -231,7 +195,17 @@ export default async function HomePage() {
       chartTotal={chartTotal}
       chartRange={chartRange}
       topExhibitions={topExhibitions}
-      visitStats={visitStats}
+      visitorAnalytics={
+        analytics && selectedAnalytics
+          ? {
+              exhibitions: analyticsExhibitions,
+              selectedId: selectedAnalytics.id,
+              selectedSlug: selectedAnalytics.slug,
+              selectedTitle: selectedAnalytics.title,
+              ...analytics,
+            }
+          : null
+      }
     />
   );
 }

@@ -4,6 +4,12 @@ import Link from "next/link";
 import Avatar from "@/components/avatar";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
+import VisitorAnalytics, {
+  type AnalyticsDay,
+  type AnalyticsExhibition,
+  type CountRow,
+  type TopArtwork,
+} from "@/components/visitor-analytics";
 import { useT } from "@/lib/i18n";
 import type { RoomModelId } from "@/lib/rooms";
 import {
@@ -29,22 +35,27 @@ type TopExhibition = {
   artworkCount: number;
 };
 
-export type VisitStats = {
-  totalVisits: number;
+// The full per-exhibition visitor analytics (merged here from the old
+// Visitor Analytics tool, Nov 2026). Null when the user has no
+// exhibition yet.
+export type DashboardVisitorAnalytics = {
+  exhibitions: AnalyticsExhibition[];
+  selectedId: string;
+  selectedSlug: string;
+  selectedTitle: string;
+  daily: AnalyticsDay[];
+  totalVisits30: number;
+  uniqueVisitors30: number;
+  totalVisitsAllTime: number;
+  uniqueVisitorsAllTime: number;
   avgDurationSeconds: number | null;
-  topArtworks: { id: string; title: string; exhibitionTitle: string; views: number }[];
-  topCountries: { country: string; visits: number }[];
+  topArtworks: TopArtwork[];
+  devices: CountRow[];
+  referrers: CountRow[];
+  countries: CountRow[];
 };
 
 type ChartDay = { label: string; full: string; count: number; isRecentWeek: boolean };
-
-function formatDuration(seconds: number | null): string {
-  if (seconds == null) return "N/A";
-  if (seconds < 60) return `${seconds} s`;
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
-}
 
 export default function Dashboard({
   user,
@@ -54,7 +65,7 @@ export default function Dashboard({
   chartTotal,
   chartRange,
   topExhibitions,
-  visitStats,
+  visitorAnalytics,
 }: {
   user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   exhibitionCount: number;
@@ -68,7 +79,7 @@ export default function Dashboard({
   chartTotal: number;
   chartRange: string;
   topExhibitions: TopExhibition[];
-  visitStats: VisitStats;
+  visitorAnalytics: DashboardVisitorAnalytics | null;
 }) {
   const t = useT();
   const [query, setQuery] = useState("");
@@ -289,65 +300,28 @@ export default function Dashboard({
             )}
           </section>
 
-          {/* Creator visit statistics (feature 6): visits, average time,
-              most-viewed artworks and visitor countries, from VisitLog.
-              Full detail lives in the Visitor Analytics tool. */}
-          <section className={styles.card} aria-label={t("stats", "visitorStats")}>
+          {/* Visitor analytics (merged here from the old Visitor
+              Analytics tool, Nov 2026): visits, unique visitors, most
+              viewed artworks, devices, traffic sources and countries,
+              per exhibition, with a CSV export. The anchor
+              #visitor-analytics is where /tools/visitor-analytics and
+              the Intelligence hub link to. */}
+          <section id="visitor-analytics" className={styles.card} aria-label={t("stats", "visitorStats")}>
             <div className="section-heading">
               <div>
                 <span className="eyebrow">{t("stats", "visits")}</span>
                 <h2>{t("stats", "visitorStats")}</h2>
-                <p className={styles.cardSub}>
-                  {t("stats", "visits")} · {visitStats.totalVisits}, {t("stats", "avgVisitTime")} ·{" "}
-                  {formatDuration(visitStats.avgDurationSeconds)}
-                </p>
+                <p className={styles.cardSub}>{t("stats", "visitorStatsDesc")}</p>
               </div>
-              <Link className="view-all" href="/tools/visitor-analytics">
-                {t("stats", "seeFullStats")}
-              </Link>
             </div>
-            {visitStats.totalVisits === 0 ? (
-              <p className={styles.empty}>{t("stats", "noVisitsYet")}</p>
+            {visitorAnalytics === null ? (
+              <p className={styles.empty}>{t("stats", "noExhibitionsForStats")}</p>
             ) : (
-              <div className={styles.visitStatsGrid}>
-                <div>
-                  <h3 className={styles.visitStatsHeading}>{t("stats", "topArtworks")}</h3>
-                  {visitStats.topArtworks.length === 0 ? (
-                    <p className={styles.empty}>{t("stats", "noVisitsYet")}</p>
-                  ) : (
-                    <ul className={styles.visitStatsList}>
-                      {visitStats.topArtworks.map((artwork) => (
-                        <li key={artwork.id}>
-                          <span>
-                            {artwork.title}
-                            <small>, {artwork.exhibitionTitle}</small>
-                          </span>
-                          <strong>
-                            {artwork.views} {t("stats", "views")}
-                          </strong>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div>
-                  <h3 className={styles.visitStatsHeading}>{t("stats", "countries")}</h3>
-                  {visitStats.topCountries.length === 0 ? (
-                    <p className={styles.empty}>{t("stats", "noVisitsYet")}</p>
-                  ) : (
-                    <ul className={styles.visitStatsList}>
-                      {visitStats.topCountries.map((row) => (
-                        <li key={row.country}>
-                          <span>{row.country}</span>
-                          <strong>
-                            {row.visits} {t("stats", "views")}
-                          </strong>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
+              <VisitorAnalytics
+                {...visitorAnalytics}
+                basePath="/"
+                selectSuffix="#visitor-analytics"
+              />
             )}
           </section>
 

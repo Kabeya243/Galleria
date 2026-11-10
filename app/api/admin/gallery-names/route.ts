@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser, isAdminEmail } from "@/lib/auth";
+import { requireAdminPermission } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { getGalleryNames } from "@/lib/gallery-names-server";
 import { roomLayouts } from "@/lib/rooms";
@@ -17,9 +17,10 @@ const bodySchema = z.object({
 });
 
 export async function PUT(request: Request) {
-  const user = await getCurrentUser();
-  if (!user || !isAdminEmail(user.email)) {
-    return NextResponse.json({ error: "Admin only." }, { status: 403 });
+  // Renaming a gallery is a gallery-management action: the manager
+  // holds it, and so does a sub-admin granted galleries.manage.
+  if (!(await requireAdminPermission("galleries.manage"))) {
+    return NextResponse.json({ error: "Galleries management only." }, { status: 403 });
   }
   let body: unknown = {};
   try {

@@ -3,7 +3,13 @@
 // Atelier app/services/documents.py). Both must stay in sync: the
 // editor refuses invalid documents before they reach R2 or the export
 // function, and the export function re-validates server-side.
-
+//
+// Nov 2026 (Kabeya): two former blocks were removed on purpose —
+// added images are accepted whatever their source (library, upload,
+// data URL, external URL), and element sizes are no longer capped at
+// 6000 px. An image the export cannot fetch renders as a neutral
+// placeholder instead of failing the export (see api/index.py
+// _draw_pdf_image), so removing the blocks cannot break an export.
 export function validateAtelierDocument(document: unknown): string | null {
   if (!document || typeof document !== "object") return "Document invalide.";
   const pages = (document as { pages?: unknown }).pages ?? [document];
@@ -36,7 +42,6 @@ export function validateAtelierDocument(document: unknown): string | null {
       for (const [key, def] of [["left", 0], ["top", 0], ["width", 100], ["height", 100], ["scaleX", 1], ["scaleY", 1], ["angle", 0], ["opacity", 1]] as const) {
         const value = Number(o[key] ?? def);
         if (!Number.isFinite(value) || Math.abs(value) > 100000) return "Valeur de position ou de taille hors limite.";
-        if ((key === "width" || key === "height") && !(value >= 1 && value <= 6000)) return "La taille d’un élément doit être comprise entre 1 et 6000 px.";
         if ((key === "scaleX" || key === "scaleY") && (value === 0 || Math.abs(value) > 100)) return "Échelle d’élément invalide.";
         if (key === "opacity" && !(value >= 0 && value <= 1)) return "L’opacité doit être comprise entre 0 et 100 %.";
       }
@@ -50,13 +55,10 @@ export function validateAtelierDocument(document: unknown): string | null {
       if ("text" in o && (typeof o.text !== "string" || o.text.length > 10000)) return "Le texte dépasse la longueur maximale.";
       if (o.src) {
         const source = o.src;
+        // Any image source is accepted (library, upload, data URL,
+        // external URL): the export renders what it can fetch and a
+        // neutral placeholder for the rest, never an error.
         if (typeof source !== "string" || source.length > 20 * 1024 * 1024) return "Source d’image invalide.";
-        const uploadOk =
-          /^\/api\/r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:jpe?g|png|webp|svg)$/i.test(source) ||
-          /^\/api\/atelier\/file\/atelier\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9]{32}\.(?:jpe?g|png|webp|svg)$/i.test(source) ||
-          /^https?:\/\/[^/]+\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:jpe?g|png|webp|svg)$/i.test(source);
-        const dataOk = /^data:image\/(?:png|jpe?g|webp|svg\+xml);base64,/i.test(source);
-        if (!uploadOk && !dataOk) return "Les images doivent provenir de la bibliothèque Lakisa.";
       }
     }
   }

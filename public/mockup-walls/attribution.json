@@ -1,0 +1,122 @@
+[
+  {
+    "id": "living-room-bright",
+    "label": "Bright living room",
+    "category": "living-room",
+    "file": "/mockup-walls/living-room-bright.jpg",
+    "width": 2000,
+    "height": 1765,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "living-room-sofa",
+    "label": "Sofa and gallery wall",
+    "category": "living-room",
+    "file": "/mockup-walls/living-room-sofa.jpg",
+    "width": 2000,
+    "height": 1125,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "living-room-modern",
+    "label": "Modern living room",
+    "category": "living-room",
+    "file": "/mockup-walls/living-room-modern.jpg",
+    "width": 2000,
+    "height": 1055,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "dining-room-green",
+    "label": "Dining room, green chairs",
+    "category": "dining-room",
+    "file": "/mockup-walls/dining-room-green.jpg",
+    "width": 2000,
+    "height": 1125,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "dining-room-loft",
+    "label": "Loft dining room",
+    "category": "dining-room",
+    "file": "/mockup-walls/dining-room-loft.jpg",
+    "width": 2000,
+    "height": 1500,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "gallery-red",
+    "label": "Red gallery wall",
+    "category": "gallery",
+    "file": "/mockup-walls/gallery-red.jpg",
+    "width": 2000,
+    "height": 1333,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "gallery-teal",
+    "label": "Teal gallery wall",
+    "category": "gallery",
+    "file": "/mockup-walls/gallery-teal.jpg",
+    "width": 2000,
+    "height": 1125,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "gallery-white",
+    "label": "White gallery wall",
+    "category": "gallery",
+    "file": "/mockup-walls/gallery-white.jpg",
+    "width": 2000,
+    "height": 1500,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "bedroom-white",
+    "label": "Bright bedroom",
+    "category": "bedroom",
+    "file": "/mockup-walls/bedroom-white.jpg",
+    "width": 2000,
+    "height": 1333,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=2000&q=80"
+  },
+  {
+    "id": "office-glass",
+    "label": "Glass office",
+    "category": "office",
+    "file": "/mockup-walls/office-glass.jpg",
+    "width": 2000,
+    "height": 1335,
+    "license": "Unsplash License",
+    "license_url": "https://unsplash.com/license",
+    "creator": "Unsplash",
+    "source": "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=2000&q=80"
+  }
+]

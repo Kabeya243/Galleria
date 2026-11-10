@@ -1,82 +1,17 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import ToolsShell from "@/components/tools-shell";
-import FrameStudio from "@/components/frame-studio";
-import { getCurrentUser } from "@/lib/auth";
-import { logToolUse } from "@/lib/tool-use";
-import { db } from "@/lib/db";
-import styles from "@/components/tools.module.css";
 
-export const metadata = {
-  title: "Frame Studio: Lakisa Tools",
-  description:
-    "Frame your artworks, all 28 digitised styles with faithful previews, custom width, depth, material, matboard and glass, side-by-side comparison, and one-click save to the artwork.",
-};
-
-export default async function FrameStudioRoute({
+// Frame Studio moved into the merged tool "Frames & Art on Walls".
+// Old links keep working: this route redirects there, keeping a
+// deep-linked artwork when one was given.
+export default async function FrameStudioRedirect({
   searchParams,
 }: {
   searchParams: Promise<{ artworkId?: string }>;
 }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  await logToolUse("frame-studio", user.id);
   const { artworkId } = await searchParams;
-  const [exhibitionCount, artworks] = await Promise.all([
-    db.exhibition.count({ where: { ownerId: user.id } }),
-    db.artwork.findMany({
-      where: { exhibition: { ownerId: user.id } },
-      select: {
-        id: true,
-        title: true,
-        medium: true,
-        dimensions: true,
-        year: true,
-        color: true,
-        accent: true,
-        imageUrl: true,
-        frame: true,
-        exhibitionId: true,
-        exhibition: { select: { title: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
-
-  return (
-    <ToolsShell
-      user={user}
-      exhibitionCount={exhibitionCount}
-      title="frameStudio"
-      eyebrow="frameStudioEyebrow"
-      description="frameStudioDesc"
-    >
-      {artworks.length === 0 ? (
-        <div className={styles.emptyBox}>
-          <strong>No artworks yet.</strong>
-          <p>Open an exhibition in the editor and add your first work, it will show up here as soon as it exists.</p>
-          <Link href="/exhibitions" className="galleries-open-button">
-            Go to your exhibitions
-          </Link>
-        </div>
-      ) : (
-        <FrameStudio
-          initialArtworkId={artworkId}
-          artworks={artworks.map((a) => ({
-            id: a.id,
-            title: a.title,
-            medium: a.medium,
-            dimensions: a.dimensions,
-            year: a.year,
-            color: a.color,
-            accent: a.accent,
-            imageUrl: a.imageUrl,
-            exhibitionId: a.exhibitionId,
-            exhibitionTitle: a.exhibition.title,
-            frame: a.frame,
-          }))}
-        />
-      )}
-    </ToolsShell>
+  redirect(
+    artworkId
+      ? `/tools/frames-walls?artworkId=${encodeURIComponent(artworkId)}`
+      : "/tools/frames-walls",
   );
 }

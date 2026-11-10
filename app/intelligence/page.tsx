@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BarChart3, Bot, Box, Clapperboard, ScanEye, ShieldCheck, Sparkles } from "lucide-react";
+import { BarChart3, Box, Clapperboard, ShieldCheck } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 export const metadata = {
   title: "Intelligence: Lakisa",
   description:
-    "What the numbers say, and help thinking: visitor analytics, AI-assisted exhibition planning, artwork analysis, 3D assets and video.",
+    "What the numbers say, and help thinking: visitor analytics on the dashboard, 3D assets and video.",
 };
 
 export default async function IntelligenceHub() {
@@ -31,32 +31,13 @@ export default async function IntelligenceHub() {
     description: "adminStatsDesc",
           status: "owner-only",
         },
+    // Visitor analytics moved to the dashboard (Nov 2026): the full
+    // analytics live there under #visitor-analytics.
     {
-      href: "/tools/visitor-analytics",
+      href: "/#visitor-analytics",
       icon: BarChart3,
       title: "insights",
     description: "insightsDesc",
-      status: "ready",
-    },
-    {
-      href: "/tools/ai-architect",
-      icon: Sparkles,
-      title: "aiArchitect",
-    description: "aiArchitectDesc",
-      status: "ready",
-    },
-    {
-      href: "/tools/artwork-intelligence",
-      icon: ScanEye,
-      title: "artworkIntelligence",
-    description: "artworkIntelligenceDesc",
-      status: "ready",
-    },
-    {
-      href: "/tools/ai-assistant",
-      icon: Bot,
-      title: "aiAssistant",
-    description: "aiAssistantDesc",
       status: "ready",
     },
     {

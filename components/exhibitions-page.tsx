@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, ArrowUpRight, PenLine, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, ArrowUpRight, PenLine, Plus, Search, Trash2 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import ThemeToggle from "@/components/theme-toggle";
@@ -42,6 +42,13 @@ export default function ExhibitionsPage({
   // the editor's remove-room): first click arms, second confirms, and the
   // armed state clears after a few seconds.
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  // Local search (Nov 2026): only filters the exhibitions on this page,
+  // by title — never the rest of the site.
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const visibleExhibitions = exhibitions.filter(
+    (exhibition) => needle === "" || exhibition.title.toLowerCase().includes(needle),
+  );
 
   // Feature 7: the title is mandatory and a room model is picked in the
   // dialog — the POST no longer creates an "Untitled exhibition".
@@ -138,7 +145,41 @@ export default function ExhibitionsPage({
                 </button>
               </div>
             ) : (
-              exhibitions.map((exhibition) => (
+              <>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    gridColumn: "1 / -1",
+                    maxWidth: 420,
+                    padding: "9px 12px",
+                    border: "1px solid var(--line)",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Search size={16} aria-hidden="true" />
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={t("exhibitions", "searchPlaceholder")}
+                    aria-label={t("exhibitions", "searchAria")}
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      color: "inherit",
+                      fontSize: 14,
+                      width: "100%",
+                    }}
+                  />
+                </label>
+                {visibleExhibitions.length === 0 ? (
+                  <div className={styles.emptyState} style={{ gridColumn: "1 / -1" }}>
+                    <strong>{t("exhibitions", "noMatch")}</strong>
+                  </div>
+                ) : (
+                  visibleExhibitions.map((exhibition) => (
                 <article key={exhibition.id} className={`gallery-card ${styles.card}`}>
                   <Link
                     href={`/editor/${exhibition.id}`}
@@ -185,7 +226,9 @@ export default function ExhibitionsPage({
                     </div>
                   </div>
                 </article>
-              ))
+                  ))
+                )}
+              </>
             )}
           </section>
         </div>

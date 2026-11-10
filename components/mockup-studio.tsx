@@ -17,12 +17,14 @@ export type MockupArtwork = {
   accent: string;
   imageUrl: string | null;
   exhibitionTitle: string;
+  // The frame saved on the artwork (Frame Studio value): the Walls view
+  // opens with it when it names a built-in frame style.
+  frame?: string;
 };
 
 type Arrangement = "single" | "diptych" | "triptych" | "grid" | "salon";
 type Glass = "none" | "clear" | "non-reflective";
 type Lighting = "warm" | "cool" | "daylight";
-type WallMaterial = "paint" | "plaster" | "brick" | "wood" | "concrete";
 type ExportFormat = "png" | "jpeg" | "webp";
 
 type MockupConfig = {
@@ -41,8 +43,6 @@ type MockupConfig = {
   lighting: Lighting;
   shadow: boolean;
   shadowStrength: number; // 0–100
-  wallColor: string;
-  wallMaterial: WallMaterial;
   brightness: number; // 0.6–1.3
   spacing: number; // gap between works in an arrangement, cm
   resolution: "1080p" | "2k" | "4k";
@@ -50,7 +50,7 @@ type MockupConfig = {
 };
 
 const DEFAULT_CONFIG: MockupConfig = {
-  scene: "living-room",
+  scene: "living-room-bright",
   arrangement: "single",
   artworkIds: [],
   widthCm: 100,
@@ -65,8 +65,6 @@ const DEFAULT_CONFIG: MockupConfig = {
   lighting: "daylight",
   shadow: true,
   shadowStrength: 45,
-  wallColor: "",
-  wallMaterial: "paint",
   brightness: 1,
   spacing: 12,
   resolution: "1080p",
@@ -125,7 +123,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 /** Load an artwork image with CORS so the canvas stays exportable. */
-function loadImage(url: string): Promise<HTMLImageElement> {
+export function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -136,7 +134,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /** Procedural stand-in for artworks without an uploaded image. */
-function drawPlaceholderArt(
+export function drawPlaceholderArt(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -165,337 +163,47 @@ function drawPlaceholderArt(
 }
 
 // ---------------------------------------------------------------------------
-// Scenes — original procedural interiors (SVG-style canvas drawing, not photos)
+// Walls — real wall photos (public/mockup-walls/, Unsplash License)
 // ---------------------------------------------------------------------------
+// The old mockup drew eight procedural vector interiors on canvas. The
+// walls are now ten real photographs: the picker shows the full photo as
+// the thumbnail (never a cropped swatch) and the render draws the same
+// full photo cover-fit as the backdrop, so what you pick is what hangs.
+// `wall` / `floor` are only the fallback colours when a photo cannot
+// load — the render then falls back to a plain painted wall.
 
-type SceneDef = {
+export type WallDef = {
   id: string;
   label: string;
+  category: string;
+  file: string;
+  width: number;
+  height: number;
   wall: string;
   floor: string;
   mood: string;
-  /** Draw furniture + props. Wall and floor are already painted. */
-  draw: (ctx: CanvasRenderingContext2D, W: number, H: number, floorY: number) => void;
 };
 
-function rect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fill: string) {
-  ctx.fillStyle = fill;
-  ctx.fillRect(x, y, w, h);
-}
-
-function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string) {
-  ctx.fillStyle = fill;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-  ctx.fill();
-}
-
-function ellipse(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number, fill: string) {
-  ctx.fillStyle = fill;
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function plant(ctx: CanvasRenderingContext2D, x: number, baseY: number, s: number) {
-  // Pot + leaves, drawn from simple shapes.
-  ctx.fillStyle = "#a9805a";
-  ctx.beginPath();
-  ctx.moveTo(x - 0.03 * s, baseY - 0.09 * s);
-  ctx.lineTo(x + 0.03 * s, baseY - 0.09 * s);
-  ctx.lineTo(x + 0.022 * s, baseY);
-  ctx.lineTo(x - 0.022 * s, baseY);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#4a6b3f";
-  ctx.lineWidth = Math.max(2, 0.008 * s);
-  ctx.lineCap = "round";
-  for (const [dx, dy, len] of [
-    [-0.035, -0.16, 0.1],
-    [-0.012, -0.19, 0.12],
-    [0.015, -0.18, 0.11],
-    [0.04, -0.14, 0.09],
-  ] as const) {
-    ctx.beginPath();
-    ctx.moveTo(x, baseY - 0.09 * s);
-    ctx.quadraticCurveTo(x + dx * s, baseY - 0.09 * s - len * s * 0.6, x + dx * s, baseY - 0.09 * s - len * s);
-    ctx.stroke();
-  }
-  ctx.fillStyle = "#5d7f4e";
-  for (const [dx, dy] of [
-    [-0.035, -0.16],
-    [-0.012, -0.19],
-    [0.015, -0.18],
-    [0.04, -0.14],
-  ] as const) {
-    ellipse(ctx, x + dx * s, baseY + dy * s, 0.012 * s, 0.02 * s, "#5d7f4e");
-  }
-}
-
-function sofa(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) {
-  const dark = shade(color, -28);
-  const light = shade(color, 18);
-  rrect(ctx, x, y, w, h, Math.min(14, h * 0.18), color); // body
-  rrect(ctx, x + w * 0.04, y - h * 0.42, w * 0.42, h * 0.5, 8, light); // back cushions
-  rrect(ctx, x + w * 0.54, y - h * 0.42, w * 0.42, h * 0.5, 8, light);
-  rrect(ctx, x + w * 0.06, y + h * 0.08, w * 0.4, h * 0.5, 6, dark); // seat cushions
-  rrect(ctx, x + w * 0.54, y + h * 0.08, w * 0.4, h * 0.5, 6, dark);
-  rect(ctx, x + w * 0.02, y + h, w * 0.05, h * 0.16, "#3a2f26"); // legs
-  rect(ctx, x + w * 0.93, y + h, w * 0.05, h * 0.16, "#3a2f26");
-}
-
-function pendantLamp(ctx: CanvasRenderingContext2D, x: number, topY: number, len: number, color: string) {
-  ctx.strokeStyle = "#6b655c";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x, topY);
-  ctx.lineTo(x, topY + len);
-  ctx.stroke();
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(x - 16, topY + len);
-  ctx.lineTo(x + 16, topY + len);
-  ctx.lineTo(x + 10, topY + len + 18);
-  ctx.lineTo(x - 10, topY + len + 18);
-  ctx.closePath();
-  ctx.fill();
-  ellipse(ctx, x, topY + len + 20, 12, 4, "rgba(255, 214, 130, 0.85)");
-}
-
-const SCENES: SceneDef[] = [
-  {
-    id: "living-room",
-    label: "Living room",
-    wall: "#e8e2d6",
-    floor: "#b08d63",
-    mood: "Warm daylight, oak floor",
-    draw(ctx, W, H, floorY) {
-      // Rug
-      ellipse(ctx, W * 0.5, H * 0.9, W * 0.34, H * 0.045, "#c9b8a3");
-      ellipse(ctx, W * 0.5, H * 0.9, W * 0.28, H * 0.032, "#b3a186");
-      sofa(ctx, W * 0.06, floorY - H * 0.085, W * 0.3, H * 0.085, "#8a7a68");
-      // Coffee table
-      rrect(ctx, W * 0.42, floorY - H * 0.035, W * 0.16, H * 0.012, 4, "#6f5138");
-      rect(ctx, W * 0.435, floorY - H * 0.025, W * 0.008, H * 0.025, "#4a3524");
-      rect(ctx, W * 0.565, floorY - H * 0.025, W * 0.008, H * 0.025, "#4a3524");
-      // Floor lamp, right
-      rect(ctx, W * 0.9, floorY - H * 0.22, W * 0.006, H * 0.22, "#4a4440");
-      ellipse(ctx, W * 0.9, floorY - H * 0.235, W * 0.035, H * 0.02, "#e8d9a8");
-      ellipse(ctx, W * 0.9, floorY - H * 0.235, W * 0.02, H * 0.012, "#f6e7bd");
-      plant(ctx, W * 0.82, floorY, H * 0.55);
-      // Framed print on the side wall, small
-      rect(ctx, W * 0.72, floorY - H * 0.3, W * 0.07, H * 0.16, "#3d3a35");
-      rect(ctx, W * 0.725, floorY - H * 0.29, W * 0.06, H * 0.14, "#c66545");
-    },
-  },
-  {
-    id: "bedroom",
-    label: "Bedroom",
-    wall: "#ddd5c6",
-    floor: "#a98a68",
-    mood: "Soft morning light",
-    draw(ctx, W, H, floorY) {
-      // Bed, left
-      rrect(ctx, W * 0.05, floorY - H * 0.16, W * 0.06, H * 0.16, 6, "#5c4a3a"); // headboard
-      rrect(ctx, W * 0.05, floorY - H * 0.09, W * 0.34, H * 0.09, 6, "#f4efe4"); // mattress
-      rrect(ctx, W * 0.05, floorY - H * 0.03, W * 0.34, H * 0.03, 4, "#b7a284"); // throw
-      rrect(ctx, W * 0.07, floorY - H * 0.13, W * 0.09, H * 0.05, 5, "#ffffff"); // pillows
-      rrect(ctx, W * 0.17, floorY - H * 0.13, W * 0.09, H * 0.05, 5, "#efe7d6");
-      // Nightstand + lamp, right of bed
-      rrect(ctx, W * 0.44, floorY - H * 0.07, W * 0.08, H * 0.07, 4, "#7a5c40");
-      rect(ctx, W * 0.475, floorY - H * 0.11, W * 0.006, H * 0.04, "#3d3a35");
-      ellipse(ctx, W * 0.478, floorY - H * 0.115, W * 0.02, H * 0.014, "#f2dfa8");
-      plant(ctx, W * 0.9, floorY, H * 0.5);
-      ellipse(ctx, W * 0.55, H * 0.92, W * 0.2, H * 0.03, "#cbbda6");
-    },
-  },
-  {
-    id: "office",
-    label: "Office",
-    wall: "#e3e6e2",
-    floor: "#9a938a",
-    mood: "Cool daylight, concrete floor",
-    draw(ctx, W, H, floorY) {
-      // Desk
-      rrect(ctx, W * 0.58, floorY - H * 0.1, W * 0.3, H * 0.014, 3, "#5c4632");
-      rect(ctx, W * 0.59, floorY - H * 0.09, W * 0.012, H * 0.09, "#4a3826");
-      rect(ctx, W * 0.855, floorY - H * 0.09, W * 0.012, H * 0.09, "#4a3826");
-      // Monitor
-      rect(ctx, W * 0.68, floorY - H * 0.19, W * 0.09, H * 0.06, "#2b2b2b");
-      rect(ctx, W * 0.685, floorY - H * 0.185, W * 0.08, H * 0.05, "#7fa3a8");
-      rect(ctx, W * 0.72, floorY - H * 0.13, W * 0.008, H * 0.03, "#2b2b2b");
-      // Chair
-      rrect(ctx, W * 0.68, floorY - H * 0.085, W * 0.07, H * 0.05, 6, "#3d4a52");
-      rect(ctx, W * 0.715, floorY - H * 0.035, W * 0.006, H * 0.035, "#2b2b2b");
-      // Shelf, left
-      rect(ctx, W * 0.06, floorY - H * 0.34, W * 0.16, H * 0.008, "#6f5138");
-      rect(ctx, W * 0.06, floorY - H * 0.24, W * 0.16, H * 0.008, "#6f5138");
-      for (let i = 0; i < 5; i++) {
-        rect(ctx, W * (0.07 + i * 0.03), floorY - H * (0.375 + (i % 2) * 0.005), W * 0.016, H * 0.04, ["#a67c37", "#5d7f4e", "#7a5c40", "#c66545", "#4a6b7a"][i]);
-      }
-      for (let i = 0; i < 4; i++) {
-        rect(ctx, W * (0.075 + i * 0.035), floorY - H * 0.275, W * 0.02, H * 0.04, ["#8a7a68", "#b3a186", "#6b655c", "#a9805a"][i]);
-      }
-      plant(ctx, W * 0.3, floorY, H * 0.45);
-    },
-  },
-  {
-    id: "hotel",
-    label: "Hotel",
-    wall: "#ded8cb",
-    floor: "#8f7a5e",
-    mood: "Evening warmth, carpet",
-    draw(ctx, W, H, floorY) {
-      // Carpet
-      ellipse(ctx, W * 0.5, H * 0.93, W * 0.36, H * 0.04, "#7d6b52");
-      // Bed, centre-left
-      rrect(ctx, W * 0.1, floorY - H * 0.17, W * 0.05, H * 0.17, 6, "#4a3a2c");
-      rrect(ctx, W * 0.1, floorY - H * 0.1, W * 0.32, H * 0.1, 6, "#f7f2e8");
-      rrect(ctx, W * 0.12, floorY - H * 0.135, W * 0.09, H * 0.045, 5, "#ffffff");
-      rrect(ctx, W * 0.22, floorY - H * 0.135, W * 0.09, H * 0.045, 5, "#efe7d6");
-      rrect(ctx, W * 0.1, floorY - H * 0.04, W * 0.32, H * 0.04, 4, "#a67c37");
-      // Bench at foot of bed
-      rrect(ctx, W * 0.12, floorY - H * 0.055, W * 0.28, H * 0.03, 5, "#5c4632");
-      // Pendant lamps
-      pendantLamp(ctx, W * 0.16, 0, H * 0.1, "#a67c37");
-      pendantLamp(ctx, W * 0.3, 0, H * 0.1, "#a67c37");
-      // Side table + vase, right
-      ellipse(ctx, W * 0.78, floorY - H * 0.06, W * 0.05, H * 0.008, "#3d3a35");
-      rect(ctx, W * 0.777, floorY - H * 0.06, W * 0.006, H * 0.06, "#3d3a35");
-      rrect(ctx, W * 0.765, floorY - H * 0.1, W * 0.03, H * 0.035, 4, "#7fa3a8");
-      plant(ctx, W * 0.92, floorY, H * 0.5);
-    },
-  },
-  {
-    id: "museum",
-    label: "Museum",
-    wall: "#eceae4",
-    floor: "#b5ada0",
-    mood: "Bright, quiet, stone floor",
-    draw(ctx, W, H, floorY) {
-      // Tall window, right
-      rect(ctx, W * 0.82, H * 0.04, W * 0.13, H * 0.4, "#cfe0e8");
-      rect(ctx, W * 0.885, H * 0.04, W * 0.004, H * 0.4, "#8a8580");
-      rect(ctx, W * 0.82, H * 0.23, W * 0.13, H * 0.004, "#8a8580");
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.beginPath();
-      ctx.moveTo(W * 0.82, floorY);
-      ctx.lineTo(W * 0.95, floorY);
-      ctx.lineTo(W * 0.99, H * 0.98);
-      ctx.lineTo(W * 0.86, H * 0.98);
-      ctx.closePath();
-      ctx.fill();
-      // Bench, centre
-      rrect(ctx, W * 0.4, floorY - H * 0.05, W * 0.2, H * 0.02, 4, "#6f6a60");
-      rect(ctx, W * 0.415, floorY - H * 0.03, W * 0.01, H * 0.03, "#4a463f");
-      rect(ctx, W * 0.575, floorY - H * 0.03, W * 0.01, H * 0.03, "#4a463f");
-      // Pedestal with small sculpture, left
-      rect(ctx, W * 0.08, floorY - H * 0.14, W * 0.07, H * 0.14, "#f4f2ec");
-      ellipse(ctx, W * 0.115, floorY - H * 0.17, W * 0.02, H * 0.03, "#8a7a68");
-      // Wall label
-      rect(ctx, W * 0.62, floorY - H * 0.26, W * 0.05, H * 0.07, "#ffffff");
-      rect(ctx, W * 0.63, floorY - H * 0.245, W * 0.03, H * 0.004, "#9a938a");
-      rect(ctx, W * 0.63, floorY - H * 0.23, W * 0.03, H * 0.004, "#9a938a");
-      rect(ctx, W * 0.63, floorY - H * 0.215, W * 0.02, H * 0.004, "#9a938a");
-    },
-  },
-  {
-    id: "gallery",
-    label: "Contemporary gallery",
-    wall: "#f4f2ee",
-    floor: "#a9a49b",
-    mood: "White cube, track light",
-    draw(ctx, W, H, floorY) {
-      // Track light beam from ceiling
-      ctx.fillStyle = "rgba(255, 246, 220, 0.5)";
-      ctx.beginPath();
-      ctx.moveTo(W * 0.5, 0);
-      ctx.lineTo(W * 0.54, 0);
-      ctx.lineTo(W * 0.66, floorY);
-      ctx.lineTo(W * 0.42, floorY);
-      ctx.closePath();
-      ctx.fill();
-      rect(ctx, W * 0.48, 0, W * 0.08, H * 0.012, "#2b2b2b");
-      rrect(ctx, W * 0.505, H * 0.012, W * 0.03, H * 0.03, 3, "#2b2b2b");
-      // Low bench
-      rrect(ctx, W * 0.68, floorY - H * 0.045, W * 0.18, H * 0.018, 4, "#e8e2d6");
-      rect(ctx, W * 0.695, floorY - H * 0.028, W * 0.008, H * 0.028, "#8a8580");
-      rect(ctx, W * 0.83, floorY - H * 0.028, W * 0.008, H * 0.028, "#8a8580");
-      // Small plinth, left
-      rect(ctx, W * 0.08, floorY - H * 0.16, W * 0.08, H * 0.16, "#ffffff");
-      ellipse(ctx, W * 0.12, floorY - H * 0.19, W * 0.025, H * 0.028, "#c66545");
-      // Floor shadow line
-      ctx.fillStyle = "rgba(0,0,0,0.08)";
-      ctx.fillRect(0, floorY + H * 0.02, W, H * 0.01);
-    },
-  },
-  {
-    id: "restaurant",
-    label: "Restaurant",
-    wall: "#d9cfc0",
-    floor: "#6e4f36",
-    mood: "Warm evening, dark wood",
-    draw(ctx, W, H, floorY) {
-      // Banquette, left
-      rrect(ctx, W * 0.04, floorY - H * 0.12, W * 0.26, H * 0.12, 8, "#7a3f34");
-      rrect(ctx, W * 0.04, floorY - H * 0.2, W * 0.26, H * 0.09, 8, "#8a4a3e");
-      // Table
-      ellipse(ctx, W * 0.44, floorY - H * 0.09, W * 0.13, H * 0.014, "#f4efe4");
-      rect(ctx, W * 0.437, floorY - H * 0.09, W * 0.006, H * 0.09, "#3d3a35");
-      ellipse(ctx, W * 0.44, floorY, W * 0.06, H * 0.008, "#3d3a35");
-      // Wine glasses on table
-      ellipse(ctx, W * 0.4, floorY - H * 0.115, W * 0.008, H * 0.012, "#e8f0f2");
-      ellipse(ctx, W * 0.47, floorY - H * 0.115, W * 0.008, H * 0.012, "#e8f0f2");
-      // Pendant lamps over table
-      pendantLamp(ctx, W * 0.4, 0, H * 0.14, "#2b2b2b");
-      pendantLamp(ctx, W * 0.48, 0, H * 0.14, "#2b2b2b");
-      // Chairs, right
-      rrect(ctx, W * 0.62, floorY - H * 0.11, W * 0.05, H * 0.11, 5, "#3d3a35");
-      rrect(ctx, W * 0.62, floorY - H * 0.11, W * 0.05, H * 0.02, 3, "#2b2b2b");
-      rrect(ctx, W * 0.72, floorY - H * 0.11, W * 0.05, H * 0.11, 5, "#3d3a35");
-      rrect(ctx, W * 0.72, floorY - H * 0.11, W * 0.05, H * 0.02, 3, "#2b2b2b");
-      // Wall panelling
-      rect(ctx, W * 0.85, H * 0.05, W * 0.11, H * 0.45, "#b7a284");
-      rect(ctx, W * 0.86, H * 0.07, W * 0.09, H * 0.41, "#c9b8a3");
-    },
-  },
-  {
-    id: "commercial",
-    label: "Commercial space",
-    wall: "#e6e4df",
-    floor: "#8f8a82",
-    mood: "Bright lobby, polished floor",
-    draw(ctx, W, H, floorY) {
-      // Reception desk
-      rrect(ctx, W * 0.58, floorY - H * 0.11, W * 0.3, H * 0.11, 4, "#f4f2ec");
-      rect(ctx, W * 0.58, floorY - H * 0.11, W * 0.3, H * 0.01, "#a67c37");
-      rect(ctx, W * 0.6, floorY - H * 0.17, W * 0.05, H * 0.06, "#2b2b2b");
-      rect(ctx, W * 0.605, floorY - H * 0.165, W * 0.04, H * 0.05, "#7fa3a8");
-      // Shelving, left
-      rect(ctx, W * 0.06, H * 0.06, W * 0.16, H * 0.5, "#d9d4c9");
-      for (let r = 0; r < 3; r++) {
-        rect(ctx, W * 0.06, H * (0.2 + r * 0.15), W * 0.16, H * 0.006, "#b7b0a2");
-        for (let i = 0; i < 3; i++) {
-          rect(ctx, W * (0.075 + i * 0.05), H * (0.14 + r * 0.15), W * 0.03, H * 0.055, ["#a67c37", "#5d7f4e", "#c66545"][i]);
-        }
-      }
-      // Sofa, centre-left
-      sofa(ctx, W * 0.28, floorY - H * 0.08, W * 0.22, H * 0.08, "#6b7a72");
-      plant(ctx, W * 0.93, floorY, H * 0.6);
-      // Logo wall text
-      ctx.fillStyle = "#a67c37";
-      ctx.font = `600 ${Math.round(H * 0.045)}px Georgia, serif`;
-      ctx.fillText("LAKISA", W * 0.6, H * 0.1);
-    },
-  },
+export const MOCKUP_WALLS: WallDef[] = [
+  { id: "living-room-bright", label: "Bright living room", category: "living-room", file: "/mockup-walls/living-room-bright.jpg", width: 2000, height: 1765, wall: "#e8e2d6", floor: "#b08d63", mood: "Living room · real photo" },
+  { id: "living-room-sofa", label: "Sofa and gallery wall", category: "living-room", file: "/mockup-walls/living-room-sofa.jpg", width: 2000, height: 1125, wall: "#e8e2d6", floor: "#b08d63", mood: "Living room · real photo" },
+  { id: "living-room-modern", label: "Modern living room", category: "living-room", file: "/mockup-walls/living-room-modern.jpg", width: 2000, height: 1055, wall: "#e8e2d6", floor: "#b08d63", mood: "Living room · real photo" },
+  { id: "dining-room-green", label: "Dining room, green chairs", category: "dining-room", file: "/mockup-walls/dining-room-green.jpg", width: 2000, height: 1125, wall: "#ddd5c6", floor: "#a98a68", mood: "Dining room · real photo" },
+  { id: "dining-room-loft", label: "Loft dining room", category: "dining-room", file: "/mockup-walls/dining-room-loft.jpg", width: 2000, height: 1500, wall: "#ddd5c6", floor: "#a98a68", mood: "Dining room · real photo" },
+  { id: "gallery-red", label: "Red gallery wall", category: "gallery", file: "/mockup-walls/gallery-red.jpg", width: 2000, height: 1333, wall: "#eceae4", floor: "#b5ada0", mood: "Gallery · real photo" },
+  { id: "gallery-teal", label: "Teal gallery wall", category: "gallery", file: "/mockup-walls/gallery-teal.jpg", width: 2000, height: 1125, wall: "#eceae4", floor: "#b5ada0", mood: "Gallery · real photo" },
+  { id: "gallery-white", label: "White gallery wall", category: "gallery", file: "/mockup-walls/gallery-white.jpg", width: 2000, height: 1500, wall: "#f4f2ee", floor: "#a9a49b", mood: "Gallery · real photo" },
+  { id: "bedroom-white", label: "Bright bedroom", category: "bedroom", file: "/mockup-walls/bedroom-white.jpg", width: 2000, height: 1333, wall: "#ddd5c6", floor: "#a98a68", mood: "Bedroom · real photo" },
+  { id: "office-glass", label: "Glass office", category: "office", file: "/mockup-walls/office-glass.jpg", width: 2000, height: 1335, wall: "#e3e6e2", floor: "#9a938a", mood: "Office · real photo" },
 ];
 
-const WALL_MATERIALS: { id: WallMaterial; label: string }[] = [
-  { id: "paint", label: "Paint" },
-  { id: "plaster", label: "Plaster" },
-  { id: "brick", label: "Brick" },
-  { id: "wood", label: "Wood panel" },
-  { id: "concrete", label: "Concrete" },
+export const WALL_CATEGORIES: { id: string; label: string }[] = [
+  { id: "all", label: "All walls" },
+  { id: "living-room", label: "Living room" },
+  { id: "dining-room", label: "Dining room" },
+  { id: "gallery", label: "Gallery" },
+  { id: "bedroom", label: "Bedroom" },
+  { id: "office", label: "Office" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -510,7 +218,7 @@ function drawWallMaterial(
   W: number,
   floorY: number,
   wallColor: string,
-  material: WallMaterial,
+  material: "paint" | "plaster" | "brick" | "wood" | "concrete",
 ) {
   ctx.fillStyle = wallColor;
   ctx.fillRect(0, 0, W, floorY);
@@ -626,7 +334,7 @@ function seedFromString(s: string): number {
   return h >>> 0;
 }
 
-type FrameSpecLike = (typeof FRAME_VARIANTS)[FrameVariant];
+export type FrameSpecLike = (typeof FRAME_VARIANTS)[FrameVariant];
 
 /**
  * Clip one bar of a ring to its 45° mitred shape (local coords: outer edge
@@ -656,7 +364,7 @@ function clipMitredBar(ctx: CanvasRenderingContext2D, len: number, w: number) {
  * every side — exactly like the 3D FramePhotoSkin mapping (the mesh is
  * turned, the UVs travel with it).
  */
-function paintRingSides(
+export function paintRingSides(
   ctx: CanvasRenderingContext2D,
   x0: number,
   y0: number,
@@ -698,7 +406,7 @@ function paintRingSides(
 }
 
 /** Tile the real moulding photo along one bar (local coords). One tile covers `w` across the bar and `w * stripW/stripH` along it, so the carving is never stretched — the same rule as the 3D skin. */
-function paintPhotoBar(ctx: CanvasRenderingContext2D, photo: HTMLImageElement, len: number, w: number) {
+export function paintPhotoBar(ctx: CanvasRenderingContext2D, photo: HTMLImageElement, len: number, w: number) {
   const tileW = Math.max(4, w * (photo.naturalWidth / Math.max(1, photo.naturalHeight)));
   for (let x = 0; x < len; x += tileW) {
     const dw = Math.min(tileW, len - x);
@@ -843,7 +551,7 @@ function paintMatte(ctx: CanvasRenderingContext2D, base: string, len: number, w:
 }
 
 /** Procedural bar finish for frames without a photo, from `spec.texture`. */
-function paintProceduralBar(
+export function paintProceduralBar(
   ctx: CanvasRenderingContext2D,
   spec: FrameSpecLike,
   len: number,
@@ -886,7 +594,7 @@ function paintProceduralBar(
  * (local coords, outer edge y = 0). Works over a photo skin and over a
  * procedural finish alike.
  */
-function paintProfile(ctx: CanvasRenderingContext2D, profile: FrameSpecLike["profile"], len: number, w: number) {
+export function paintProfile(ctx: CanvasRenderingContext2D, profile: FrameSpecLike["profile"], len: number, w: number) {
   const g = ctx.createLinearGradient(0, 0, 0, w);
   switch (profile ?? "flat") {
     case "stepped": {
@@ -949,7 +657,7 @@ function paintProfile(ctx: CanvasRenderingContext2D, profile: FrameSpecLike["pro
 }
 
 /** Beaded inner edge: a row of small shaded beads (not for photo frames — the photo carries them). */
-function paintBeads(ctx: CanvasRenderingContext2D, spec: FrameSpecLike, len: number, w: number) {
+export function paintBeads(ctx: CanvasRenderingContext2D, spec: FrameSpecLike, len: number, w: number) {
   const r = Math.max(1, w * 0.14);
   const spacing = Math.max(4, w * 0.46);
   const cy = w - w * 0.16;
@@ -1012,7 +720,7 @@ function paintScroll(ctx: CanvasRenderingContext2D, x: number, y: number, R: num
 }
 
 /** Repeated ornaments along the bar centre (not for photo frames — the photo carries them). */
-function paintOrnaments(
+export function paintOrnaments(
   ctx: CanvasRenderingContext2D,
   spec: FrameSpecLike,
   len: number,
@@ -1030,7 +738,7 @@ function paintOrnaments(
 }
 
 /** One side of a passe-partout: base colour, material feel, and the frame's shadow at its outer edge. */
-function paintMatSide(
+export function paintMatSide(
   ctx: CanvasRenderingContext2D,
   matColor: string,
   matTexture: "velvet" | "paper" | "yellow" | undefined,
@@ -1084,7 +792,7 @@ function paintMatSide(
 }
 
 /** One side of a thin gold trim ring: metal base with a bright centre line and dark edges. */
-function paintTrimSide(ctx: CanvasRenderingContext2D, trimColor: string, len: number, w: number) {
+export function paintTrimSide(ctx: CanvasRenderingContext2D, trimColor: string, len: number, w: number) {
   ctx.fillStyle = trimColor;
   ctx.fillRect(0, 0, len, w);
   const g = ctx.createLinearGradient(0, 0, 0, w);
@@ -1099,7 +807,7 @@ function paintTrimSide(ctx: CanvasRenderingContext2D, trimColor: string, len: nu
  * Outer shadow: darkest at the given rect's edges, fading outward over
  * `depthPx` — the shadow a floated work casts on its tray.
  */
-function drawOuterShadow(
+export function drawOuterShadow(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -1136,7 +844,7 @@ function drawOuterShadow(
  * `depthPx` — the tray walls shading the tray floor, or a mat opening
  * shading the artwork just inside it.
  */
-function drawInnerShadow(
+export function drawInnerShadow(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -1353,21 +1061,30 @@ function arrangementSlots(cfg: MockupConfig): { dx: number; dy: number; w: numbe
 
 type LoadedArt = { art: MockupArtwork; img: HTMLImageElement | null };
 
-/** Full render: scene + framed artworks, at the canvas's own resolution. */
-function drawMockup(
+/** Full render: wall photo + framed artworks, at the canvas's own resolution. */
+export function drawMockup(
   ctx: CanvasRenderingContext2D,
   W: number,
   H: number,
   cfg: MockupConfig,
   loaded: LoadedArt[],
-  scene: SceneDef,
+  wall: WallDef,
   framePhoto: HTMLImageElement | null,
+  wallPhoto: HTMLImageElement | null = null,
 ) {
   const floorY = H * 0.62;
-  const wallColor = cfg.wallColor || scene.wall;
-  drawWallMaterial(ctx, W, floorY, wallColor, cfg.wallMaterial);
-  drawFloor(ctx, W, H, floorY, scene.floor);
-  scene.draw(ctx, W, H, floorY);
+  if (wallPhoto) {
+    // The real wall photo, cover-fit: it fills the canvas, centred, and
+    // is never stretched — the same rule as the framed artwork inside it.
+    const scale = Math.max(W / wallPhoto.naturalWidth, H / wallPhoto.naturalHeight);
+    const dw = wallPhoto.naturalWidth * scale;
+    const dh = wallPhoto.naturalHeight * scale;
+    ctx.drawImage(wallPhoto, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  } else {
+    // Fallback when the photo cannot load: a plain painted wall.
+    drawWallMaterial(ctx, W, floorY, wall.wall, "paint");
+    drawFloor(ctx, W, H, floorY, wall.floor);
+  }
 
   const pxPerCmX = W / WALL_WIDTH_CM;
   const pxPerCmY = floorY / WALL_HEIGHT_CM;
@@ -1452,6 +1169,11 @@ export default function MockupStudio({
   // failure, or for frames without a photo — the render then falls back
   // to the procedural finish, so the preview never breaks.
   const [framePhoto, setFramePhoto] = useState<HTMLImageElement | null>(null);
+  // The real wall photo for the selected wall, loaded the same way. Null
+  // while loading or on failure — the render then falls back to a plain
+  // painted wall, so the preview never breaks.
+  const [wallPhoto, setWallPhoto] = useState<HTMLImageElement | null>(null);
+  const [wallFilter, setWallFilter] = useState("all");
   const [rendering, setRendering] = useState(false);
   const [renderMsg, setRenderMsg] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -1469,7 +1191,11 @@ export default function MockupStudio({
   const previewRef = useRef<HTMLCanvasElement | null>(null);
   const imgCache = useRef(new Map<string, HTMLImageElement>());
 
-  const scene = useMemo(() => SCENES.find((s) => s.id === cfg.scene) ?? SCENES[0], [cfg.scene]);
+  const wall = useMemo(() => MOCKUP_WALLS.find((w) => w.id === cfg.scene) ?? MOCKUP_WALLS[0], [cfg.scene]);
+  const visibleWalls = useMemo(
+    () => (wallFilter === "all" ? MOCKUP_WALLS : MOCKUP_WALLS.filter((w) => w.category === wallFilter)),
+    [wallFilter],
+  );
   const needed = ARRANGEMENT_COUNT[cfg.arrangement];
   const selectedArts = useMemo(
     () => cfg.artworkIds.map((id) => artworks.find((a) => a.id === id)).filter((a): a is MockupArtwork => !!a),
@@ -1479,6 +1205,17 @@ export default function MockupStudio({
   const update = useCallback((patch: Partial<MockupConfig>) => {
     setCfg((c) => ({ ...c, ...patch }));
   }, []);
+
+  // Open with the selected artwork's saved frame (when it names a
+  // built-in style), instead of always defaulting to wood. Runs when the
+  // artwork changes, never while the user is picking a frame.
+  const lastFrameSyncArtId = useRef<string | null>(null);
+  useEffect(() => {
+    const art = selectedArts[0];
+    if (!art || art.id === lastFrameSyncArtId.current) return;
+    lastFrameSyncArtId.current = art.id;
+    if (art.frame && art.frame in FRAME_VARIANTS) update({ frame: art.frame as FrameVariant });
+  }, [selectedArts, update]);
 
   const pickArtwork = useCallback(
     (slot: number, id: string) => {
@@ -1559,14 +1296,35 @@ export default function MockupStudio({
     };
   }, [cfg.frame]);
 
+  // Load the real wall photo for the selected wall (cached, CORS-safe).
+  useEffect(() => {
+    let cancelled = false;
+    const cached = imgCache.current.get(wall.file);
+    if (cached) {
+      setWallPhoto(cached);
+      return;
+    }
+    loadImage(wall.file)
+      .then((img) => {
+        imgCache.current.set(wall.file, img);
+        if (!cancelled) setWallPhoto(img);
+      })
+      .catch(() => {
+        if (!cancelled) setWallPhoto(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [wall]);
+
   // Preview redraw.
   useEffect(() => {
     const canvas = previewRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    drawMockup(ctx, canvas.width, canvas.height, cfg, loaded, scene, framePhoto);
-  }, [cfg, loaded, scene, framePhoto]);
+    drawMockup(ctx, canvas.width, canvas.height, cfg, loaded, wall, framePhoto, wallPhoto);
+  }, [cfg, loaded, wall, framePhoto, wallPhoto]);
 
   // Saved mockups list.
   useEffect(() => {
@@ -1614,7 +1372,7 @@ export default function MockupStudio({
       for (const entry of loaded) {
         exportLoaded.push(entry);
       }
-      drawMockup(ctx, res.w, res.h, cfg, exportLoaded, scene, framePhoto);
+      drawMockup(ctx, res.w, res.h, cfg, exportLoaded, wall, framePhoto, wallPhoto);
       const mime = cfg.format === "png" ? "image/png" : cfg.format === "jpeg" ? "image/jpeg" : "image/webp";
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.92));
       if (!blob) throw new Error("The export came back empty. Try PNG instead.");
@@ -1634,11 +1392,11 @@ export default function MockupStudio({
     } finally {
       setRendering(false);
     }
-  }, [cfg, loaded, scene, selectedArts, framePhoto]);
+  }, [cfg, loaded, wall, selectedArts, framePhoto, wallPhoto]);
 
   // --- Save / load ----------------------------------------------------------
   const doSave = useCallback(async () => {
-    const title = saveTitle.trim() || `${selectedArts[0]?.title ?? "Mockup"}, ${scene.label}`;
+    const title = saveTitle.trim() || `${selectedArts[0]?.title ?? "Mockup"}, ${wall.label}`;
     setSaving(true);
     setSaveMsg(null);
     try {
@@ -1668,7 +1426,7 @@ export default function MockupStudio({
     } finally {
       setSaving(false);
     }
-  }, [saveTitle, selectedArts, scene, loadedId, cfg, refreshSaved]);
+  }, [saveTitle, selectedArts, wall, loadedId, cfg, refreshSaved]);
 
   const doLoad = useCallback((row: SavedMockup) => {
     const next = configFromSaved(row.data);
@@ -1759,12 +1517,17 @@ export default function MockupStudio({
         .ms-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .ms-chip { border: 1px solid #d9d4c9; background: #fdfdfc; color: #1a1a1a; border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
         .ms-chip[aria-pressed="true"] { background: #1a1a1a; color: #fdfdfc; border-color: #1a1a1a; }
-        .ms-scene { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        @media (max-width: 480px) { .ms-scene { grid-template-columns: repeat(2, 1fr); } }
-        .ms-scene button { border: 1px solid #d9d4c9; border-radius: 8px; padding: 0; overflow: hidden; cursor: pointer; background: #fdfdfc; text-align: left; }
-        .ms-scene button[aria-pressed="true"] { border-color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
-        .ms-scene .swatch { height: 20px; }
-        .ms-scene span { display: block; font-size: 10px; line-height: 1.25; padding: 3px 4px; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* Wall picker: real photo thumbnails, full width, two columns.
+           Each thumbnail shows the whole wall photo (object-fit cover,
+           fixed 16/10 ratio) with its label below on up to two lines —
+           nothing is cropped or cut off at the bottom, unlike the old
+           colour-swatch grid squeezed into the three-column panel. */
+        .ms-walls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        @media (max-width: 480px) { .ms-walls { grid-template-columns: 1fr; } }
+        .ms-walls button { border: 1px solid #d9d4c9; border-radius: 8px; padding: 0; overflow: hidden; cursor: pointer; background: #fdfdfc; text-align: left; }
+        .ms-walls button[aria-pressed="true"] { border-color: #1a1a1a; box-shadow: 0 0 0 2px #1a1a1a; }
+        .ms-walls img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; background: #e8e2d6; }
+        .ms-walls span { display: block; font-size: 11px; line-height: 1.35; padding: 5px 6px 6px; color: #1a1a1a; }
         .ms-artslots { display: flex; flex-direction: column; gap: 6px; }
         .ms-artlist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
         /* Wide desktop: three artwork buttons per row, two rows for six
@@ -1797,7 +1560,7 @@ export default function MockupStudio({
           <canvas ref={previewRef} width={960} height={540} aria-label="Mockup preview" />
           <div className="ms-caption">
             <span>
-              {firstArt ? `${firstArt.title} · ${firstArt.year} · ${firstArt.medium}` : "No artwork selected"}, {scene.label} · {scene.mood}
+              {firstArt ? `${firstArt.title} · ${firstArt.year} · ${firstArt.medium}` : "No artwork selected"}, {wall.label} · {wall.mood}
             </span>
             <span>Preview 960 × 540 · export renders at full resolution</span>
           </div>
@@ -1889,35 +1652,31 @@ export default function MockupStudio({
             </div>
           </div>
 
-          <div className="ms-panel-grid">
-            <div className="ms-section">
-              <h3>Scene</h3>
-            <div className="ms-scene">
-              {SCENES.map((s) => (
-                <button key={s.id} type="button" aria-pressed={cfg.scene === s.id} onClick={() => update({ scene: s.id })}>
-                  <span className="swatch" style={{ background: `linear-gradient(${s.wall} 62%, ${s.floor} 62%)` }} />
-                  <span>{s.label}</span>
+          {/* Wall: full-width section (outside the three-column panel grid)
+              so the ten photo thumbnails get room and are never cut off. */}
+          <div className="ms-section">
+            <h3>Wall · {MOCKUP_WALLS.length} real photos</h3>
+            <div className="ms-chips" role="group" aria-label="Filter walls by room" style={{ marginBottom: 8 }}>
+              {WALL_CATEGORIES.map((c) => (
+                <button key={c.id} type="button" className="ms-chip" aria-pressed={wallFilter === c.id} onClick={() => setWallFilter(c.id)}>
+                  {c.label}
                 </button>
               ))}
             </div>
-            <div className="ms-row" style={{ marginTop: 10 }}>
-              <label className="ms-field">
-                Wall colour
-                <input type="color" value={cfg.wallColor || scene.wall} onChange={(e) => update({ wallColor: e.target.value })} />
-              </label>
-              <label className="ms-field">
-                Wall material
-                <select value={cfg.wallMaterial} onChange={(e) => update({ wallMaterial: e.target.value as WallMaterial })}>
-                  {WALL_MATERIALS.map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
-                  ))}
-                </select>
-              </label>
+            <div className="ms-walls">
+              {visibleWalls.map((w) => (
+                <button key={w.id} type="button" aria-pressed={cfg.scene === w.id} onClick={() => update({ scene: w.id })}>
+                  <img src={w.file} alt="" loading="lazy" />
+                  <span>{w.label}</span>
+                </button>
+              ))}
             </div>
             <p className="ms-note" style={{ marginTop: 6 }}>
-              Wall colour defaults to the scene&apos;s own wall. Pick a colour to repaint it.
+              Wall photos: Unsplash License. The framed artwork hangs on the photo you pick, at the size and height you set below.
             </p>
           </div>
+
+          <div className="ms-panel-grid">
 
           <div className="ms-section">
             <h3>Placement</h3>
@@ -2027,7 +1786,7 @@ export default function MockupStudio({
               <input
                 type="text"
                 value={saveTitle}
-                placeholder={firstArt ? `${firstArt.title}, ${scene.label}` : "My mockup"}
+                placeholder={firstArt ? `${firstArt.title}, ${wall.label}` : "My mockup"}
                 onChange={(e) => setSaveTitle(e.target.value)}
               />
             </label>

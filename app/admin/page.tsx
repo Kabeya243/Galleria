@@ -2,7 +2,8 @@ import Link from "next/link";
 import AdminGalleries from "@/components/admin-galleries";
 import AdminGalleryNames from "@/components/admin-gallery-names";
 import AdminShell from "@/components/admin-shell";
-import { requireAdmin } from "@/lib/admin";
+import SubAdmins from "@/components/sub-admins";
+import { hasAdminPermission, requireAdminAccess } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { getGalleryNames } from "@/lib/gallery-names-server";
 import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
@@ -153,7 +154,17 @@ export default async function AdminRoute({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const user = await requireAdmin();
+  const { user, access } = await requireAdminAccess();
+  // Section gates for sub-admins (the manager holds every permission,
+  // so every section shows for him). The sections below only render
+  // when the permission is held — the data never leaves the server
+  // for a section the viewer cannot open.
+  const canStats = hasAdminPermission(access, "stats.view");
+  const canUsers = hasAdminPermission(access, "users.view");
+  const canExhibitions = hasAdminPermission(access, "exhibitions.view");
+  const canArtworks = hasAdminPermission(access, "artworks.view");
+  const canGalleries = hasAdminPermission(access, "galleries.view");
+  const canManageGalleries = hasAdminPermission(access, "galleries.manage");
   const { q } = await searchParams;
   const query = (q ?? "").trim();
   const now = new Date();
@@ -581,11 +592,24 @@ export default async function AdminRoute({
   return (
     <AdminShell
       user={user}
-      title="Hello, Kabeya"
-      eyebrow="ADMIN · FOR THE OWNER ONLY"
-      description={`${todayLabel}, a look at who joined, what was built, and what visitors viewed on Lakisa.`}
+      title={access.isManager ? "Hello, Kabeya" : `Hello, ${user.name}`}
+      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+      description={
+        access.isManager
+          ? `${todayLabel}, a look at who joined, what was built, and what visitors viewed on Lakisa.`
+          : `${todayLabel}, the sections of Lakisa you may manage.`
+      }
       counts={{ users: userCount, exhibitions: exhibitionCount, artworks: artworkCount, tools: totalToolUses }}
+      sections={[
+        ...(canStats ? ["overview", "tools", "test-reports"] : []),
+        ...(canUsers ? ["users"] : []),
+        ...(canExhibitions ? ["exhibitions"] : []),
+        ...(canArtworks ? ["artworks"] : []),
+        ...(canGalleries ? ["galleries"] : []),
+        ...(access.isManager ? ["sub-admins"] : []),
+      ]}
     >
+      {canStats && (
       <div id="overview" className="ad-section">
         {/* Stat cards */}
         <div className="ad-grid-stats">
@@ -1033,8 +1057,10 @@ export default async function AdminRoute({
           )}
         </section>
       </div>
+      )}
 
       {/* Tools used */}
+      {canStats && (
       <section id="tools" className="ad-section">
         <div className="ad-section-head">
           <h2>Tools used</h2>
@@ -1106,8 +1132,10 @@ export default async function AdminRoute({
           </section>
         </div>
       </section>
+      )}
 
       {/* All users */}
+      {canUsers && (
       <section id="users" className="ad-section">
         <div className="ad-section-head">
           <h2>All users</h2>
@@ -1151,8 +1179,10 @@ export default async function AdminRoute({
           </div>
         )}
       </section>
+      )}
 
       {/* All exhibitions */}
+      {canExhibitions && (
       <section id="exhibitions" className="ad-section">
         <div className="ad-section-head">
           <h2>All exhibitions</h2>
@@ -1200,8 +1230,10 @@ export default async function AdminRoute({
           </div>
         )}
       </section>
+      )}
 
       {/* All artworks */}
+      {canArtworks && (
       <section id="artworks" className="ad-section">
         <div className="ad-section-head">
           <h2>All artworks</h2>
@@ -1240,8 +1272,10 @@ export default async function AdminRoute({
           </div>
         )}
       </section>
+      )}
 
       {/* Galleries — room templates */}
+      {canGalleries && (
       <section id="galleries" className="ad-section">
         <div className="ad-section-head">
           <h2>Galleries</h2>
@@ -1251,7 +1285,7 @@ export default async function AdminRoute({
             working.
           </p>
         </div>
-        <AdminGalleries templates={galleryTemplates} hidden={hiddenRoomLayouts} />
+        <AdminGalleries templates={galleryTemplates} hidden={hiddenRoomLayouts} canManage={canManageGalleries} />
         <div className="ad-section-head" style={{ marginTop: 28 }}>
           <h3>Gallery names</h3>
           <p>
@@ -1259,12 +1293,14 @@ export default async function AdminRoute({
             creation dialog and in the editor, in the matching language.
           </p>
         </div>
-        <AdminGalleryNames names={galleryNames} />
+        <AdminGalleryNames names={galleryNames} canManage={canManageGalleries} />
       </section>
+      )}
 
       {/* Test reports — feature tests for the new tools (profile photos,
           works wall, website builder, portfolio PDF). Written by
           scripts/test-new-features.mjs to public/test-reports/latest.json. */}
+      {canStats && (
       <section id="test-reports" className="ad-section">
         <div className="ad-section-head">
           <h2>Test reports</h2>
@@ -1323,10 +1359,29 @@ export default async function AdminRoute({
           </div>
         )}
       </section>
+      )}
 
+      {/* Sub-admins — manager only. The manager adds accounts with
+          limited access to this dashboard and picks their sections. */}
+      {access.isManager && (
+      <section id="sub-admins" className="ad-section">
+        <div className="ad-section-head">
+          <h2>Sub-admins</h2>
+          <p>
+            Give a signed-up account limited access to this dashboard. A sub-admin signs in with
+            their own account and only sees the sections you pick. Only you, the manager, can add
+            or remove sub-admins, and you keep full access.
+          </p>
+        </div>
+        <SubAdmins />
+      </section>
+      )}
+
+      {canStats && (
       <p className="ad-foot">
         Legacy image storage in the database: {formatBytes(storageBytes)} (R2 is separate).
       </p>
+      )}
     </AdminShell>
   );
 }

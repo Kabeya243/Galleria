@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Check, Plus, Search, Trash2 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import { useT } from "@/lib/i18n";
 import type { LibraryWorkItem } from "@/lib/library";
+import {
+  DirectUploadFailedError,
+  DirectUploadNotConfiguredError,
+  uploadFileToR2,
+} from "@/lib/direct-upload";
 import styles from "./public-home.module.css";
 
 // "Mes œuvres" — the artist's reusable artwork library: every work
@@ -38,6 +43,92 @@ export default function LibraryPage({
   // (same pattern as the exhibitions page): first click arms, second
   // confirms, and the armed state clears after a few seconds.
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  // Add artwork straight into the library (Nov 2026): the work is
+  // uploaded once here and is then available everywhere that reads
+  // the library — editor, certificates, PDF editor.
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addFile, setAddFile] = useState<File | null>(null);
+  const [addTitle, setAddTitle] = useState("");
+  const [addArtist, setAddArtist] = useState(user.name);
+  const [addYear, setAddYear] = useState(String(new Date().getFullYear()));
+  const [addMedium, setAddMedium] = useState("");
+  const [addDimensions, setAddDimensions] = useState("");
+  const [addDescription, setAddDescription] = useState("");
+  const [addBusy, setAddBusy] = useState(false);
+  const [addProgress, setAddProgress] = useState<number | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [addSuccess, setAddSuccess] = useState(false);
+  const addFileRef = useRef<HTMLInputElement | null>(null);
+
+  async function addArtwork(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (addBusy) return;
+    const title = addTitle.trim();
+    if (!title) {
+      setAddError(t("library", "artworkTitlePlaceholder"));
+      return;
+    }
+    if (!addFile) {
+      setAddError(t("library", "chooseImageFirst"));
+      return;
+    }
+    setAddBusy(true);
+    setAddError(null);
+    setAddSuccess(false);
+    try {
+      const proxyUpload = async (): Promise<string> => {
+        const body = new FormData();
+        body.set("file", addFile);
+        const response = await fetch("/api/uploads/r2", { method: "POST", body });
+        const text = await response.text();
+        let result: { error?: string; url?: string } = {};
+        try {
+          result = text ? (JSON.parse(text) as typeof result) : {};
+        } catch {
+          result = {};
+        }
+        if (!response.ok) throw new Error(result.error ?? t("library", "couldNotUpload"));
+        if (!result.url) throw new Error(t("library", "couldNotUpload"));
+        return result.url;
+      };
+      const imageUrl = await uploadFileToR2(addFile, "image", proxyUpload, setAddProgress);
+      const res = await fetch("/api/library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          artist: addArtist.trim(),
+          year: addYear.trim(),
+          medium: addMedium.trim(),
+          dimensions: addDimensions.trim(),
+          description: addDescription.trim(),
+          imageUrl,
+        }),
+      });
+      const json = (await res.json()) as { work?: LibraryWorkItem; error?: string };
+      if (!res.ok) throw new Error(json.error ?? t("library", "couldNotSaveArtwork"));
+      if (json.work) setWorks((current) => [json.work as LibraryWorkItem, ...current]);
+      setAddFile(null);
+      setAddTitle("");
+      setAddMedium("");
+      setAddDimensions("");
+      setAddDescription("");
+      if (addFileRef.current) addFileRef.current.value = "";
+      setAddSuccess(true);
+      window.setTimeout(() => setAddSuccess(false), 6000);
+    } catch (error) {
+      if (error instanceof DirectUploadNotConfiguredError) {
+        setAddError(t("library", "couldNotUpload"));
+      } else if (error instanceof DirectUploadFailedError) {
+        setAddError(t("library", "couldNotUpload"));
+      } else {
+        setAddError(error instanceof Error ? error.message : t("library", "couldNotSaveArtwork"));
+      }
+    } finally {
+      setAddBusy(false);
+      setAddProgress(null);
+    }
+  }
 
   const visibleWorks = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -145,7 +236,80 @@ export default function LibraryPage({
                 aria-label={t("library", "searchAria")}
               />
             </label>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setShowAddForm((current) => !current)}
+              aria-expanded={showAddForm}
+            >
+              <Plus size={14} /> {t("library", "addArtwork")}
+            </button>
           </section>
+
+          {showAddForm && (
+            <section className="library-add-form" aria-label={t("library", "addArtwork")}>
+              <p>{t("library", "addArtworkCopy")}</p>
+              <form onSubmit={addArtwork}>
+                <label>
+                  <span>{t("library", "artworkImage")}</span>
+                  <input
+                    ref={addFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/svg+xml,.jpg,.jpeg,.png,.webp,.svg"
+                    onChange={(event) => setAddFile(event.target.files?.[0] ?? null)}
+                    required
+                  />
+                  {addFile && <small>{addFile.name}</small>}
+                </label>
+                <label>
+                  <span>{t("library", "artworkTitle")}</span>
+                  <input
+                    value={addTitle}
+                    onChange={(event) => setAddTitle(event.target.value)}
+                    placeholder={t("library", "artworkTitlePlaceholder")}
+                    required
+                  />
+                </label>
+                <label>
+                  <span>{t("library", "artworkArtist")}</span>
+                  <input value={addArtist} onChange={(event) => setAddArtist(event.target.value)} />
+                </label>
+                <label>
+                  <span>{t("library", "artworkYear")}</span>
+                  <input value={addYear} onChange={(event) => setAddYear(event.target.value)} />
+                </label>
+                <label>
+                  <span>{t("library", "artworkMedium")}</span>
+                  <input value={addMedium} onChange={(event) => setAddMedium(event.target.value)} />
+                </label>
+                <label>
+                  <span>{t("library", "artworkDimensions")}</span>
+                  <input value={addDimensions} onChange={(event) => setAddDimensions(event.target.value)} placeholder="80 × 100 cm" />
+                </label>
+                <label>
+                  <span>{t("library", "artworkDescription")}</span>
+                  <input value={addDescription} onChange={(event) => setAddDescription(event.target.value)} />
+                </label>
+                <button type="submit" className="primary-button" disabled={addBusy}>
+                  {addBusy
+                    ? addProgress != null
+                      ? `${t("library", "uploading")} ${addProgress}%`
+                      : t("library", "savingArtwork")
+                    : t("library", "addArtwork")}
+                </button>
+              </form>
+              {addError && (
+                <p role="alert" className="asset-upload-error">
+                  {addError}
+                </p>
+              )}
+              {addSuccess && (
+                <p role="status" className="library-added-note">
+                  <Check size={13} /> {t("library", "artworkAdded")}
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="galleries-grid" id="artworks">
             {works.length === 0 ? (

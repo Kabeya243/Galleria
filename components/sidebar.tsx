@@ -21,7 +21,6 @@ import {
   Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
-  Presentation,
   Settings2,
   ShieldCheck,
   Users,
@@ -114,7 +113,6 @@ const NAV_GROUPS: NavGroup[] = [
     hub: "/publish",
     label: "publish",
     items: [
-      { id: "present-sell", href: "/tools/present-sell", label: "presentSell", icon: Presentation },
       { id: "published", href: "/explore", label: "published", icon: Compass },
     ],
   },
@@ -123,9 +121,10 @@ const NAV_GROUPS: NavGroup[] = [
     hub: "/intelligence",
     label: "intelligence",
     items: [
-      // The hub itself is the entry point for everyone; Admin analytics
-      // stays owner-only, and "Your exhibition insights" lives on the hub.
-      { id: "insights", href: "/intelligence", label: "insights", icon: BarChart3 },
+      // Visitor analytics moved to the dashboard (Nov 2026): the
+      // "insights" link goes to the dashboard section. Admin analytics
+      // stays owner-only.
+      { id: "insights", href: "/#visitor-analytics", label: "insights", icon: BarChart3 },
       { id: "analytics", href: "/admin", label: "adminAnalytics", icon: ShieldCheck, adminOnly: true },
     ],
   },
@@ -181,9 +180,10 @@ export default function Sidebar({
   exhibitionCount,
   collapsible = true,
 }: {
-  // isAdmin is carried on the user object by getCurrentUser (lib/auth.ts);
-  // the Admin links only render when it is true.
-  user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
+  // isAdmin / isSubAdmin are carried on the user object by
+  // getCurrentUser (lib/auth.ts); the Admin links render when either
+  // is true — the admin page itself checks the permissions server-side.
+  user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean; isSubAdmin?: boolean };
   active: SidebarActive;
   exhibitionCount: number;
   // Collapsible mode is the platform-wide default: a narrow icon-only
@@ -342,7 +342,7 @@ export default function Sidebar({
         <div className="side-nav-groups">
           <nav aria-label={t("nav", "mainNav")}>
             {NAV_GROUPS.map((group) => {
-              const items = group.items.filter((item) => !item.adminOnly || user.isAdmin);
+              const items = group.items.filter((item) => !item.adminOnly || user.isAdmin || user.isSubAdmin);
               if (items.length === 0) return null;
               return (
                 <div key={group.id}>

@@ -50,6 +50,11 @@ export default function VisitorAnalytics({
   devices,
   referrers,
   countries,
+  // Where the exhibition selector navigates. The analytics live on the
+  // dashboard (since Nov 2026), so the default navigates to
+  // /?exhibitionId=…#visitor-analytics.
+  basePath = "/",
+  selectSuffix = "#visitor-analytics",
 }: {
   exhibitions: AnalyticsExhibition[];
   selectedId: string;
@@ -65,6 +70,8 @@ export default function VisitorAnalytics({
   devices: CountRow[];
   referrers: CountRow[];
   countries: CountRow[];
+  basePath?: string;
+  selectSuffix?: string;
 }) {
   const router = useRouter();
   const [downloading, setDownloading] = useState(false);
@@ -164,7 +171,7 @@ export default function VisitorAnalytics({
           Exhibition
           <select
             value={selectedId}
-            onChange={(e) => router.push(`/tools/visitor-analytics?exhibitionId=${e.target.value}`)}
+            onChange={(e) => router.push(`${basePath}?exhibitionId=${e.target.value}${selectSuffix}`)}
           >
             {exhibitions.map((e) => (
               <option key={e.id} value={e.id}>

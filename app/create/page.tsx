@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Aperture, Boxes, Calculator, Frame, GalleryVerticalEnd, Image, Palette, Presentation, Route, Wrench } from "lucide-react";
+import { Aperture, Boxes, Calculator, Frame, GalleryVerticalEnd, Route, Wrench } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -46,18 +46,13 @@ const CARDS: HubCard[] = [
     description: "priceYourWorkDesc",
     status: "ready",
   },
+  // Frames & Art on Walls is the merged Frame Studio + Mockup Studio
+  // (Nov 2026): one tool, realistic frames on 10 real wall photos.
   {
-    href: "/tools/frame-studio",
+    href: "/tools/frames-walls",
     icon: Frame,
-    title: "frameStudio",
-    description: "frameStudioDesc",
-    status: "ready",
-  },
-  {
-    href: "/tools/mockup-studio",
-    icon: Image,
-    title: "mockupStudio",
-    description: "mockupStudioDesc",
+    title: "framesWalls",
+    description: "framesWallsDesc",
     status: "ready",
   },
   {
@@ -65,20 +60,6 @@ const CARDS: HubCard[] = [
     icon: Aperture,
     title: "photographyLab",
     description: "photographyLabDesc",
-    status: "ready",
-  },
-  {
-    href: "/tools/color-intelligence",
-    icon: Palette,
-    title: "colorIntelligence",
-    description: "colorIntelligenceDesc",
-    status: "ready",
-  },
-  {
-    href: "/tools/presentation-designer",
-    icon: Presentation,
-    title: "presentationDesigner",
-    description: "presentationDesignerDesc",
     status: "ready",
   },
 ];

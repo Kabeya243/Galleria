@@ -39,14 +39,24 @@ model User {
   savedWorks   SavedWork[]
   listings     Listing[]
   libraryWorks LibraryWork[]
+  contacts     Contact[]
   teamsOwned   Team[]
   teamMemberships TeamMember[]
   teamComments TeamComment[]
   teamActivities TeamActivity[]
+  // Sub-admin grants (Nov 2026): the manager (platform owner) can give
+  // another account limited access to the admin dashboard. The grant
+  // itself is the SubAdmin row below; grantedSubAdmins are the grants
+  // this user handed out. See lib/admin.ts for the permission list.
+  subAdminGrant    SubAdmin?  @relation("SubAdminUser")
+  grantedSubAdmins SubAdmin[] @relation("SubAdminGrantor")
   // Advanced website builder (Claude editor): sites created in
   // /tools/website-builder/advanced. See models Site/Page/Section/
   // Block/Template/Media below.
   sites         Site[]
+  // Open calls (Nov 2026): calls for applications the user creates
+  // in /tools/open-calls. See OpenCall below.
+  openCalls     OpenCall[]
 }
 
 model PasswordResetToken {
@@ -119,6 +129,24 @@ model Message {
   readAt         DateTime?
 
   @@index([conversationId, createdAt])
+}
+
+// Contacts (Nov 2026): the artist's own address book — collectors,
+// curators, galleries, advisors — stored on the account, not in the
+// browser. Previously localStorage only ("Saved in this browser only");
+// the tool migrates any browser copy into the database on first load.
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  role      String   @default("Collector")
+  email     String   @default("")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }
 
 model Exhibition {
@@ -566,6 +594,26 @@ model GalleryName {
   updatedAt DateTime @updatedAt
 }
 
+// Sub-admin grants (Nov 2026): the manager (platform owner, the only
+// account in ADMIN_EMAILS) can give another signed-up account limited
+// access to the admin dashboard (/admin). The grant lists the permission
+// keys the sub-admin holds — see ADMIN_PERMISSIONS in lib/admin.ts.
+// Permissions are checked server-side on every admin page render and
+// every admin API route, never only hidden in the interface. The
+// manager keeps full access and is the only one who can add, change or
+// remove grants (subadmins.manage is never grantable). One grant per
+// user (userId unique); granting again replaces the permission list.
+model SubAdmin {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation("SubAdminUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedById String
+  grantedBy   User     @relation("SubAdminGrantor", fields: [grantedById], references: [id], onDelete: Cascade)
+  permissions Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Advanced website builder (Claude « atelier-sites », integrated 8 Nov 2026)
 // ---------------------------------------------------------------------------
@@ -659,4 +707,65 @@ model Media {
   createdAt DateTime @default(now())
 
   @@index([siteId])
+}
+
+// ---------------------------------------------------------------------------
+// Open calls (Nov 2026): a Google Forms / Jotform-style tool in
+// /tools/open-calls. The owner creates a call (title, description,
+// deadline), builds its form from fields, publishes it (public link
+// /open-calls/[slug]), and reads the responses. All data lives in the
+// database — nothing in localStorage. File answers are stored in R2
+// under open-calls/<slug>/<uuid>.<ext> (see the public upload route);
+// the response row only stores the file key and name in its answers.
+// ---------------------------------------------------------------------------
+// status: draft (being built, no public link works yet), published
+// (public link live, accepts responses until the deadline), closed
+// (public link shows "closed", no more responses).
+model OpenCall {
+  id          String             @id @default(cuid())
+  ownerId     String
+  owner       User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String             @unique
+  description String             @default("")
+  deadline    DateTime?
+  status      String             @default("draft")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  fields      OpenCallField[]
+  responses   OpenCallResponse[]
+
+  @@index([ownerId, createdAt])
+  @@index([status, createdAt])
+}
+
+// One form field. type: short_text | long_text | email | number |
+// date | select | checkbox | file. options holds the choice list for
+// select/checkbox (Json string array), null otherwise.
+model OpenCallField {
+  id         String   @id @default(cuid())
+  openCallId String
+  openCall   OpenCall @relation(fields: [openCallId], references: [id], onDelete: Cascade)
+  label      String
+  type       String
+  required   Boolean  @default(false)
+  options    Json?
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([openCallId, order])
+}
+
+// One submitted application. answers is a Json map fieldId -> value:
+// strings for text/email/number/date, a string for select, a string
+// array for checkbox, and { key, name } for a file answer (the file
+// itself is in R2, served owner-only by /api/open-calls/files/...).
+model OpenCallResponse {
+  id         String   @id @default(cuid())
+  openCallId String
+  openCall   OpenCall @relation(fields: [openCallId], references: [id], onDelete: Cascade)
+  answers    Json
+  createdAt  DateTime @default(now())
+
+  @@index([openCallId, createdAt])
 }

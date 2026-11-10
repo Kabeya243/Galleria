@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import InDevelopmentBox from "@/components/in-development-box";
 import ToolsShell from "@/components/tools-shell";
 import VideoGenerator, { type VideoExhibition } from "@/components/video-generator";
 import { getCurrentUser } from "@/lib/auth";
@@ -68,6 +69,11 @@ export default async function VideoGeneratorRoute({
       eyebrow="videoGeneratorEyebrow"
       description="videoGeneratorDesc"
     >
+      <InDevelopmentBox title="In development">
+        The video generator is still being built. You can already build a shot list and record a
+        walkthrough of your real 3D room, but expect rough edges: recording, formats and exports
+        may change before launch.
+      </InDevelopmentBox>
       {exhibitions.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No exhibitions yet.</strong>

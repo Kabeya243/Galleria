@@ -879,11 +879,8 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(3, "Colour: read the palette", "Run Colour Intelligence on the artwork and bring its palette back here. The wizard stores the palette in the project and suggests the wall colours that let the work shine.")}
+        {stepHeader(3, "Colour: read the palette", "The palette of the artwork, read from its real pixels, and the wall colours that let the work shine. Palettes you saved earlier are listed below.")}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          <Link href={`/tools/color-intelligence?artworkId=${primary.id}`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
-            Open in Colour Intelligence →
-          </Link>
           <button type="button" style={btnGhost} onClick={() => void refreshLinked()}>Refresh status</button>
         </div>
         {linkedLoading ? (
@@ -911,7 +908,7 @@ export default function ArtInContext({
             <p style={{ fontSize: 13, color: "#6b6558" }}>Paper white and warm gallery white first; the two palest tints come from the work&apos;s own dominant colours.</p>
           </div>
         ) : (
-          <p style={{ fontSize: 14 }}>No palette stored yet. Open Colour Intelligence above, analyse <strong>{primary.title}</strong>, save the palette there, then come back and press Refresh.</p>
+          <p style={{ fontSize: 14 }}>No palette stored yet for <strong>{primary.title}</strong>. Palettes saved earlier from the colour tool are listed below when available.</p>
         )}
         {palettes.length > 0 && (
           <div style={{ marginTop: 20, borderTop: "1px solid #e8e2d4", paddingTop: 16 }}>
@@ -964,10 +961,10 @@ export default function ArtInContext({
 
     return (
       <div style={cardStyle}>
-        {stepHeader(4, "Frames: choose the frame", "All 28 frame styles from Frame Studio, previewed on your own work. Pick one and save it, the frame is written to the real artwork row, so the 3D gallery and the public exhibition show the same frame.")}
+        {stepHeader(4, "Frames: choose the frame", "All 28 frame styles from Frames & Art on Walls, previewed on your own work. Pick one and save it, the frame is written to the real artwork row, so the 3D gallery and the public exhibition show the same frame.")}
         <p style={{ fontSize: 13, color: "#6b6558", marginTop: 0 }}>
           Saved frame: <strong>{FRAME_VARIANTS[primary.frame as FrameVariant]?.label ?? primary.frame}</strong> · {statusBadge(statuses[3])}
-          {" "}· <Link href={`/tools/frame-studio?artworkId=${primary.id}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open the full Frame Studio for custom widths, mats and glass →</Link>
+          {" "}· <Link href={`/tools/frames-walls?artworkId=${primary.id}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open Frames & Art on Walls for custom widths, mats and glass →</Link>
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 }}>
           {variants.map(([key, spec]) => {
@@ -1009,10 +1006,10 @@ export default function ArtInContext({
     const mine = mockups.filter((r) => selectedArtworks.some((a) => r.artworkId === a.id || (Array.isArray(r.data.artworkIds) && (r.data.artworkIds as unknown[]).includes(a.id))));
     return (
       <div style={cardStyle}>
-        {stepHeader(5, "Mockups: hang it in a room", "Place the work in a real interior in Mockup Studio and save the mockup. Saved mockups are collected into this project, and the high-resolution exports are reused again at step 10.")}
+        {stepHeader(5, "Mockups: hang it in a room", "Place the work in a real interior in Frames & Art on Walls and save the mockup. Saved mockups are collected into this project, and the high-resolution exports are reused again at step 10.")}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          <Link href={`/tools/mockup-studio?artworkId=${primary.id}`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
-            Open in Mockup Studio →
+          <Link href={`/tools/frames-walls?artworkId=${primary.id}&view=walls`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
+            Open Frames & Art on Walls →
           </Link>
           <button type="button" style={btnGhost} onClick={() => void refreshLinked()}>Refresh status</button>
         </div>
@@ -1479,7 +1476,7 @@ export default function ArtInContext({
                 <dt style={{ color: "#6b6558" }}>Public URL</dt>
                 <dd style={{ margin: 0, wordBreak: "break-all" }}><a href={publicUrl} target="_blank" rel="noreferrer" style={{ color: GOLD }}>{publicUrl}</a></dd>
                 <dt style={{ color: "#6b6558" }}>Catalogue</dt>
-                <dd style={{ margin: 0 }}><Link href={`/tools/presentation-designer?exhibitionId=${exhibition.id}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Build the PDF catalogue →</Link></dd>
+                <dd style={{ margin: 0 }}><Link href="/tools/portfolio-pdf" target="_blank" rel="noreferrer" style={{ color: GOLD }}>Build the PDF catalogue →</Link></dd>
                 <dt style={{ color: "#6b6558" }}>Works</dt>
                 <dd style={{ margin: 0 }}>{exhibition.artworks.length} in the show</dd>
               </dl>
@@ -1538,9 +1535,9 @@ export default function ArtInContext({
                 ))}
               </ul>
             ) : (
-              <p style={{ fontSize: 13, color: "#6b6558", margin: 0 }}>No mockups collected yet, see step 5. <Link href={`/tools/mockup-studio?artworkId=${primary?.id ?? ""}`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open Mockup Studio →</Link></p>
+              <p style={{ fontSize: 13, color: "#6b6558", margin: 0 }}>No mockups collected yet, see step 5. <Link href={`/tools/frames-walls?artworkId=${primary?.id ?? ""}&view=walls`} target="_blank" rel="noreferrer" style={{ color: GOLD }}>Open Frames & Art on Walls →</Link></p>
             )}
-            <p style={{ fontSize: 13, color: "#6b6558" }}>Export the full-resolution file from Mockup Studio, the saved mockup keeps your scene, frame and light.</p>
+            <p style={{ fontSize: 13, color: "#6b6558" }}>Export the full-resolution file from Frames & Art on Walls, the saved mockup keeps your scene, frame and light.</p>
           </section>
 
           <section>
@@ -1557,9 +1554,9 @@ export default function ArtInContext({
 
           <section style={{ borderTop: "1px solid #e8e2d4", paddingTop: 16 }}>
             <h3 style={{ fontFamily: "Fraunces, serif", margin: "0 0 8px" }}>PDF catalogue {catalogueDone ? <span style={{ color: "#2e6b34", fontSize: 13 }}>✓</span> : null}</h3>
-            <p style={{ fontSize: 14, margin: "0 0 8px" }}>Built from the Presentation Designer data, the same works, captions and curatorial text as the show.</p>
-            <Link href={`/tools/presentation-designer?exhibitionId=${exhibition.id}`} target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
-              Open Presentation Designer →
+            <p style={{ fontSize: 14, margin: "0 0 8px" }}>Built from the Portfolio PDF data, the same works, captions and curatorial text as the show.</p>
+            <Link href="/tools/portfolio-pdf" target="_blank" rel="noreferrer" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
+              Open Portfolio PDF →
             </Link>
             <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, fontSize: 14, cursor: "pointer" }}>
               <input type="checkbox" checked={data.promotion.catalogue} onChange={() => togglePromo("catalogue")} /> Catalogue exported

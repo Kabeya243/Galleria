@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   Search,
+  ShieldCheck,
   Users,
   Wrench,
   Image as ImageIcon,
@@ -32,14 +33,16 @@ type NavItem = {
 // top, search field, grouped nav items with icons, active item highlighted,
 // account section at the bottom). A hamburger collapses it to a narrow
 // icon-only rail; the collapsed state persists in localStorage. Every admin
-// page is server-rendered and already checked the user is the owner before
-// rendering, so this shell trusts its props.
+// page is server-rendered and already checked the user's permissions before
+// rendering, so this shell trusts its props — `sections` lists the nav
+// items the viewer may open (a sub-admin only sees their own sections).
 export default function AdminShell({
   user,
   title,
   eyebrow,
   description,
   counts,
+  sections,
   children,
 }: {
   user: { id: string; name: string; email: string };
@@ -47,6 +50,8 @@ export default function AdminShell({
   eyebrow: string;
   description: string;
   counts?: { users: number; exhibitions: number; artworks: number; tools?: number };
+  // Nav ids the viewer may open; omitted = all (the manager).
+  sections?: string[];
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -62,7 +67,7 @@ export default function AdminShell({
   // Track which section is on screen, so the matching menu item is
   // highlighted (like the reference's active Dashboard row).
   useEffect(() => {
-    const ids = ["overview", "users", "exhibitions", "artworks", "galleries", "tools"];
+    const ids = ["overview", "users", "exhibitions", "artworks", "galleries", "tools", "test-reports", "sub-admins"];
     const elements = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -131,7 +136,13 @@ export default function AdminShell({
       href: "#test-reports",
       icon: <ClipboardCheck size={18} />,
     },
-  ];
+    {
+      id: "sub-admins",
+      label: "Sub-admins",
+      href: "#sub-admins",
+      icon: <ShieldCheck size={18} />,
+    },
+  ].filter((item) => !sections || sections.includes(item.id));
   const needle = query.trim().toLowerCase();
   const visibleItems = needle
     ? items.filter((item) => item.label.toLowerCase().includes(needle))

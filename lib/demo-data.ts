@@ -418,6 +418,10 @@ export function specFromFrameConfig(config: FrameConfig): FrameSpec {
     floatGap: config.floatGap,
     texture,
     bead: base.bead,
+    // Keep the base style's real moulding photo: a custom frame based on
+    // a digitised frame still wears that frame's photo skin, in the tool
+    // previews and in the 3D gallery alike.
+    photo: base.photo,
     profile: config.profile,
     grain: config.grain,
     glass: config.glass,

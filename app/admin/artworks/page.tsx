@@ -1,13 +1,11 @@
 import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
-import AdminShell from "@/components/admin-shell";
+import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox } from "@/components/admin-ui";
 import {
-  adminSections,
   getAdminContext,
   hasAdminPermission,
   loadAdminArtworks,
-  loadAdminShellCounts,
 } from "@/lib/admin-data";
 
 export const metadata = {
@@ -21,17 +19,14 @@ export default async function AdminArtworksRoute() {
     return <AdminDenied user={user} />;
   }
   if (!hasAdminPermission(access, "artworks.view")) redirect("/admin");
-  const [allArtworks, counts] = await Promise.all([loadAdminArtworks(), loadAdminShellCounts()]);
+  const allArtworks = await loadAdminArtworks();
   return (
-    <AdminShell
-      user={user}
-      title="All artworks"
-      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
-      description={`${allArtworks.length} artworks, what it is, where it hangs, and who it belongs to.`}
-      counts={counts}
-      sections={adminSections(access)}
-      active="artworks"
-    >
+    <>
+      <AdminHero
+        eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+        title="All artworks"
+        description={`${allArtworks.length} artworks, what it is, where it hangs, and who it belongs to.`}
+      />
       <div className="ad-section">
         {allArtworks.length === 0 ? (
           <EmptyBox title="No artworks yet." body="Artworks appear here as soon as someone adds one to an exhibition." />
@@ -66,6 +61,6 @@ export default async function AdminArtworksRoute() {
           </div>
         )}
       </div>
-    </AdminShell>
+    </>
   );
 }

@@ -2,13 +2,11 @@ import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
 import AdminGalleries from "@/components/admin-galleries";
 import AdminGalleryNames from "@/components/admin-gallery-names";
-import AdminShell from "@/components/admin-shell";
+import { AdminHero } from "@/components/admin-shell";
 import {
-  adminSections,
   getAdminContext,
   hasAdminPermission,
   loadAdminGalleries,
-  loadAdminShellCounts,
 } from "@/lib/admin-data";
 
 export const metadata = {
@@ -23,20 +21,14 @@ export default async function AdminGalleriesRoute() {
   }
   if (!hasAdminPermission(access, "galleries.view")) redirect("/admin");
   const canManageGalleries = hasAdminPermission(access, "galleries.manage");
-  const [{ galleryTemplates, hiddenRoomLayouts, galleryNames }, counts] = await Promise.all([
-    loadAdminGalleries(),
-    loadAdminShellCounts(),
-  ]);
+  const { galleryTemplates, hiddenRoomLayouts, galleryNames } = await loadAdminGalleries();
   return (
-    <AdminShell
-      user={user}
-      title="Galleries"
-      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
-      description={`${galleryTemplates.length} room templates, the models visitors can pick. Deleting one hides it from the catalogue, the creation dialog and the editor; exhibitions already built with it keep working.`}
-      counts={counts}
-      sections={adminSections(access)}
-      active="galleries"
-    >
+    <>
+      <AdminHero
+        eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+        title="Galleries"
+        description={`${galleryTemplates.length} room templates, the models visitors can pick. Deleting one hides it from the catalogue, the creation dialog and the editor; exhibitions already built with it keep working.`}
+      />
       <div className="ad-section">
         <AdminGalleries templates={galleryTemplates} hidden={hiddenRoomLayouts} canManage={canManageGalleries} />
         <div className="ad-section-head" style={{ marginTop: 28 }}>
@@ -48,6 +40,6 @@ export default async function AdminGalleriesRoute() {
         </div>
         <AdminGalleryNames names={galleryNames} canManage={canManageGalleries} />
       </div>
-    </AdminShell>
+    </>
   );
 }

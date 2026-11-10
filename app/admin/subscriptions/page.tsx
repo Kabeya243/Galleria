@@ -1,13 +1,11 @@
 import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
-import AdminShell from "@/components/admin-shell";
+import { AdminHero } from "@/components/admin-shell";
 import AdminSubscriptions from "@/components/admin-subscriptions";
 import { EmptyBox, ShareBars } from "@/components/admin-ui";
 import {
-  adminSections,
   getAdminContext,
   hasAdminPermission,
-  loadAdminShellCounts,
   loadAdminSubscriptions,
 } from "@/lib/admin-data";
 
@@ -28,7 +26,7 @@ export default async function AdminSubscriptionsRoute() {
   }
   if (!hasAdminPermission(access, "subscriptions.view")) redirect("/admin");
   const canManageSubscriptions = hasAdminPermission(access, "subscriptions.manage");
-  const [subs, counts] = await Promise.all([loadAdminSubscriptions(), loadAdminShellCounts()]);
+  const subs = await loadAdminSubscriptions();
   const {
     plans,
     subscriptionRows,
@@ -46,15 +44,12 @@ export default async function AdminSubscriptionsRoute() {
     referralStats,
   } = subs;
   return (
-    <AdminShell
-      user={user}
-      title="Subscriptions"
-      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
-      description={`${allSubscriptionsCount} subscribers. Everything is free to try for now: the paywall is off, so every tool is open to every account. These plans are the structure billing will use later, once a payment provider is connected.`}
-      counts={counts}
-      sections={adminSections(access)}
-      active="subscriptions"
-    >
+    <>
+      <AdminHero
+        eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+        title="Subscriptions"
+        description={`${allSubscriptionsCount} subscribers. Everything is free to try for now: the paywall is off, so every tool is open to every account. These plans are the structure billing will use later, once a payment provider is connected.`}
+      />
       <div className="ad-section">
         <div className="ad-layout-half">
           <section className="ad-card">
@@ -148,6 +143,6 @@ export default async function AdminSubscriptionsRoute() {
           canManage={canManageSubscriptions}
         />
       </div>
-    </AdminShell>
+    </>
   );
 }

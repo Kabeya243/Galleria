@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
 import AdminHashRedirect from "@/components/admin-hash-redirect";
-import AdminShell from "@/components/admin-shell";
+import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox, ShareBars, Sparkline } from "@/components/admin-ui";
 import {
   adminSections,
@@ -11,7 +11,6 @@ import {
   getAdminContext,
   hasAdminPermission,
   loadAdminOverview,
-  loadAdminShellCounts,
   relativeTime,
   visitLocation,
 } from "@/lib/admin-data";
@@ -39,7 +38,7 @@ export default async function AdminOverviewRoute() {
   if (!hasAdminPermission(access, "stats.view")) {
     redirect(sections[0] === "overview" ? "/admin" : `/admin/${sections[0]}`);
   }
-  const [overview, counts] = await Promise.all([loadAdminOverview(), loadAdminShellCounts()]);
+  const overview = await loadAdminOverview();
   const {
     userCount,
     exhibitionCount,
@@ -91,19 +90,16 @@ export default async function AdminOverviewRoute() {
   });
 
   return (
-    <AdminShell
-      user={user}
-      title={access.isManager ? "Hello, Kabeya" : `Hello, ${user.name}`}
-      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
-      description={
-        access.isManager
-          ? `${todayLabel}, a look at who joined, what was built, and what visitors viewed on Lakisa.`
-          : `${todayLabel}, the sections of Lakisa you may manage.`
-      }
-      counts={counts}
-      sections={sections}
-      active="overview"
-    >
+    <>
+      <AdminHero
+        eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+        title={access.isManager ? "Hello, Kabeya" : `Hello, ${user.name}`}
+        description={
+          access.isManager
+            ? `${todayLabel}, a look at who joined, what was built, and what visitors viewed on Lakisa.`
+            : `${todayLabel}, the sections of Lakisa you may manage.`
+        }
+      />
       <AdminHashRedirect />
       <div className="ad-section">
         {/* Stat cards */}
@@ -556,6 +552,6 @@ export default async function AdminOverviewRoute() {
       <p className="ad-foot">
         Legacy image storage in the database: {formatBytes(storageBytes)} (R2 is separate).
       </p>
-    </AdminShell>
+    </>
   );
 }

@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
-import AdminShell from "@/components/admin-shell";
+import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox } from "@/components/admin-ui";
 import {
-  adminSections,
   getAdminContext,
   hasAdminPermission,
-  loadAdminShellCounts,
   loadAdminUsers,
 } from "@/lib/admin-data";
 
@@ -27,17 +25,14 @@ export default async function AdminUsersRoute({
   if (!hasAdminPermission(access, "users.view")) redirect("/admin");
   const { q } = await searchParams;
   const query = (q ?? "").trim();
-  const [allUsers, counts] = await Promise.all([loadAdminUsers(query), loadAdminShellCounts()]);
+  const allUsers = await loadAdminUsers(query);
   return (
-    <AdminShell
-      user={user}
-      title="All users"
-      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
-      description={`${allUsers.length} ${query ? `matching “${query}”` : "registered"}, who they are, what they do, where they are based, and when they signed up.`}
-      counts={counts}
-      sections={adminSections(access)}
-      active="users"
-    >
+    <>
+      <AdminHero
+        eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+        title="All users"
+        description={`${allUsers.length} ${query ? `matching “${query}”` : "registered"}, who they are, what they do, where they are based, and when they signed up.`}
+      />
       <div className="ad-section">
         <form className="ad-search" method="get" action="/admin/users">
           <input name="q" defaultValue={query} placeholder="Search by name, email or country…" aria-label="Search users" />
@@ -74,6 +69,6 @@ export default async function AdminUsersRoute({
           </div>
         )}
       </div>
-    </AdminShell>
+    </>
   );
 }

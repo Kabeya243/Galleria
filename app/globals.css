@@ -1438,6 +1438,12 @@ button { font-weight: 600; }
    work as designed. */
 html:has(.ad-root), html:has(.ad-root) body { overflow-y: auto; }
 
+/* Reserve the scrollbar space on every admin page, so the sidebar and
+   the content never shift sideways when moving between a short page
+   (no scrollbar) and a long one (scrollbar). Without this, the whole
+   layout jumps by the scrollbar width on each navigation. */
+html:has(.ad-root) { scrollbar-gutter: stable; }
+
 /* Published artist sites (/sites/[slug], sub-pages, owner preview) and
    the legacy simple-builder sites (/sites/[id]) are plain long pages
    outside .app-shell, with no inner scroll container of their own,

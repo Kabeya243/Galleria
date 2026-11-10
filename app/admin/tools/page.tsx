@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
-import AdminShell from "@/components/admin-shell";
+import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox } from "@/components/admin-ui";
 import {
-  adminSections,
   getAdminContext,
   hasAdminPermission,
-  loadAdminShellCounts,
   loadAdminTools,
   relativeTime,
 } from "@/lib/admin-data";
@@ -23,18 +21,15 @@ export default async function AdminToolsRoute() {
     return <AdminDenied user={user} />;
   }
   if (!hasAdminPermission(access, "stats.view")) redirect("/admin");
-  const [{ toolStats, totalToolUses, toolMax, recentToolUses, recentToolUsers }, counts] =
-    await Promise.all([loadAdminTools(), loadAdminShellCounts()]);
+  const { toolStats, totalToolUses, toolMax, recentToolUses, recentToolUsers } =
+    await loadAdminTools();
   return (
-    <AdminShell
-      user={user}
-      title="Tools used"
-      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
-      description={`${totalToolUses} ${totalToolUses === 1 ? "use" : "uses"} recorded, per tool, all time and in the last 30 days. Tracking started when this version shipped, so a tool nobody has opened yet shows 0.`}
-      counts={counts}
-      sections={adminSections(access)}
-      active="tools"
-    >
+    <>
+      <AdminHero
+        eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+        title="Tools used"
+        description={`${totalToolUses} ${totalToolUses === 1 ? "use" : "uses"} recorded, per tool, all time and in the last 30 days. Tracking started when this version shipped, so a tool nobody has opened yet shows 0.`}
+      />
       <div className="ad-section">
         <div className="ad-layout-half">
           <section className="ad-card">
@@ -99,6 +94,6 @@ export default async function AdminToolsRoute() {
           </section>
         </div>
       </div>
-    </AdminShell>
+    </>
   );
 }

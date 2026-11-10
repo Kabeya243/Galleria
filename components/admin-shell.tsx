@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ClipboardCheck,
   CreditCard,
@@ -28,47 +30,107 @@ type NavItem = {
   badge?: number;
 };
 
+type ShellCounts = { users: number; exhibitions: number; artworks: number; tools?: number };
+
+// Section routes, in nav order. The active section is derived from the
+// current path, so the shell never needs an `active` prop from the page.
+const SECTION_ROUTES: Record<string, string> = {
+  overview: "/admin",
+  users: "/admin/users",
+  exhibitions: "/admin/exhibitions",
+  artworks: "/admin/artworks",
+  galleries: "/admin/galleries",
+  tools: "/admin/tools",
+  "test-reports": "/admin/test-reports",
+  subscriptions: "/admin/subscriptions",
+  "sub-admins": "/admin/sub-admins",
+};
+
+// Page hero (eyebrow + title + description), rendered by each admin page
+// at the top of its content. It used to live inside this shell; it moved
+// out so the shell can live in the shared admin layout and stay mounted
+// across navigations, while each page keeps its own heading.
+export function AdminHero({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="ad-hero">
+      <span className="ad-eyebrow">{eyebrow}</span>
+      <h1>{title}</h1>
+      <p>{description}</p>
+    </div>
+  );
+}
+
 // Standalone shell for the Admin area (CRM): one page per section, no
 // SANAA app sidebar and no SANAA navigation at all. The Admin has its
 // own collapsible sidebar menu (style: dark minimal dashboard sidebar
 // — logo + title on top, search field, grouped nav items with icons,
 // active item highlighted, account section at the bottom). A hamburger
 // collapses it to a narrow icon-only rail; the collapsed state persists
-// in localStorage. Every admin page is server-rendered and already
-// checked the user's permissions before rendering, so this shell trusts
-// its props — `sections` lists the nav items the viewer may open (a
-// sub-admin only sees their own sections), and `active` is the section
-// of the page being shown (each section is its own route now, so the
-// old scroll-tracking observer is gone).
+// in localStorage.
+//
+// This shell is mounted ONCE, in app/admin/layout.tsx, so it stays
+// mounted while the visitor moves between admin pages: the sidebar
+// never unmounts, never flashes, and its state (collapsed, menu
+// search) survives navigation. Only the page content below swaps.
+// The nav uses next/link, so moving between sections is a client-side
+// navigation, never a full page reload. The badge counts come from the
+// layout on first paint and are refreshed from the API whenever the
+// route changes, so they stay true without remounting the shell.
+// Every admin page is server-rendered and already checked the user's
+// permissions before rendering, so this shell trusts its props —
+// `sections` lists the nav items the viewer may open (a sub-admin only
+// sees their own sections).
 export default function AdminShell({
   user,
-  title,
-  eyebrow,
-  description,
   counts,
   sections,
-  active,
   children,
 }: {
   user: { id: string; name: string; email: string };
-  title: string;
-  eyebrow: string;
-  description: string;
-  counts?: { users: number; exhibitions: number; artworks: number; tools?: number };
+  // Badge counts at first paint (from the layout); refreshed from the
+  // API on every navigation.
+  counts?: ShellCounts;
   // Nav ids the viewer may open; omitted = all (the manager).
   sections?: string[];
-  // The section of the page being shown (one of the nav ids).
-  active: string;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname() ?? "/admin";
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
+  const [liveCounts, setLiveCounts] = useState<ShellCounts | undefined>(counts);
 
   // Read the pre-paint collapsed state (set by the inline script in
   // app/admin/layout.tsx, so the sidebar never flashes the wrong width).
   useEffect(() => {
     setCollapsed(document.documentElement.getAttribute("data-admin-collapsed") === "true");
   }, []);
+
+  // Keep the nav badge counts true across client-side navigations: the
+  // layout (and its props) is not re-run when only the page segment
+  // changes, so refresh the counts from the API on every route change.
+  // A failed fetch just keeps the last known counts.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/shell-counts", { credentials: "same-origin" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data && typeof data.users === "number") setLiveCounts(data);
+      })
+      .catch(() => {
+        // Offline or denied: keep the counts from first paint.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -88,20 +150,20 @@ export default function AdminShell({
 
   const items: NavItem[] = [
     { id: "overview", label: "Dashboard", href: "/admin", icon: <LayoutDashboard size={18} /> },
-    { id: "users", label: "All users", href: "/admin/users", icon: <Users size={18} />, badge: counts?.users },
+    { id: "users", label: "All users", href: "/admin/users", icon: <Users size={18} />, badge: liveCounts?.users },
     {
       id: "exhibitions",
       label: "All exhibitions",
       href: "/admin/exhibitions",
       icon: <Images size={18} />,
-      badge: counts?.exhibitions,
+      badge: liveCounts?.exhibitions,
     },
     {
       id: "artworks",
       label: "All artworks",
       href: "/admin/artworks",
       icon: <ImageIcon size={18} />,
-      badge: counts?.artworks,
+      badge: liveCounts?.artworks,
     },
     {
       id: "galleries",
@@ -114,7 +176,7 @@ export default function AdminShell({
       label: "Tools used",
       href: "/admin/tools",
       icon: <Wrench size={18} />,
-      badge: counts?.tools,
+      badge: liveCounts?.tools,
     },
     {
       id: "test-reports",
@@ -135,11 +197,22 @@ export default function AdminShell({
       icon: <ShieldCheck size={18} />,
     },
   ].filter((item) => !sections || sections.includes(item.id));
+
+  // Active section from the current path: exact match, else the longest
+  // href that is a parent of the path (so a nested admin route still
+  // highlights its section). Falls back to the overview.
+  const activeItem =
+    items.find((item) => pathname === item.href) ??
+    items
+      .filter((item) => item.href !== "/admin" && pathname.startsWith(item.href + "/"))
+      .sort((a, b) => b.href.length - a.href.length)[0] ??
+    items.find((item) => item.id === "overview");
+  const active = activeItem?.id ?? "overview";
+
   const needle = query.trim().toLowerCase();
   const visibleItems = needle
     ? items.filter((item) => item.label.toLowerCase().includes(needle))
     : items;
-  const activeItem = items.find((item) => item.id === active);
 
   return (
     <div className="ad-root">
@@ -177,7 +250,7 @@ export default function AdminShell({
             <span className="ad-sidebar-empty">No matching section.</span>
           ) : (
             visibleItems.map((item) => (
-              <a
+              <Link
                 key={item.id}
                 href={item.href}
                 className={`ad-nav-item${active === item.id ? " ad-nav-active" : ""}`}
@@ -192,7 +265,7 @@ export default function AdminShell({
                 {item.badge !== undefined && (
                   <span className="ad-nav-badge">{item.badge}</span>
                 )}
-              </a>
+              </Link>
             ))
           )}
         </nav>
@@ -228,14 +301,7 @@ export default function AdminShell({
           </div>
         </header>
         <main className="ad-main">
-          <div className="ad-container">
-            <div className="ad-hero">
-              <span className="ad-eyebrow">{eyebrow}</span>
-              <h1>{title}</h1>
-              <p>{description}</p>
-            </div>
-            {children}
-          </div>
+          <div className="ad-container">{children}</div>
         </main>
       </div>
     </div>

@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
-import AdminShell from "@/components/admin-shell";
+import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox } from "@/components/admin-ui";
 import {
-  adminSections,
   getAdminContext,
   hasAdminPermission,
-  loadAdminShellCounts,
   loadAdminTestReports,
 } from "@/lib/admin-data";
 
@@ -21,17 +19,14 @@ export default async function AdminTestReportsRoute() {
     return <AdminDenied user={user} />;
   }
   if (!hasAdminPermission(access, "stats.view")) redirect("/admin");
-  const [testReport, counts] = await Promise.all([loadAdminTestReports(), loadAdminShellCounts()]);
+  const testReport = await loadAdminTestReports();
   return (
-    <AdminShell
-      user={user}
-      title="Test reports"
-      eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
-      description="Results of the automated feature tests for the new tools, profile photos, works wall, website builder (51 templates) and portfolio PDF builder (50 templates)."
-      counts={counts}
-      sections={adminSections(access)}
-      active="test-reports"
-    >
+    <>
+      <AdminHero
+        eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
+        title="Test reports"
+        description="Results of the automated feature tests for the new tools, profile photos, works wall, website builder (51 templates) and portfolio PDF builder (50 templates)."
+      />
       <div className="ad-section">
         {!testReport ? (
           <EmptyBox
@@ -82,6 +77,6 @@ export default async function AdminTestReportsRoute() {
           </div>
         )}
       </div>
-    </AdminShell>
+    </>
   );
 }

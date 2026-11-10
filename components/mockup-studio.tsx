@@ -55,8 +55,10 @@ const DEFAULT_CONFIG: MockupConfig = {
   artworkIds: [],
   widthCm: 100,
   heightCm: 80,
-  posX: 50,
-  hangCm: 155,
+  // Default wall (Bright living room) free-wall anchor: left of the
+  // print already hanging in the photo, centre 140 cm above the floor.
+  posX: 34,
+  hangCm: 140,
   tilt: 0,
   frame: "wood",
   matOn: false,
@@ -182,10 +184,23 @@ export type WallDef = {
   wall: string;
   floor: string;
   mood: string;
+  // Free-wall anchor for this photo (Nov 2026): where the framed work
+  // hangs by default, so it lands on empty wall instead of on top of a
+  // frame or furniture already in the photo. posX is the centre across
+  // the canvas (0-100); hangCm is the centre height above the floor.
+  // Walls without an anchor centre the work (50%, 147 cm).
+  posX?: number;
+  hangCm?: number;
 };
 
 export const MOCKUP_WALLS: WallDef[] = [
-  { id: "living-room-bright", label: "Bright living room", category: "living-room", file: "/mockup-walls/living-room-bright.jpg", width: 2000, height: 1765, wall: "#e8e2d6", floor: "#b08d63", mood: "Living room · real photo" },
+  // Bright living room: the photo already hangs a framed print
+  // centre-right (about 48-64% across, 17-47% down) above the side
+  // table, with a floor lamp left of it and the yellow armchair below.
+  // The free wall is left of that print, above the chair: centre the
+  // new frame at 34% across so it clears the print, the lamp pole and
+  // the chair back.
+  { id: "living-room-bright", label: "Bright living room", category: "living-room", file: "/mockup-walls/living-room-bright.jpg", width: 2000, height: 1765, wall: "#e8e2d6", floor: "#b08d63", mood: "Living room · real photo", posX: 34, hangCm: 140 },
   { id: "living-room-sofa", label: "Sofa and gallery wall", category: "living-room", file: "/mockup-walls/living-room-sofa.jpg", width: 2000, height: 1125, wall: "#e8e2d6", floor: "#b08d63", mood: "Living room · real photo" },
   { id: "living-room-modern", label: "Modern living room", category: "living-room", file: "/mockup-walls/living-room-modern.jpg", width: 2000, height: 1055, wall: "#e8e2d6", floor: "#b08d63", mood: "Living room · real photo" },
   { id: "dining-room-green", label: "Dining room, green chairs", category: "dining-room", file: "/mockup-walls/dining-room-green.jpg", width: 2000, height: 1125, wall: "#ddd5c6", floor: "#a98a68", mood: "Dining room · real photo" },
@@ -210,8 +225,15 @@ export const WALL_CATEGORIES: { id: string; label: string }[] = [
 // Rendering engine — draws scene + artworks on any canvas at full resolution
 // ---------------------------------------------------------------------------
 
-const WALL_HEIGHT_CM = 300;
-const WALL_WIDTH_CM = 600;
+// The wall photos are taken about 3-4 m from the wall, so the visible
+// wall spans roughly 420 cm across and 340 cm floor to ceiling: a
+// 100 cm wide work then covers about a quarter of the picture, the size
+// a real 100 x 80 cm frame reads at in the room (the old 600 cm width
+// shrank every work to a miniature). The floor line sits at 72% of the
+// picture height, so a centre hung at 147 cm lands at about 57% of the
+// visible wall height, the standard gallery hanging height.
+const WALL_HEIGHT_CM = 340;
+const WALL_WIDTH_CM = 420;
 
 function drawWallMaterial(
   ctx: CanvasRenderingContext2D,
@@ -1072,7 +1094,7 @@ export function drawMockup(
   framePhoto: HTMLImageElement | null,
   wallPhoto: HTMLImageElement | null = null,
 ) {
-  const floorY = H * 0.62;
+  const floorY = H * 0.72;
   if (wallPhoto) {
     // The real wall photo, cover-fit: it fills the canvas, centred, and
     // is never stretched — the same rule as the framed artwork inside it.
@@ -1189,7 +1211,24 @@ export default function MockupStudio({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const previewRef = useRef<HTMLCanvasElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const imgCache = useRef(new Map<string, HTMLImageElement>());
+
+  // The settings panel opens at its first section, never mid-scroll:
+  // the panel used to open with its top cut off (the "Matboard" row
+  // half visible), so its scroll position is reset on mount.
+  useEffect(() => {
+    panelRef.current?.scrollTo({ top: 0 });
+  }, []);
+
+  // "Settings" in the preview toolbar: bring the settings panel into
+  // view (on mobile it sits below the preview) and back to its top.
+  const goToSettings = useCallback(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    panel.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const wall = useMemo(() => MOCKUP_WALLS.find((w) => w.id === cfg.scene) ?? MOCKUP_WALLS[0], [cfg.scene]);
   const visibleWalls = useMemo(
@@ -1231,6 +1270,23 @@ export default function MockupStudio({
     },
     [],
   );
+
+  // Picking a wall moves the frame to that photo's free-wall anchor
+  // when it has one (centre, 147 cm, when it has none), so the work
+  // never lands on top of a frame or furniture already in the picture.
+  // A placement the user moved by hand is left alone across walls.
+  const pickWall = useCallback((w: WallDef) => {
+    setCfg((c) => {
+      const prev = MOCKUP_WALLS.find((x) => x.id === c.scene) ?? MOCKUP_WALLS[0];
+      const atAnchor = c.posX === (prev.posX ?? 50) && c.hangCm === (prev.hangCm ?? 147);
+      return {
+        ...c,
+        scene: w.id,
+        posX: atAnchor ? (w.posX ?? 50) : c.posX,
+        hangCm: atAnchor ? (w.hangCm ?? 147) : c.hangCm,
+      };
+    });
+  }, []);
 
   const setArrangement = useCallback((arr: Arrangement) => {
     setCfg((c) => {
@@ -1497,18 +1553,27 @@ export default function MockupStudio({
         }
         .ms-preview { background: #fff; border: 1px solid #e8e2d6; border-radius: 12px; padding: 12px; }
         .ms-preview canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: #f4f2ee; }
+        /* Download toolbar above the preview: the export used to live
+           only at the bottom of the long settings panel, so it was easy
+           to miss. Download, resolution and Settings are now always
+           visible with the preview. */
+        .ms-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+        .ms-res-group { display: flex; border: 1px solid #d9d4c9; border-radius: 999px; overflow: hidden; background: #fdfdfc; }
+        .ms-res-group button { border: 0; border-right: 1px solid #d9d4c9; background: transparent; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #1a1a1a; }
+        .ms-res-group button:last-child { border-right: 0; }
+        .ms-res-group button[aria-pressed="true"] { background: #1a1a1a; color: #fdfdfc; }
+        .ms-toolbar .ms-note { margin: 0; }
         .ms-caption { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: #6b655c; }
-        /* Side-by-side, no page scroll: the panel is bounded to the window
-           height (topbar + tool header above it) and only ever scrolls
-           INSIDE itself when the window is too short for all the controls.
-           The preview stays put next to it. On mobile the layout stacks. */
-        .ms-panel { background: #fff; border: 1px solid #e8e2d6; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; max-height: calc(100dvh - 280px); overflow-y: auto; overflow-x: hidden; }
-        .ms-panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: start; }
-        /* Wide desktop: three columns of sections, so the whole panel fits
-           the window height with no scrolling at all. */
-        @media (min-width: 1301px) { .ms-panel-grid { grid-template-columns: 1fr 1fr 1fr; } }
-        @media (max-width: 900px) { .ms-panel-grid { grid-template-columns: 1fr; } }
-        .ms-section h3 { font-family: "Fraunces", Georgia, serif; font-size: 13px; margin: 0 0 4px; color: #1a1a1a; }
+        /* Settings panel: one column of clearly titled sections, each
+           its own card, so nothing is squeezed into a three-column grid
+           and no control is ever cut off at the top. The panel header
+           sticks to the top while the panel scrolls inside itself. */
+        .ms-panel { background: #fff; border: 1px solid #e8e2d6; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 12px; max-height: calc(100dvh - 280px); overflow-y: auto; overflow-x: hidden; }
+        .ms-panel-head { position: sticky; top: -12px; z-index: 2; margin: -12px -12px 0; padding: 12px 12px 10px; background: #fff; border-bottom: 1px solid #e8e2d6; }
+        .ms-panel-head h2 { font-family: "Fraunces", Georgia, serif; font-size: 16px; margin: 0; color: #1a1a1a; }
+        .ms-panel-head p { margin: 2px 0 0; font-size: 12px; color: #6b655c; }
+        .ms-section { background: #fdfdfc; border: 1px solid #e8e2d6; border-radius: 10px; padding: 12px; }
+        .ms-section h3 { font-family: "Fraunces", Georgia, serif; font-size: 14px; margin: 0 0 10px; color: #1a1a1a; }
         .ms-framebar { display: flex; gap: 10px; align-items: end; }
         .ms-framebar .ms-field { flex: 1; min-width: 0; }
         .ms-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -1561,6 +1626,27 @@ export default function MockupStudio({
 
       <div className="ms-layout">
         <div className="ms-preview">
+          <div className="ms-toolbar" role="group" aria-label="Download and settings">
+            <button type="button" className="ms-btn" onClick={doExport} disabled={rendering || selectedArts.length === 0}>
+              {rendering ? "Rendering…" : `Download ${cfg.format.toUpperCase()} · ${cfg.resolution === "1080p" ? "1080p" : cfg.resolution.toUpperCase()}`}
+            </button>
+            <div className="ms-res-group" role="group" aria-label="Export resolution">
+              {(["1080p", "2k", "4k"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  aria-pressed={cfg.resolution === r}
+                  onClick={() => update({ resolution: r })}
+                >
+                  {r === "1080p" ? "1080p" : r.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button type="button" className="ms-btn ms-btn-ghost" onClick={goToSettings}>
+              Settings
+            </button>
+            {rendering && <p className="ms-note">{renderMsg ?? "Rendering…"}</p>}
+          </div>
           <canvas ref={previewRef} width={960} height={540} aria-label="Mockup preview" />
           <div className="ms-caption">
             <span>
@@ -1569,9 +1655,15 @@ export default function MockupStudio({
             <span>Preview 960 × 540 · export renders at full resolution</span>
           </div>
           {imgError && <p className="ms-error" style={{ marginTop: 10 }}>{imgError}</p>}
+          {renderMsg && !rendering && <p className="ms-ok" style={{ marginTop: 10 }}>{renderMsg}</p>}
+          {exportError && <p className="ms-error" style={{ marginTop: 10 }}>{exportError}</p>}
         </div>
 
-        <div className="ms-panel">
+        <div className="ms-panel" ref={panelRef}>
+          <div className="ms-panel-head">
+            <h2>Settings</h2>
+            <p>Frame, artworks, scene, placement and export for this mockup.</p>
+          </div>
           {/* Frame first: changing the frame is the most frequent action, so
               its controls sit at the top of the panel — visible with the
               preview, no scrolling to reach them. */}
@@ -1656,10 +1748,11 @@ export default function MockupStudio({
             </div>
           </div>
 
-          {/* Wall: full-width section (outside the three-column panel grid)
-              so the ten photo thumbnails get room and are never cut off. */}
+          {/* Scene: full-width section so the ten photo thumbnails get
+              room and are never cut off. Picking a wall moves the frame
+              to that photo's free-wall anchor when it has one. */}
           <div className="ms-section">
-            <h3>Wall · {MOCKUP_WALLS.length} real photos</h3>
+            <h3>Scene · {MOCKUP_WALLS.length} real photos</h3>
             <div className="ms-chips" role="group" aria-label="Filter walls by room" style={{ marginBottom: 8 }}>
               {WALL_CATEGORIES.map((c) => (
                 <button key={c.id} type="button" className="ms-chip" aria-pressed={wallFilter === c.id} onClick={() => setWallFilter(c.id)}>
@@ -1669,7 +1762,7 @@ export default function MockupStudio({
             </div>
             <div className="ms-walls">
               {visibleWalls.map((w) => (
-                <button key={w.id} type="button" aria-pressed={cfg.scene === w.id} onClick={() => update({ scene: w.id })}>
+                <button key={w.id} type="button" aria-pressed={cfg.scene === w.id} onClick={() => pickWall(w)}>
                   <img src={w.file} alt="" loading="lazy" />
                   <span>{w.label}</span>
                 </button>
@@ -1679,8 +1772,6 @@ export default function MockupStudio({
               Wall photos: Unsplash License. The framed artwork hangs on the photo you pick, at the size and height you set below.
             </p>
           </div>
-
-          <div className="ms-panel-grid">
 
           <div className="ms-section">
             <h3>Placement</h3>
@@ -1778,9 +1869,6 @@ export default function MockupStudio({
                 {rendering ? "Rendering…" : `Export ${cfg.format.toUpperCase()} · ${RESOLUTIONS[cfg.resolution].label.split(" · ")[0]}`}
               </button>
             </div>
-            {renderMsg && !rendering && <p className="ms-ok" style={{ marginTop: 10 }}>{renderMsg}</p>}
-            {rendering && <p className="ms-note" style={{ marginTop: 10 }}>{renderMsg ?? "Rendering…"}</p>}
-            {exportError && <p className="ms-error" style={{ marginTop: 10 }}>{exportError}</p>}
           </div>
 
           <div className="ms-section">
@@ -1875,7 +1963,6 @@ export default function MockupStudio({
                 ))}
               </div>
             )}
-          </div>
           </div>
         </div>
       </div>

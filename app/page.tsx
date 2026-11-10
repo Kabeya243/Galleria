@@ -1,5 +1,6 @@
 import Dashboard from "@/components/dashboard";
 import PublicHome, { type FeaturedPreview, type PublicHomeExhibition } from "@/components/public-home";
+import { JsonLd, organizationJsonLd } from "@/components/seo-jsonld";
 import { getCurrentUser } from "@/lib/auth";
 import { db, withDbRetry } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
@@ -100,7 +101,12 @@ export default async function HomePage({
     const [exhibitions, featured] = await withDbRetry(() =>
       Promise.all([findPublicExhibitions(), findFeaturedPreview()]),
     );
-    return <PublicHome exhibitions={exhibitions} featured={featured} />;
+    return (
+      <>
+        <JsonLd data={organizationJsonLd()} />
+        <PublicHome exhibitions={exhibitions} featured={featured} />
+      </>
+    );
   }
 
   const { exhibitionId } = await searchParams;

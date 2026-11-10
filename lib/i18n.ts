@@ -4050,6 +4050,32 @@ export const DICTIONARY = {
     emptyId: { fr: "Saisissez un identifiant de certificat.", en: "Enter a certificate ID." },
     backHome: { fr: "Retour à l'accueil", en: "Back home" },
   },
+  // Messaging safety (Nov 2026, lot messagerie temps reel + securite):
+  // notification bell, reporting and blocking in the messages area.
+  // Only French and English are written here; other locales fall back
+  // to English, as translate() does for any missing locale.
+  messagesSafety: {
+    notifications: { fr: "Notifications", en: "Notifications" },
+    noUnread: { fr: "Aucun message non lu.", en: "No unread messages." },
+    viewAllMessages: { fr: "Voir tous les messages", en: "View all messages" },
+    report: { fr: "Signaler", en: "Report" },
+    reportMessage: { fr: "Signaler ce message", en: "Report this message" },
+    reportConversation: { fr: "Signaler cette conversation", en: "Report this conversation" },
+    reportReason: { fr: "Motif", en: "Reason" },
+    reasonSpam: { fr: "Spam", en: "Spam" },
+    reasonHarassment: { fr: "Harcèlement", en: "Harassment" },
+    reasonScam: { fr: "Arnaque", en: "Scam" },
+    reasonInappropriate: { fr: "Contenu inapproprié", en: "Inappropriate content" },
+    reasonOther: { fr: "Autre", en: "Other" },
+    sendReport: { fr: "Envoyer le signalement", en: "Send report" },
+    reportSent: { fr: "Signalement envoyé. Merci.", en: "Report sent. Thank you." },
+    reportFailed: { fr: "Impossible d'envoyer le signalement. Réessayez.", en: "Could not send the report. Try again." },
+    blockUser: { fr: "Bloquer cet utilisateur", en: "Block this user" },
+    unblockUser: { fr: "Débloquer cet utilisateur", en: "Unblock this user" },
+    blockConfirm: { fr: "Bloquer ? Cette personne ne pourra plus vous écrire.", en: "Block this person? They will no longer be able to message you." },
+    blockedNotice: { fr: "Vous avez bloqué cette personne. Elle ne peut plus vous envoyer de messages.", en: "You blocked this person. They cannot send you new messages." },
+    confirm: { fr: "Confirmer", en: "Confirm" },
+  },
 } as const;
 
 export type DictionaryKey = keyof typeof DICTIONARY;

@@ -54,8 +54,15 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
   const [rightOpen, setRightOpen] = useState(true);
   const [activePageId, setActivePageId] = useState(site.pages[0].id);
   const [selectedSectionId, setSelectedSectionId] = useState(site.pages[0].sections[0]?.id ?? "");
+  const [selectedBlockId, setSelectedBlockId] = useState(site.pages[0].sections[0]?.blocks[0]?.id ?? "");
   const [device, setDevice] = useState<Device>("ordinateur");
-  const [previewMode, setPreviewMode] = useState(false);
+  // HTML5 drag and drop state (no extra dependency): what is being
+  // dragged (a section, a block, or a block type from the panel) and
+  // where it would land, for the drop highlight only. The payload
+  // itself travels in the drag event's dataTransfer.
+  const [draggedSectionId, setDraggedSectionId] = useState("");
+  const [draggedBlockKey, setDraggedBlockKey] = useState("");
+  const [dropTargetKey, setDropTargetKey] = useState("");
   const [zoom, setZoom] = useState(100);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -66,7 +73,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
 
   const activePage = site.pages.find((page) => page.id === activePageId) ?? site.pages[0];
   const selectedSection = activePage?.sections.find((section) => section.id === selectedSectionId) ?? activePage?.sections[0];
-  const selectedBlock = selectedSection?.blocks[0];
+  const selectedBlock = selectedSection?.blocks.find((block) => block.id === selectedBlockId) ?? selectedSection?.blocks[0];
 
   // Media library for the active site, from PostgreSQL (Media rows).
   useEffect(() => {
@@ -233,6 +240,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
     setSite(next);
     setActivePageId(next.pages[0].id);
     setSelectedSectionId(next.pages[0].sections[0]?.id ?? "");
+    setSelectedBlockId(next.pages[0].sections[0]?.blocks[0]?.id ?? "");
     setMessage(`Le modèle « ${template.name} » est prêt à personnaliser.`);
     setError("");
     setActivePanel("Pages");
@@ -245,6 +253,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
     historyIndex.current = 0;
     setActivePageId(next.pages[0]?.id ?? "");
     setSelectedSectionId(next.pages[0]?.sections[0]?.id ?? "");
+    setSelectedBlockId(next.pages[0]?.sections[0]?.blocks[0]?.id ?? "");
     setSitesMenuOpen(false);
     setPendingDeleteSiteId("");
     setMessage("");
@@ -315,21 +324,195 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
     setMessage("Le site a été supprimé.");
   }
 
-  function addBlock(type: BlockType) {
-    if (!activePage) return;
+  // WordPress-style block model: a section holds one or more blocks,
+  // each block is one content element (heading, text, image, gallery,
+  // button, and so on). The canvas renders every block, and each block
+  // can be added, duplicated, deleted and moved by drag and drop, on
+  // its own or across sections.
+  function makeBlock(type: BlockType): Block {
     const definition = blockLibrary.find((item) => item.type === type);
-    const block: Block = {
+    return {
       id: makeId(),
       type,
       content: { heading: definition?.label ?? "Nouvelle section", body: definition?.description ?? "", label: "", image: "", action: "En savoir plus", items: ["Nouvel élément"] }
     };
-    const section: Section = { id: makeId(), title: definition?.label ?? "Nouvelle section", blocks: [block] };
+  }
+
+  // Insert a block: inside a section (before a given block, or at the
+  // end of the section), or as a new section at the end of the page
+  // when no target section is given (the panel "+" behaviour, and a
+  // drop on an empty part of the page).
+  function insertBlock(type: BlockType, targetSectionId?: string, beforeBlockId?: string | null) {
+    if (!activePage) return;
+    const block = makeBlock(type);
+    if (!targetSectionId) {
+      const section: Section = { id: makeId(), title: blockLibrary.find((item) => item.type === type)?.label ?? "Nouvelle section", blocks: [block] };
+      const pageId = activePage.id;
+      commit((current) => ({
+        ...current,
+        pages: current.pages.map((page) => page.id === pageId ? { ...page, sections: [...page.sections, section] } : page)
+      }));
+      setSelectedSectionId(section.id);
+      setSelectedBlockId(block.id);
+      return;
+    }
     const pageId = activePage.id;
     commit((current) => ({
       ...current,
-      pages: current.pages.map((page) => page.id === pageId ? { ...page, sections: [...page.sections, section] } : page)
+      pages: current.pages.map((page) => page.id === pageId ? {
+        ...page,
+        sections: page.sections.map((section) => {
+          if (section.id !== targetSectionId) return section;
+          const blocks = [...section.blocks];
+          const at = beforeBlockId ? blocks.findIndex((item) => item.id === beforeBlockId) : -1;
+          if (at >= 0) blocks.splice(at, 0, block);
+          else blocks.push(block);
+          return { ...section, blocks };
+        })
+      } : page)
     }));
-    setSelectedSectionId(section.id);
+    setSelectedSectionId(targetSectionId);
+    setSelectedBlockId(block.id);
+  }
+
+  function addBlock(type: BlockType) {
+    insertBlock(type);
+  }
+
+  // Move a block within its section or into another section, before a
+  // given block there (or at the end). A section emptied by the move
+  // disappears, unless it was the page's only section.
+  function moveBlock(fromSectionId: string, blockId: string, toSectionId: string, beforeBlockId: string | null) {
+    if (!activePage) return;
+    if (fromSectionId === toSectionId && beforeBlockId === blockId) return;
+    const pageId = activePage.id;
+    commit((current) => {
+      const page = current.pages.find((item) => item.id === pageId);
+      if (!page) return current;
+      const source = page.sections.find((item) => item.id === fromSectionId);
+      const moving = source?.blocks.find((item) => item.id === blockId);
+      if (!source || !moving) return current;
+      let sections = page.sections.map((section) => section.id === fromSectionId
+        ? { ...section, blocks: section.blocks.filter((item) => item.id !== blockId) }
+        : section);
+      if (sections.length > 1) sections = sections.filter((section) => section.blocks.length > 0);
+      sections = sections.map((section) => {
+        if (section.id !== toSectionId) return section;
+        const blocks = [...section.blocks];
+        const at = beforeBlockId ? blocks.findIndex((item) => item.id === beforeBlockId) : -1;
+        if (at >= 0) blocks.splice(at, 0, moving);
+        else blocks.push(moving);
+        return { ...section, blocks };
+      });
+      return { ...current, pages: current.pages.map((item) => item.id === pageId ? { ...item, sections } : item) };
+    });
+    setSelectedSectionId(toSectionId);
+    setSelectedBlockId(blockId);
+  }
+
+  function duplicateBlock(sectionId: string, blockId: string) {
+    if (!activePage) return;
+    const source = activePage.sections.find((section) => section.id === sectionId)?.blocks.find((block) => block.id === blockId);
+    if (!source) return;
+    const copy: Block = { ...source, id: makeId(), content: { ...source.content } };
+    const pageId = activePage.id;
+    commit((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === pageId ? {
+        ...page,
+        sections: page.sections.map((section) => {
+          if (section.id !== sectionId) return section;
+          const blocks = [...section.blocks];
+          blocks.splice(blocks.findIndex((item) => item.id === blockId) + 1, 0, copy);
+          return { ...section, blocks };
+        })
+      } : page)
+    }));
+    setSelectedSectionId(sectionId);
+    setSelectedBlockId(copy.id);
+    setMessage("Bloc dupliqué.");
+  }
+
+  function deleteBlock(sectionId: string, blockId: string) {
+    if (!activePage) return;
+    const section = activePage.sections.find((item) => item.id === sectionId);
+    if (!section) return;
+    if (section.blocks.length === 1 && activePage.sections.length === 1) {
+      setError("Une page doit conserver au moins un bloc.");
+      return;
+    }
+    const remaining = section.blocks.filter((item) => item.id !== blockId);
+    if (remaining.length === 0) {
+      // Last block of the section: the section goes with it.
+      removeSection(sectionId);
+    } else {
+      patchPage(activePage.id, { sections: activePage.sections.map((item) => item.id === sectionId ? { ...item, blocks: remaining } : item) });
+    }
+    if (selectedBlockId === blockId) {
+      const fallback = remaining[0] ?? activePage.sections.find((item) => item.id !== sectionId)?.blocks[0];
+      setSelectedBlockId(fallback?.id ?? "");
+    }
+    setMessage("Bloc supprimé.");
+  }
+
+  // -- HTML5 drag and drop -------------------------------------------------
+  // Three payloads, all plain dataTransfer strings, no dependency:
+  //   application/x-lakisa-section    a whole section, by id
+  //   application/x-lakisa-block      a block, as "sectionId/blockId"
+  //   application/x-lakisa-block-type a block type from the panel, to insert
+  function clearDragState() {
+    setDraggedSectionId("");
+    setDraggedBlockKey("");
+    setDropTargetKey("");
+  }
+
+  function readDrop(event: DragEvent<HTMLElement>): { kind: "section"; sectionId: string } | { kind: "block"; fromSectionId: string; blockId: string } | { kind: "block-type"; blockType: BlockType } | null {
+    const sectionId = event.dataTransfer.getData("application/x-lakisa-section");
+    if (sectionId) return { kind: "section", sectionId };
+    const blockKey = event.dataTransfer.getData("application/x-lakisa-block");
+    if (blockKey.includes("/")) {
+      const [fromSectionId, blockId] = blockKey.split("/");
+      return { kind: "block", fromSectionId, blockId };
+    }
+    const blockType = event.dataTransfer.getData("application/x-lakisa-block-type");
+    if (blockType) return { kind: "block-type", blockType: blockType as BlockType };
+    return null;
+  }
+
+  function handleSectionDrop(event: DragEvent<HTMLDivElement>, section: Section) {
+    event.preventDefault();
+    const payload = readDrop(event);
+    clearDragState();
+    if (!payload) return;
+    if (payload.kind === "section") reorderSection(payload.sectionId, section.id);
+    else if (payload.kind === "block") moveBlock(payload.fromSectionId, payload.blockId, section.id, null);
+    else insertBlock(payload.blockType, section.id);
+  }
+
+  function handleBlockDrop(event: DragEvent<HTMLDivElement>, section: Section, block: Block) {
+    event.preventDefault();
+    event.stopPropagation();
+    const payload = readDrop(event);
+    clearDragState();
+    if (!payload) return;
+    if (payload.kind === "block") moveBlock(payload.fromSectionId, payload.blockId, section.id, block.id);
+    else if (payload.kind === "block-type") insertBlock(payload.blockType, section.id, block.id);
+    else reorderSection(payload.sectionId, section.id);
+  }
+
+  // Public URL of this site once published.
+  const liveSiteUrl = `/sites/${site.publishedSlug ?? site.slug}`;
+
+  // Preview opens in a new browser tab, not in a panel. A published
+  // site opens at its live URL; a draft is saved first, then opens
+  // through the owner-only preview route (/sites/preview/[slug]),
+  // which renders the same public view for the signed-in owner.
+  async function openPreview() {
+    const ok = await saveSiteDoc(siteRef.current);
+    if (!ok) return;
+    const current = siteRef.current;
+    const url = current.published ? `/sites/${current.publishedSlug ?? current.slug}` : `/sites/preview/${current.slug}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   function removeSection(sectionId: string) {
@@ -340,7 +523,10 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
       return;
     }
     patchPage(activePage.id, { sections });
-    if (selectedSectionId === sectionId) setSelectedSectionId(sections[0].id);
+    if (selectedSectionId === sectionId) {
+      setSelectedSectionId(sections[0].id);
+      setSelectedBlockId(sections[0].blocks[0]?.id ?? "");
+    }
   }
 
   function duplicateSection(sectionId: string) {
@@ -380,6 +566,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
     commit((current) => ({ ...current, pages: [...current.pages, page] }));
     setActivePageId(page.id);
     setSelectedSectionId(page.sections[0].id);
+    setSelectedBlockId(page.sections[0].blocks[0]?.id ?? "");
   }
 
   function movePage(pageId: string, offset: number) {
@@ -401,6 +588,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
     if (activePageId === pageId) {
       setActivePageId(pages[0].id);
       setSelectedSectionId(pages[0].sections[0]?.id ?? "");
+      setSelectedBlockId(pages[0].sections[0]?.blocks[0]?.id ?? "");
     }
   }
 
@@ -479,12 +667,12 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
   }) as React.CSSProperties, [site.theme]);
 
   return (
-    <main className={`advanced-editor editor-shell ${previewMode ? "preview-mode" : ""}`}>
+    <main className="advanced-editor editor-shell">
       <header className="topbar">
         <div className="top-left">
           <div className="brand-mark">a</div>
-          <span className="brand-name">{previewMode ? site.title : "atelier"}</span>
-          {!previewMode && <>
+          <span className="brand-name">atelier</span>
+          <>
           <div className="sites-menu-wrap">
             <button className="button" onClick={() => setSitesMenuOpen((open) => !open)}>Mes sites⌄</button>
             {sitesMenuOpen && <div className="sites-popover">
@@ -512,13 +700,13 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
             }
             patchSite({ title, slug });
           }} />
-          </>}
+          </>
         </div>
         <div className="top-tools">
-          {!previewMode && <>
+          <>
             <button className="icon-button" title="Annuler (Ctrl+Z)" onClick={undo}>↶</button>
             <button className="icon-button" title="Rétablir (Ctrl+Y)" onClick={redo}>↷</button>
-          </>}
+          </>
           <div className="device-switch" aria-label="Aperçu par appareil">
             {(["ordinateur", "tablette", "mobile"] as Device[]).map((value) => (
               <button key={value} className={device === value ? "active" : ""} title={value} onClick={() => setDevice(value)}>
@@ -526,19 +714,23 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
               </button>
             ))}
           </div>
-          {!previewMode && <>
+          <>
             <button className="button" onClick={() => setZoom((value) => Math.max(50, value - 10))}>−</button>
             <span style={{ fontSize: 11, minWidth: 32, textAlign: "center" }}>{zoom}%</span>
             <button className="button" onClick={() => setZoom((value) => Math.min(120, value + 10))}>+</button>
-          </>}
+          </>
         </div>
         <div className="top-right">
-          {!previewMode && <>
+          <>
             <span className="save-label" style={{ fontSize: 10, color: "#777" }}>{saving ? "Enregistrement…" : "Enregistré"}</span>
             <button className="button" onClick={() => { void saveSiteDoc(siteRef.current).then((ok) => { if (ok) setMessage("Brouillon enregistré dans votre compte."); }); }}>Enregistrer</button>
-            <button className="button" onClick={() => setPreviewMode(true)}>Aperçu</button>
-          </>}
-          {previewMode && <button className="button" onClick={() => setPreviewMode(false)}>Quitter l’aperçu</button>}
+            <button className="button" onClick={() => { void openPreview(); }} title="Ouvrir l'aperçu dans un nouvel onglet">Aperçu</button>
+          </>
+          {site.published && (
+            <a className="button live-site-button" href={liveSiteUrl} target="_blank" rel="noreferrer" title="Ouvrir le site publié dans un nouvel onglet">
+              View live site
+            </a>
+          )}
           <button className="button primary" onClick={publish} disabled={saving}>{site.published ? "Mettre à jour" : "Publier"}</button>
         </div>
       </header>
@@ -557,7 +749,7 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
           {activePanel === "Sections" && <BlockPanel heading="Sections" intro="Ajoutez une structure prête à personnaliser." onAdd={addBlock} types={["hero", "text", "gallery", "events", "footer", "divider"]} />}
           {activePanel === "Blocs" && <BlockPanel heading="Bibliothèque de blocs" intro="Ajoutez des éléments réutilisables à cette page." onAdd={addBlock} types={blockLibrary.map((block) => block.type)} />}
           {activePanel === "Médias" && <MediaPanel media={media} inputRef={fileInput} onUpload={uploadMedia} onChoose={(url) => selectedBlock && patchBlock(selectedBlock.id, "image", url)} />}
-          {activePanel === "Pages" && <PagesPanel pages={site.pages} activePageId={activePage.id} onSelect={(page) => { setActivePageId(page.id); setSelectedSectionId(page.sections[0]?.id ?? ""); }} onAdd={addPage} onMove={movePage} onDelete={deletePage} />}
+          {activePanel === "Pages" && <PagesPanel pages={site.pages} activePageId={activePage.id} onSelect={(page) => { setActivePageId(page.id); setSelectedSectionId(page.sections[0]?.id ?? ""); setSelectedBlockId(page.sections[0]?.blocks[0]?.id ?? ""); }} onAdd={addPage} onMove={movePage} onDelete={deletePage} />}
           {activePanel === "Thème" && <ThemePanel theme={site.theme} onChange={patchTheme} />}
         </aside>
 
@@ -565,30 +757,43 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
           <div className="canvas-toolbar">
             <span><span className={`status-dot ${site.published ? "" : "draft"}`} />{site.published ? "Publié" : "Brouillon"}</span>
             <span>›</span><strong style={{ color: "#4b4740" }}>{activePage.title}</strong>
-            <span style={{ marginLeft: 8 }}>↕ Glissez les sections pour les réorganiser</span>
+            <span style={{ marginLeft: 8 }}>Glissez un bloc pour le déplacer, glissez un bloc du panneau Blocs pour l'insérer</span>
+            {site.published && <a className="live-site-link" href={liveSiteUrl} target="_blank" rel="noreferrer">View live site</a>}
           </div>
           <div className="canvas-outer">
             <div className={`canvas-wrap design-${site.design ?? "minimal"} ${site.templateId === "portfolio-editorial" ? "canvas-editorial" : ""}`} style={{ width: canvasWidth, minWidth: device === "ordinateur" ? 600 : undefined, zoom: zoom / 100, ...themeStyle }}>
               <div className="canvas-site-nav" style={{ color: site.theme.colors.text, fontFamily: site.theme.typography.headingFont }}>
                 <strong>{site.title}</strong>
-                <div className={previewMode ? "canvas-preview-nav" : ""}>{site.pages.map((page) => previewMode
-                  ? <button className={`preview-page-link ${activePage.id === page.id ? "current" : ""}`} aria-current={activePage.id === page.id ? "page" : undefined} key={page.id} onClick={() => { setActivePageId(page.id); setSelectedSectionId(page.sections[0]?.id ?? ""); }}>{page.title}</button>
-                  : <span key={page.id}>{page.title}</span>)}</div>
+                <div>{site.pages.map((page) => <span key={page.id}>{page.title}</span>)}</div>
               </div>
               {activePage.sections.map((section, index) => {
-                const block = section.blocks[0];
-                if (!block) return null;
+                if (section.blocks.length === 0) return null;
+                const firstBlock = section.blocks[0];
                 const headingTag = index === 0 ? "h1" : index === 1 ? "h2" : "h3";
                 const PreviewHeading = headingTag;
                 const previewHeadingSize = `clamp(20px, ${site.theme.typography[headingTag] * (device === "mobile" ? 0.62 : 1)}px, 72px)`;
+                const sectionDropKey = `section:${section.id}`;
                 return (
-                  <div key={section.id} draggable className={`canvas-section design-section section-${block.type} ${site.templateId === "portfolio-editorial" ? "editorial-section" : ""} ${site.templateId === "portfolio-editorial" && block.type === "hero" ? `editorial-hero ${block.content.image ? "has-editorial-image" : ""}` : ""} ${site.templateId === "portfolio-editorial" && block.type === "gallery" ? "editorial-gallery" : ""} ${selectedSectionId === section.id ? "selected" : ""}`}
-                    onClick={() => setSelectedSectionId(section.id)}
-                    onDragStart={(event: DragEvent<HTMLDivElement>) => event.dataTransfer.setData("text/plain", section.id)}
-                    onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add("drag-over"); }}
-                    onDragLeave={(event) => event.currentTarget.classList.remove("drag-over")}
-                    onDrop={(event) => { event.preventDefault(); event.currentTarget.classList.remove("drag-over"); reorderSection(event.dataTransfer.getData("text/plain"), section.id); }}>
-                    <span className="section-caption">{section.title} · {index + 1}</span>
+                  <div key={section.id} className={`canvas-section design-section section-${firstBlock.type} ${site.templateId === "portfolio-editorial" ? "editorial-section" : ""} ${site.templateId === "portfolio-editorial" && firstBlock.type === "hero" ? `editorial-hero ${firstBlock.content.image ? "has-editorial-image" : ""}` : ""} ${site.templateId === "portfolio-editorial" && firstBlock.type === "gallery" ? "editorial-gallery" : ""} ${selectedSectionId === section.id ? "selected" : ""} ${dropTargetKey === sectionDropKey ? "drag-over" : ""} ${draggedSectionId === section.id ? "dragging" : ""}`}
+                    onClick={() => { setSelectedSectionId(section.id); setSelectedBlockId(section.blocks[0]?.id ?? ""); }}
+                    onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropTargetKey(sectionDropKey); }}
+                    onDragLeave={() => setDropTargetKey((current) => current === sectionDropKey ? "" : current)}
+                    onDrop={(event) => handleSectionDrop(event, section)}>
+                    <span className="section-caption" draggable title="Glisser pour déplacer cette section"
+                      onDragStart={(event: DragEvent<HTMLSpanElement>) => { event.stopPropagation(); event.dataTransfer.setData("application/x-lakisa-section", section.id); event.dataTransfer.setData("text/plain", section.id); event.dataTransfer.effectAllowed = "move"; setDraggedSectionId(section.id); }}
+                      onDragEnd={clearDragState}>⠿ {section.title} · {index + 1}</span>
+                    {section.blocks.map((block) => {
+                      const blockDropKey = `block:${section.id}/${block.id}`;
+                      const blockKey = `${section.id}/${block.id}`;
+                      return (
+                      <div key={block.id} draggable className={`canvas-block block-${block.type} ${selectedBlockId === block.id && selectedSectionId === section.id ? "selected" : ""} ${dropTargetKey === blockDropKey ? "drag-over" : ""} ${draggedBlockKey === blockKey ? "dragging" : ""}`}
+                        onClick={(event) => { event.stopPropagation(); setSelectedSectionId(section.id); setSelectedBlockId(block.id); }}
+                        onDragStart={(event: DragEvent<HTMLDivElement>) => { event.stopPropagation(); event.dataTransfer.setData("application/x-lakisa-block", blockKey); event.dataTransfer.setData("text/plain", blockKey); event.dataTransfer.effectAllowed = "move"; setDraggedBlockKey(blockKey); }}
+                        onDragEnd={clearDragState}
+                        onDragOver={(event) => { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = "move"; setDropTargetKey(blockDropKey); }}
+                        onDragLeave={() => setDropTargetKey((current) => current === blockDropKey ? "" : current)}
+                        onDrop={(event) => handleBlockDrop(event, section, block)}>
+                      <span className="block-caption" title="Glissez ce bloc pour le déplacer">⠿ {blockLibrary.find((item) => item.type === block.type)?.label ?? block.type}</span>
                     <div className="preview-eyebrow" style={{ color: site.theme.colors.primary }}>{String(block.content.label ?? site.title)}</div>
                     {editingField === `${block.id}:heading`
                       ? <textarea autoFocus className="field field-textarea" value={String(block.content.heading ?? "")} onChange={(event) => patchBlock(block.id, "heading", event.target.value)} onBlur={() => setEditingField(null)} />
@@ -616,6 +821,13 @@ export default function AdvancedSiteEditor({ initialSites, templates }: { initia
                     {["hero", "cta", "pricing"].includes(block.type) && <button className="preview-action" style={{ background: site.theme.buttons.style === "plein" ? site.theme.colors.primary : "transparent", color: site.theme.buttons.style === "plein" ? "#fff" : site.theme.colors.primary, border: `1px solid ${site.theme.colors.primary}`, borderRadius: `${site.theme.buttons.radius}px` }}>{String(block.content.action ?? "Découvrir")}</button>}
                     {!["hero", "text", "image", "gallery", "events", "audio", "video", "contact", "cta", "pricing", "divider", "footer", "social"].includes(block.type) && <div className="preview-card">{String((Array.isArray(block.content.items) ? block.content.items[0] : undefined) ?? block.content.body ?? "")}</div>}
                     {block.type === "divider" && <hr style={{ marginTop: 26, border: 0, borderTop: `1px solid ${site.theme.colors.secondary}` }} />}
+                    <div className="block-controls">
+                      <button className="small-button" aria-label="Dupliquer ce bloc" title="Dupliquer ce bloc" onClick={(event) => { event.stopPropagation(); duplicateBlock(section.id, block.id); }}>⧉</button>
+                      <button className="small-button" aria-label="Supprimer ce bloc" title="Supprimer ce bloc" onClick={(event) => { event.stopPropagation(); deleteBlock(section.id, block.id); }}>×</button>
+                    </div>
+                      </div>
+                      );
+                    })}
                     <div className="section-controls" style={{ position: "absolute", right: 7, top: 7, display: selectedSectionId === section.id ? "flex" : "none", gap: 4 }}>
                       <button className="small-button" aria-label="Dupliquer la section" title="Dupliquer" onClick={(event) => { event.stopPropagation(); duplicateSection(section.id); }}>⧉</button>
                       <button className="small-button" aria-label="Supprimer la section" title="Supprimer" onClick={(event) => { event.stopPropagation(); removeSection(section.id); }}>×</button>
@@ -673,10 +885,14 @@ function TemplatePanel({ templates, onApply }: { templates: TemplateSummary[]; o
 
 function BlockPanel({ heading, intro, types, onAdd }: { heading: string; intro: string; types: BlockType[]; onAdd: (type: BlockType) => void }) {
   return <><h2 className="panel-title">{heading}</h2><p className="panel-subtitle">{intro}</p>
+    <p className="panel-subtitle">Glissez un bloc sur la page pour l'insérer à cet endroit, ou cliquez sur ＋ pour l'ajouter à la fin.</p>
     {types.map((type) => {
       const block = blockLibrary.find((item) => item.type === type);
       if (!block) return null;
-      return <div key={type} className="library-row"><div><strong>{block.label}</strong><small>{block.description}</small></div><button className="small-button" aria-label={`Ajouter ${block.label}`} onClick={() => onAdd(type)}>＋</button></div>;
+      return <div key={type} className="library-row" draggable
+        onDragStart={(event: DragEvent<HTMLDivElement>) => { event.dataTransfer.setData("application/x-lakisa-block-type", type); event.dataTransfer.setData("text/plain", type); event.dataTransfer.effectAllowed = "copy"; }}>
+        <span className="library-grip" title="Glisser pour insérer ce bloc">⠿</span>
+        <div><strong>{block.label}</strong><small>{block.description}</small></div><button className="small-button" aria-label={`Ajouter ${block.label}`} onClick={() => onAdd(type)}>＋</button></div>;
     })}
   </>;
 }

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import PublicExhibition from "@/components/public-exhibition";
 import ExhibitionPasswordGate from "@/components/exhibition-password-gate";
+import { JsonLd, exhibitionJsonLd } from "@/components/seo-jsonld";
 import { db } from "@/lib/db";
 import { findPublishedExhibition, loadPublicExhibition } from "@/lib/exhibition-public";
 import { logVisit, readVisitContext } from "@/lib/visits";
@@ -77,10 +78,23 @@ export default async function PublicExhibitionPage({ params }: RouteProps) {
   await logVisit({ exhibitionId: exhibition.id, ...visit });
 
   return (
-    <PublicExhibition
-      exhibition={exhibition}
-      accessibilityPack={accessibilityPack}
-      music={music}
-    />
+    <>
+      {exhibition.visibility === "public" && (
+        <JsonLd
+          data={exhibitionJsonLd({
+            slug: exhibition.slug,
+            title: exhibition.title,
+            description: exhibition.description,
+            ownerName: exhibition.ownerName,
+            artworks: exhibition.artworks,
+          })}
+        />
+      )}
+      <PublicExhibition
+        exhibition={exhibition}
+        accessibilityPack={accessibilityPack}
+        music={music}
+      />
+    </>
   );
 }

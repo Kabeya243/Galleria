@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Avatar from "@/components/avatar";
 import BrandLogo from "@/components/brand-logo";
+import NotificationBell from "@/components/notification-bell";
 import { useT, type DictionarySection } from "@/lib/i18n";
 import {
   Archive,
@@ -322,6 +323,9 @@ export default function Sidebar({
             <BrandLogo variant="horizontal" height={52} />
             <BrandLogo variant="icon" height={44} />
           </Link>
+          {/* Notification bell (Nov 2026): unread messages, for every
+              signed-in user — the sidebar only renders for them. */}
+          <NotificationBell />
           {collapsible ? (
             <button
               type="button"

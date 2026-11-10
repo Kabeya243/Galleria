@@ -152,15 +152,23 @@ def _absolute_cover(raw: str | None, origin: str) -> str | None:
 
 
 @lru_cache(maxsize=8)
-def _reflect_artwork(engine):
+def _reflect_artwork_cached(engine):
     """Reflected Artwork table (first artwork image = feed cover).
     Autoloads directly instead of gating on has_table, which can
     report False under a restricted search_path even when the table
-    is readable. A failure returns None and the caller skips the
-    cover lookup."""
+    is readable. Raises on failure: lru_cache does not cache
+    exceptions, so a transient failure at cold start does not poison
+    later reads on the same instance (see _reflect_artwork)."""
+    metadata = MetaData()
+    return Table("Artwork", metadata, autoload_with=engine)
+
+
+def _reflect_artwork(engine):
+    """Reflected Artwork table, or None when it cannot be read.
+    A failure returns None and the caller skips the cover lookup;
+    the failure is not cached, so the next request retries."""
     try:
-        metadata = MetaData()
-        return Table("Artwork", metadata, autoload_with=engine)
+        return _reflect_artwork_cached(engine)
     except SQLAlchemyError:
         return None
 
@@ -175,9 +183,6 @@ def _reconcile_feed_posts(db: Session, request: Request) -> None:
     rows that exist."""
     try:
         exhibition, _user, fields = get_sources(db)
-        artwork_table = _reflect_artwork(db.get_bind())
-        if artwork_table is None:
-            return
         origin = _request_origin(request)
         id_col = fields["exhibition_id"]
         owner_col = fields["exhibition_author"]
@@ -189,6 +194,14 @@ def _reconcile_feed_posts(db: Session, request: Request) -> None:
         if not public_rows:
             return
         existing = {row[0] for row in db.execute(select(Post.exhibitionId)).all()}
+        missing = [row[0] for row in public_rows if row[0] not in existing]
+        if not missing:
+            # Nothing to heal: skip the Artwork reflection and the
+            # cover scan entirely, so a warm feed read stays cheap.
+            return
+        artwork_table = _reflect_artwork(db.get_bind())
+        if artwork_table is None:
+            return
         img_col = artwork_table.c.get("imageUrl")
         exh_col = artwork_table.c.get("exhibitionId")
         created_col = artwork_table.c.get("createdAt")
@@ -198,7 +211,9 @@ def _reconcile_feed_posts(db: Session, request: Request) -> None:
         if created_col is not None:
             order.append(created_col.asc())
         art_rows = db.execute(
-            select(exh_col, img_col).where(img_col.is_not(None)).order_by(*order)
+            select(exh_col, img_col)
+            .where(img_col.is_not(None), exh_col.in_(missing))
+            .order_by(*order)
         ).all()
         cover_by_exhibition: dict[str, str] = {}
         for row in art_rows:
@@ -254,6 +269,7 @@ def _feed_posts_from_exhibitions(db: Session, request: Request, exhibition, user
         public_rows = db.execute(select(*columns).where(published_filter(fields))).all()
         if not public_rows:
             return []
+        public_ids = [row[0] for row in public_rows]
         img_col = artwork_table.c.get("imageUrl")
         exh_col = artwork_table.c.get("exhibitionId")
         created_col = artwork_table.c.get("createdAt")
@@ -263,7 +279,9 @@ def _feed_posts_from_exhibitions(db: Session, request: Request, exhibition, user
         if created_col is not None:
             order.append(created_col.asc())
         art_rows = db.execute(
-            select(exh_col, img_col).where(img_col.is_not(None)).order_by(*order)
+            select(exh_col, img_col)
+            .where(img_col.is_not(None), exh_col.in_(public_ids))
+            .order_by(*order)
         ).all()
         cover_by_exhibition: dict[str, str] = {}
         for row in art_rows:
@@ -276,13 +294,20 @@ def _feed_posts_from_exhibitions(db: Session, request: Request, exhibition, user
         author_cols = [user_id_col, user_name_col]
         if user_avatar_col is not None:
             author_cols.append(user_avatar_col)
+        author_ids = {row[1] for row in public_rows}
         authors = {
             row[0]: row
-            for row in db.execute(select(*author_cols)).all()
+            for row in db.execute(
+                select(*author_cols).where(user_id_col.in_(author_ids))
+            ).all()
         }
         existing_posts = {
             row[0]: row[1]
-            for row in db.execute(select(Post.exhibitionId, Post.id)).all()
+            for row in db.execute(
+                select(Post.exhibitionId, Post.id).where(
+                    Post.exhibitionId.in_(public_ids)
+                )
+            ).all()
         }
         posts: list[dict[str, object]] = []
         to_create = []
@@ -343,6 +368,55 @@ def _feed_posts_from_exhibitions(db: Session, request: Request, exhibition, user
         except Exception:
             pass
         return []
+
+
+def _complete_feed_posts(
+    db: Session,
+    request: Request,
+    exhibition,
+    user,
+    fields,
+    posts: list[dict[str, object]],
+) -> list[dict[str, object]] | None:
+    """Complete the first page with any covered public exhibition
+    missing from the main query, or None when the feed is already
+    complete (or the check cannot run). The main query only returns
+    Post rows, so a missed reconciliation (webhook never ran, row
+    deleted) would otherwise serve a partial feed indefinitely; the
+    fallback derives the missing posts from the exhibitions
+    themselves and creates their Post rows, so the next read is
+    complete through the main query. Never raises."""
+    try:
+        artwork_table = _reflect_artwork(db.get_bind())
+        if artwork_table is None:
+            return None
+        exh_col = artwork_table.c.get("exhibitionId")
+        img_col = artwork_table.c.get("imageUrl")
+        if exh_col is None or img_col is None:
+            return None
+        id_col = fields["exhibition_id"]
+        covered = exists(
+            select(1).where(and_(exh_col == id_col, img_col.is_not(None)))
+        )
+        covered_count = db.scalar(
+            select(func.count(id_col)).where(published_filter(fields), covered)
+        ) or 0
+        if covered_count <= len(posts):
+            return None
+        fallback_posts = _feed_posts_from_exhibitions(db, request, exhibition, user, fields)
+        if not fallback_posts:
+            return None
+        seen = {post["exhibitionId"] for post in posts}
+        merged = [*posts, *(p for p in fallback_posts if p["exhibitionId"] not in seen)]
+        merged.sort(key=lambda p: str(p["createdAt"]), reverse=True)
+        return merged[:PAGE_SIZE]
+    except Exception:
+        logger.exception("Feed completion check failed; serving the posts already loaded.")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None
 
 
 @router.get("/feed")
@@ -432,6 +506,14 @@ def read_feed(
         }
         for row in page_rows
     ]
+    if not cursor and not has_more and posts:
+        # First page, fully loaded from Post rows: if a covered public
+        # exhibition still has no Post row, the list above is partial.
+        # Complete it from the exhibitions themselves rather than
+        # serving the partial list (see _complete_feed_posts).
+        completed = _complete_feed_posts(db, request, exhibition, user, fields, posts)
+        if completed is not None:
+            posts = completed
     next_cursor = (
         _cursor_encode(page_rows[-1]["createdAt"], page_rows[-1]["id"])
         if has_more and page_rows

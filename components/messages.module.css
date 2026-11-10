@@ -328,3 +328,265 @@
     max-width: 88%;
   }
 }
+
+/* -- Notification bell (sidebar) ----------------------------------------- */
+/* The bell lives in the sidebar top row (collapsed rail included), so
+   its dropdown is positioned fixed from the button's own rectangle —
+   it must never be clipped by the sidebar. */
+.bellWrap {
+  position: relative;
+  flex: none;
+}
+
+.bellButton {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.bellButton:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.bellCount {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #b3261e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-grid;
+  place-items: center;
+}
+
+.bellPanel {
+  position: fixed;
+  z-index: 60;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.bellPanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bellPanelHead button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.bellPanelHead button:hover {
+  color: var(--ink);
+}
+
+.bellList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bellItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bellItem:hover {
+  background: var(--surface-2);
+}
+
+.bellItemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.bellItemName {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bellItemTime {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.bellItemExcerpt {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bellFoot {
+  display: block;
+  padding: 12px 14px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.bellFoot:hover {
+  background: var(--surface-2);
+}
+
+.bellEmpty {
+  padding: 20px 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* -- Thread safety actions ----------------------------------------------- */
+.threadActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.threadHeadRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.actionButton {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.actionButton:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+
+.actionButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.actionDanger {
+  color: #9a2b2b;
+  border-color: #e0b4b4;
+}
+
+.actionDanger:hover {
+  color: #7c1f1f;
+  border-color: #9a2b2b;
+}
+
+.msgActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  align-items: center;
+}
+
+.msgReport {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  opacity: 0.55;
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.msgReport:hover {
+  opacity: 1;
+}
+
+.reportBox {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reportBox label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.reportBox select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.reportRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notice {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 12px;
+  line-height: 1.6;
+}

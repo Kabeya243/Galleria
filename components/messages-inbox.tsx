@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar from "@/components/sidebar";
 import { useLocale, LOCALE_TAGS } from "@/lib/i18n";
 import styles from "./messages.module.css";
+
+// Polling interval for the conversation list: no WebSocket, a plain
+// GET every few seconds, paused while the tab is hidden (see the
+// effect below).
+const POLL_MS = 5000;
 
 // Inbox (/messages): the signed-in user's conversations, newest first.
 // Each row shows the other person, the inquiry context when there is
@@ -44,23 +49,68 @@ export default function MessagesInbox({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Signature of the last list applied, so a poll that returns the
+  // same conversations does not rewrite state.
+  const listSignature = useRef("");
 
+  // Live inbox: the first load lists the conversations, then a poll
+  // every few seconds fetches GET /api/messages again so new
+  // conversations and unread counts appear without reloading the page.
+  // Polling stops while the tab is hidden and resumes (with an
+  // immediate fetch) when it becomes visible again. No WebSocket.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    async function load(initial: boolean) {
       try {
         const response = await fetch("/api/messages", { credentials: "same-origin", cache: "no-store" });
         if (!response.ok) throw new Error("Could not load your messages.");
         const result = (await response.json()) as { conversations: Conversation[] };
-        if (!cancelled) setConversations(result.conversations ?? []);
+        if (cancelled) return;
+        const next = result.conversations ?? [];
+        const signature = next
+          .map((c) => `${c.id}:${c.updatedAt}:${c.unreadCount}`)
+          .join("|");
+        if (signature !== listSignature.current) {
+          listSignature.current = signature;
+          setConversations(next);
+        }
       } catch {
-        if (!cancelled) setError("Could not load your messages. Try again.");
+        if (!cancelled && initial) setError("Could not load your messages. Try again.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && initial) setLoading(false);
       }
-    })();
+    }
+
+    function start() {
+      if (timer !== null) return;
+      timer = setInterval(() => {
+        if (document.visibilityState === "visible") void load(false);
+      }, POLL_MS);
+    }
+    function stop() {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        void load(false);
+        start();
+      } else {
+        stop();
+      }
+    }
+
+    void load(true);
+    start();
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 

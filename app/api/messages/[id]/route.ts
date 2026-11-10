@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isBlocked } from "@/app/api/messages/safety";
 import {
   checkMessageRateLimit,
   notifyRecipient,
@@ -53,6 +54,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const otherId = otherParticipant(conversation, user.id);
   const other = otherId === conversation.participantA.id ? conversation.participantA : conversation.participantB;
+  // The thread tells the client whether the reader blocked the other
+  // side, so the reply box can show the blocked state instead of
+  // failing on send.
+  const blockedByMe = await isBlocked(user.id, otherId);
   return NextResponse.json({
     conversation: {
       id: conversation.id,
@@ -63,6 +68,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       artworkTitle: conversation.artwork?.title ?? null,
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
+      blockedByMe,
     },
     messages: messages.map((m) => ({
       id: m.id,
@@ -87,6 +93,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const conversation = await loadConversation(id, user.id);
   if (!conversation) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
 
+  // Blocking is enforced server-side: the other participant may have
+  // blocked the sender since the thread was opened, and the sender
+  // may have blocked them (the reply box is disabled in that case,
+  // but the API must not trust the client).
+  const otherId = otherParticipant(conversation, user.id);
+  if (await isBlocked(otherId, user.id)) {
+    return NextResponse.json(
+      { error: "This user is not accepting messages from you." },
+      { status: 403 },
+    );
+  }
+  if (await isBlocked(user.id, otherId)) {
+    return NextResponse.json(
+      { error: "You blocked this user. Unblock them to message them again." },
+      { status: 403 },
+    );
+  }
+
   const rateError = await checkMessageRateLimit(user.id);
   if (rateError) return NextResponse.json({ error: rateError }, { status: 429 });
 
@@ -96,7 +120,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
   await db.conversation.update({ where: { id }, data: { updatedAt: new Date() } });
 
-  const otherId = otherParticipant(conversation, user.id);
   const other = await db.user.findUnique({ where: { id: otherId }, select: { email: true } });
   if (other) {
     const origin = new URL(request.url).origin;

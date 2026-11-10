@@ -42,6 +42,51 @@ function formatDate(value: string, locale: Locale) {
   }).format(new Date(value));
 }
 
+// The feed API is a Python serverless function: a cold start can be
+// slow or fail once (timeout, 5xx) while the next call succeeds, so a
+// single failed fetch must not become the error screen. Retry transient
+// failures (network error, abort, 5xx) up to 3 attempts with a growing
+// delay; a 4xx will not heal on retry, so it stops immediately.
+const FEED_ATTEMPTS = 3;
+const FEED_RETRY_DELAY_MS = [800, 2000];
+const FEED_TIMEOUT_MS = 15000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchFeedPage(nextCursor: string | null): Promise<FeedResponse> {
+  let lastError: unknown = new Error("Feed request failed.");
+  for (let attempt = 0; attempt < FEED_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await sleep(FEED_RETRY_DELAY_MS[attempt - 1] ?? 2000);
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), FEED_TIMEOUT_MS);
+    let retryable = true;
+    try {
+      const url = new URL("/api/social/feed", window.location.origin);
+      if (nextCursor) url.searchParams.set("cursor", nextCursor);
+      const response = await fetch(url, {
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        retryable = response.status >= 500 || response.status === 429;
+        throw new Error("Feed request failed.");
+      }
+      return (await response.json()) as FeedResponse;
+    } catch (error) {
+      lastError = error;
+      if (!retryable) break;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Feed request failed.");
+}
+
 function FeedList() {
   const t = useT();
   const { locale } = useLocale();
@@ -59,11 +104,7 @@ function FeedList() {
     setActionError("");
     append ? setLoadingMore(true) : setLoading(true);
     try {
-      const url = new URL("/api/social/feed", window.location.origin);
-      if (nextCursor) url.searchParams.set("cursor", nextCursor);
-      const response = await fetch(url, { credentials: "same-origin", cache: "no-store" });
-      if (!response.ok) throw new Error("Feed request failed.");
-      const result = (await response.json()) as FeedResponse;
+      const result = await fetchFeedPage(nextCursor);
       setPosts((current) => {
         const merged = append ? [...current, ...result.posts] : result.posts;
         return [...new Map(merged.map((post) => [post.id, post])).values()];

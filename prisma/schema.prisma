@@ -36,6 +36,11 @@ model User {
   conversationsAsA Conversation[] @relation("ConversationAsA")
   conversationsAsB Conversation[] @relation("ConversationAsB")
   messagesSent    Message[]
+  // Messaging safety (Nov 2026): blocks given and received, and
+  // reports filed. See UserBlock / MessageReport below.
+  blocksGiven    UserBlock[]     @relation("UserBlockBlocker")
+  blocksReceived UserBlock[]     @relation("UserBlockBlocked")
+  messageReports MessageReport[] @relation("MessageReportReporter")
   savedWorks   SavedWork[]
   listings     Listing[]
   libraryWorks LibraryWork[]
@@ -112,6 +117,7 @@ model Conversation {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   messages       Message[]
+  reports        MessageReport[]
 
   @@index([participantAId])
   @@index([participantBId])
@@ -128,7 +134,44 @@ model Message {
   createdAt      DateTime     @default(now())
   readAt         DateTime?
 
+  reports MessageReport[]
+
   @@index([conversationId, createdAt])
+}
+
+// Messaging safety (Nov 2026): blocking and reporting. A block is one
+// row per (blocker, blocked); the blocked user can no longer send new
+// messages to the blocker (checked server-side in POST /api/messages
+// and POST /api/messages/[id], 403) and the conversation disappears
+// from the blocker's inbox. A report records who reported which
+// message and/or conversation and why; admins read them at
+// GET /api/admin/reports. Applied by `prisma db push` on deploy (see
+// vercel.json); no data migration — the tables start empty.
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("UserBlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("UserBlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model MessageReport {
+  id             String        @id @default(cuid())
+  reporterId     String
+  reporter       User          @relation("MessageReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  messageId      String?
+  message        Message?      @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  reason         String
+  createdAt      DateTime      @default(now())
+
+  @@index([createdAt])
+  @@index([reporterId])
 }
 
 // Contacts (Nov 2026): the artist's own address book — collectors,

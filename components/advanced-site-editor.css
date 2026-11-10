@@ -317,26 +317,31 @@
 }
 .advanced-editor .canvas-wrap[class*="design-"] .preview-eyebrow { color: var(--site-primary) !important; }
 .advanced-editor .canvas-wrap[class*="design-"] .preview-card, .advanced-editor .canvas-wrap[class*="design-"] .section-events, .advanced-editor .canvas-wrap[class*="design-"] .section-audio, .advanced-editor .canvas-wrap[class*="design-"] .section-video, .advanced-editor .canvas-wrap[class*="design-"] .section-pricing, .advanced-editor .canvas-wrap[class*="design-"] .section-team { background: var(--site-secondary) !important; color: var(--site-text) !important; }
-.advanced-editor .preview-mode .leftbar, .advanced-editor .preview-mode .panel, .advanced-editor .preview-mode .canvas-toolbar { display: none; }
-.advanced-editor .preview-mode .workarea, .advanced-editor .preview-mode .content-area { min-width: 0; }
-.advanced-editor .preview-mode .section-caption, .advanced-editor .preview-mode .section-controls { display: none !important; }
-.advanced-editor .preview-mode .canvas-section { cursor: default; border-color: transparent !important; box-shadow: none !important; }
-.advanced-editor .preview-mode .content-area { width: 100%; }
-.advanced-editor .preview-mode .canvas-outer { display: flex; justify-content: center; padding: 0; background: #e9e7e2; }
-.advanced-editor .preview-mode .canvas-wrap { min-height: 100%; transition: none; }
-.advanced-editor .canvas-preview-nav { display: flex; flex-wrap: wrap; gap: 8px; }
-.advanced-editor .preview-page-link { padding: 6px 9px; border: 0; border-radius: 4px; background: transparent; color: inherit; font: inherit; font-size: 11px; }
-.advanced-editor .preview-page-link.current { background: var(--site-secondary); color: var(--site-primary); font-weight: 700; }
-@media (max-width: 760px) {
-.advanced-editor .preview-mode .topbar { height: 54px; gap: 6px; padding: 0 7px; }
-.advanced-editor .preview-mode .top-left { min-width: 0; gap: 6px; }
-.advanced-editor .preview-mode .top-left .brand-name { display: block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.advanced-editor .preview-mode .top-tools { gap: 3px; }
-.advanced-editor .preview-mode .device-switch { display: flex; }
-.advanced-editor .preview-mode .device-switch button { padding: 5px 6px; }
-.advanced-editor .preview-mode .top-right { gap: 4px; }
-.advanced-editor .preview-mode .top-right .button { padding: 7px 8px; font-size: 10px; }
-}
+/* (The old in-panel preview mode was removed with the external-tab
+   preview: its .preview-mode, .canvas-preview-nav and .preview-page-link
+   rules lived here and are now gone.) */
 /* Inside ToolsShell the editor does not own the whole viewport: it fills
    the dashboard content area instead of 100vh. */
 .advanced-editor.editor-shell { height: calc(100dvh - 230px); min-height: 620px; }
+
+/* -- Blocks (WordPress-style content blocks inside a section) ------------- */
+.advanced-editor .canvas-block { position: relative; cursor: grab; border: 1px solid transparent; border-radius: 6px; padding: 6px; margin: 0 -6px 10px; }
+.advanced-editor .canvas-block:last-child { margin-bottom: 0; }
+.advanced-editor .canvas-block:hover { border-color: #d7d1ef; }
+.advanced-editor .canvas-block.selected { border: 1px solid #8a7bd0; box-shadow: 0 0 0 2px #6558a61a; }
+.advanced-editor .canvas-block.drag-over { border-top: 3px solid #6558a6; }
+.advanced-editor .canvas-block.dragging, .advanced-editor .canvas-section.dragging { opacity: .45; }
+.advanced-editor .block-caption { position: absolute; top: 6px; left: 7px; background: #37332d; color: white; border-radius: 3px; padding: 3px 6px; font-size: 9px; opacity: 0; z-index: 2; }
+.advanced-editor .canvas-block:hover .block-caption, .advanced-editor .canvas-block.selected .block-caption { opacity: 1; }
+.advanced-editor .block-controls { position: absolute; right: 7px; top: 7px; display: none; gap: 4px; z-index: 2; background: white; border: 1px solid var(--adv-line); border-radius: 6px; padding: 2px; box-shadow: 0 2px 8px #00000014; }
+.advanced-editor .canvas-block:hover .block-controls, .advanced-editor .canvas-block.selected .block-controls { display: flex; }
+.advanced-editor .section-caption { cursor: grab; }
+.advanced-editor .library-row { cursor: grab; }
+.advanced-editor .library-row:active { cursor: grabbing; }
+.advanced-editor .library-grip { color: #b6b0a7; font-size: 13px; flex-shrink: 0; }
+
+/* -- "View live site" (shown once the site is published) ------------------- */
+.advanced-editor .live-site-button { background: #171717; border-color: #171717; color: #fff; text-decoration: none; }
+.advanced-editor .live-site-button:hover { background: #000; border-color: #000; color: #fff; }
+.advanced-editor .live-site-link { color: #54478f; font-weight: 700; text-decoration: none; border: 1px solid #d7d1ef; background: #fff; padding: 5px 10px; border-radius: 6px; }
+.advanced-editor .live-site-link:hover { background: #f0eef9; }

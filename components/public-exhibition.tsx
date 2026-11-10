@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Headset, Info, List, Maximize2, Minimize2, Route } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Headset, Info, List, Mail, Maximize2, Minimize2, Route } from "lucide-react";
 import type { WebGLRenderer } from "three";
 import { useProgress } from "@react-three/drei";
 import Avatar from "@/components/avatar";
@@ -493,9 +493,25 @@ export default function PublicExhibition({
       </header>
       {activeRoom && <div className="public-room-label"><span>ROOM {String(exhibition.rooms.indexOf(activeRoom) + 1).padStart(2, "0")}</span><i /> {activeRoom.name.toUpperCase()}</div>}
       {exhibition.rooms.length > 1 && <nav className="public-room-nav" aria-label="Exhibition rooms">
+        <style>{`
+          .public-room-nav .public-room-message { display: inline-flex; align-items: center; gap: 6px; min-height: 27px; margin-left: 2px; padding: 0 8px 0 10px; border: 0; border-left: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--muted); font: 500 8px "DM Sans", sans-serif; text-decoration: none; white-space: nowrap; cursor: pointer; }
+          .public-room-nav .public-room-message:hover { color: var(--ink); }
+          .public-room-nav .public-room-message span { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+        `}</style>
         <button aria-label="Previous room" onClick={() => changeRoom((exhibition.rooms.indexOf(activeRoom) - 1 + exhibition.rooms.length) % exhibition.rooms.length)}><ChevronLeft size={15} /></button>
         {exhibition.rooms.map((room, index) => <button key={room.id} className={room.id === activeRoom?.id ? "active" : ""} onClick={() => changeRoom(index)}>{String(index + 1).padStart(2, "0")} <span>{room.name}</span></button>)}
         <button aria-label="Next room" onClick={() => changeRoom((exhibition.rooms.indexOf(activeRoom) + 1) % exhibition.rooms.length)}><ChevronRight size={15} /></button>
+        {/* "Send a message" lives here, in the rooms menu of the visit,
+            not on the exhibition cards: it opens the same new-message
+            page for the exhibitor as the old card button did. */}
+        {!embedded && (
+          <Link
+            href={`/messages/new?to=${encodeURIComponent(exhibition.ownerId)}&exhibitionId=${encodeURIComponent(exhibition.id)}`}
+            className="public-room-message"
+          >
+            <Mail size={13} /> <span>{t("explore", "sendMessage")}</span>
+          </Link>
+        )}
       </nav>}
       {!walking && !showListView && (
         <ExhibitionEntryScreen

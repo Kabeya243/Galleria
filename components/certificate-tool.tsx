@@ -450,13 +450,15 @@ export default function CertificateTool({
     }).catch(() => setQrError(true));
   }, [payload]);
 
-  // Fit the sheet inside the workspace on desktop: measure the space
-  // the workspace actually gives the sheet and scale the sheet down
-  // (never up) so it fits without the workspace scrolling. The sheet's
-  // layout size is fixed by its aspect ratio, so a transform scale is
-  // enough — the wrapper is given the scaled height so no empty space
-  // is left behind. Below 900 px the columns stack and the sheet keeps
-  // its natural size (scale 1, no wrapper height).
+  // Fit the sheet inside the workspace on desktop: measure the width
+  // the workspace actually gives the sheet and scale it to fill that
+  // width (never down below its natural size more than needed, and
+  // never up beyond 1.25x, so the preview stays sharp and legible).
+  // Height is NOT a constraint any more: the workspace scrolls
+  // vertically inside itself, so the sheet renders large and the
+  // reader scrolls the panel to see the whole page. Below 900 px the
+  // columns stack and the sheet keeps its natural size (scale 1, no
+  // wrapper height).
   useEffect(() => {
     const scaler = scalerRef.current;
     const sheet = sheetRef.current;
@@ -470,10 +472,12 @@ export default function CertificateTool({
       const naturalW = sheet.offsetWidth;
       const naturalH = sheet.offsetHeight;
       const availW = scaler.clientWidth;
-      const availH = scaler.clientHeight;
-      if (!naturalW || !naturalH || !availW || !availH) return;
+      if (!naturalW || !naturalH || !availW) return;
       setSheetHeight(naturalH);
-      setSheetScale(Math.min(1, availW / naturalW, availH / naturalH));
+      // Width only: the panel scrolls vertically, so the sheet is
+      // scaled to fill the panel width (up to 1.25x for legibility)
+      // instead of being shrunk to fit the panel height.
+      setSheetScale(Math.min(1.25, availW / naturalW));
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -689,7 +693,7 @@ export default function CertificateTool({
           ? `4px double ${frameColor}`
           : `1px solid ${frameColor}`;
   const sheetStyle: React.CSSProperties = {
-    maxWidth: isLandscape ? 820 : 640,
+    maxWidth: isLandscape ? 960 : 720,
     width: "100%",
     margin: "0 auto",
     padding: "clamp(22px, 5vw, 52px) clamp(20px, 6vw, 56px)",
@@ -822,6 +826,17 @@ export default function CertificateTool({
               <input value={cfg.medium} onChange={(event) => set("medium", event.target.value)} />
             </label>
             <label className={styles.field}>
+              <span>Artwork image URL</span>
+              <input
+                value={cfg.imageUrl ?? ""}
+                placeholder="https://… leave empty for no image"
+                onChange={(event) => set("imageUrl", event.target.value.trim() === "" ? null : event.target.value)}
+              />
+            </label>
+            <p className="cert-hint">
+              The image shown on the certificate. Picking an artwork fills this in from its record; paste any image URL here to change it, or clear it to print without an image. The same URL is sent to the PDF export.
+            </p>
+            <label className={styles.field}>
               <span>Sale price (USD, optional)</span>
               <input
                 inputMode="decimal"
@@ -947,7 +962,7 @@ export default function CertificateTool({
         {/* -- Live preview (workspace) ---------------------------------------- */}
         <section className="cert-workspace">
           <p className="cert-workspace-hint">
-            Live preview: {template.name} · {cfg.paperSize} {cfg.orientation}. What you see here is what prints and what the PDF contains, on one page.
+            Live preview: {template.name} · {cfg.paperSize} {cfg.orientation}. What you see here is what prints and what the PDF contains, on one page. Every change in the form appears here at once. Scroll inside this panel to see the whole sheet.
           </p>
           <div
             className="cert-sheet-scaler"
@@ -1123,6 +1138,7 @@ export default function CertificateTool({
           </div>
           </div>
         </section>
+      </div>
 
         {/* -- How verification works (online, by ID or QR code) -------------- */}
         <div className="cert-verify-box">
@@ -1138,7 +1154,6 @@ export default function CertificateTool({
             browser (“Print” opens the print dialog, where you choose “Save as PDF”).
           </p>
         </div>
-      </div>
 
       {/* -- Issued certificates -------------------------------------------- */}
       <section className="cert-issued">

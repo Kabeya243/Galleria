@@ -33,6 +33,29 @@ export async function getPublishedSite(slug: string) {
   });
 }
 
+export type PublishedSiteData = NonNullable<Awaited<ReturnType<typeof getPublishedSite>>>;
+
+// Owner-only draft preview (used by /sites/preview/[slug], the target
+// of the editor's "Aperçu" button for unpublished sites): the same
+// site rows as getPublishedSite, but without the published filter and
+// scoped to the signed-in owner, so a draft never leaks to the public.
+export async function getSiteForOwnerPreview(slug: string, ownerId: string) {
+  return db.site.findFirst({
+    where: { slug, userId: ownerId },
+    include: {
+      pages: {
+        orderBy: { order: "asc" },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: { blocks: { orderBy: { order: "asc" } } }
+          }
+        }
+      }
+    }
+  });
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -176,6 +199,12 @@ function PublishedSiteFooter({
 export async function PublishedSite({ slug, pageSlug }: { slug: string; pageSlug?: string }) {
   const site = await getPublishedSite(slug);
   if (!site) notFound();
+  return <PublishedSiteView site={site} pageSlug={pageSlug} />;
+}
+
+// The public rendering of a site, given its loaded rows: shared by
+// the published page above and the owner-only draft preview.
+export function PublishedSiteView({ site, pageSlug }: { site: PublishedSiteData; pageSlug?: string }) {
   const page = pageSlug ? site.pages.find((item) => item.slug === pageSlug) : site.pages[0];
   if (!page) notFound();
   const theme = getTheme(site.theme);

@@ -3,6 +3,10 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
+  blockedIdsFor,
+  isBlocked,
+} from "@/app/api/messages/safety";
+import {
   checkMessageRateLimit,
   findOrCreateConversation,
   notifyRecipient,
@@ -50,7 +54,16 @@ export async function GET() {
     orderBy: { updatedAt: "desc" },
     take: 100,
   });
-  return NextResponse.json({ conversations: rows.map((row) => toClientConversation(row, user.id)) });
+  // Blocked conversations stay out of the inbox: the reader blocked
+  // the other participant, so their thread is hidden here (it is not
+  // deleted: the direct URL still opens it, and unblocking restores
+  // it to this list).
+  const blocked = new Set(await blockedIdsFor(user.id));
+  const visible = rows.filter((row) => {
+    const otherId = row.participantAId === user.id ? row.participantBId : row.participantAId;
+    return !blocked.has(otherId);
+  });
+  return NextResponse.json({ conversations: visible.map((row) => toClientConversation(row, user.id)) });
 }
 
 export async function POST(request: Request) {
@@ -70,6 +83,23 @@ export async function POST(request: Request) {
     select: { id: true, email: true, name: true },
   });
   if (!recipient) return NextResponse.json({ error: "That user does not exist." }, { status: 404 });
+
+  // Blocking is enforced server-side, both ways: a user the recipient
+  // blocked cannot write to them, and a user the sender blocked cannot
+  // be written to either (the thread is hidden from the sender's inbox
+  // once blocked, but the compose entry point must not reopen it).
+  if (await isBlocked(recipientId, user.id)) {
+    return NextResponse.json(
+      { error: "This user is not accepting messages from you." },
+      { status: 403 },
+    );
+  }
+  if (await isBlocked(user.id, recipientId)) {
+    return NextResponse.json(
+      { error: "You blocked this user. Unblock them to message them again." },
+      { status: 403 },
+    );
+  }
 
   // An inquiry must point at a real exhibition or artwork, and the
   // artwork must belong to that exhibition when both are given.

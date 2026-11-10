@@ -25,7 +25,7 @@ export type ExploreExhibition = {
   coverImageUrl: string | null;
 };
 
-function ExhibitionGrid({ exhibitions, viewerId }: { exhibitions: ExploreExhibition[]; viewerId?: string | null }) {
+function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
   const t = useT();
   return (
     <section className="galleries-grid" id="exhibitions">
@@ -71,15 +71,9 @@ function ExhibitionGrid({ exhibitions, viewerId }: { exhibitions: ExploreExhibit
                 <Link href={`/exhibition/${exhibition.slug}`} className="galleries-open-button">
                   {t("explore", "visitExhibition")} <ArrowUpRight size={14} />
                 </Link>
-                {viewerId && viewerId !== exhibition.ownerId && (
-                  <Link
-                    href={`/messages/new?to=${encodeURIComponent(exhibition.ownerId)}&exhibitionId=${encodeURIComponent(exhibition.id)}`}
-                    className="galleries-open-button"
-                    style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}
-                  >
-                    {t("explore", "sendMessage")}
-                  </Link>
-                )}
+                {/* No "Send a message" button on the card: messaging the
+                    exhibitor lives in the rooms menu inside the
+                    exhibition visit itself (see public-exhibition). */}
               </div>
             </div>
           </article>
@@ -123,7 +117,7 @@ export default function ExplorePage({
           <p>{t("explore", "copyPublic")}</p>
         </section>
 
-        <ExhibitionGrid exhibitions={exhibitions} viewerId={null} />
+        <ExhibitionGrid exhibitions={exhibitions} />
 
         <footer className={styles.homeFooter}>
           <span>{t("common", "footerRights")}</span>
@@ -157,7 +151,7 @@ export default function ExplorePage({
             </div>
           </section>
 
-          <ExhibitionGrid exhibitions={exhibitions} viewerId={user.id} />
+          <ExhibitionGrid exhibitions={exhibitions} />
         </div>
       </section>
     </main>

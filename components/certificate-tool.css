@@ -152,10 +152,12 @@
 
 /* Desktop: the studio fills the viewport (same 100dvh - 300px frame the
    Atelier editor uses: the app topbar, the page header and this tool's
-   own topbar sit above it). The form panel scrolls inside itself with
-   a hidden scrollbar; the workspace never scrolls — the sheet is
-   scaled down to fit it instead (see .cert-sheet-scaler). Below
-   900 px the two columns stack and everything flows naturally again. */
+   own topbar sit above it). Both panels scroll inside themselves with
+   hidden scrollbars on the form; the workspace scrolls vertically
+   inside itself too, so the sheet renders large (scaled to the panel
+   width, up to 1.25x) instead of being shrunk to fit the panel
+   height. Below 900 px the two columns stack and everything flows
+   naturally again. */
 @media (min-width: 901px) {
   .certificate-scope .cert-layout {
     height: calc(100dvh - 300px);
@@ -175,18 +177,20 @@
 
   .certificate-scope .cert-workspace {
     min-height: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
   }
 
   .certificate-scope .cert-sheet-scaler {
-    flex: 1;
+    flex: 1 0 auto;
     min-height: 0;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    overflow: hidden;
+    overflow: visible;
+    padding-bottom: 24px;
   }
 }
 
@@ -516,6 +520,12 @@
   margin: 0;
   color: #9a9a94;
   font-size: 12px;
+  /* Stays visible at the top of the scrolling preview panel. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--cert-workspace-bg);
+  padding-bottom: 6px;
 }
 
 [data-theme="light"] .certificate-scope .cert-workspace-hint {

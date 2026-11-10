@@ -153,11 +153,12 @@ def _absolute_cover(raw: str | None, origin: str) -> str | None:
 
 @lru_cache(maxsize=8)
 def _reflect_artwork(engine):
-    """Reflected Artwork table (first artwork image = feed cover)."""
+    """Reflected Artwork table (first artwork image = feed cover).
+    Autoloads directly instead of gating on has_table, which can
+    report False under a restricted search_path even when the table
+    is readable. A failure returns None and the caller skips the
+    cover lookup."""
     try:
-        inspector = inspect(engine)
-        if not inspector.has_table("Artwork"):
-            return None
         metadata = MetaData()
         return Table("Artwork", metadata, autoload_with=engine)
     except SQLAlchemyError:
@@ -229,6 +230,121 @@ def _reconcile_feed_posts(db: Session, request: Request) -> None:
             pass
 
 
+def _feed_posts_from_exhibitions(db: Session, request: Request, exhibition, user, fields) -> list[dict[str, object]]:
+    """Fallback feed: derive posts from the public exhibitions
+    themselves when the Post table has no rows for them (the publish
+    webhook never ran, or the reconciliation missed). Creates the
+    missing Post rows best-effort so likes keep working; when a row
+    cannot be created the post still renders, with a synthetic id
+    (liking it then fails cleanly instead of the feed staying empty).
+    Never raises: a failure returns an empty list."""
+    try:
+        artwork_table = _reflect_artwork(db.get_bind())
+        if artwork_table is None:
+            return []
+        origin = _request_origin(request)
+        id_col = fields["exhibition_id"]
+        owner_col = fields["exhibition_author"]
+        title_col = fields["exhibition_title"]
+        slug_col = fields["exhibition_slug"]
+        published_at_col = exhibition.c.get("publishedAt")
+        columns = [id_col, owner_col, title_col, slug_col]
+        if published_at_col is not None:
+            columns.append(published_at_col)
+        public_rows = db.execute(select(*columns).where(published_filter(fields))).all()
+        if not public_rows:
+            return []
+        img_col = artwork_table.c.get("imageUrl")
+        exh_col = artwork_table.c.get("exhibitionId")
+        created_col = artwork_table.c.get("createdAt")
+        if img_col is None or exh_col is None:
+            return []
+        order = [exh_col]
+        if created_col is not None:
+            order.append(created_col.asc())
+        art_rows = db.execute(
+            select(exh_col, img_col).where(img_col.is_not(None)).order_by(*order)
+        ).all()
+        cover_by_exhibition: dict[str, str] = {}
+        for row in art_rows:
+            if row[0] not in cover_by_exhibition and row[1]:
+                cover_by_exhibition[row[0]] = row[1]
+        # Author names/avatars for the fallback posts.
+        user_id_col = fields["user_id"]
+        user_name_col = fields["user_name"]
+        user_avatar_col = fields.get("user_avatar")
+        author_cols = [user_id_col, user_name_col]
+        if user_avatar_col is not None:
+            author_cols.append(user_avatar_col)
+        authors = {
+            row[0]: row
+            for row in db.execute(select(*author_cols)).all()
+        }
+        existing_posts = {
+            row[0]: row[1]
+            for row in db.execute(select(Post.exhibitionId, Post.id)).all()
+        }
+        posts: list[dict[str, object]] = []
+        to_create = []
+        for row in public_rows:
+            ex_id = row[0]
+            cover = _absolute_cover(cover_by_exhibition.get(ex_id), origin)
+            if not cover:
+                continue
+            created_at = row[4] if len(row) > 4 and row[4] is not None else datetime.now(timezone.utc)
+            author = authors.get(row[1])
+            post_id = existing_posts.get(ex_id)
+            if post_id is None:
+                to_create.append(
+                    Post(exhibitionId=ex_id, authorId=row[1], coverImageUrl=cover, isVisible=True, createdAt=created_at)
+                )
+            posts.append(
+                {
+                    "id": post_id if post_id is not None else f"exh:{ex_id}",
+                    "exhibitionId": ex_id,
+                    "coverImageUrl": cover,
+                    "createdAt": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
+                    "title": row[2],
+                    "slug": row[3],
+                    "artist": {
+                        "name": author[1] if author is not None else "",
+                        "avatarUrl": author[2] if author is not None and len(author) > 2 else None,
+                    },
+                    "likeCount": 0,
+                    "likedByMe": False,
+                    "visitUrl": f"/exhibition/{quote(str(row[3]), safe='')}",
+                }
+            )
+        if to_create:
+            try:
+                db.add_all(to_create)
+                db.commit()
+                # Swap the synthetic ids for the real Post ids.
+                real_ids = {
+                    row[0]: row[1]
+                    for row in db.execute(
+                        select(Post.exhibitionId, Post.id).where(
+                            Post.exhibitionId.in_([p["exhibitionId"] for p in posts])
+                        )
+                    ).all()
+                }
+                for post in posts:
+                    real = real_ids.get(str(post["exhibitionId"]))
+                    if real is not None:
+                        post["id"] = real
+            except IntegrityError:
+                db.rollback()
+        posts.sort(key=lambda p: str(p["createdAt"]), reverse=True)
+        return posts[:PAGE_SIZE]
+    except Exception:
+        logger.exception("Feed fallback failed; returning an empty feed.")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return []
+
+
 @router.get("/feed")
 def read_feed(
     request: Request,
@@ -290,6 +406,15 @@ def read_feed(
         .limit(PAGE_SIZE + 1)
     )
     rows = db.execute(query).mappings().all()
+    if not rows:
+        # The Post table has no rows for the public exhibitions (the
+        # publish webhook never ran, or the reconciliation missed).
+        # Derive the feed from the exhibitions themselves instead of
+        # rendering an empty feed; the fallback also creates the
+        # missing Post rows so likes keep working.
+        fallback_posts = _feed_posts_from_exhibitions(db, request, exhibition, user, fields)
+        if fallback_posts:
+            return {"posts": fallback_posts, "nextCursor": None}
     has_more = len(rows) > PAGE_SIZE
     page_rows = rows[:PAGE_SIZE]
     posts = [

@@ -1159,6 +1159,9 @@ button { font-weight: 600; }
 .editor-error-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: rgba(255, 122, 107, 0.12); border-bottom: 1px solid rgba(255, 122, 107, 0.4); color: #ff9a8a; font-size: 12px; line-height: 1.5; }
 .editor-error-banner button { border: 0; background: transparent; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
 [data-theme="dark"] .editor-error-banner { background: #2a1410; border-bottom-color: #ff9a8a; color: #ff9a8a; }
+.editor-notice-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: rgba(232, 184, 96, 0.12); border-bottom: 1px solid rgba(232, 184, 96, 0.45); color: #c98f1b; font-size: 12px; line-height: 1.5; }
+.editor-notice-banner button { border: 0; background: transparent; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
+[data-theme="dark"] .editor-notice-banner { background: #241c0e; border-bottom-color: #c98f1b; color: #e8b860; }
 .editor-back, .editor-secondary-button, .editor-publish-button,
 .room-selector, .add-room-button, .asset-row, .add-to-room, .tool-button,
 .stage-add-button button, .property-actions button, .rotate-control,

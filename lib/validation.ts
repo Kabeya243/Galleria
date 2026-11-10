@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isR2ImageUrl } from "@/lib/r2";
+import { isR2ImageUrl, toServingImageUrl } from "@/lib/r2";
 import { isVideoServingUrl } from "@/lib/video";
 import { isSculptureServingUrl } from "@/lib/sculpture";
 import { galleryRoomSchema } from "@/lib/rooms";
@@ -116,6 +116,37 @@ export function isPasswordValid(password: string): boolean {
   return checks.length && checks.lowercase && checks.uppercase && checks.number;
 }
 
+// The image URLs the server accepts for an artwork (same allow-list
+// as the editor's isAllowedImageUrl in components/editor.tsx — the two
+// must stay in sync, or a save the editor allows is rejected here).
+export function isAllowedArtworkImageUrl(url: string): boolean {
+  return (
+    /^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif))$/i.test(url) ||
+    isR2ImageUrl(url)
+  );
+}
+
+// Strip the media links the server will not accept from an artwork
+// payload, instead of rejecting the whole save for one dead link: a
+// stored R2 public URL from an older host is first normalized to the
+// same-origin serving URL (same file, current host) and kept; a link
+// that is still not accepted becomes null and the artwork stays on
+// the wall as a placeholder. The editor does the same client-side and
+// names the affected artworks; this is the last line of defence for
+// any other client, so a stale tab can never wedge a save the way a
+// dead image link did in November 2026.
+export function sanitizeArtworkMediaUrls<T extends { imageUrl?: string | null; videoUrl?: string | null; sculptureUrl?: string | null }>(
+  artwork: T,
+): T {
+  const cleaned = { ...artwork };
+  const servingImageUrl = toServingImageUrl(cleaned.imageUrl);
+  if (servingImageUrl && isAllowedArtworkImageUrl(servingImageUrl)) cleaned.imageUrl = servingImageUrl;
+  else if (cleaned.imageUrl) cleaned.imageUrl = null;
+  if (cleaned.videoUrl && !isVideoServingUrl(cleaned.videoUrl)) cleaned.videoUrl = null;
+  if (cleaned.sculptureUrl && !isSculptureServingUrl(cleaned.sculptureUrl)) cleaned.sculptureUrl = null;
+  return cleaned;
+}
+
 const artworkSchema = z.object({
   id: z.string().min(1).max(64),
   title: z.string().trim().min(1).max(120),
@@ -157,12 +188,7 @@ const artworkSchema = z.object({
   // URLs, or a save the editor allows is rejected here.
   imageUrl: z
     .string()
-    .refine(
-      (url) =>
-        /^\/api\/(?:uploads\/[a-f0-9-]+\.webp|portfolio-artworks\/[a-z0-9-]+\.(?:jpg|jpeg|webp)|r2\/uploads\/[A-Za-z0-9_-]+\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|avif|heic|heif))$/i.test(url) ||
-        isR2ImageUrl(url),
-      { message: "Invalid image URL." },
-    )
+    .refine((url) => isAllowedArtworkImageUrl(url), { message: "Invalid image URL." })
     .nullable()
     .optional(),
   // Video artwork (Nov 2026): a same-origin serving URL only

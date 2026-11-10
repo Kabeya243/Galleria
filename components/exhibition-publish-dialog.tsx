@@ -48,6 +48,10 @@ export default function ExhibitionPublishDialog({
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : t("publish", "publish"));
+    } finally {
+      // Always clear the busy state: a publish step that returns
+      // without throwing (a failed pre-save, a closed dialog) used to
+      // leave the button on "Loading..." and Cancel disabled forever.
       setPublishing(false);
     }
   }

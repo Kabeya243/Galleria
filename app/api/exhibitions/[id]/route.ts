@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { upsertLibraryWorks } from "@/lib/library";
 import { parseGalleryRooms } from "@/lib/rooms";
 import { parseGuidedTour, pruneTourStops } from "@/lib/tour";
-import { exhibitionUpdateSchema } from "@/lib/validation";
+import { exhibitionUpdateSchema, sanitizeArtworkMediaUrls } from "@/lib/validation";
 import { canEditExhibition } from "@/lib/teams";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -87,7 +87,15 @@ export async function PUT(request: Request, { params }: RouteContext) {
   const { id } = await params;
 
   try {
-    const input = exhibitionUpdateSchema.parse(await request.json());
+    const body = (await request.json()) as { artworks?: unknown };
+    // A dead media link never blocks a save: strip it before
+    // validation (see sanitizeArtworkMediaUrls in lib/validation.ts).
+    if (Array.isArray(body.artworks)) {
+      body.artworks = body.artworks.map((artwork) =>
+        artwork && typeof artwork === "object" ? sanitizeArtworkMediaUrls(artwork as { imageUrl?: string | null; videoUrl?: string | null; sculptureUrl?: string | null }) : artwork,
+      );
+    }
+    const input = exhibitionUpdateSchema.parse(body);
     const existing = await db.exhibition.findFirst({ where: { id } });
     if (!existing) return NextResponse.json({ error: "Exhibition not found." }, { status: 404 });
     // Save path: the owner, or a team editor with an edit share

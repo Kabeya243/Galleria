@@ -65,6 +65,7 @@ import { useLocale, useT } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
 import { galleryCameraStart, galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import { isVideoServingUrl, VIDEO_DIRECT_MAX_FILE_SIZE } from "@/lib/video";
+import { toServingImageUrl } from "@/lib/r2-urls";
 import { isSculptureServingUrl, SCULPTURE_DIRECT_MAX_FILE_SIZE } from "@/lib/sculpture";
 import {
   DirectUploadFailedError,
@@ -463,6 +464,17 @@ export default function Editor({
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // The last save error, mirrored in a ref so publishExhibition can
+  // throw it (state does not update synchronously inside saveExhibition).
+  const saveErrorRef = useRef<string | null>(null);
+  function reportSaveError(message: string | null) {
+    saveErrorRef.current = message;
+    setSaveError(message);
+  }
+  // A non-blocking save note: when a save drops a broken media link
+  // (see sanitizeArtworkMedia), the save still succeeds and this names
+  // the artworks that lost their image, video or sculpture link.
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   // The exhibition failed to load (bad id, deleted, or server error): the
   // workspace below stays hidden and the banner above explains, with a
   // way back to the dashboard, instead of a native alert + redirect.
@@ -2076,29 +2088,56 @@ export default function Editor({
     return Boolean(r2Base) && url.startsWith(`${r2Base}/uploads/`);
   }
 
+  // A broken media link is NOT a blocking problem: an image, video or
+  // sculpture URL the server will not accept is stripped by
+  // sanitizeArtworkMedia at save time (the artwork stays on the wall
+  // as a placeholder) instead of blocking every save. Before this, one
+  // artwork with a dead image link left the editor unable to save
+  // anything — not even the description.
   function artworkSaveProblems(artwork: Artwork): string[] {
     const problems: string[] = [];
     if (!artwork.title.trim()) problems.push("a title");
     if (!/^#[0-9a-f]{6}$/i.test(artwork.color)) problems.push("a valid frame colour");
     if (!/^#[0-9a-f]{6}$/i.test(artwork.accent)) problems.push("a valid accent colour");
-    if (artwork.imageUrl && !isAllowedImageUrl(artwork.imageUrl)) {
-      problems.push("a re-uploaded image (this image link cannot be saved)");
-    }
-    if (artwork.videoUrl && !isVideoServingUrl(artwork.videoUrl)) {
-      problems.push("a re-uploaded video (this video link cannot be saved)");
-    }
-    if (artwork.sculptureUrl && !isSculptureServingUrl(artwork.sculptureUrl)) {
-      problems.push("a re-uploaded sculpture (this sculpture link cannot be saved)");
-    }
     if (!artwork.roomId) problems.push("a room");
     return problems;
   }
 
+  // Strip the media links the server will not accept (a dead image,
+  // video or sculpture URL — an old upload link, a third-party URL).
+  // A stored R2 public URL from an older host is still the same file,
+  // so it is first normalized to the same-origin serving URL and kept
+  // when the normalized URL is accepted. Only a link that is still not
+  // accepted is dropped: the artwork stays on the wall as a
+  // placeholder frame and the artist re-uploads the image. Returns the
+  // cleaned copy plus which kinds of media were dropped, so the save
+  // can name them.
+  function sanitizeArtworkMedia(artwork: Artwork): { cleaned: Artwork; dropped: string[] } {
+    const dropped: string[] = [];
+    const cleaned = { ...artwork };
+    const servingImageUrl = toServingImageUrl(cleaned.imageUrl);
+    if (servingImageUrl && isAllowedImageUrl(servingImageUrl)) cleaned.imageUrl = servingImageUrl;
+    else if (cleaned.imageUrl) {
+      cleaned.imageUrl = null;
+      dropped.push("image");
+    }
+    if (cleaned.videoUrl && !isVideoServingUrl(cleaned.videoUrl)) {
+      cleaned.videoUrl = null;
+      dropped.push("video");
+    }
+    if (cleaned.sculptureUrl && !isSculptureServingUrl(cleaned.sculptureUrl)) {
+      cleaned.sculptureUrl = null;
+      dropped.push("sculpture");
+    }
+    return { cleaned, dropped };
+  }
+
   async function saveExhibition(options?: { autosave?: boolean }) {
     const autosave = options?.autosave === true;
-    setSaveError(null);
+    reportSaveError(null);
+    setSaveNotice(null);
     if (!title.trim()) {
-      if (!autosave) setSaveError("Give the exhibition a title before saving.");
+      if (!autosave) reportSaveError("Give the exhibition a title before saving.");
       return false;
     }
     const incomplete = artworks
@@ -2108,7 +2147,7 @@ export default function Editor({
       if (autosave) return false;
       const first = incomplete[0];
       const label = first.artwork.title.trim() || `Artwork ${first.index + 1}`;
-      setSaveError(
+      reportSaveError(
         `${label} needs ${first.problems.join(" and ")} before this exhibition can be saved.` +
           (incomplete.length > 1 ? ` ${incomplete.length} artworks are missing details.` : "") +
           " Fill them in on the right, then save again.",
@@ -2119,6 +2158,15 @@ export default function Editor({
     if (saveInFlightRef.current) return false;
     saveInFlightRef.current = true;
     setBusy(true);
+    // Broken media links are stripped before sending (see
+    // sanitizeArtworkMedia): the save must never fail on one dead
+    // image link. The stripped artworks are named in the notice below.
+    const stripped: string[] = [];
+    const payloadArtworks = artworks.map((artwork) => {
+      const { cleaned, dropped } = sanitizeArtworkMedia(artwork);
+      if (dropped.length > 0) stripped.push(`${artwork.title.trim() || "An artwork"} (${dropped.join(", ")})`);
+      return cleaned;
+    });
     try {
       const response = await fetch(`/api/exhibitions/${exhibitionId}`, {
         method: "PUT",
@@ -2127,7 +2175,7 @@ export default function Editor({
           title,
           description,
           rooms,
-          artworks,
+          artworks: payloadArtworks,
           tour,
           audioUrl: music?.url ?? null,
           audioTitle: music?.title.trim() ? music.title.trim() : null,
@@ -2158,6 +2206,11 @@ export default function Editor({
         );
       }
       setSaved(true);
+      if (stripped.length > 0) {
+        setSaveNotice(
+          `Saved. The broken ${stripped.length === 1 ? "link" : "links"} of ${stripped.join(", ")} ${stripped.length === 1 ? "was" : "were"} removed — the artwork stays on the wall without its image. Re-upload the image to show it again.`,
+        );
+      }
       // The save re-records the artworks in the library, so the picker
       // cache is stale from here on: drop it so the next open refetches
       // and the new files show up without a manual reload.
@@ -2170,7 +2223,7 @@ export default function Editor({
       return true;
     } catch (error) {
       console.error("Could not save exhibition.", error);
-      if (!autosave) setSaveError(error instanceof Error ? error.message : "Could not save this exhibition.");
+      if (!autosave) reportSaveError(error instanceof Error ? error.message : "Could not save this exhibition.");
       return false;
     } finally {
       saveInFlightRef.current = false;
@@ -2704,6 +2757,20 @@ export default function Editor({
   // no-op — the row already exists).
   function addLibraryArtwork(work: LibraryPickerWork): string | undefined {
     if (!activeRoom) return undefined;
+    // A work with no usable media (a dead image link, no image at all)
+    // cannot hang: adding it would put a black placeholder on the wall.
+    // Refuse it here, in the picker, and say so — the artist
+    // re-uploads the image in the library first. A stored R2 URL from
+    // an older host still counts: it normalizes to the serving URL.
+    const servingImageUrl = work.imageUrl ? toServingImageUrl(work.imageUrl) : null;
+    const hasUsableMedia =
+      (servingImageUrl && isAllowedImageUrl(servingImageUrl)) ||
+      (work.videoUrl && isVideoServingUrl(work.videoUrl)) ||
+      (work.sculptureUrl && isSculptureServingUrl(work.sculptureUrl));
+    if (!hasUsableMedia) {
+      setLibraryError(`"${work.title}" has no image to hang. Its image link is broken, so re-upload the image in the library first.`);
+      return undefined;
+    }
     const index = currentArtworks.length;
     const alongOffset = (index % 5 - 2) * 1.0;
     // A sculpture library work stands on the floor (its pedestal),
@@ -2727,7 +2794,7 @@ export default function Editor({
       rotation,
       scale: 1,
       frame: work.frame || "wood",
-      imageUrl: work.imageUrl,
+      imageUrl: servingImageUrl ?? work.imageUrl,
       videoUrl: work.videoUrl,
       sculptureUrl: work.sculptureUrl ?? null,
       palette: work.palette,
@@ -3247,7 +3314,14 @@ async function compressImage(file: File): Promise<File> {
   // passes the chosen visibility (and password, when protected) plus
   // publishToFeed — false when the author unchecked the feed.
   async function publishExhibition(nextVisibility?: PublishVisibility, password?: string, publishToFeed?: boolean) {
-    if (!saved && !(await saveExhibition())) return;
+    // Publish saves first. A failed save used to return silently here,
+    // and the dialog stayed on "Loading..." forever because its busy
+    // state only cleared on a throw (see exhibition-publish-dialog).
+    // Throw the save error instead, so the dialog shows the reason and
+    // lets the artist close it and fix the exhibition.
+    if (!saved && !(await saveExhibition())) {
+      throw new Error(saveErrorRef.current ?? "Could not save this exhibition. Fix the artworks flagged above, then publish again.");
+    }
     setBusy(true);
     try {
       const response = await fetch(`/api/exhibitions/${exhibitionId}/publish`, {
@@ -3621,6 +3695,14 @@ async function compressImage(file: File): Promise<File> {
         <div className="editor-error-banner" role="alert">
           <span>{saveError}</span>
           <button type="button" aria-label="Dismiss" onClick={() => setSaveError(null)}>
+            ×
+          </button>
+        </div>
+      )}
+      {saveNotice && (
+        <div className="editor-notice-banner" role="status">
+          <span>{saveNotice}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setSaveNotice(null)}>
             ×
           </button>
         </div>

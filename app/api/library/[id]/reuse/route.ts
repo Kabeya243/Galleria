@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser, toClientArtwork } from "@/lib/auth";
-import { copyLibraryWorkToExhibition } from "@/lib/library";
+import { copyLibraryWorkToExhibition, removeLibraryWorkFromExhibition } from "@/lib/library";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -30,4 +30,21 @@ export async function POST(request: Request, { params }: RouteContext) {
   const result = await copyLibraryWorkToExhibition(user.id, id, input.exhibitionId, input.roomId);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ artwork: toClientArtwork(result.artwork) }, { status: 201 });
+}
+
+// Remove a library work from one exhibition: delete the copies that
+// hang there. The library row stays, and copies in other exhibitions
+// are untouched. The link "Add to an exhibition" creates was not
+// reversible before this — the only way out was deleting the work
+// from the library entirely.
+export async function DELETE(request: Request, { params }: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Sign in to remove an artwork." }, { status: 401 });
+  const { id } = await params;
+  const exhibitionId = new URL(request.url).searchParams.get("exhibitionId");
+  if (!exhibitionId) return NextResponse.json({ error: "Choose an exhibition to remove the artwork from." }, { status: 400 });
+
+  const result = await removeLibraryWorkFromExhibition(user.id, id, exhibitionId);
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+  return NextResponse.json({ removedCopies: result.removedCopies });
 }

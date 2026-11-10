@@ -12,7 +12,7 @@ import { getHiddenRoomLayouts } from "@/lib/hidden-room-layouts";
 import { getAllPromoCodes } from "@/lib/promo-codes";
 import { getReferralStats } from "@/lib/referrals";
 import { getAllPlans } from "@/lib/subscriptions";
-import { HIDDEN_LAYOUT_KEYS, ROOM_MODELS, roomLayouts, type RoomLayout } from "@/lib/rooms";
+import { HIDDEN_LAYOUT_KEYS, ROOM_MODELS, placedArtworks, roomLayouts, type RoomLayout } from "@/lib/rooms";
 import { TOOL_LABELS, TOOL_SLUGS, type ToolSlug } from "@/lib/tool-use";
 
 export { hasAdminPermission };
@@ -214,8 +214,9 @@ export async function loadAdminOverview() {
         slug: true,
         status: true,
         views: true,
+        rooms: true,
         owner: { select: { name: true, email: true } },
-        _count: { select: { artworks: true } },
+        artworks: { select: { roomId: true } },
       },
     }),
     db.user.findMany({
@@ -429,6 +430,13 @@ export async function loadAdminOverview() {
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, 8);
 
+  // The "Artworks" column counts the works actually hanging in a
+  // room, not every Artwork row (see placedArtworks in lib/rooms.ts).
+  const topExhibitionsPlaced = topExhibitions.map((exhibition) => ({
+    ...exhibition,
+    artworkCount: placedArtworks(exhibition.rooms, exhibition.artworks).count,
+  }));
+
   return {
     userCount,
     exhibitionCount,
@@ -466,7 +474,7 @@ export async function loadAdminOverview() {
     returningVisitors30,
     countries,
     roles,
-    topExhibitions,
+    topExhibitions: topExhibitionsPlaced,
     recentUsers,
     activity,
   };
@@ -547,7 +555,7 @@ export async function loadAdminUsers(query: string) {
 // ---- All exhibitions (/admin/exhibitions) ----
 
 export async function loadAdminExhibitions() {
-  return db.exhibition.findMany({
+  const exhibitions = await db.exhibition.findMany({
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -557,10 +565,17 @@ export async function loadAdminExhibitions() {
       views: true,
       createdAt: true,
       updatedAt: true,
+      rooms: true,
       owner: { select: { name: true, email: true } },
-      _count: { select: { artworks: true } },
+      artworks: { select: { roomId: true } },
     },
   });
+  // The "Artworks" column counts the works actually hanging in a
+  // room, not every Artwork row (see placedArtworks in lib/rooms.ts).
+  return exhibitions.map((exhibition) => ({
+    ...exhibition,
+    artworkCount: placedArtworks(exhibition.rooms, exhibition.artworks).count,
+  }));
 }
 
 // ---- All artworks (/admin/artworks) ----

@@ -936,3 +936,23 @@ export function parseGalleryRooms(value: string): GalleryRoom[] {
   const parsed = z.array(galleryRoomSchema).max(12).parse(migrated);
   return parsed.length ? parsed : [createGalleryRoom()];
 }
+
+// An artwork only counts as "in the exhibition" when it hangs in one
+// of the exhibition's rooms: copies added from the library used to
+// land in "room-main", a room most exhibitions do not have, so they
+// were invisible in the editor while still counted in the list —
+// "20 œuvres" for a room that holds 8. The cover is the first placed
+// artwork with an image, oldest first.
+export function placedArtworks<T extends { roomId: string; imageUrl?: string | null }>(
+  roomsJson: string,
+  artworks: T[],
+): { placed: T[]; count: number; coverImageUrl: string | null } {
+  let roomIds = new Set<string>();
+  try {
+    roomIds = new Set(parseGalleryRooms(roomsJson).map((room) => room.id));
+  } catch {
+    roomIds = new Set();
+  }
+  const placed = artworks.filter((artwork) => roomIds.has(artwork.roomId));
+  return { placed, count: placed.length, coverImageUrl: placed.find((artwork) => artwork.imageUrl)?.imageUrl ?? null };
+}

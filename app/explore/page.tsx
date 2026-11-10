@@ -3,7 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import ExplorePage, { type ExploreExhibition } from "@/components/explore-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { parseGalleryRooms } from "@/lib/rooms";
+import { parseGalleryRooms, placedArtworks } from "@/lib/rooms";
 import { toServingImageUrl } from "@/lib/r2";
 
 export const metadata = {
@@ -31,22 +31,24 @@ async function findPublicExhibitions(): Promise<ExploreExhibition[]> {
     },
     include: {
       owner: { select: { id: true, name: true } },
-      _count: { select: { artworks: true } },
-      artworks: { select: { imageUrl: true }, orderBy: { createdAt: "asc" }, take: 1 },
+      artworks: { select: { roomId: true, imageUrl: true }, orderBy: { createdAt: "asc" } },
     },
     orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
   });
-  return exhibitions.map((exhibition) => ({
-    id: exhibition.id,
-    title: exhibition.title,
-    slug: exhibition.slug,
-    artistName: exhibition.owner.name,
-    ownerId: exhibition.owner.id,
-    roomCount: countRooms(exhibition.rooms),
-    artworkCount: exhibition._count.artworks,
-    views: exhibition.views,
-    coverImageUrl: toServingImageUrl(exhibition.artworks[0]?.imageUrl),
-  }));
+  return exhibitions.map((exhibition) => {
+    const { count, coverImageUrl } = placedArtworks(exhibition.rooms, exhibition.artworks);
+    return {
+      id: exhibition.id,
+      title: exhibition.title,
+      slug: exhibition.slug,
+      artistName: exhibition.owner.name,
+      ownerId: exhibition.owner.id,
+      roomCount: countRooms(exhibition.rooms),
+      artworkCount: count,
+      views: exhibition.views,
+      coverImageUrl: toServingImageUrl(coverImageUrl),
+    };
+  });
 }
 
 export default async function ExploreRoute() {

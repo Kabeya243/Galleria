@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import ExhibitionsPage, { type OwnExhibition } from "@/components/exhibitions-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { parseGalleryRooms } from "@/lib/rooms";
+import { parseGalleryRooms, placedArtworks } from "@/lib/rooms";
 import { toServingImageUrl } from "@/lib/r2";
 
 export const metadata = {
@@ -23,22 +23,24 @@ async function findOwnExhibitions(ownerId: string): Promise<OwnExhibition[]> {
   const exhibitions = await db.exhibition.findMany({
     where: { ownerId },
     include: {
-      _count: { select: { artworks: true } },
-      artworks: { select: { imageUrl: true }, orderBy: { createdAt: "asc" }, take: 1 },
+      artworks: { select: { roomId: true, imageUrl: true }, orderBy: { createdAt: "asc" } },
     },
     orderBy: { updatedAt: "desc" },
   });
-  return exhibitions.map((exhibition) => ({
-    id: exhibition.id,
-    title: exhibition.title,
-    slug: exhibition.slug,
-    status: exhibition.status === "public" ? ("public" as const) : ("draft" as const),
-    roomCount: countRooms(exhibition.rooms),
-    artworkCount: exhibition._count.artworks,
-    views: exhibition.views,
-    coverImageUrl: toServingImageUrl(exhibition.artworks[0]?.imageUrl),
-    updatedAt: exhibition.updatedAt.toISOString(),
-  }));
+  return exhibitions.map((exhibition) => {
+    const { count, coverImageUrl } = placedArtworks(exhibition.rooms, exhibition.artworks);
+    return {
+      id: exhibition.id,
+      title: exhibition.title,
+      slug: exhibition.slug,
+      status: exhibition.status === "public" ? ("public" as const) : ("draft" as const),
+      roomCount: countRooms(exhibition.rooms),
+      artworkCount: count,
+      views: exhibition.views,
+      coverImageUrl: toServingImageUrl(coverImageUrl),
+      updatedAt: exhibition.updatedAt.toISOString(),
+    };
+  });
 }
 
 export default async function ExhibitionsRoute() {

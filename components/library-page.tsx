@@ -39,6 +39,11 @@ export default function LibraryPage({
   const [reuseTarget, setReuseTarget] = useState<Record<string, string>>({});
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedNote, setAddedNote] = useState<{ workId: string; exhibitionTitle: string } | null>(null);
+  // Removing a work from one exhibition (the reverse of "Add to an
+  // exhibition"): the key is work + exhibition, since a work can hang
+  // in several shows at once.
+  const [removingKey, setRemovingKey] = useState<string | null>(null);
+  const [removedNote, setRemovedNote] = useState<{ workId: string; exhibitionTitle: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   // Two-step inline confirm for deleting a work from the library
   // (same pattern as the exhibitions page): first click arms, second
@@ -175,6 +180,41 @@ export default function LibraryPage({
       setPageError(error instanceof Error ? error.message : t("library", "couldNotAdd"));
     } finally {
       setAddingId(null);
+    }
+  }
+
+  // Remove a work from one exhibition (the reverse of "Add to an
+  // exhibition", which was not reversible before): only the copies in
+  // that show go — the library row and copies elsewhere stay.
+  async function removeWorkFromExhibition(work: LibraryWorkItem, exhibitionId: string) {
+    const exhibition = exhibitions.find((item) => item.id === exhibitionId);
+    if (!exhibition) return;
+    const key = `${work.id}:${exhibitionId}`;
+    setRemovingKey(key);
+    setPageError(null);
+    try {
+      const response = await fetch(`/api/library/${work.id}/reuse?exhibitionId=${encodeURIComponent(exhibitionId)}`, {
+        method: "DELETE",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? t("library", "couldNotRemove"));
+      setRemovedNote({ workId: work.id, exhibitionTitle: exhibition.title });
+      window.setTimeout(
+        () => setRemovedNote((current) => (current?.workId === work.id ? null : current)),
+        6000,
+      );
+      setWorks((current) =>
+        current.map((item) =>
+          item.id === work.id
+            ? { ...item, exhibitionIds: item.exhibitionIds.filter((id) => id !== exhibitionId) }
+            : item,
+        ),
+      );
+    } catch (error) {
+      console.error("Could not remove artwork from exhibition.", error);
+      setPageError(error instanceof Error ? error.message : t("library", "couldNotRemove"));
+    } finally {
+      setRemovingKey(null);
     }
   }
 
@@ -364,12 +404,40 @@ export default function LibraryPage({
                         ? t("library", "notInExhibition")
                         : `${t("library", "inExhibitions")} ${work.exhibitionIds.length} ${work.exhibitionIds.length === 1 ? t("library", "exhibition") : t("library", "exhibitions")}`}
                     </p>
+                    {work.exhibitionIds.length > 0 && (
+                      <div className="library-exhibition-chips">
+                        {work.exhibitionIds.map((exhibitionId) => {
+                          const exhibition = exhibitions.find((item) => item.id === exhibitionId);
+                          if (!exhibition) return null;
+                          const key = `${work.id}:${exhibitionId}`;
+                          return (
+                            <span key={exhibitionId} className="library-exhibition-chip">
+                              {exhibition.title}
+                              <button
+                                type="button"
+                                onClick={() => void removeWorkFromExhibition(work, exhibitionId)}
+                                disabled={removingKey === key}
+                                aria-label={`${t("library", "removeFromExhibition")}: ${exhibition.title}`}
+                                title={t("library", "removeFromExhibition")}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                     {confirmingDeleteId === work.id && (
                       <p className="asset-upload-error" role="alert">{t("library", "deleteWarning")}</p>
                     )}
                     {addedNote?.workId === work.id && (
                       <p className="library-added-note" role="status">
                         <Check size={13} /> {t("library", "addedTo")} {addedNote.exhibitionTitle}
+                      </p>
+                    )}
+                    {removedNote?.workId === work.id && (
+                      <p className="library-added-note" role="status">
+                        <Check size={13} /> {t("library", "removedFrom")} {removedNote.exhibitionTitle}
                       </p>
                     )}
                     <div className="gallery-card-actions library-card-actions">
@@ -386,11 +454,15 @@ export default function LibraryPage({
                       </select>
                       <button
                         onClick={() => void reuseWork(work)}
-                        disabled={addingId === work.id || !reuseTarget[work.id]}
+                        disabled={addingId === work.id || !reuseTarget[work.id] || work.exhibitionIds.includes(reuseTarget[work.id] ?? "")}
                         className="galleries-open-button"
+                        title={reuseTarget[work.id] && work.exhibitionIds.includes(reuseTarget[work.id]) ? t("library", "alreadyInExhibition") : undefined}
                       >
                         <Plus size={14} /> {addingId === work.id ? t("library", "adding") : t("library", "addToExhibition")}
                       </button>
+                      {reuseTarget[work.id] && work.exhibitionIds.includes(reuseTarget[work.id]) && (
+                        <p className="library-added-note" role="status">{t("library", "alreadyInExhibition")}</p>
+                      )}
                       <button
                         onClick={() => void deleteWork(work)}
                         disabled={deletingId === work.id}

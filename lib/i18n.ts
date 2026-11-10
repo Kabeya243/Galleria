@@ -3074,6 +3074,10 @@ export const DICTIONARY = {
     couldNotLoad: { fr: "Impossible de charger vos œuvres.", en: "Could not load your artworks." },
     couldNotAdd: { fr: "Impossible d'ajouter cette œuvre à l'exposition.", en: "Could not add this artwork to the exhibition." },
     couldNotDelete: { fr: "Impossible de supprimer cette œuvre.", en: "Could not delete this artwork." },
+    removeFromExhibition: { fr: "Retirer de cette exposition", en: "Remove from this exhibition" },
+    removedFrom: { fr: "Retirée de", en: "Removed from" },
+    couldNotRemove: { fr: "Impossible de retirer cette œuvre de l'exposition.", en: "Could not remove this artwork from the exhibition." },
+    alreadyInExhibition: { fr: "Cette œuvre est déjà dans cette exposition.", en: "This artwork is already in that exhibition." },
     addArtwork: { fr: "Ajouter une œuvre", en: "Add artwork" },
     addArtworkCopy: {
       fr: "Téléversez une œuvre directement dans votre bibliothèque : elle sera disponible partout, dans l'éditeur, les certificats et le PDF editor.",

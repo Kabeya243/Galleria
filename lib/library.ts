@@ -1,4 +1,8 @@
 import { toServingImageUrl } from "@/lib/r2";
+import { parseGalleryRooms } from "@/lib/rooms";
+import { isSculptureServingUrl } from "@/lib/sculpture";
+import { isAllowedArtworkImageUrl } from "@/lib/validation";
+import { isVideoServingUrl } from "@/lib/video";
 import { db } from "@/lib/db";
 
 // Shared library helpers ("Mes œuvres"): the reusable artwork library
@@ -254,14 +258,57 @@ export async function copyLibraryWorkToExhibition(
   ownerId: string,
   libraryWorkId: string,
   exhibitionId: string,
-  roomId = "room-main",
+  roomId?: string,
 ) {
   const [work, exhibition] = await Promise.all([
     db.libraryWork.findFirst({ where: { id: libraryWorkId, ownerId } }),
-    db.exhibition.findFirst({ where: { id: exhibitionId, ownerId }, select: { id: true } }),
+    db.exhibition.findFirst({ where: { id: exhibitionId, ownerId }, select: { id: true, rooms: true } }),
   ]);
   if (!work) return { error: "Work not found in your library.", status: 404 as const };
   if (!exhibition) return { error: "Exhibition not found.", status: 404 as const };
+  // A work with no usable media (a dead image link, no image at all)
+  // cannot hang: refuse it here instead of creating a black
+  // placeholder copy the editor would have to strip at save time. A
+  // stored R2 URL from an older host still counts: it normalizes to
+  // the serving URL, and the copy stores the normalized URL.
+  const servingImageUrl = work.imageUrl ? toServingImageUrl(work.imageUrl) : null;
+  const hasUsableMedia =
+    (servingImageUrl && isAllowedArtworkImageUrl(servingImageUrl)) ||
+    (work.videoUrl && isVideoServingUrl(work.videoUrl)) ||
+    (work.sculptureUrl && isSculptureServingUrl(work.sculptureUrl));
+  if (!hasUsableMedia) {
+    return {
+      error: `"${work.title}" has no image to hang. Its image link is broken, so re-upload the image in the library first.`,
+      status: 400 as const,
+    };
+  }
+  const mediaUrl = mediaUrlOf(work);
+  // One copy per exhibition: a second add of the same work used to
+  // create another Artwork row stacked on exactly the same spot, and
+  // the exhibitions list counted every copy.
+  const existingCopies = await db.artwork.findMany({
+    where: { exhibitionId },
+    select: { imageUrl: true, videoUrl: true, sculptureUrl: true },
+  });
+  if (mediaUrl && existingCopies.some((copy) => mediaUrlOf(copy) === mediaUrl)) {
+    return { error: `"${work.title}" is already in that exhibition.`, status: 409 as const };
+  }
+  // The copy hangs in a real room of the exhibition: the room the
+  // caller asked for when it exists, else the first room. The old
+  // default ("room-main") is not a room of most exhibitions, so the
+  // copy was invisible in the editor while still counted in the list.
+  let targetRoomId = "room-main";
+  try {
+    const rooms = parseGalleryRooms(exhibition.rooms);
+    if (roomId && rooms.some((room) => room.id === roomId)) targetRoomId = roomId;
+    else if (rooms[0]) targetRoomId = rooms[0].id;
+  } catch {
+    // A rooms value that does not parse keeps the old default.
+  }
+  // Spread the copies along the back wall instead of stacking them
+  // all on the same spot: each new copy steps 1.5 m sideways.
+  const inRoomCount = await db.artwork.count({ where: { exhibitionId, roomId: targetRoomId } });
+  const alongOffset = ((inRoomCount % 5) - 2) * 1.5;
   const artwork = await db.artwork.create({
     data: {
       title: work.title,
@@ -270,7 +317,7 @@ export async function copyLibraryWorkToExhibition(
       medium: work.medium,
       dimensions: work.dimensions,
       description: work.description,
-      imageUrl: work.imageUrl,
+      imageUrl: servingImageUrl ?? work.imageUrl,
       videoUrl: work.videoUrl,
       sculptureUrl: work.sculptureUrl,
       frame: work.frame,
@@ -278,16 +325,57 @@ export async function copyLibraryWorkToExhibition(
       altText: work.altText,
       // A sculpture copy stands on the floor at the room's centre,
       // not on the wall at eye level — the editor moves it from there.
-      positionX: 0,
+      positionX: alongOffset,
       positionY: work.sculptureUrl ? 0 : 2.5,
       positionZ: work.sculptureUrl ? 2 : -5.72,
       rotation: 0,
       scale: 1,
-      roomId,
+      roomId: targetRoomId,
       exhibitionId,
     },
   });
   return { artwork, status: 201 as const };
+}
+
+// Remove one library work from one exhibition: delete the copies of
+// the work that hang there (by media URL, so a copy re-titled for
+// that show still matches). The library row stays, and copies in
+// other exhibitions are untouched. Returns how many copies went.
+export async function removeLibraryWorkFromExhibition(
+  ownerId: string,
+  libraryWorkId: string,
+  exhibitionId: string,
+) {
+  const [work, exhibition] = await Promise.all([
+    db.libraryWork.findFirst({ where: { id: libraryWorkId, ownerId } }),
+    db.exhibition.findFirst({ where: { id: exhibitionId, ownerId }, select: { id: true } }),
+  ]);
+  if (!work) return { error: "Work not found in your library.", status: 404 as const };
+  if (!exhibition) return { error: "Exhibition not found.", status: 404 as const };
+  const mediaUrl = mediaUrlOf(work);
+  if (!mediaUrl) return { error: "This work has no image to remove.", status: 400 as const };
+  const deleted = await db.artwork.deleteMany({
+    where: {
+      exhibitionId,
+      ...(work.sculptureUrl
+        ? { sculptureUrl: work.sculptureUrl }
+        : work.videoUrl
+          ? { videoUrl: work.videoUrl }
+          : { imageUrl: work.imageUrl }),
+    },
+  });
+  // The stored imageUrl may be a stale R2 URL while the copy stores
+  // the normalized serving URL (or the other way round): match on the
+  // normalized media URL too, so no copy is left behind.
+  const copies = await db.artwork.findMany({
+    where: { exhibitionId },
+    select: { id: true, imageUrl: true, videoUrl: true, sculptureUrl: true },
+  });
+  const staleIds = copies.filter((copy) => mediaUrlOf(copy) === mediaUrl).map((copy) => copy.id);
+  if (staleIds.length > 0) {
+    await db.artwork.deleteMany({ where: { id: { in: staleIds } } });
+  }
+  return { removedCopies: deleted.count + staleIds.length, status: 200 as const };
 }
 
 // The one explicit, confirmed delete (from "Mes œuvres"): the library

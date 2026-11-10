@@ -383,11 +383,18 @@ export default function Editor({
   // Automatic wall composition ("Compose wall", see
   // lib/compose-wall.ts): whether the compose panel is open, which
   // wall it targets, and the inline result message. The panel opens
-  // from the multi-selection bar; the message is shown in the panel,
-  // never a native alert.
+  // from the toolbar (all artworks of the room) or from the
+  // multi-selection bar (the selection only); the message is shown in
+  // the panel, never a native alert.
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeWallId, setComposeWallId] = useState<string | null>(null);
   const [composeMessage, setComposeMessage] = useState<string | null>(null);
+  // Compose every hangable artwork of the active room, not just the
+  // selection: set by the toolbar "Compose wall" button, cleared when
+  // the panel closes. Before this, Compose only appeared after
+  // multi-selecting artworks, so a room full of stacked works had no
+  // visible way to arrange it.
+  const [composeAll, setComposeAll] = useState(false);
   // 3D builder: 0.5 m floor grid (drags snap to 0.25 m while it is on),
   // measurement guides, and the stage-settings toggle (shows the room
   // settings panel — the same UI the inspector falls back to).
@@ -993,15 +1000,20 @@ export default function Editor({
   useEffect(() => { selectionRef.current = selectionRefs; });
 
   // Automatic wall composition ("Compose wall"): the artworks it
-  // can hang — the selected artworks of the active room, excluding
-  // curatorial texts (they are artworks in the model, but the
-  // size/dominant rules do not apply to them). Elements and artworks
+  // can hang — every hangable artwork of the active room, or only the
+  // selected ones when composeAll is off. Curatorial texts are
+  // artworks in the model, but the size/dominant rules do not apply
+  // to them; sculptures stand on the floor. Elements and artworks
   // from other rooms are ignored.
-  const composeCandidates = useMemo(() => {
+  const composeAllCandidates = useMemo(() => {
     if (!activeRoom) return [];
+    return artworks.filter((artwork) => artwork.roomId === activeRoom.id && !artwork.text && !artwork.sculptureUrl);
+  }, [artworks, activeRoom]);
+  const composeCandidates = useMemo(() => {
+    if (composeAll) return composeAllCandidates;
     const selectedIds = new Set(selectionRefs.filter((ref) => ref.kind === "artwork").map((ref) => ref.id));
-    return artworks.filter((artwork) => selectedIds.has(artwork.id) && artwork.roomId === activeRoom.id && !artwork.text && !artwork.sculptureUrl);
-  }, [selectionRefs, artworks, activeRoom]);
+    return composeAllCandidates.filter((artwork) => selectedIds.has(artwork.id));
+  }, [selectionRefs, composeAllCandidates, composeAll]);
   // Every hangable face of the active room (room walls, Sunlight
   // panels, added cloisons/suspendus), for the wall picker.
   const composeFaces = useMemo(() => {
@@ -3945,6 +3957,7 @@ async function compressImage(file: File): Promise<File> {
               <button className="tool-button mobile-panel-toggle" aria-label={mobilePanelOpen ? "Hide build panel" : "Show build panel"} aria-expanded={mobilePanelOpen} title={mobilePanelOpen ? "Hide build panel" : "Show build panel"} onClick={() => setMobilePanelOpen((value) => !value)}><PanelLeft size={16} /></button>
               <button className={`tool-button${showGrid ? " active" : ""}`} aria-label="Toggle grid" aria-pressed={showGrid} title="Toggle grid: 0.5 m grid; drags snap to 0.25 m" onClick={() => setShowGrid((value) => !value)}><Grid2X2 size={16} /></button>
               <button className={`tool-button${showMeasure ? " active" : ""}`} aria-label="Measure" aria-pressed={showMeasure} title="Measure: distances between neighbouring artworks" onClick={() => setShowMeasure((value) => !value)}><Ruler size={16} /></button>
+              <button className="tool-button" aria-label="Compose wall" title="Compose wall: hang all artworks of this room in one row at eye level, 12 cm apart, largest in the centre" disabled={composeAllCandidates.length < 2} style={composeAllCandidates.length < 2 ? { opacity: 0.45 } : undefined} onClick={() => { setComposeAll(true); openComposePanel(); }}><LayoutGrid size={16} /></button>
               <button className={`tool-button${showStageSettings ? " active" : ""}`} aria-label="Toggle stage settings" aria-pressed={showStageSettings} title="Stage settings: room dimensions, walls, floor and ceiling" onClick={() => { const next = !showStageSettings; setShowStageSettings(next); if (next) clearSelection(); }}><Settings2 size={16} /></button>
               <button className={`tool-button${showHistory ? " active" : ""}`} aria-label="Version history" aria-pressed={showHistory} title="Version history: the last 10 saves" onClick={() => { setShowHistory((value) => !value); if (!showHistory) void loadHistory(); }}><History size={16} /></button>
               <button className="tool-button" aria-label="Fullscreen" onClick={() => document.querySelector(".scene-wrap")?.requestFullscreen()}><Expand size={16} /></button>
@@ -3959,7 +3972,7 @@ async function compressImage(file: File): Promise<File> {
                 <button type="button" title="Delete all selected items" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--danger, #b3261e)", fontSize: "9px", cursor: "pointer" }} onClick={deleteSelection}><Trash2 size={12} /> Delete</button>
               )}
               {composeCandidates.length >= 2 && (
-                <button type="button" title="Compose the selected artworks on a wall: one row at eye level, 12 cm apart" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={openComposePanel}><LayoutGrid size={12} /> Compose wall</button>
+                <button type="button" title="Compose the selected artworks on a wall: one row at eye level, 12 cm apart" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => { setComposeAll(false); openComposePanel(); }}><LayoutGrid size={12} /> Compose wall</button>
               )}
               <span style={{ color: "var(--muted)" }}>Shift-click in 3D or in Layers adds to the selection; dragging moves all selected items together.</span>
             </div>
@@ -3977,8 +3990,8 @@ async function compressImage(file: File): Promise<File> {
                   <option key={option.id} value={option.id}>{option.label}</option>
                 ))}
               </select>
-              <button type="button" title="Place the selected artworks on this wall" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={applyComposition}>Compose</button>
-              <button type="button" title="Close the compose panel" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => setComposeOpen(false)}>Close</button>
+              <button type="button" title="Place these artworks on this wall" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={applyComposition}>Compose</button>
+              <button type="button" title="Close the compose panel" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => { setComposeOpen(false); setComposeAll(false); }}>Close</button>
               {composeMessage && <span role="status" style={{ color: "var(--muted)", lineHeight: 1.5 }}>{composeMessage}</span>}
             </div>
           )}

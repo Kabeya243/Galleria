@@ -358,6 +358,11 @@ button { color: inherit; }
 .library-card-actions { flex-wrap: wrap; }
 .library-exhibition-select { flex: 1 1 160px; min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-3); color: var(--ink); font-size: 12px; }
 .library-added-note { display: flex; align-items: center; gap: 6px; color: var(--accent); font-size: 12px; }
+.library-exhibition-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.library-exhibition-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-3); color: var(--ink); font-size: 11px; line-height: 1.4; }
+.library-exhibition-chip button { border: 0; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; padding: 0 3px; }
+.library-exhibition-chip button:hover { color: var(--danger, #b3261e); }
+.library-exhibition-chip button:disabled { opacity: 0.45; cursor: default; }
 .library-add-form { margin: 16px 0 4px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
 .library-add-form > p { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .library-add-form form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-items: end; }

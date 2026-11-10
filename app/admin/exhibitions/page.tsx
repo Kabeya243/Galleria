@@ -58,7 +58,7 @@ export default async function AdminExhibitionsRoute() {
                       {exhibition.owner.name} ({exhibition.owner.email})
                     </td>
                     <td>{exhibition.status}</td>
-                    <td>{exhibition._count.artworks}</td>
+                    <td>{exhibition.artworkCount}</td>
                     <td>{exhibition.views}</td>
                     <td>{exhibition.updatedAt.toLocaleDateString("en-GB")}</td>
                   </tr>

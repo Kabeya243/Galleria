@@ -3,7 +3,7 @@ import PublicHome, { type FeaturedPreview, type PublicHomeExhibition } from "@/c
 import { JsonLd, organizationJsonLd } from "@/components/seo-jsonld";
 import { getCurrentUser } from "@/lib/auth";
 import { db, withDbRetry } from "@/lib/db";
-import { parseGalleryRooms } from "@/lib/rooms";
+import { parseGalleryRooms, placedArtworks } from "@/lib/rooms";
 import { toServingImageUrl } from "@/lib/r2";
 import { loadUserDashboard } from "@/lib/user-dashboard-data";
 
@@ -24,21 +24,23 @@ async function findPublicExhibitions(): Promise<PublicHomeExhibition[]> {
     where: { status: "public", visibility: "public" },
     include: {
       owner: { select: { name: true } },
-      _count: { select: { artworks: true } },
-      artworks: { select: { imageUrl: true }, orderBy: { createdAt: "asc" }, take: 1 },
+      artworks: { select: { roomId: true, imageUrl: true }, orderBy: { createdAt: "asc" } },
     },
     orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
   });
-  return exhibitions.map((exhibition) => ({
-    id: exhibition.id,
-    title: exhibition.title,
-    slug: exhibition.slug,
-    artistName: exhibition.owner.name,
-    roomCount: countRooms(exhibition.rooms),
-    artworkCount: exhibition._count.artworks,
-    views: exhibition.views,
-    coverImageUrl: toServingImageUrl(exhibition.artworks[0]?.imageUrl),
-  }));
+  return exhibitions.map((exhibition) => {
+    const { count, coverImageUrl } = placedArtworks(exhibition.rooms, exhibition.artworks);
+    return {
+      id: exhibition.id,
+      title: exhibition.title,
+      slug: exhibition.slug,
+      artistName: exhibition.owner.name,
+      roomCount: countRooms(exhibition.rooms),
+      artworkCount: count,
+      views: exhibition.views,
+      coverImageUrl: toServingImageUrl(coverImageUrl),
+    };
+  });
 }
 
 // The hero preview: the newest public exhibition with its first three
@@ -48,19 +50,19 @@ async function findFeaturedPreview(): Promise<FeaturedPreview | null> {
     where: { status: "public", visibility: "public" },
     include: {
       owner: { select: { name: true } },
-      _count: { select: { artworks: true } },
       artworks: {
         where: { imageUrl: { not: null } },
-        select: { id: true, title: true, imageUrl: true },
+        select: { id: true, title: true, imageUrl: true, roomId: true },
         orderBy: { createdAt: "asc" },
-        take: 3,
       },
     },
     orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
   });
   if (!exhibition) return null;
-  const artworks = exhibition.artworks
+  const { placed, count } = placedArtworks(exhibition.rooms, exhibition.artworks);
+  const artworks = placed
     .filter((artwork) => artwork.imageUrl)
+    .slice(0, 3)
     .map((artwork) => ({
       id: artwork.id,
       title: artwork.title,
@@ -72,7 +74,7 @@ async function findFeaturedPreview(): Promise<FeaturedPreview | null> {
     title: exhibition.title,
     slug: exhibition.slug,
     artistName: exhibition.owner.name,
-    artworkCount: exhibition._count.artworks,
+    artworkCount: count,
     artworks,
   };
 }

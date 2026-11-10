@@ -9,11 +9,19 @@ import { PAYWALL_ENABLED, getPlanBySlug, getUserSubscription } from "@/lib/subsc
 // immediate, so users can try every plan. Once the paywall is on, a
 // change has no way to be paid here, so the route answers 409 until
 // billing (Flutterwave / Pesapal) is connected — the switch is safe to
-// flip only with billing in place.
+// flip only with billing in place. A "single" change is a fixed
+// one-month term with no renewal: it ends one month after the change
+// and the plan returns to Discovery (see getUserSubscription).
 const bodySchema = z.object({
   planSlug: z.enum(["discovery", "creator", "studio"]),
-  billingCycle: z.enum(["monthly", "yearly"]).optional().default("monthly"),
+  billingCycle: z.enum(["monthly", "yearly", "single"]).optional().default("monthly"),
 });
+
+function addOneMonth(from: Date): Date {
+  const end = new Date(from);
+  end.setMonth(end.getMonth() + 1);
+  return end;
+}
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -38,7 +46,11 @@ export async function POST(request: Request) {
   if (!plan || !plan.isActive) {
     return NextResponse.json({ error: "That plan is not available." }, { status: 400 });
   }
+  if (parsed.data.billingCycle === "single" && plan.singleMonthPriceUsd === 0) {
+    return NextResponse.json({ error: "That plan has no one-month price." }, { status: 400 });
+  }
   const { subscription } = await getUserSubscription(user.id);
+  const startedAt = new Date();
   const updated = await withDbRetry(() =>
     db.subscription.update({
       where: { id: subscription.id },
@@ -47,8 +59,8 @@ export async function POST(request: Request) {
         billingCycle: parsed.data.billingCycle,
         status: "active",
         source: "trial",
-        startedAt: new Date(),
-        endsAt: null,
+        startedAt,
+        endsAt: parsed.data.billingCycle === "single" ? addOneMonth(startedAt) : null,
       },
       include: { plan: true },
     }),

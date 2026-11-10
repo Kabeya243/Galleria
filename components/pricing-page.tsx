@@ -58,7 +58,7 @@ export default function PricingPage() {
   const [plansError, setPlansError] = useState(false);
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meLoaded, setMeLoaded] = useState(false);
-  const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
+  const [cycle, setCycle] = useState<"monthly" | "yearly" | "single">("monthly");
   const [changeTarget, setChangeTarget] = useState<PlanDTO | null>(null);
 
   const loadPlans = useCallback(async () => {
@@ -117,19 +117,40 @@ export default function PricingPage() {
         ? t("pricing", "free")
         : `$${plan.monthlyPriceUsd}`;
     }
-    return plan.yearlyPriceUsd === 0 ? t("pricing", "free") : `$${plan.yearlyPriceUsd}`;
+    if (cycle === "yearly") {
+      return plan.yearlyPriceUsd === 0 ? t("pricing", "free") : `$${plan.yearlyPriceUsd}`;
+    }
+    return plan.singleMonthPriceUsd === 0
+      ? t("pricing", "free")
+      : `$${plan.singleMonthPriceUsd}`;
   };
 
   const priceSuffix = (plan: PlanDTO) => {
-    const usd = cycle === "monthly" ? plan.monthlyPriceUsd : plan.yearlyPriceUsd;
+    const usd =
+      cycle === "monthly"
+        ? plan.monthlyPriceUsd
+        : cycle === "yearly"
+          ? plan.yearlyPriceUsd
+          : plan.singleMonthPriceUsd;
     if (usd === 0) return null;
-    return t("pricing", cycle === "monthly" ? "perMonth" : "perYear");
+    return t(
+      "pricing",
+      cycle === "monthly" ? "perMonth" : cycle === "yearly" ? "perYear" : "perOneMonth",
+    );
   };
 
   const ugxText = (plan: PlanDTO) => {
-    const usd = cycle === "monthly" ? plan.monthlyPriceUsd : plan.yearlyPriceUsd;
+    const usd =
+      cycle === "monthly"
+        ? plan.monthlyPriceUsd
+        : cycle === "yearly"
+          ? plan.yearlyPriceUsd
+          : plan.singleMonthPriceUsd;
     if (usd === 0) return null;
-    return `≈ ${formatUgx(usd)} ${t("pricing", cycle === "monthly" ? "ugxPerMonth" : "ugxPerYear")}`;
+    return `≈ ${formatUgx(usd)} ${t(
+      "pricing",
+      cycle === "monthly" ? "ugxPerMonth" : cycle === "yearly" ? "ugxPerYear" : "ugxOneMonth",
+    )}`;
   };
 
   const limitText = (limit: number | null) =>
@@ -144,6 +165,23 @@ export default function PricingPage() {
   const text = (value: string): Cell => ({ kind: "text", text: value });
 
   const rows: Array<{ label: string; value: (plan: PlanDTO) => Cell }> = [
+    {
+      label: t("pricing", "rowPrice"),
+      value: (p) => {
+        const usd =
+          cycle === "monthly"
+            ? p.monthlyPriceUsd
+            : cycle === "yearly"
+              ? p.yearlyPriceUsd
+              : p.singleMonthPriceUsd;
+        if (usd === 0) return text(t("pricing", "free"));
+        const suffix = t(
+          "pricing",
+          cycle === "monthly" ? "perMonth" : cycle === "yearly" ? "perYear" : "perOneMonth",
+        );
+        return text(`$${usd} ${suffix}`);
+      },
+    },
     { label: t("pricing", "rowGallery"), value: (p) => text(p.slug === "discovery" ? t("pricing", "galleryBase") : t("pricing", "galleryAll")) },
     { label: t("pricing", "rowExhibitions"), value: (p) => text(limitText(p.limits.exhibitions)) },
     { label: t("pricing", "rowArtworks"), value: (p) => text(limitText(p.limits.artworks)) },
@@ -192,6 +230,7 @@ export default function PricingPage() {
     { q: t("pricing", "faq2q"), a: t("pricing", "faq2a") },
     { q: t("pricing", "faq3q"), a: t("pricing", "faq3a") },
     { q: t("pricing", "faq4q"), a: t("pricing", "faq4a") },
+    { q: t("pricing", "faq5q"), a: t("pricing", "faq5a") },
   ];
 
   return (
@@ -216,6 +255,10 @@ export default function PricingPage() {
           <button type="button" aria-pressed={cycle === "yearly"} onClick={() => setCycle("yearly")}>
             {t("pricing", "yearly")}{" "}
             <span className={styles.toggleSave}>({t("pricing", "yearlySave")})</span>
+          </button>
+          <button type="button" aria-pressed={cycle === "single"} onClick={() => setCycle("single")}>
+            {t("pricing", "single")}{" "}
+            <span className={styles.toggleSave}>({t("pricing", "singleNote")})</span>
           </button>
         </div>
       </section>

@@ -1,0 +1,2109 @@
+{
+  "generatedAt": "2026-11-08T08:32:11.940Z",
+  "commit": "8c0e78f",
+  "mission": "chantier-5-exhibition-tests-all-galleries",
+  "summary": {
+    "total": 151,
+    "passed": 151,
+    "failed": 0
+  },
+  "rooms": {
+    "—": {
+      "passed": 4,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "all-layouts",
+          "name": "All 21 gallery layouts enumerated (Sunlight + 20 defs)",
+          "status": "pass",
+          "detail": "sunlight, serpentine, vitrine, loft, halle, arche, musee, claire-voie, parquet, verriere, pavillon, classique, atrium-blanc, patio, escalier, salles-vertes, couloir-sombre, couloir-dore, voutes, courbes, atrium-lattes"
+        },
+        {
+          "id": "schema",
+          "name": "Prisma Exhibition has rooms JSON + artworks with roomId; pages exist",
+          "status": "pass",
+          "detail": "Exhibition.rooms + Artwork.roomId + /galleries + /exhibition/[slug] + GalleryScene"
+        },
+        {
+          "id": "layout-switch-rehang",
+          "name": "Layout switch: 3 real works re-hung on every other layout's back/longest wall",
+          "status": "pass",
+          "detail": "3 works re-hung cleanly on all 21 layouts"
+        },
+        {
+          "id": "partition-collision",
+          "name": "Walk collision: a user-added partition wall blocks the visitor",
+          "status": "pass",
+          "detail": "partition 4 m × 0.15 m blocks the walk at its centre only"
+        }
+      ]
+    },
+    "sunlight": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "10 wall faces, 5 blocks, 516 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 22 m — one row at eye level (1.50 m), 12 cm apart. — wall back (22.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (26.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -13.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (3.5, 10.5) walkable, plan offset (22, 0)"
+        }
+      ]
+    },
+    "serpentine": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "48 wall faces, 52 blocks, 3264 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "LIMIT (by design): no serpentine face fits 3 large works (max face 2.2 m) — Placed 2 of 3 artworks on the serp 0i0 · faces front · 2.2 m. 1 did not fit — try a longer wall."
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "2/7 placed (packed) on serp-0i0 (2.2 m) — unplaced: boy-gold, w4, w5, w6, w7"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit serp-0i0, placed at (-1.03, 1.50, 7.16)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (7, 21) walkable, plan offset (22, 0)"
+        }
+      ]
+    },
+    "vitrine": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "5 wall faces, 11 blocks, 658 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 16 m — one row at eye level (1.50 m), 12 cm apart. — wall back (16.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (16.0 m); +2 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (3.1, 8) walkable, plan offset (19, 0)"
+        }
+      ]
+    },
+    "loft": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "6 wall faces, 2 blocks, 320 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 18 m — one row at eye level (1.50 m), 12 cm apart. — wall back (18.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (2, 6.5) walkable, plan offset (20, 0)"
+        }
+      ]
+    },
+    "halle": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "53 wall faces, 25 blocks, 749 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 25 m — one row at eye level (1.50 m), 12 cm apart. — wall back (25.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (34.0 m); +2 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit screen-6+, placed at (-4.52, 1.58, 8.41)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (-5, 15) walkable, plan offset (23.5, 0)"
+        }
+      ]
+    },
+    "arche": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "8 wall faces, 2 blocks, 412 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 20 m — one row at eye level (1.50 m), 12 cm apart. — wall back (20.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (24.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "4 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -14.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (-1, 5.5) walkable, plan offset (21, 0)"
+        }
+      ]
+    },
+    "musee": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "14 wall faces, 2 blocks, 468 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 28 m — one row at eye level (1.50 m), 12 cm apart. — wall back (28.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (40.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 9.5) walkable, plan offset (31, 0)"
+        }
+      ]
+    },
+    "claire-voie": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "4 wall faces, 1 blocks, 215 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 11 m — one row at eye level (1.50 m), 12 cm apart. — wall back (11.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (23.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (-0.50, 1.50, -12.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (-4.2, 8.2) walkable, plan offset (16.5, 0)"
+        }
+      ]
+    },
+    "parquet": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "12 wall faces, 9 blocks, 449 m² walkable, speed 4 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 23 m — one row at eye level (1.50 m), 12 cm apart. — wall back (23.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on front (24.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -9.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 9) walkable, plan offset (23, 0)"
+        }
+      ]
+    },
+    "verriere": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "11 wall faces, 5 blocks, 936 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 40 m — one row at eye level (1.50 m), 12 cm apart. — wall back (40.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on back (40.0 m)"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit panel-b+, placed at (-1.08, 1.55, -6.53)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (-2.2, 5.5) walkable, plan offset (31, 0)"
+        }
+      ]
+    },
+    "pavillon": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "10 wall faces, 10 blocks, 196 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the left a · faces right · 6.1 m — one row at eye level (1.50 m), 12 cm apart. — wall left-a (6.1 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (packed) on left-a (6.1 m)"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit left-a, placed at (-3.90, 1.50, -4.95)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 5) walkable, plan offset (15, 0)"
+        }
+      ]
+    },
+    "classique": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "3 wall faces, 13 blocks, 281 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 8 m — one row at eye level (1.50 m), 12 cm apart. — wall back (8.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (40.0 m); +2 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -19.80)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 18) walkable, plan offset (15, 0)"
+        }
+      ]
+    },
+    "atrium-blanc": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "4 wall faces, 8 blocks, 640 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 26 m — one row at eye level (1.50 m), 12 cm apart. — wall back (26.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (27.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -13.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 11) walkable, plan offset (24, 0)"
+        }
+      ]
+    },
+    "patio": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "12 wall faces, 7 blocks, 1296 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the wall0 · faces back · 11 m — one row at eye level (1.50 m), 12 cm apart. — wall wall0 (11.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on wall0 (11.0 m)"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit wall0, placed at (5.41, 1.50, 20.19)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (-6, 7) walkable, plan offset (33, 0)"
+        }
+      ]
+    },
+    "escalier": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "4 wall faces, 4 blocks, 299 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 16 m — one row at eye level (1.50 m), 12 cm apart. — wall back (16.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -9.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 8) walkable, plan offset (19, 0)"
+        }
+      ]
+    },
+    "salles-vertes": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "16 wall faces, 2 blocks, 421 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 14 m — one row at eye level (1.50 m), 12 cm apart. — wall back (14.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (32.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -15.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 14) walkable, plan offset (18, 0)"
+        }
+      ]
+    },
+    "couloir-sombre": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "28 wall faces, 0 blocks, 291 m² walkable, speed 4.2 m/s, light spot-warm"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 7 m — one row at eye level (1.50 m), 12 cm apart. — wall back (7.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -22.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 21) walkable, plan offset (14.5, 0)"
+        }
+      ]
+    },
+    "couloir-dore": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "21 wall faces, 0 blocks, 291 m² walkable, speed 4.2 m/s, light spot-warm"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Left wall · 46 m — one row at eye level (1.50 m), 12 cm apart. — wall left (46.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit panel-l-0+, placed at (-3.31, 1.50, 0.20)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 21) walkable, plan offset (14.5, 0)"
+        }
+      ]
+    },
+    "voutes": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "12 wall faces, 2 blocks, 276 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Back wall · 10 m — one row at eye level (1.50 m), 12 cm apart. — wall back (10.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (30.0 m); +3 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit back, placed at (0.00, 1.50, -14.90)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 13) walkable, plan offset (16, 0)"
+        }
+      ]
+    },
+    "courbes": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "8 wall faces, 6 blocks, 484 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the curve0 · faces back · 8.1 m — one row at eye level (1.50 m), 12 cm apart. — wall curve0 (8.1 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (packed) on curve0 (8.1 m)"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit curve0, placed at (-7.96, 1.50, 9.51)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (4, 6) walkable, plan offset (23.5, 0)"
+        }
+      ]
+    },
+    "atrium-lattes": {
+      "passed": 7,
+      "failed": 0,
+      "checks": [
+        {
+          "id": "def-integrity",
+          "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+          "status": "pass",
+          "detail": "7 wall faces, 7 blocks, 233 m² walkable, speed 4.2 m/s, light sunlight"
+        },
+        {
+          "id": "exhibition-open",
+          "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+          "status": "pass",
+          "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+        },
+        {
+          "id": "compose-3",
+          "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+          "status": "pass",
+          "detail": "Composed 3 artworks on the Left wall · 18 m — one row at eye level (1.50 m), 12 cm apart. — wall left (18.0 m)"
+        },
+        {
+          "id": "compose-7",
+          "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+          "status": "pass",
+          "detail": "7/7 placed (row) on left (18.0 m); +4 other long wall(s) clear"
+        },
+        {
+          "id": "drag-snap",
+          "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+          "status": "pass",
+          "detail": "3 awkward drops all snapped onto a wall"
+        },
+        {
+          "id": "place-on-wall",
+          "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+          "status": "pass",
+          "detail": "hit left, placed at (-6.90, 1.50, 0.00)"
+        },
+        {
+          "id": "navigation",
+          "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+          "status": "pass",
+          "detail": "camera start (0, 7.5) walkable, plan offset (18, 0)"
+        }
+      ]
+    }
+  },
+  "checks": [
+    {
+      "room": "—",
+      "id": "all-layouts",
+      "name": "All 21 gallery layouts enumerated (Sunlight + 20 defs)",
+      "status": "pass",
+      "detail": "sunlight, serpentine, vitrine, loft, halle, arche, musee, claire-voie, parquet, verriere, pavillon, classique, atrium-blanc, patio, escalier, salles-vertes, couloir-sombre, couloir-dore, voutes, courbes, atrium-lattes"
+    },
+    {
+      "room": "—",
+      "id": "schema",
+      "name": "Prisma Exhibition has rooms JSON + artworks with roomId; pages exist",
+      "status": "pass",
+      "detail": "Exhibition.rooms + Artwork.roomId + /galleries + /exhibition/[slug] + GalleryScene"
+    },
+    {
+      "room": "—",
+      "id": "layout-switch-rehang",
+      "name": "Layout switch: 3 real works re-hung on every other layout's back/longest wall",
+      "status": "pass",
+      "detail": "3 works re-hung cleanly on all 21 layouts"
+    },
+    {
+      "room": "—",
+      "id": "partition-collision",
+      "name": "Walk collision: a user-added partition wall blocks the visitor",
+      "status": "pass",
+      "detail": "partition 4 m × 0.15 m blocks the walk at its centre only"
+    },
+    {
+      "room": "sunlight",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "10 wall faces, 5 blocks, 516 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "sunlight",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "sunlight",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 22 m — one row at eye level (1.50 m), 12 cm apart. — wall back (22.0 m)"
+    },
+    {
+      "room": "sunlight",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (26.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "sunlight",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "sunlight",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -13.90)"
+    },
+    {
+      "room": "sunlight",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (3.5, 10.5) walkable, plan offset (22, 0)"
+    },
+    {
+      "room": "serpentine",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "48 wall faces, 52 blocks, 3264 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "serpentine",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "serpentine",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "LIMIT (by design): no serpentine face fits 3 large works (max face 2.2 m) — Placed 2 of 3 artworks on the serp 0i0 · faces front · 2.2 m. 1 did not fit — try a longer wall."
+    },
+    {
+      "room": "serpentine",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "2/7 placed (packed) on serp-0i0 (2.2 m) — unplaced: boy-gold, w4, w5, w6, w7"
+    },
+    {
+      "room": "serpentine",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "serpentine",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit serp-0i0, placed at (-1.03, 1.50, 7.16)"
+    },
+    {
+      "room": "serpentine",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (7, 21) walkable, plan offset (22, 0)"
+    },
+    {
+      "room": "vitrine",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "5 wall faces, 11 blocks, 658 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "vitrine",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "vitrine",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 16 m — one row at eye level (1.50 m), 12 cm apart. — wall back (16.0 m)"
+    },
+    {
+      "room": "vitrine",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (16.0 m); +2 other long wall(s) clear"
+    },
+    {
+      "room": "vitrine",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "vitrine",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+    },
+    {
+      "room": "vitrine",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (3.1, 8) walkable, plan offset (19, 0)"
+    },
+    {
+      "room": "loft",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "6 wall faces, 2 blocks, 320 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "loft",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "loft",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 18 m — one row at eye level (1.50 m), 12 cm apart. — wall back (18.0 m)"
+    },
+    {
+      "room": "loft",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "loft",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "loft",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+    },
+    {
+      "room": "loft",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (2, 6.5) walkable, plan offset (20, 0)"
+    },
+    {
+      "room": "halle",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "53 wall faces, 25 blocks, 749 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "halle",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "halle",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 25 m — one row at eye level (1.50 m), 12 cm apart. — wall back (25.0 m)"
+    },
+    {
+      "room": "halle",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (34.0 m); +2 other long wall(s) clear"
+    },
+    {
+      "room": "halle",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "halle",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit screen-6+, placed at (-4.52, 1.58, 8.41)"
+    },
+    {
+      "room": "halle",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (-5, 15) walkable, plan offset (23.5, 0)"
+    },
+    {
+      "room": "arche",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "8 wall faces, 2 blocks, 412 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "arche",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "arche",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 20 m — one row at eye level (1.50 m), 12 cm apart. — wall back (20.0 m)"
+    },
+    {
+      "room": "arche",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (24.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "arche",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "4 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "arche",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -14.90)"
+    },
+    {
+      "room": "arche",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (-1, 5.5) walkable, plan offset (21, 0)"
+    },
+    {
+      "room": "musee",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "14 wall faces, 2 blocks, 468 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "musee",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "musee",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 28 m — one row at eye level (1.50 m), 12 cm apart. — wall back (28.0 m)"
+    },
+    {
+      "room": "musee",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (40.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "musee",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "musee",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -11.90)"
+    },
+    {
+      "room": "musee",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 9.5) walkable, plan offset (31, 0)"
+    },
+    {
+      "room": "claire-voie",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "4 wall faces, 1 blocks, 215 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "claire-voie",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "claire-voie",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 11 m — one row at eye level (1.50 m), 12 cm apart. — wall back (11.0 m)"
+    },
+    {
+      "room": "claire-voie",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (23.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "claire-voie",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "claire-voie",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (-0.50, 1.50, -12.90)"
+    },
+    {
+      "room": "claire-voie",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (-4.2, 8.2) walkable, plan offset (16.5, 0)"
+    },
+    {
+      "room": "parquet",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "12 wall faces, 9 blocks, 449 m² walkable, speed 4 m/s, light sunlight"
+    },
+    {
+      "room": "parquet",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "parquet",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 23 m — one row at eye level (1.50 m), 12 cm apart. — wall back (23.0 m)"
+    },
+    {
+      "room": "parquet",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on front (24.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "parquet",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "parquet",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -9.90)"
+    },
+    {
+      "room": "parquet",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 9) walkable, plan offset (23, 0)"
+    },
+    {
+      "room": "verriere",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "11 wall faces, 5 blocks, 936 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "verriere",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "verriere",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 40 m — one row at eye level (1.50 m), 12 cm apart. — wall back (40.0 m)"
+    },
+    {
+      "room": "verriere",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on back (40.0 m)"
+    },
+    {
+      "room": "verriere",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "verriere",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit panel-b+, placed at (-1.08, 1.55, -6.53)"
+    },
+    {
+      "room": "verriere",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (-2.2, 5.5) walkable, plan offset (31, 0)"
+    },
+    {
+      "room": "pavillon",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "10 wall faces, 10 blocks, 196 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "pavillon",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "pavillon",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the left a · faces right · 6.1 m — one row at eye level (1.50 m), 12 cm apart. — wall left-a (6.1 m)"
+    },
+    {
+      "room": "pavillon",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (packed) on left-a (6.1 m)"
+    },
+    {
+      "room": "pavillon",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "pavillon",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit left-a, placed at (-3.90, 1.50, -4.95)"
+    },
+    {
+      "room": "pavillon",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 5) walkable, plan offset (15, 0)"
+    },
+    {
+      "room": "classique",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "3 wall faces, 13 blocks, 281 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "classique",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "classique",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 8 m — one row at eye level (1.50 m), 12 cm apart. — wall back (8.0 m)"
+    },
+    {
+      "room": "classique",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (40.0 m); +2 other long wall(s) clear"
+    },
+    {
+      "room": "classique",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "classique",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -19.80)"
+    },
+    {
+      "room": "classique",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 18) walkable, plan offset (15, 0)"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "4 wall faces, 8 blocks, 640 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 26 m — one row at eye level (1.50 m), 12 cm apart. — wall back (26.0 m)"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (27.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -13.90)"
+    },
+    {
+      "room": "atrium-blanc",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 11) walkable, plan offset (24, 0)"
+    },
+    {
+      "room": "patio",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "12 wall faces, 7 blocks, 1296 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "patio",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "patio",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the wall0 · faces back · 11 m — one row at eye level (1.50 m), 12 cm apart. — wall wall0 (11.0 m)"
+    },
+    {
+      "room": "patio",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on wall0 (11.0 m)"
+    },
+    {
+      "room": "patio",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "patio",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit wall0, placed at (5.41, 1.50, 20.19)"
+    },
+    {
+      "room": "patio",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (-6, 7) walkable, plan offset (33, 0)"
+    },
+    {
+      "room": "escalier",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "4 wall faces, 4 blocks, 299 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "escalier",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "escalier",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 16 m — one row at eye level (1.50 m), 12 cm apart. — wall back (16.0 m)"
+    },
+    {
+      "room": "escalier",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (20.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "escalier",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "escalier",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -9.90)"
+    },
+    {
+      "room": "escalier",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 8) walkable, plan offset (19, 0)"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "16 wall faces, 2 blocks, 421 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 14 m — one row at eye level (1.50 m), 12 cm apart. — wall back (14.0 m)"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (32.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -15.90)"
+    },
+    {
+      "room": "salles-vertes",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 14) walkable, plan offset (18, 0)"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "28 wall faces, 0 blocks, 291 m² walkable, speed 4.2 m/s, light spot-warm"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 7 m — one row at eye level (1.50 m), 12 cm apart. — wall back (7.0 m)"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -22.90)"
+    },
+    {
+      "room": "couloir-sombre",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 21) walkable, plan offset (14.5, 0)"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "21 wall faces, 0 blocks, 291 m² walkable, speed 4.2 m/s, light spot-warm"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Left wall · 46 m — one row at eye level (1.50 m), 12 cm apart. — wall left (46.0 m)"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (46.0 m); +1 other long wall(s) clear"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit panel-l-0+, placed at (-3.31, 1.50, 0.20)"
+    },
+    {
+      "room": "couloir-dore",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 21) walkable, plan offset (14.5, 0)"
+    },
+    {
+      "room": "voutes",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "12 wall faces, 2 blocks, 276 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "voutes",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "voutes",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Back wall · 10 m — one row at eye level (1.50 m), 12 cm apart. — wall back (10.0 m)"
+    },
+    {
+      "room": "voutes",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (30.0 m); +3 other long wall(s) clear"
+    },
+    {
+      "room": "voutes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "voutes",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit back, placed at (0.00, 1.50, -14.90)"
+    },
+    {
+      "room": "voutes",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 13) walkable, plan offset (16, 0)"
+    },
+    {
+      "room": "courbes",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "8 wall faces, 6 blocks, 484 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "courbes",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "courbes",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the curve0 · faces back · 8.1 m — one row at eye level (1.50 m), 12 cm apart. — wall curve0 (8.1 m)"
+    },
+    {
+      "room": "courbes",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (packed) on curve0 (8.1 m)"
+    },
+    {
+      "room": "courbes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "courbes",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit curve0, placed at (-7.96, 1.50, 9.51)"
+    },
+    {
+      "room": "courbes",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (4, 6) walkable, plan offset (23.5, 0)"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "def-integrity",
+      "name": "Definition integrity (bounds, camera, speed, light, blocks, walls)",
+      "status": "pass",
+      "detail": "7 wall faces, 7 blocks, 233 m² walkable, speed 4.2 m/s, light sunlight"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "exhibition-open",
+      "name": "Exhibition opens: room round-trips via parseGalleryRooms, no template artworks seeded",
+      "status": "pass",
+      "detail": "room opens empty — no seeded template artworks (removed Chantier 6)"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "compose-3",
+      "name": "Compose wall, 3 real works on the back/longest wall (1.50 m, 12 cm, largest centre)",
+      "status": "pass",
+      "detail": "Composed 3 artworks on the Left wall · 18 m — one row at eye level (1.50 m), 12 cm apart. — wall left (18.0 m)"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "compose-7",
+      "name": "Compose wall, 7 works (solo-expo wall) on the longest wall",
+      "status": "pass",
+      "detail": "7/7 placed (row) on left (18.0 m); +4 other long wall(s) clear"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "drag-snap",
+      "name": "Drag-end snap: a work dropped mid-room, past a wall's end or high up always lands on a wall",
+      "status": "pass",
+      "detail": "3 awkward drops all snapped onto a wall"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "place-on-wall",
+      "name": "Single work: raycast from camera start + galleryPlaceOnWall",
+      "status": "pass",
+      "detail": "hit left, placed at (-6.90, 1.50, 0.00)"
+    },
+    {
+      "room": "atrium-lattes",
+      "id": "navigation",
+      "name": "Navigation: camera start walkable, a step exists, plan lines in room, teleport offsets",
+      "status": "pass",
+      "detail": "camera start (0, 7.5) walkable, plan offset (18, 0)"
+    }
+  ]
+}

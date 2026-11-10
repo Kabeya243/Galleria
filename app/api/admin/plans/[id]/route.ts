@@ -27,6 +27,7 @@ const bodySchema = z
     description: z.string().trim().max(500).optional(),
     monthlyPriceUsd: z.number().min(0).max(100000).optional(),
     yearlyPriceUsd: z.number().min(0).max(1000000).optional(),
+    singleMonthPriceUsd: z.number().min(0).max(100000).optional(),
     features: z.array(z.string().trim().min(1).max(200)).max(40).optional(),
     limits: limitsSchema.optional(),
     isActive: z.boolean().optional(),
@@ -64,6 +65,7 @@ export async function PATCH(
   if (parsed.data.description !== undefined) data.description = parsed.data.description;
   if (parsed.data.monthlyPriceUsd !== undefined) data.monthlyPriceUsd = parsed.data.monthlyPriceUsd;
   if (parsed.data.yearlyPriceUsd !== undefined) data.yearlyPriceUsd = parsed.data.yearlyPriceUsd;
+  if (parsed.data.singleMonthPriceUsd !== undefined) data.singleMonthPriceUsd = parsed.data.singleMonthPriceUsd;
   if (parsed.data.features !== undefined) data.features = parsed.data.features;
   if (parsed.data.isActive !== undefined) data.isActive = parsed.data.isActive;
   if (parsed.data.limits !== undefined) {
@@ -82,6 +84,7 @@ export async function PATCH(
       description: updated.description,
       monthlyPriceUsd: updated.monthlyPriceUsd,
       yearlyPriceUsd: updated.yearlyPriceUsd,
+      singleMonthPriceUsd: updated.singleMonthPriceUsd,
       features: updated.features,
       limits: updated.limits,
       isActive: updated.isActive,

@@ -17,6 +17,11 @@ import { db, withDbRetry } from "@/lib/db";
 // otherwise plan changes have no way to be paid). No code change is
 // needed to flip the switch, only the variable.
 
+// Billing cycles: monthly and yearly subscriptions renew; "single" is
+// a fixed one-month term with no renewal (Creator $5.99, Studio $29).
+// When a single term ends, the plan returns to Discovery.
+export type BillingCycle = "monthly" | "yearly" | "single";
+
 export type PlanSlug = "discovery" | "creator" | "studio";
 
 export type PlanLimits = {
@@ -36,6 +41,7 @@ export type PlanDTO = {
   description: string;
   monthlyPriceUsd: number;
   yearlyPriceUsd: number;
+  singleMonthPriceUsd: number;
   features: string[];
   limits: PlanLimits;
   isActive: boolean;
@@ -69,9 +75,12 @@ function isPlanSlug(value: unknown): value is PlanSlug {
 }
 
 // The three plans, exactly as in the monetisation dossier (Table 4 for
-// prices, Table 5 for tools and limits). Feature lines are the plan data
-// shown on the pricing page, in display order. Limits use null for
-// unlimited and 0 for not included.
+// prices, Table 5 for tools and limits), with the November 2026 price
+// decision applied: Creator is $4.99/month and $49.90/year (2 months
+// free) with a 100 AI actions/month quota, and every paid plan offers a
+// one-month-only price (Creator $5.99, Studio $29, no renewal).
+// Feature lines are the plan data shown on the pricing page, in display
+// order. Limits use null for unlimited and 0 for not included.
 const PLAN_DEFAULTS: Array<{
   slug: PlanSlug;
   name: string;
@@ -79,6 +88,7 @@ const PLAN_DEFAULTS: Array<{
   description: string;
   monthlyPriceUsd: number;
   yearlyPriceUsd: number;
+  singleMonthPriceUsd: number;
   features: string[];
   limits: PlanLimits;
   sortOrder: number;
@@ -90,6 +100,7 @@ const PLAN_DEFAULTS: Array<{
     description: "For artists discovering Lakisa: a 3D gallery, one exhibition and room to try the tools.",
     monthlyPriceUsd: 0,
     yearlyPriceUsd: 0,
+    singleMonthPriceUsd: 0,
     features: [
       "3D gallery with base room models",
       "1 public exhibition",
@@ -108,8 +119,9 @@ const PLAN_DEFAULTS: Array<{
     name: "Creator",
     tagline: "For artists who exhibit and sell",
     description: "For active artists who exhibit and sell their work: every creative tool, more room, and your own subdomain.",
-    monthlyPriceUsd: 8,
-    yearlyPriceUsd: 80,
+    monthlyPriceUsd: 4.99,
+    yearlyPriceUsd: 49.9,
+    singleMonthPriceUsd: 5.99,
     features: [
       "Everything in Discovery",
       "All 3D room models",
@@ -126,9 +138,9 @@ const PLAN_DEFAULTS: Array<{
       "Open Calls",
       "Your subdomain (you.lakisa.art)",
       "Basic statistics",
-      "200 AI actions per month",
+      "100 AI actions per month",
     ],
-    limits: { exhibitions: 10, artworks: 100, storageGb: 20, contacts: null, inventory: null, aiActionsPerMonth: 200 },
+    limits: { exhibitions: 10, artworks: 100, storageGb: 20, contacts: null, inventory: null, aiActionsPerMonth: 100 },
     sortOrder: 1,
   },
   {
@@ -138,6 +150,7 @@ const PLAN_DEFAULTS: Array<{
     description: "For galleries, collectives and artists who want their own site: everything in Creator, plus the Website Builder and advanced tools.",
     monthlyPriceUsd: 25,
     yearlyPriceUsd: 250,
+    singleMonthPriceUsd: 29,
     features: [
       "Everything in Creator",
       "Unlimited exhibitions and artworks",
@@ -207,6 +220,7 @@ function parsePlan(row: {
   description: string;
   monthlyPriceUsd: number;
   yearlyPriceUsd: number;
+  singleMonthPriceUsd: number;
   features: unknown;
   limits: unknown;
   isActive: boolean;
@@ -227,6 +241,7 @@ function parsePlan(row: {
     description: row.description,
     monthlyPriceUsd: row.monthlyPriceUsd,
     yearlyPriceUsd: row.yearlyPriceUsd,
+    singleMonthPriceUsd: row.singleMonthPriceUsd,
     features,
     limits: {
       exhibitions: numOrNull(rawLimits.exhibitions),
@@ -248,7 +263,9 @@ function toPlanDTO(row: Parameters<typeof parsePlan>[0]): PlanDTO {
 }
 
 // Seed the three plans if they are missing. Only creates missing rows;
-// it never overwrites a plan the manager edited in the admin.
+// it never overwrites a plan the manager edited in the admin. After
+// seeding, syncCreatorPricing applies the November 2026 price decision
+// to rows that still hold the old defaults (see below).
 export async function ensurePlansSeeded(): Promise<void> {
   await withDbRetry(async () => {
     const existing = await db.subscriptionPlan.findMany({ select: { slug: true } });
@@ -263,10 +280,63 @@ export async function ensurePlansSeeded(): Promise<void> {
           description: def.description,
           monthlyPriceUsd: def.monthlyPriceUsd,
           yearlyPriceUsd: def.yearlyPriceUsd,
+          singleMonthPriceUsd: def.singleMonthPriceUsd,
           features: def.features,
           limits: def.limits,
           sortOrder: def.sortOrder,
         },
+      });
+    }
+  });
+  await syncCreatorPricing();
+}
+
+// One-time price update (Nov 2026): Kabeya cut the Creator price from
+// $8/$80 to $4.99/$49.90 and the Creator AI quota from 200 to 100
+// actions/month, and added a one-month-only price ($5.99 Creator, $29
+// Studio, no renewal). Rows already in the database still carry the old
+// values, and the seed above never overwrites an admin edit, so this
+// applies the decided prices to rows that still hold the old defaults
+// only. A row the manager already edited to other prices is left alone;
+// the one-month price is only filled when it is still unset (0) on a
+// paid plan, never overwritten once set.
+async function syncCreatorPricing(): Promise<void> {
+  await withDbRetry(async () => {
+    const creator = await db.subscriptionPlan.findUnique({ where: { slug: "creator" } });
+    if (creator) {
+      const limits = (creator.limits ?? {}) as Record<string, unknown>;
+      const holdsOldPrices =
+        creator.monthlyPriceUsd === 8 &&
+        creator.yearlyPriceUsd === 80 &&
+        limits.aiActionsPerMonth === 200;
+      if (holdsOldPrices) {
+        const features: string[] = Array.isArray(creator.features)
+          ? creator.features
+              .filter((f): f is string => typeof f === "string")
+              .map((f) => f.replace("200 AI actions per month", "100 AI actions per month"))
+          : [];
+        await db.subscriptionPlan.update({
+          where: { slug: "creator" },
+          data: {
+            monthlyPriceUsd: 4.99,
+            yearlyPriceUsd: 49.9,
+            singleMonthPriceUsd: 5.99,
+            features,
+            limits: { ...limits, aiActionsPerMonth: 100 },
+          },
+        });
+      } else if (creator.singleMonthPriceUsd === 0) {
+        await db.subscriptionPlan.update({
+          where: { slug: "creator" },
+          data: { singleMonthPriceUsd: 5.99 },
+        });
+      }
+    }
+    const studio = await db.subscriptionPlan.findUnique({ where: { slug: "studio" } });
+    if (studio && studio.singleMonthPriceUsd === 0) {
+      await db.subscriptionPlan.update({
+        where: { slug: "studio" },
+        data: { singleMonthPriceUsd: 29 },
       });
     }
   });
@@ -329,6 +399,31 @@ export async function getUserSubscription(
     }),
   );
   if (existing) {
+    // A one-month-only term that ended returns the account to
+    // Discovery: no renewal, no charge, no lock.
+    if (
+      existing.billingCycle === "single" &&
+      existing.endsAt &&
+      existing.endsAt.getTime() <= Date.now()
+    ) {
+      const discovery = await getPlanBySlug("discovery");
+      if (!discovery) throw new Error("Discovery plan is missing");
+      const downgraded = await withDbRetry(() =>
+        db.subscription.update({
+          where: { id: existing.id },
+          data: {
+            planId: discovery.id,
+            status: "active",
+            billingCycle: "monthly",
+            source: "trial",
+            startedAt: new Date(),
+            endsAt: null,
+          },
+          include: { plan: true },
+        }),
+      );
+      return { subscription: toSubscriptionDTO(downgraded), plan: toPlanDTO(downgraded.plan) };
+    }
     return { subscription: toSubscriptionDTO(existing), plan: toPlanDTO(existing.plan) };
   }
   const discovery = await getPlanBySlug("discovery");

@@ -686,6 +686,9 @@ model SubscriptionPlan {
   description     String   @default("")
   monthlyPriceUsd Float    @default(0)
   yearlyPriceUsd  Float    @default(0)
+  // One-month-only price (fixed one-month term, no renewal): Creator
+  // $5.99, Studio $29 (Nov 2026). 0 = not offered (Discovery).
+  singleMonthPriceUsd Float @default(0)
   // Feature lines shown on the pricing page, in display order.
   features        Json     @default("[]")
   // Limits, null = unlimited: exhibitions, artworks, storageGb,

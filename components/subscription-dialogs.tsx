@@ -64,7 +64,7 @@ export function PlanChangeDialog({
 }: {
   currentPlan: PlanDTO;
   targetPlan: PlanDTO;
-  billingCycle: "monthly" | "yearly";
+  billingCycle: "monthly" | "yearly" | "single";
   paywallEnabled: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
@@ -90,9 +90,13 @@ export function PlanChangeDialog({
       ? targetPlan.monthlyPriceUsd === 0
         ? t("pricing", "free")
         : `$${targetPlan.monthlyPriceUsd} ${t("pricing", "perMonth")}`
-      : targetPlan.yearlyPriceUsd === 0
-        ? t("pricing", "free")
-        : `$${targetPlan.yearlyPriceUsd} ${t("pricing", "perYear")}`;
+      : billingCycle === "yearly"
+        ? targetPlan.yearlyPriceUsd === 0
+          ? t("pricing", "free")
+          : `$${targetPlan.yearlyPriceUsd} ${t("pricing", "perYear")}`
+        : targetPlan.singleMonthPriceUsd === 0
+          ? t("pricing", "free")
+          : `$${targetPlan.singleMonthPriceUsd} ${t("pricing", "perOneMonth")}`;
 
   return (
     <DialogShell label={t("pricing", "changePlanTitle")} onClose={onClose}>
@@ -104,6 +108,7 @@ export function PlanChangeDialog({
         <p style={{ margin: "0 0 14px", fontSize: 14 }}>
           {t("pricing", "changePlanPrice")}: <strong>{price}</strong>
         </p>
+        {billingCycle === "single" && <DialogBody text={t("pricing", "singleNoRenewal")} />}
         <DialogBody
           text={
             paywallEnabled

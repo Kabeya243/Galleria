@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-11-08T09:36:32.855Z",
+  "checks": [
+    {
+      "id": "gate-public",
+      "name": "gate: published + public is embeddable",
+      "status": "pass",
+      "detail": "status=public visibility=public -> true"
+    },
+    {
+      "id": "gate-private-link",
+      "name": "gate: private-link is refused",
+      "status": "pass",
+      "detail": "visibility=private-link -> false"
+    },
+    {
+      "id": "gate-password",
+      "name": "gate: password-protected is refused",
+      "status": "pass",
+      "detail": "visibility=password -> false"
+    },
+    {
+      "id": "gate-draft",
+      "name": "gate: draft is refused",
+      "status": "pass",
+      "detail": "status=draft -> false"
+    },
+    {
+      "id": "embed-path",
+      "name": "embed path encodes the slug",
+      "status": "pass",
+      "detail": "/embed/exhibition/<slug>"
+    },
+    {
+      "id": "embed-url",
+      "name": "embed URL joins origin and path",
+      "status": "pass",
+      "detail": "origin + path, one slash"
+    },
+    {
+      "id": "snippet-shape",
+      "name": "snippet is a plain iframe, no script",
+      "status": "pass",
+      "detail": "<iframe src=\"https://example.test/embed/exhibition/my-show\" width=\"100%\" height=\"600\" style=\"border:0\" loading=\"lazy\" allowfullscreen title=\"My Show\"></iframe>"
+    },
+    {
+      "id": "snippet-size",
+      "name": "snippet honours width/height, defaults 100% x 600",
+      "status": "pass",
+      "detail": "defaults 100% x 600, custom sizes pass through"
+    },
+    {
+      "id": "snippet-title-escape",
+      "name": "snippet escapes quotes in the title",
+      "status": "pass",
+      "detail": "title=\"Say &quot;hi&quot;\""
+    },
+    {
+      "id": "route-exists",
+      "name": "embed route exists and gates on the eligibility check",
+      "status": "pass",
+      "detail": "app/embed/exhibition/[slug]/page.tsx"
+    },
+    {
+      "id": "share-offers-embed",
+      "name": "share panel offers the embed code (public shows only)",
+      "status": "pass",
+      "detail": "exhibition-share.tsx"
+    },
+    {
+      "id": "viewer-embedded-mode",
+      "name": "public viewer has a chromeless embedded mode",
+      "status": "pass",
+      "detail": "public-exhibition.tsx"
+    },
+    {
+      "id": "i18n-embed",
+      "name": "embed strings exist in FR and EN",
+      "status": "pass",
+      "detail": "lib/i18n.ts embed section, FR + EN"
+    }
+  ]
+}

@@ -228,6 +228,7 @@ export default async function AdminRoute({
     plans,
     allSubscriptions,
     subscriptionCounts,
+    paidSubscriptions,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -420,6 +421,13 @@ export default async function AdminRoute({
       },
     }),
     db.subscription.groupBy({ by: ["planId"], _count: { _all: true } }),
+    // Active paid subscriptions, for the Sales card (MRR, paying
+    // subscribers, conversion). A separate query so the 500-row cap on
+    // the table below never skews the money numbers.
+    db.subscription.findMany({
+      where: { status: "active", plan: { slug: { not: "discovery" } } },
+      include: { plan: true },
+    }),
   ]);
 
   const userCount = userDates.length;
@@ -612,6 +620,36 @@ export default async function AdminRoute({
     count: subscriptionCounts.find((c) => c.planId === p.id)?._count._all ?? 0,
   }));
   const subscriptionMax = Math.max(...subscriptionStats.map((s) => s.count), 1);
+  // Sales (Nov 2026): real numbers from the subscription rows, never
+  // invented. MRR counts recurring terms only (monthly at full price,
+  // yearly at one twelfth); a one-month-only term is one-time revenue,
+  // not recurring. Total collected is $0 until billing is connected:
+  // every plan change today is a free trial, so nothing has been
+  // charged. Conversion is paying accounts over all accounts.
+  const salesMrr = paidSubscriptions.reduce((sum, s) => {
+    if (s.billingCycle === "monthly") return sum + s.plan.monthlyPriceUsd;
+    if (s.billingCycle === "yearly") return sum + s.plan.yearlyPriceUsd / 12;
+    return sum;
+  }, 0);
+  const salesPayingByPlan = plans
+    .filter((p) => p.slug !== "discovery")
+    .map((p) => ({
+      name: p.name,
+      count: paidSubscriptions.filter((s) => s.planId === p.id).length,
+    }));
+  const salesConversion =
+    userCount > 0 ? (paidSubscriptions.length / userCount) * 100 : 0;
+  const salesNewPaid14d = paidSubscriptions.filter(
+    (s) => s.startedAt >= fourteenDaysAgo,
+  ).length;
+  const salesPrices = plans
+    .filter((p) => p.slug !== "discovery")
+    .map(
+      (p) =>
+        `${p.name} $${p.monthlyPriceUsd}/month, $${p.yearlyPriceUsd}/year, $${p.singleMonthPriceUsd} one month`,
+    )
+    .join(" · ");
+
   const subscriptionRows = allSubscriptions.map((s) => ({
     userId: s.user.id,
     name: s.user.name,
@@ -624,6 +662,7 @@ export default async function AdminRoute({
     billingCycle: s.billingCycle,
     source: s.source,
     startedAt: s.startedAt.toISOString(),
+    endsAt: s.endsAt ? s.endsAt.toISOString() : null,
   }));
 
   const todayLabel = now.toLocaleDateString("en-GB", {
@@ -1469,6 +1508,57 @@ export default async function AdminRoute({
             </a>
           </section>
         </div>
+
+        <section className="ad-card" style={{ marginTop: 16 }}>
+          <div className="ad-card-head">
+            <div>
+              <h2>Sales</h2>
+              <p className="ad-card-sub">
+                Real subscription revenue, from the database. Nothing here is a forecast.
+              </p>
+            </div>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <div className="ad-card ad-stat">
+              <span className="ad-stat-label">Monthly recurring revenue</span>
+              <strong className="ad-stat-value">${salesMrr.toFixed(2)}</strong>
+              <span className="ad-stat-note">Recurring terms only; one-month terms excluded</span>
+            </div>
+            <div className="ad-card ad-stat">
+              <span className="ad-stat-label">Total collected</span>
+              <strong className="ad-stat-value">$0.00</strong>
+              <span className="ad-stat-note">Billing is not connected yet, nothing charged</span>
+            </div>
+            <div className="ad-card ad-stat">
+              <span className="ad-stat-label">Paying subscribers</span>
+              <strong className="ad-stat-value">{paidSubscriptions.length}</strong>
+              <span className="ad-stat-note">
+                {salesPayingByPlan.map((p) => `${p.name} ${p.count}`).join(" · ") || "No paid plan yet"}
+              </span>
+            </div>
+            <div className="ad-card ad-stat">
+              <span className="ad-stat-label">Conversion</span>
+              <strong className="ad-stat-value">{salesConversion.toFixed(1)}%</strong>
+              <span className="ad-stat-note">
+                {paidSubscriptions.length} paying of {userCount} accounts
+              </span>
+            </div>
+            <div className="ad-card ad-stat">
+              <span className="ad-stat-label">New paid, last 14 days</span>
+              <strong className="ad-stat-value">{salesNewPaid14d}</strong>
+              <span className="ad-stat-note">Paid plans started in the last 14 days</span>
+            </div>
+          </div>
+          <p style={{ margin: "16px 0 0", fontSize: 14, lineHeight: 1.6 }}>
+            Current prices: {salesPrices}
+          </p>
+        </section>
         <AdminSubscriptions plans={plans} subscriptions={subscriptionRows} canManage={canManageSubscriptions} />
       </section>
       )}

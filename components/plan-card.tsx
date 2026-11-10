@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PlanChangeDialog } from "@/components/subscription-dialogs";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
 import type { PlanDTO, SubscriptionDTO } from "@/lib/subscriptions";
 
 // "My plan" card (Nov 2026): the account's current plan and its usage
@@ -18,6 +18,7 @@ type MeResponse = {
 
 export default function PlanCard() {
   const t = useT();
+  const { locale } = useLocale();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [plans, setPlans] = useState<PlanDTO[]>([]);
   const [targetSlug, setTargetSlug] = useState<string | null>(null);
@@ -53,7 +54,11 @@ export default function PlanCard() {
   const others = plans.filter((p) => p.slug !== me.plan.slug && p.isActive);
   const target = others.find((p) => p.slug === targetSlug) ?? others[0] ?? null;
   const billingCycle =
-    me.subscription.billingCycle === "yearly" ? "yearly" as const : "monthly" as const;
+    me.subscription.billingCycle === "yearly"
+      ? ("yearly" as const)
+      : me.subscription.billingCycle === "single"
+        ? ("single" as const)
+        : ("monthly" as const);
 
   async function confirmChange() {
     const res = await fetch("/api/subscriptions/change", {
@@ -86,6 +91,12 @@ export default function PlanCard() {
     >
       <h2 style={{ margin: "0 0 4px", fontSize: 17 }}>{t("pricing", "myPlan")}</h2>
       <p style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700 }}>{me.plan.name}</p>
+      {me.subscription.billingCycle === "single" && me.subscription.endsAt && (
+        <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--muted)" }}>
+          {t("pricing", "singleEnds")}{" "}
+          {new Date(me.subscription.endsAt).toLocaleDateString(locale)}
+        </p>
+      )}
       <dl style={{ margin: "0 0 16px", display: "grid", gap: 8 }}>
         {usageRows.map((row) => (
           <div

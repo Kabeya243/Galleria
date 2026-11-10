@@ -17,6 +17,7 @@ export type AdminSubscriptionRow = {
   billingCycle: string;
   source: string;
   startedAt: string;
+  endsAt: string | null;
 };
 
 function formatLimit(value: number | null): string {
@@ -60,6 +61,7 @@ export default function AdminSubscriptions({
     description: "",
     monthly: "",
     yearly: "",
+    single: "",
     features: "",
     exhibitions: "",
     artworks: "",
@@ -114,6 +116,7 @@ export default function AdminSubscriptions({
       description: plan.description,
       monthly: String(plan.monthlyPriceUsd),
       yearly: String(plan.yearlyPriceUsd),
+      single: String(plan.singleMonthPriceUsd),
       features: plan.features.join("\n"),
       exhibitions: plan.limits.exhibitions === null ? "" : String(plan.limits.exhibitions),
       artworks: plan.limits.artworks === null ? "" : String(plan.limits.artworks),
@@ -130,7 +133,15 @@ export default function AdminSubscriptions({
     if (!editingPlan) return;
     const monthly = Number(editForm.monthly);
     const yearly = Number(editForm.yearly);
-    if (!Number.isFinite(monthly) || monthly < 0 || !Number.isFinite(yearly) || yearly < 0) {
+    const single = Number(editForm.single);
+    if (
+      !Number.isFinite(monthly) ||
+      monthly < 0 ||
+      !Number.isFinite(yearly) ||
+      yearly < 0 ||
+      !Number.isFinite(single) ||
+      single < 0
+    ) {
       setEditError("Prices must be numbers, zero or more.");
       return;
     }
@@ -163,6 +174,7 @@ export default function AdminSubscriptions({
           description: editForm.description.trim(),
           monthlyPriceUsd: monthly,
           yearlyPriceUsd: yearly,
+          singleMonthPriceUsd: single,
           features: editForm.features
             .split("\n")
             .map((line) => line.trim())
@@ -203,6 +215,7 @@ export default function AdminSubscriptions({
               <th>Plan</th>
               <th>Monthly</th>
               <th>Yearly</th>
+              <th>One month</th>
               <th>Exhibitions</th>
               <th>Artworks</th>
               <th>Storage</th>
@@ -221,6 +234,7 @@ export default function AdminSubscriptions({
                 </td>
                 <td>${plan.monthlyPriceUsd}</td>
                 <td>${plan.yearlyPriceUsd}</td>
+                <td>${plan.singleMonthPriceUsd}</td>
                 <td>{formatLimit(plan.limits.exhibitions)}</td>
                 <td>{formatLimit(plan.limits.artworks)}</td>
                 <td>{plan.limits.storageGb === null ? "Unlimited" : `${plan.limits.storageGb} GB`}</td>
@@ -290,6 +304,17 @@ export default function AdminSubscriptions({
                   step="0.01"
                   value={editForm.yearly}
                   onChange={(e) => setEditForm({ ...editForm, yearly: e.target.value })}
+                  required
+                />
+              </label>
+              <label style={{ display: "grid", gap: 4, fontSize: 14, flex: 1 }}>
+                One-month price (USD)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.single}
+                  onChange={(e) => setEditForm({ ...editForm, single: e.target.value })}
                   required
                 />
               </label>
@@ -398,7 +423,17 @@ export default function AdminSubscriptions({
                     <span style={{ color: "var(--muted)", fontSize: 12 }}>{row.source}</span>
                   </td>
                   <td>{row.status}</td>
-                  <td>{row.billingCycle}</td>
+                  <td>
+                    {row.billingCycle}
+                    {row.endsAt && (
+                      <>
+                        <br />
+                        <span style={{ color: "var(--muted)", fontSize: 12 }}>
+                          ends {new Date(row.endsAt).toLocaleDateString("en-GB")}
+                        </span>
+                      </>
+                    )}
+                  </td>
                   <td>{new Date(row.startedAt).toLocaleDateString("en-GB")}</td>
                   {canManage && (
                     <td>

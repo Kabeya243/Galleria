@@ -4,6 +4,7 @@ import ExplorePage, { type ExploreExhibition } from "@/components/explore-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
+import { toServingImageUrl } from "@/lib/r2";
 
 export const metadata = {
   title: "Explore: Lakisa",
@@ -18,17 +19,18 @@ function countRooms(value: string): number {
   }
 }
 
-// Every public exhibition by OTHER people — when signed in, the viewer's
-// own exhibitions are left out, so Explore is where you discover others.
-async function findOtherPublicExhibitions(viewerId?: string): Promise<ExploreExhibition[]> {
+// Every public exhibition on the platform — including the viewer's
+// own. Explore is the public list, so a public exhibition must be
+// visible here whoever looks at it (the old owner exclusion hid your
+// own public shows from you, which read as a bug in testing).
+async function findPublicExhibitions(): Promise<ExploreExhibition[]> {
   const exhibitions = await db.exhibition.findMany({
     where: {
       status: "public",
       visibility: "public",
-      ...(viewerId ? { ownerId: { not: viewerId } } : {}),
     },
     include: {
-      owner: { select: { name: true } },
+      owner: { select: { id: true, name: true } },
       _count: { select: { artworks: true } },
       artworks: { select: { imageUrl: true }, orderBy: { createdAt: "asc" }, take: 1 },
     },
@@ -39,16 +41,17 @@ async function findOtherPublicExhibitions(viewerId?: string): Promise<ExploreExh
     title: exhibition.title,
     slug: exhibition.slug,
     artistName: exhibition.owner.name,
+    ownerId: exhibition.owner.id,
     roomCount: countRooms(exhibition.rooms),
     artworkCount: exhibition._count.artworks,
     views: exhibition.views,
-    coverImageUrl: exhibition.artworks[0]?.imageUrl ?? null,
+    coverImageUrl: toServingImageUrl(exhibition.artworks[0]?.imageUrl),
   }));
 }
 
 export default async function ExploreRoute() {
   const user = await getCurrentUser();
-  const exhibitions = await findOtherPublicExhibitions(user?.id);
+  const exhibitions = await findPublicExhibitions();
   const ownExhibitionCount = user ? await db.exhibition.count({ where: { ownerId: user.id } }) : 0;
   return <ExplorePage user={user} exhibitions={exhibitions} ownExhibitionCount={ownExhibitionCount} />;
 }

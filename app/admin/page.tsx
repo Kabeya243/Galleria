@@ -155,6 +155,26 @@ export default async function AdminRoute({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { user, access } = await requireAdminAccess();
+  // Signed-in but not an admin: a clean access-denied panel, rendered
+  // here before any of the 29 data queries run, instead of a redirect
+  // to a dashboard that may itself be having a bad minute.
+  if (!access.isManager && !access.isSubAdmin) {
+    return (
+      <main className="ad-root">
+        <div className="ad-denied">
+          <h1>Admin access required</h1>
+          <p>
+            This area is for the Lakisa manager and sub-admins. You are
+            signed in as {user.name ?? user.email}, and this account does
+            not have admin access.
+          </p>
+          <Link href="/" className="ad-denied-link">
+            Back to your dashboard
+          </Link>
+        </div>
+      </main>
+    );
+  }
   // Section gates for sub-admins (the manager holds every permission,
   // so every section shows for him). The sections below only render
   // when the permission is held — the data never leaves the server

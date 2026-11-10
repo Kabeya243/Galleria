@@ -3,6 +3,7 @@ import ExhibitionsPage, { type OwnExhibition } from "@/components/exhibitions-pa
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
+import { toServingImageUrl } from "@/lib/r2";
 
 export const metadata = {
   title: "Exhibitions: Lakisa",
@@ -35,7 +36,7 @@ async function findOwnExhibitions(ownerId: string): Promise<OwnExhibition[]> {
     roomCount: countRooms(exhibition.rooms),
     artworkCount: exhibition._count.artworks,
     views: exhibition.views,
-    coverImageUrl: exhibition.artworks[0]?.imageUrl ?? null,
+    coverImageUrl: toServingImageUrl(exhibition.artworks[0]?.imageUrl),
     updatedAt: exhibition.updatedAt.toISOString(),
   }));
 }

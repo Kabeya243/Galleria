@@ -45,10 +45,5 @@ export function getR2Client(): S3Client {
   });
 }
 
-// The public URL of an artwork stored in R2. The key is always under
-// uploads/<userId>/<uuid>.<ext>, so a stored image URL is easy to recognise.
-export function isR2ImageUrl(url: string): boolean {
-  const base = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
-  if (!base) return false;
-  return url.startsWith(`${base}/uploads/`);
-}
+// Pure URL helpers live in lib/r2-urls.ts (client-safe, no AWS SDK).
+export { isR2ImageUrl, r2KeyFromUrl, toServingImageUrl } from "./r2-urls";

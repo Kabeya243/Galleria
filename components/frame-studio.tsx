@@ -50,11 +50,15 @@ type SavedFramePreset = {
 export default function FrameStudio({
   artworks,
   initialArtworkId,
+  onFrameSaved,
 }: {
   artworks: FrameStudioArtwork[];
   // Deep-link context (Art in Context step 4): open with this artwork
   // already selected instead of the first work in the library.
   initialArtworkId?: string;
+  // Called after a frame is saved, so the parent can hand the new
+  // frame to the Art on Walls tab live (bug 6).
+  onFrameSaved?: (artworkId: string, frame: string) => void;
 }) {
   const initialSelected = artworks.find((a) => a.id === initialArtworkId) ?? artworks[0];
   const [selectedId, setSelectedId] = useState(initialSelected?.id ?? "");
@@ -146,6 +150,7 @@ export default function FrameStudio({
       }
       setSavedFrame(frameValue);
       setSaveState("saved");
+      onFrameSaved?.(selected.id, frameValue);
     } catch (error) {
       setSaveState("error");
       setSaveError(error instanceof Error ? error.message : "Could not save this frame.");

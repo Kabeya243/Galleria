@@ -483,17 +483,33 @@
   gap: 24px;
 }
 
+/* Theme-aware by default: this card is shared by the landing and by
+   light-theme pages (/exhibitions, /explore, /artworks, dashboard).
+   The old hardcoded near-black background made the inherited dark
+   text unreadable (black on black) on those pages. The landing keeps
+   its dark card through the .page override below. */
 .card {
   display: block;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--line);
   border-radius: 18px;
-  background: #050505;
+  background: var(--surface-3);
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .card:hover {
   transform: translateY(-3px);
+  border-color: var(--line);
+}
+
+/* The public home is a dark page by design (.page is black), so its
+   cards keep the dark background and white text there. */
+.page .card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #050505;
+}
+
+.page .card:hover {
   border-color: rgba(255, 255, 255, 0.38);
 }
 
@@ -524,7 +540,7 @@
 
 .cardTitle {
   display: block;
-  color: #ffffff;
+  color: var(--ink);
   font-family: var(--font-display), Georgia, serif;
   font-weight: 600;
   font-size: 19px;
@@ -532,12 +548,16 @@
   overflow-wrap: break-word;
 }
 
+.page .cardTitle { color: #ffffff; }
+
 .cardArtist {
   display: block;
   margin-top: 5px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--muted);
   font-size: 13px;
 }
+
+.page .cardArtist { color: rgba(255, 255, 255, 0.6); }
 
 .cardMeta {
   display: flex;
@@ -551,11 +571,16 @@
   align-items: center;
   gap: 6px;
   padding: 6px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
   font-size: 11px;
   font-weight: 600;
+}
+
+.page .cardMeta span {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .emptyState {

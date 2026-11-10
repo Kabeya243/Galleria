@@ -42,7 +42,17 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const servingUrl = `/api/r2/${objectKey}`;
   const publicUrl = r2PublicUrl(objectKey);
   const artwork = await db.artwork.findFirst({
-    where: { OR: [{ imageUrl: servingUrl }, { imageUrl: publicUrl }] },
+    where: {
+      OR: [
+        { imageUrl: servingUrl },
+        { imageUrl: publicUrl },
+        // A stored public URL from an older R2 host still ends with the
+        // same key, so match the suffix instead of the exact host — a
+        // public exhibition's cover used to 404 here for visitors when
+        // the host had changed, and the card showed a black box.
+        { imageUrl: { endsWith: `/${objectKey}` } },
+      ],
+    },
     select: { exhibition: { select: { status: true, ownerId: true } } },
   });
   let isPublic = false;

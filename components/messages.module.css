@@ -94,6 +94,10 @@
 .body {
   flex: 1;
   min-width: 0;
+  /* Stack the context line and the snippet: without a column flex
+     the two inline spans ran together on one line ("About ...Hello"). */
+  display: flex;
+  flex-direction: column;
 }
 
 .top {

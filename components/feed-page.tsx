@@ -8,6 +8,8 @@ import PublicNav from "@/components/public-nav";
 import ThemeToggle from "@/components/theme-toggle";
 import { LOCALE_TAGS, useLocale, useT, type Locale } from "@/lib/i18n";
 import styles from "./feed-page.module.css";
+import { handleCoverImageError } from "@/lib/image-fallback";
+import { toServingImageUrl } from "@/lib/r2-urls";
 
 // Publication feed (/feed) — adapted from the standalone scaffold
 // (drive-homepage-explore/src/app/galleries/feed.tsx): same behaviour
@@ -142,7 +144,7 @@ function FeedList() {
           const artistName = post.artist.name ?? "";
           return (
             <article key={post.id} className={styles.post}>
-              <img src={post.coverImageUrl} alt={post.title} className={styles.cover} loading="lazy" />
+              <img src={toServingImageUrl(post.coverImageUrl) ?? post.coverImageUrl} alt={post.title} className={styles.cover} loading="lazy" onError={handleCoverImageError} />
               <div className={styles.postBody}>
                 <div className={styles.artistRow}>
                   {post.artist.avatarUrl ? (

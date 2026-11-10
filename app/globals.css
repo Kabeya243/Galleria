@@ -1401,7 +1401,7 @@ button { font-weight: 600; }
 .gallery-card-preview-button { display: block; width: 100%; padding: 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; cursor: pointer; }
 .gallery-card-preview { display: block; width: 100%; height: auto; }
 .gallery-card-body { padding: 8px 10px 10px; }
-.gallery-card-body h3 { margin: 0 0 3px; font: 600 13px/1.25 var(--font-display), Georgia, serif; }
+.gallery-card-body h3 { margin: 0 0 3px; color: var(--ink); font: 600 13px/1.25 var(--font-display), Georgia, serif; }
 .gallery-card-body p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .gallery-card-body p:first-of-type { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .gallery-card-finishes { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1473,6 +1473,29 @@ html:has(.ad-root), html:has(.ad-root) body { overflow-y: auto; }
 /* Collapsed sidebar: a narrow icon-only rail. The width lives in a
    variable so the sidebar and the content move together, smoothly. */
 html[data-admin-collapsed="true"] .ad-root { --ad-sidebar-w: 72px; }
+
+/* Access-denied panel (signed-in, not an admin): a plain centered card
+   inside the admin shell, instead of a redirect that read as a crash. */
+.ad-denied {
+  margin: auto;
+  max-width: 480px;
+  padding: 40px 32px;
+  background: var(--ad-card);
+  border: 1px solid var(--ad-border);
+  border-radius: 12px;
+  text-align: center;
+}
+.ad-denied h1 { font-size: 20px; margin: 0 0 12px; }
+.ad-denied p { color: var(--ad-muted); line-height: 1.6; margin: 0 0 24px; }
+.ad-denied-link {
+  display: inline-block;
+  padding: 10px 18px;
+  background: var(--ad-btn-bg);
+  color: var(--ad-btn-ink);
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+}
 
 html[data-admin-theme="light"] .ad-root {
   --ad-bg: #f4f5f7;

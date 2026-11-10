@@ -99,7 +99,11 @@ export async function syncPublicationFeed(
   fetchFn: typeof fetch = fetch,
   options: { timeoutMs?: number } = {},
 ): Promise<FeedSyncResult> {
-  const timeoutMs = options.timeoutMs ?? 5000;
+  // 15 s: the Python feed function cold-starts on Vercel and a 5 s
+  // timeout aborted the webhook before it could answer, so a publish
+  // silently never reached the feed. The webhook is fail-soft, so a
+  // slow call only delays the publish response a little.
+  const timeoutMs = options.timeoutMs ?? 15000;
   const { exhibitionId, authorId, status, visibility, publishToFeed, coverImageUrl, baseUrl } = input;
   if (!input.internalKey) {
     console.warn("[feed] SOCIAL_INTERNAL_API_KEY is not set — skipping feed sync.");

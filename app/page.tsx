@@ -1,8 +1,9 @@
 import Dashboard from "@/components/dashboard";
 import PublicHome, { type FeaturedPreview, type PublicHomeExhibition } from "@/components/public-home";
 import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, withDbRetry } from "@/lib/db";
 import { parseGalleryRooms } from "@/lib/rooms";
+import { toServingImageUrl } from "@/lib/r2";
 import { getExhibitionAnalytics } from "@/lib/visitor-analytics-server";
 
 function countRooms(value: string): number {
@@ -35,7 +36,7 @@ async function findPublicExhibitions(): Promise<PublicHomeExhibition[]> {
     roomCount: countRooms(exhibition.rooms),
     artworkCount: exhibition._count.artworks,
     views: exhibition.views,
-    coverImageUrl: exhibition.artworks[0]?.imageUrl ?? null,
+    coverImageUrl: toServingImageUrl(exhibition.artworks[0]?.imageUrl),
   }));
 }
 
@@ -96,25 +97,35 @@ export default async function HomePage({
 }) {
   const user = await getCurrentUser();
   if (!user) {
-    const [exhibitions, featured] = await Promise.all([
-      findPublicExhibitions(),
-      findFeaturedPreview(),
-    ]);
+    const [exhibitions, featured] = await withDbRetry(() =>
+      Promise.all([findPublicExhibitions(), findFeaturedPreview()]),
+    );
     return <PublicHome exhibitions={exhibitions} featured={featured} />;
   }
 
   const { exhibitionId } = await searchParams;
 
-  const exhibitions = await db.exhibition.findMany({
-    where: { ownerId: user.id },
-    include: {
-      artworks: { select: { id: true, createdAt: true }, orderBy: { createdAt: "desc" } },
-      _count: { select: { artworks: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  // Retried: a transient connection failure here used to take the
+  // whole dashboard down with an "Application error" page.
+  const exhibitions = await withDbRetry(() =>
+    db.exhibition.findMany({
+      where: { ownerId: user.id },
+      include: {
+        artworks: {
+          select: { id: true, createdAt: true, imageUrl: true },
+          orderBy: { createdAt: "desc" },
+        },
+        _count: { select: { artworks: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+  );
   const artworks = exhibitions.flatMap((exhibition) => exhibition.artworks);
-  const artworkCount = artworks.length;
+  // Distinct works, not placements: one library item can sit in several
+  // exhibitions, and the count used to jump when an existing work was
+  // added to a show. Same rule as the artwork library (media URL,
+  // falling back to the row id when there is no image).
+  const artworkCount = new Set(artworks.map((a) => a.imageUrl ?? `id:${a.id}`)).size;
   const viewCount = exhibitions.reduce((count, exhibition) => count + exhibition.views, 0);
   const publicExhibitions = exhibitions.filter((exhibition) => exhibition.status === "public");
 
@@ -178,7 +189,7 @@ export default async function HomePage({
   const selectedAnalytics =
     analyticsExhibitions.find((e) => e.id === exhibitionId) ?? analyticsExhibitions[0] ?? null;
   const analytics = selectedAnalytics
-    ? await getExhibitionAnalytics(selectedAnalytics.id)
+    ? await withDbRetry(() => getExhibitionAnalytics(selectedAnalytics.id)).catch(() => null)
     : null;
 
   return (

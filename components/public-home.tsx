@@ -24,6 +24,7 @@ import BrandLogo from "@/components/brand-logo";
 import SiteFooter from "@/components/site-footer";
 import HeroGalleryPreview, { type HeroPreviewArtwork } from "@/components/hero-gallery-preview";
 import { useT } from "@/lib/i18n";
+import { handleCoverImageError } from "@/lib/image-fallback";
 import styles from "./public-home.module.css";
 
 // The tools listed in the "Resources" dropdown — the same tools as the
@@ -383,6 +384,7 @@ export default function PublicHome({
                     alt=""
                     className={styles.cover}
                     loading="lazy"
+                    onError={handleCoverImageError}
                   />
                 ) : (
                   <span className={styles.coverFallback}>LAKISA</span>

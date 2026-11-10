@@ -5,6 +5,7 @@ import { Check, Plus, Search, Trash2 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import { useT } from "@/lib/i18n";
+import { handleCoverImageError } from "@/lib/image-fallback";
 import type { LibraryWorkItem } from "@/lib/library";
 import {
   DirectUploadFailedError,
@@ -340,6 +341,7 @@ export default function LibraryPage({
                         alt={work.altText ?? work.title}
                         className={styles.cover}
                         loading="lazy"
+                        onError={handleCoverImageError}
                       />
                     ) : work.sculptureUrl ? (
                       <span

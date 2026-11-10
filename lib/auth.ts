@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { db } from "@/lib/db";
+import { db, withDbRetry } from "@/lib/db";
 import { getUserProfile } from "@/lib/profile";
 import { parsePalette } from "@/lib/palette";
 
@@ -67,20 +67,24 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const [user, profile, subAdmin] = await Promise.all([
-    db.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, name: true, role: true, country: true },
-    }),
-    // Profile extras (avatar photo + bio) live in a SavedWork row, not on
-    // the User table — see lib/profile.ts. One indexed query, merged here
-    // so every page sees user.avatarUrl / user.bio.
-    getUserProfile(userId),
-    // Sub-admin grant (Nov 2026): one indexed lookup, so the sidebar can
-    // show the Admin link to sub-admins too. The grant is read fresh on
-    // every call, so a revoke takes effect immediately.
-    db.subAdmin.findUnique({ where: { userId }, select: { id: true } }),
-  ]);
+  // Retried: a transient connection failure here used to take down
+  // every page that calls getCurrentUser (the dashboard included).
+  const [user, profile, subAdmin] = await withDbRetry(() =>
+    Promise.all([
+      db.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true, role: true, country: true },
+      }),
+      // Profile extras (avatar photo + bio) live in a SavedWork row, not on
+      // the User table — see lib/profile.ts. One indexed query, merged here
+      // so every page sees user.avatarUrl / user.bio.
+      getUserProfile(userId),
+      // Sub-admin grant (Nov 2026): one indexed lookup, so the sidebar can
+      // show the Admin link to sub-admins too. The grant is read fresh on
+      // every call, so a revoke takes effect immediately.
+      db.subAdmin.findUnique({ where: { userId }, select: { id: true } }),
+    ]),
+  );
   if (!user) return null;
   // Carried on the user object so every page can show the Admin link
   // without threading a separate prop through the whole app.

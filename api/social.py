@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 from datetime import datetime, timezone
+from functools import lru_cache
 import hmac
 import json
 import logging
@@ -14,7 +15,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Respons
 from fastapi.responses import JSONResponse
 from jwt import PyJWTError
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, field_validator, model_validator
-from sqlalchemy import and_, delete, exists, func, literal, or_, select
+from sqlalchemy import MetaData, Table, and_, delete, exists, func, inspect, literal, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -128,12 +129,118 @@ def _viewer_id(request: Request, db: Session) -> str | None:
     return user_id
 
 
+def _request_origin(request: Request) -> str:
+    """Public origin of the incoming request (for absolute cover URLs)."""
+    host = request.headers.get("host", "")
+    if not host:
+        return ""
+    proto = request.headers.get("x-forwarded-proto", "")
+    if not proto:
+        proto = "http" if host.startswith(("localhost", "127.0.0.1")) else "https"
+    return f"{proto}://{host}"
+
+
+def _absolute_cover(raw: str | None, origin: str) -> str | None:
+    """Cover URL as absolute HTTPS (same rule as the publish webhook)."""
+    if not raw:
+        return None
+    if raw.startswith("https://"):
+        return raw
+    if raw.startswith("/") and origin:
+        return f"{origin}{raw}"
+    return None
+
+
+@lru_cache(maxsize=8)
+def _reflect_artwork(engine):
+    """Reflected Artwork table (first artwork image = feed cover)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("Artwork"):
+            return None
+        metadata = MetaData()
+        return Table("Artwork", metadata, autoload_with=engine)
+    except SQLAlchemyError:
+        return None
+
+
+def _reconcile_feed_posts(db: Session, request: Request) -> None:
+    """Self-healing feed: create a Post for every public exhibition
+    that has a cover image but no Post row yet. The publish webhook
+    is the fast path, but it is fail-soft (missing key, timeout, cold
+    start), so a public exhibition could otherwise never reach the
+    feed and /feed would stay empty. Idempotent, and never raises:
+    a failure is logged and the feed still renders from the Post
+    rows that exist."""
+    try:
+        exhibition, _user, fields = get_sources(db)
+        artwork_table = _reflect_artwork(db.get_bind())
+        if artwork_table is None:
+            return
+        origin = _request_origin(request)
+        id_col = fields["exhibition_id"]
+        owner_col = fields["exhibition_author"]
+        published_at_col = exhibition.c.get("publishedAt")
+        columns = [id_col, owner_col]
+        if published_at_col is not None:
+            columns.append(published_at_col)
+        public_rows = db.execute(select(*columns).where(published_filter(fields))).all()
+        if not public_rows:
+            return
+        existing = {row[0] for row in db.execute(select(Post.exhibitionId)).all()}
+        img_col = artwork_table.c.get("imageUrl")
+        exh_col = artwork_table.c.get("exhibitionId")
+        created_col = artwork_table.c.get("createdAt")
+        if img_col is None or exh_col is None:
+            return
+        order = [exh_col]
+        if created_col is not None:
+            order.append(created_col.asc())
+        art_rows = db.execute(
+            select(exh_col, img_col).where(img_col.is_not(None)).order_by(*order)
+        ).all()
+        cover_by_exhibition: dict[str, str] = {}
+        for row in art_rows:
+            if row[0] not in cover_by_exhibition and row[1]:
+                cover_by_exhibition[row[0]] = row[1]
+        to_create = []
+        for row in public_rows:
+            ex_id = row[0]
+            if ex_id in existing:
+                continue
+            cover = _absolute_cover(cover_by_exhibition.get(ex_id), origin)
+            if not cover:
+                continue
+            created_at = row[2] if len(row) > 2 and row[2] is not None else datetime.now(timezone.utc)
+            to_create.append(
+                Post(exhibitionId=ex_id, authorId=row[1], coverImageUrl=cover, isVisible=True, createdAt=created_at)
+            )
+        if to_create:
+            db.add_all(to_create)
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+    except Exception:
+        logger.exception("Feed reconciliation failed; serving the feed from existing posts.")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
 @router.get("/feed")
 def read_feed(
     request: Request,
     cursor: str | None = None,
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    # Self-healing: a public exhibition reaches the feed through the
+    # publish webhook, but that webhook is fail-soft (missing key,
+    # timeout, cold start), so a public exhibition could otherwise
+    # never get a Post row and the feed would stay empty. Reconcile
+    # first: it only ever creates the missing rows and never raises.
+    _reconcile_feed_posts(db, request)
     exhibition, user, fields = get_sources(db)
     title = fields["exhibition_title"]
     slug = fields["exhibition_slug"]

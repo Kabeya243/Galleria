@@ -3021,6 +3021,7 @@ export const DICTIONARY = {
       sw: "Tembelea onyesho",
       ln: "Kotala bimiseli",
     },
+    sendMessage: { fr: "Envoyer un message", en: "Send a message" },
     visit: { fr: "Visiter", en: "Visit",
       de: "Besuchen",
       it: "Visita",

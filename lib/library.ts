@@ -1,3 +1,4 @@
+import { toServingImageUrl } from "@/lib/r2";
 import { db } from "@/lib/db";
 
 // Shared library helpers ("Mes œuvres"): the reusable artwork library
@@ -57,7 +58,9 @@ export type LibraryArtworkFields = {
 // URL for an image work. Null only for a work with no media at all (a
 // text panel), which is never a library work.
 function mediaUrlOf(artwork: { imageUrl?: string | null; videoUrl?: string | null; sculptureUrl?: string | null }): string | null {
-  return artwork.sculptureUrl ?? artwork.videoUrl ?? artwork.imageUrl ?? null;
+  // The image goes through the same-origin serving URL (see lib/r2.ts):
+  // a stored R2 public URL from an older host would otherwise 404.
+  return artwork.sculptureUrl ?? artwork.videoUrl ?? toServingImageUrl(artwork.imageUrl) ?? null;
 }
 
 function parsePalette(value: string | null | undefined): string[] | null {

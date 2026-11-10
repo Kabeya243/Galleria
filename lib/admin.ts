@@ -85,16 +85,17 @@ export function isAdminUser(user: { email: string } | null | undefined): boolean
 }
 
 // The admin page gate: manager or sub-admin (with at least one
-// permission). Anyone else is sent to the dashboard, not to a page
-// that reveals an admin area exists.
+// permission). A signed-in user without access gets NO_ACCESS and the
+// page renders a clean access-denied panel instead of a redirect —
+// the old redirect to "/" read as a crash when the dashboard itself
+// was flaky. Only signed-out visitors are redirected (to /login).
 export async function requireAdminAccess(): Promise<{
   user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
   access: AdminAccess;
 }> {
   const user = await getCurrentUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/login");
   const access = await getAdminAccess(user);
-  if (!access.isManager && !access.isSubAdmin) redirect("/");
   return { user, access };
 }
 

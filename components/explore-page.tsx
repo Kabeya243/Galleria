@@ -8,8 +8,9 @@ import PublicNav from "@/components/public-nav";
 import ThemeToggle from "@/components/theme-toggle";
 import styles from "./public-home.module.css";
 import { useT } from "@/lib/i18n";
+import { handleCoverImageError } from "@/lib/image-fallback";
 
-// Explore: the public exhibitions of OTHER people. Signed-in users see it
+// Explore: the public exhibitions. Signed-in users see it
 // inside their workspace (sidebar), visitors see the public header —
 // either way the grid is the same list of exhibitions to walk through.
 export type ExploreExhibition = {
@@ -17,13 +18,14 @@ export type ExploreExhibition = {
   title: string;
   slug: string;
   artistName: string;
+  ownerId: string;
   roomCount: number;
   artworkCount: number;
   views: number;
   coverImageUrl: string | null;
 };
 
-function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
+function ExhibitionGrid({ exhibitions, viewerId }: { exhibitions: ExploreExhibition[]; viewerId?: string | null }) {
   const t = useT();
   return (
     <section className="galleries-grid" id="exhibitions">
@@ -49,6 +51,7 @@ function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
                   alt={exhibition.title}
                   className={styles.cover}
                   loading="lazy"
+                  onError={handleCoverImageError}
                 />
               ) : (
                 <span className={styles.coverFallback}>LAKISA</span>
@@ -68,6 +71,15 @@ function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
                 <Link href={`/exhibition/${exhibition.slug}`} className="galleries-open-button">
                   {t("explore", "visitExhibition")} <ArrowUpRight size={14} />
                 </Link>
+                {viewerId && viewerId !== exhibition.ownerId && (
+                  <Link
+                    href={`/messages/new?to=${encodeURIComponent(exhibition.ownerId)}&exhibitionId=${encodeURIComponent(exhibition.id)}`}
+                    className="galleries-open-button"
+                    style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--line)" }}
+                  >
+                    {t("explore", "sendMessage")}
+                  </Link>
+                )}
               </div>
             </div>
           </article>
@@ -111,7 +123,7 @@ export default function ExplorePage({
           <p>{t("explore", "copyPublic")}</p>
         </section>
 
-        <ExhibitionGrid exhibitions={exhibitions} />
+        <ExhibitionGrid exhibitions={exhibitions} viewerId={null} />
 
         <footer className={styles.homeFooter}>
           <span>{t("common", "footerRights")}</span>
@@ -145,7 +157,7 @@ export default function ExplorePage({
             </div>
           </section>
 
-          <ExhibitionGrid exhibitions={exhibitions} />
+          <ExhibitionGrid exhibitions={exhibitions} viewerId={user.id} />
         </div>
       </section>
     </main>

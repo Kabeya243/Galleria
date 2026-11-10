@@ -1207,13 +1207,17 @@ export default function MockupStudio({
   }, []);
 
   // Open with the selected artwork's saved frame (when it names a
-  // built-in style), instead of always defaulting to wood. Runs when the
-  // artwork changes, never while the user is picking a frame.
-  const lastFrameSyncArtId = useRef<string | null>(null);
+  // built-in style), instead of always defaulting to wood. Runs when
+  // the artwork changes OR when its saved frame changes (a frame saved
+  // in the Frames tab must land here live), never while the user is
+  // picking a frame in this view.
+  const lastFrameSync = useRef<string | null>(null);
   useEffect(() => {
     const art = selectedArts[0];
-    if (!art || art.id === lastFrameSyncArtId.current) return;
-    lastFrameSyncArtId.current = art.id;
+    if (!art) return;
+    const syncKey = `${art.id}:${art.frame ?? ""}`;
+    if (syncKey === lastFrameSync.current) return;
+    lastFrameSync.current = syncKey;
     if (art.frame && art.frame in FRAME_VARIANTS) update({ frame: art.frame as FrameVariant });
   }, [selectedArts, update]);
 

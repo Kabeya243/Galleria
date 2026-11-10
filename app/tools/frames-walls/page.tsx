@@ -44,6 +44,17 @@ export default async function FramesWallsRoute({
     }),
   ]);
 
+  // One entry per work, not per placement: the same image can sit in
+  // several exhibitions, and the selector used to list it twice (the
+  // first row wins, most recently created first).
+  const seen = new Set<string>();
+  const distinctArtworks = artworks.filter((a) => {
+    const key = a.imageUrl ?? `title:${a.title}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   return (
     <ToolsShell
       user={user}
@@ -52,7 +63,7 @@ export default async function FramesWallsRoute({
       eyebrow="framesWallsEyebrow"
       description="framesWallsDesc"
     >
-      {artworks.length === 0 ? (
+      {distinctArtworks.length === 0 ? (
         <div className={styles.emptyBox}>
           <strong>No artworks yet.</strong>
           <p>Open an exhibition in the editor and add your first work, it will show up here as soon as it exists.</p>
@@ -64,7 +75,7 @@ export default async function FramesWallsRoute({
         <FramesWallsTool
           initialArtworkId={artworkId}
           initialView={view === "walls" ? "walls" : "frames"}
-          artworks={artworks.map((a) => ({
+          artworks={distinctArtworks.map((a) => ({
             id: a.id,
             title: a.title,
             medium: a.medium,

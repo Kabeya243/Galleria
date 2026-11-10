@@ -24,6 +24,15 @@ export default function FramesWallsTool({
   initialView?: "frames" | "walls";
 }) {
   const [view, setView] = useState<"frames" | "walls">(initialView ?? "frames");
+  // The artworks live here so a frame saved in the Frames tab reaches
+  // the Art on Walls tab live (bug 6): the server prop is frozen, so
+  // without this state the wall view kept the old frame until reload.
+  const [liveArtworks, setLiveArtworks] = useState(artworks);
+  const handleFrameSaved = (artworkId: string, frame: string) => {
+    setLiveArtworks((current) =>
+      current.map((a) => (a.id === artworkId ? { ...a, frame } : a)),
+    );
+  };
 
   return (
     <div>
@@ -59,12 +68,12 @@ export default function FramesWallsTool({
       </div>
 
       <div role="tabpanel" aria-label="Frames" style={{ display: view === "frames" ? "" : "none" }}>
-        <FrameStudio artworks={artworks} initialArtworkId={initialArtworkId} />
+        <FrameStudio artworks={liveArtworks} initialArtworkId={initialArtworkId} onFrameSaved={handleFrameSaved} />
       </div>
       <div role="tabpanel" aria-label="Art on Walls" style={{ display: view === "walls" ? "" : "none" }}>
         <MockupStudio
           initialArtworkId={initialArtworkId}
-          artworks={artworks.map((a) => ({
+          artworks={liveArtworks.map((a) => ({
             id: a.id,
             title: a.title,
             medium: a.medium,

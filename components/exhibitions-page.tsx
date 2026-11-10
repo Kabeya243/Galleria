@@ -7,6 +7,7 @@ import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import ThemeToggle from "@/components/theme-toggle";
 import { useT } from "@/lib/i18n";
+import { handleCoverImageError } from "@/lib/image-fallback";
 import type { RoomModelId } from "@/lib/rooms";
 import styles from "./public-home.module.css";
 
@@ -192,6 +193,7 @@ export default function ExhibitionsPage({
                         alt={exhibition.title}
                         className={styles.cover}
                         loading="lazy"
+                        onError={handleCoverImageError}
                       />
                     ) : (
                       <span className={styles.coverFallback}>LAKISA</span>

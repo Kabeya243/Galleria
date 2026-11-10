@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PlanChangeDialog, type PlanChangePayload } from "@/components/subscription-dialogs";
 import { useLocale, useT } from "@/lib/i18n";
+import { SHOW_PAID_PLANS } from "@/lib/plan-visibility";
 import type { PlanDTO, SubscriptionDTO } from "@/lib/subscriptions";
 
 // "My plan" card (Nov 2026): the account's current plan and its usage
@@ -59,7 +60,12 @@ export default function PlanCard() {
 
   if (!me) return null;
 
-  const others = plans.filter((p) => p.slug !== me.plan.slug && p.isActive);
+  // Paid plans are hidden for now (Nov 2026, lib/plan-visibility.ts):
+  // no plan change is offered from "My plan" either. Admin assignment
+  // still works (it does not go through this card).
+  const others = SHOW_PAID_PLANS
+    ? plans.filter((p) => p.slug !== me.plan.slug && p.isActive)
+    : [];
   const target = others.find((p) => p.slug === targetSlug) ?? others[0] ?? null;
   const billingCycle =
     me.subscription.billingCycle === "yearly"
@@ -192,6 +198,11 @@ export default function PlanCard() {
             </button>
           </div>
         </div>
+      )}
+      {!SHOW_PAID_PLANS && me.plan.slug === "discovery" && (
+        <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+          {t("pricing", "paidPlansSoon")}
+        </p>
       )}
       {target && (
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>

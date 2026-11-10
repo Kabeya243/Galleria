@@ -131,6 +131,12 @@ export async function loadUserDashboard(user: DashboardUser) {
 
   return {
     exhibitionCount: exhibitions.length,
+    // The most recently updated exhibition: the guided start ("Create
+    // your first exhibition in 3 steps") opens it in the editor for
+    // steps 2 and 3. Null when the account has no exhibition yet.
+    newestExhibition: exhibitions[0]
+      ? { id: exhibitions[0].id, slug: exhibitions[0].slug, status: exhibitions[0].status }
+      : null,
     stats: {
       exhibitions: { value: exhibitions.length, ...deltaText(exhibitionsRecent) },
       artworks: { value: artworkCount, ...deltaText(artworksRecent) },

@@ -1787,6 +1787,36 @@ export const DICTIONARY = {
     public: { fr: "Publique", en: "Public" },
     draft: { fr: "Brouillon", en: "Draft" },
     couldNotCreate: { fr: "Impossible de créer une exposition.", en: "Could not create an exhibition." },
+    // Guided start (Nov 2026): "Create your first exhibition in 3
+    // steps" — shown on the dashboard until the three steps are done.
+    // English and French only; every other locale falls back to English.
+    onboardingTitle: { fr: "Créez votre première exposition", en: "Create your first exhibition" },
+    onboardingIntro: {
+      fr: "Trois étapes, et votre première exposition est en ligne.",
+      en: "Three steps, and your first exhibition is live.",
+    },
+    onboardingStep1Title: { fr: "Créez votre exposition", en: "Create your exhibition" },
+    onboardingStep1Text: {
+      fr: "Donnez-lui un nom et choisissez une salle.",
+      en: "Give it a name and pick a room.",
+    },
+    onboardingStep1Action: { fr: "Créer une exposition", en: "Create an exhibition" },
+    onboardingStep2Title: { fr: "Ajoutez vos œuvres", en: "Add your artworks" },
+    onboardingStep2Text: {
+      fr: "Téléversez vos œuvres ou choisissez-les dans votre bibliothèque.",
+      en: "Upload your artworks or pick them from your library.",
+    },
+    onboardingStep2Action: { fr: "Ajouter des œuvres", en: "Add artworks" },
+    onboardingStep3Title: { fr: "Publiez et partagez", en: "Publish and share" },
+    onboardingStep3Text: {
+      fr: "Publiez votre exposition et copiez son lien public.",
+      en: "Publish your exhibition and copy its public link.",
+    },
+    onboardingStep3Action: { fr: "Publier l'exposition", en: "Publish the exhibition" },
+    onboardingViewExhibition: { fr: "Voir l'exposition", en: "View exhibition" },
+    onboardingCopyLink: { fr: "Copier le lien", en: "Copy link" },
+    onboardingCopied: { fr: "Lien copié", en: "Link copied" },
+    onboardingDone: { fr: "Fait", en: "Done" },
   },
   // Public homepage.
   home: {
@@ -2541,6 +2571,10 @@ export const DICTIONARY = {
       fr: "Tout est gratuit à essayer pour l'instant. Aucune carte, aucun paiement.",
       en: "Everything is free to try for now. No card, no payment.",
     },
+    paidPlansSoon: {
+      fr: "Les offres payantes Creator et Studio arrivent bientôt.",
+      en: "Paid plans Creator and Studio are coming soon.",
+    },
     backHome: { fr: "Retour à l'accueil", en: "Back to home" },
     monthly: { fr: "Mensuel", en: "Monthly" },
     yearly: { fr: "Annuel", en: "Yearly" },
@@ -2600,7 +2634,6 @@ export const DICTIONARY = {
     rowSubdomain: { fr: "Sous-domaine (you.lakisa.art)", en: "Subdomain (you.lakisa.art)" },
     rowBasicStats: { fr: "Statistiques de base", en: "Basic statistics" },
     rowWebsiteBuilder: { fr: "Website Builder", en: "Website Builder" },
-    rowImageTo3d: { fr: "Image to 3D", en: "Image to 3D" },
     rowArtInContext: { fr: "Art in Context", en: "Art in Context" },
     rowAdvancedAnalytics: { fr: "Statistiques avancées", en: "Advanced analytics" },
     rowSubAdmins: { fr: "Sous-admins", en: "Sub-admins" },
@@ -3590,11 +3623,6 @@ export const DICTIONARY = {
       fr: "Posez des questions sur vos propres projets (ce qui convient, ce qui manque, quoi encadrer ensuite), avec des réponses tirées de vos vraies données.",
       en: "Ask about your own projects (what fits, what is missing, what to frame next), answered from your real data.",
     },
-    imageTo3d: { fr: "Image vers 3D et bibliothèque", en: "Image-to-3D & Asset Library" },
-    imageTo3dDesc: {
-      fr: "Importez des modèles GLB, prévisualisez-les en 3D, et gardez une bibliothèque de ressources et de références sous licence.",
-      en: "Import GLB models, preview them in 3D, and keep a library of licensed assets and references.",
-    },
     videoGenerator: { fr: "Générateur de vidéo d'exposition", en: "Exhibition Video Generator" },
     videoGeneratorDesc: {
       fr: "Transformez une exposition en vidéo de visite : plans, titres et formats, enregistrés depuis votre vraie salle 3D.",
@@ -4065,11 +4093,6 @@ export const DICTIONARY = {
       fr: "Posez des questions sur vos propres projets (ce qui convient, ce qui manque, quoi encadrer ensuite), avec des réponses tirées de vos vraies données.",
       en: "Ask about your own projects (what fits, what is missing, what to frame next), answered from your real data.",
     },
-    imageTo3d: { fr: "Image vers 3D et bibliothèque", en: "Image-to-3D & Asset Library" },
-    imageTo3dDesc: {
-      fr: "Importez des modèles GLB, prévisualisez-les en 3D, et gardez une bibliothèque de ressources et de références sous licence.",
-      en: "Import GLB models, preview them in 3D, and keep a library of licensed assets and references.",
-    },
     videoGenerator: { fr: "Générateur de vidéo d'exposition", en: "Exhibition Video Generator" },
     videoGeneratorDesc: {
       fr: "Transformez une exposition en vidéo de visite : plans, titres et formats, enregistrés depuis votre vraie salle 3D.",
@@ -4205,12 +4228,6 @@ export const DICTIONARY = {
     framesWallsDesc: {
       fr: "Encadrez vos œuvres avec de vrais cadres et voyez-les sur de vrais murs : salon, salle à manger, galerie, chambre ou bureau.",
       en: "Frame your artworks with real frames and see them on real walls: living room, dining room, gallery, bedroom or office.",
-    },
-    imageTo3d: { fr: "Image vers 3D et bibliothèque", en: "Image-to-3D & Asset Library" },
-    imageTo3dEyebrow: { fr: "OUTILS · IMAGE VERS 3D", en: "TOOLS · IMAGE-TO-3D" },
-    imageTo3dDesc: {
-      fr: "Gardez vos ressources 3D au même endroit avec leurs licences et attributions, prévisualisez les modèles .glb importés en 3D, et transformez des images en panneaux texturés ou en reliefs, avec les limites énoncées clairement : une seule image ne peut pas reconstruire la géométrie cachée.",
-      en: "Keep your 3D assets in one place with their licences and attribution, preview imported .glb models in 3D, and turn images into textured panels or depth reliefs, with the limits stated plainly: a single image cannot reconstruct hidden geometry.",
     },
     inventory: { fr: "Inventaire et collections", en: "Inventory & Collections" },
     inventoryDesc: {

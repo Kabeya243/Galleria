@@ -6,12 +6,11 @@ import { upsertLibraryWorks } from "@/lib/library";
 
 // Create one artwork inside one of the signed-in user's exhibitions.
 // Used by Art in Context (step 1 upload, step 7 "add a copy to this
-// exhibition") and by the Image-to-3D tool's "add to an exhibition"
-// (a sculpture): the editor's whole-exhibition PUT is the wrong shape
-// for adding a single work, so this route creates the single Artwork
-// row. A sculpture add passes sculptureUrl + roomId + a floor
-// position (positionY 0); a wall work passes nothing and keeps the
-// old wall default.
+// exhibition") for adding a single work (a sculpture): the editor's
+// whole-exhibition PUT is the wrong shape for adding a single work,
+// so this route creates the single Artwork row. A sculpture add passes
+// sculptureUrl + roomId + a floor position (positionY 0); a wall work
+// passes nothing and keeps the old wall default.
 const createSchema = z.object({
   exhibitionId: z.string().min(1),
   title: z.string().trim().min(1).max(200),

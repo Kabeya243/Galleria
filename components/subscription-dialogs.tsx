@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
+import { SHOW_PAID_PLANS } from "@/lib/plan-visibility";
 import type { PlanDTO } from "@/lib/subscriptions";
 
 // Subscription dialogs (Nov 2026): plan change, locked tool and admin
@@ -342,20 +343,27 @@ export function ToolLockedDialog({
         <DialogBody text={`${t("pricing", "yourPlan")}: ${currentPlan.name}.`} />
       )}
       {!paywallEnabled && <DialogBody text={t("pricing", "freeTrialNote")} />}
+      {!SHOW_PAID_PLANS && <DialogBody text={t("pricing", "paidPlansSoon")} />}
       <div className="publish-dialog-actions">
         {!paywallEnabled && (
           <a href={toolHref} className="publish-dialog-submit" style={{ textDecoration: "none" }}>
             {t("pricing", "tryItFree")}
           </a>
         )}
-        <Link
-          href="/pricing"
-          className={paywallEnabled ? "publish-dialog-submit" : "publish-dialog-cancel"}
-          style={{ textDecoration: "none" }}
-          onClick={onClose}
-        >
-          {t("pricing", "seePlans")}
-        </Link>
+        {SHOW_PAID_PLANS ? (
+          <Link
+            href="/pricing"
+            className={paywallEnabled ? "publish-dialog-submit" : "publish-dialog-cancel"}
+            style={{ textDecoration: "none" }}
+            onClick={onClose}
+          >
+            {t("pricing", "seePlans")}
+          </Link>
+        ) : (
+          <button type="button" className="publish-dialog-cancel" onClick={onClose}>
+            {t("common", "close")}
+          </button>
+        )}
       </div>
     </DialogShell>
   );

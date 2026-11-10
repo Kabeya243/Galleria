@@ -5,7 +5,6 @@ import {
   Aperture,
   Archive,
   ArrowRight,
-  Box,
   Calculator,
   Clapperboard,
   ClipboardCheck,
@@ -48,7 +47,6 @@ const HUB_TOOL_PLANS: Array<{ href: string; requiredPlan: PlanSlug }> = [
   { href: "/tools/photography-lab", requiredPlan: "creator" },
   { href: "/tools/exhibition-planner", requiredPlan: "creator" },
   { href: "/tools/open-calls", requiredPlan: "creator" },
-  { href: "/tools/image-to-3d", requiredPlan: "studio" },
   { href: "/tools/video-generator", requiredPlan: "studio" },
   { href: "/tools/website-builder/advanced", requiredPlan: "studio" },
   { href: "/tools/portfolio-pdf", requiredPlan: "creator" },
@@ -72,7 +70,8 @@ function planDisplayName(slug: PlanSlug): string {
 // Removed (their routes redirect to /tools): Present & Sell, Color
 // Intelligence, Presentation Designer, Accessibility Studio, Education
 // Studio, AI Architect, Artwork Intelligence, AI Assistant, Marketing
-// Studio, Print Studio, Teams, Digital Twin (hidden for now).
+// Studio, Print Studio, Teams, Digital Twin (hidden for now), Image to
+// 3D (removed Nov 2026).
 // Merged: Collection Manager into Inventory, Visitor Analytics into the
 // dashboard (/dashboard/analytics), Frame Studio + Mockup Studio into
 // Frames & Art on Walls. The Website Builder opens in a new window,
@@ -131,12 +130,6 @@ const TOOLS = [
     icon: ClipboardCheck,
     title: "openCalls",
     description: "openCallsDesc",
-  },
-  {
-    href: "/tools/image-to-3d",
-    icon: Box,
-    title: "imageTo3d",
-    description: "imageTo3dDesc",
   },
   {
     href: "/tools/video-generator",

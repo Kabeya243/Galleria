@@ -33,7 +33,6 @@ export const TOOL_SLUGS = [
   "ai-architect",
   "artwork-intelligence",
   "ai-assistant",
-  "image-to-3d",
   "video-generator",
   // Phase 6 — Professional Ecosystem
   "website-builder",
@@ -77,7 +76,6 @@ export const TOOL_LABELS: Record<ToolSlug, string> = {
   "ai-architect": "AI Exhibition Architect",
   "artwork-intelligence": "Artwork Intelligence",
   "ai-assistant": "AI Creative Assistant",
-  "image-to-3d": "Image-to-3D & Asset Library",
   "video-generator": "Exhibition Video Generator",
   // Phase 6 — Professional Ecosystem
   "website-builder": "Artist Website Builder",

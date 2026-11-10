@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Avatar from "@/components/avatar";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
+import OnboardingCard, { type OnboardingExhibition } from "@/components/onboarding-card";
 import { useT } from "@/lib/i18n";
 import type { RoomModelId } from "@/lib/rooms";
 import {
@@ -35,6 +36,7 @@ type ChartDay = { label: string; full: string; count: number; isRecentWeek: bool
 export default function Dashboard({
   user,
   exhibitionCount,
+  newestExhibition,
   stats,
   chart,
   chartTotal,
@@ -43,6 +45,7 @@ export default function Dashboard({
 }: {
   user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   exhibitionCount: number;
+  newestExhibition: OnboardingExhibition | null;
   stats: {
     exhibitions: StatDelta;
     artworks: StatDelta;
@@ -187,6 +190,14 @@ export default function Dashboard({
               </button>
             </div>
           )}
+
+          <OnboardingCard
+            exhibitionCount={exhibitionCount}
+            artworksCount={stats.artworks.value}
+            publicExhibitionsCount={stats.publicExhibitions.value}
+            newestExhibition={newestExhibition}
+            onCreate={() => setShowCreateDialog(true)}
+          />
 
           <section className={styles.stats} aria-label={t("dashboard", "yourStatistics")}>
             {statCards.map((card) => (

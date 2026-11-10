@@ -8,6 +8,7 @@ import BrandLogo from "@/components/brand-logo";
 import SiteFooter from "@/components/site-footer";
 import { PlanChangeDialog, ToolLockedDialog, type PlanChangePayload } from "@/components/subscription-dialogs";
 import { useLocale, useT, type DictionarySection } from "@/lib/i18n";
+import { SHOW_PAID_PLANS } from "@/lib/plan-visibility";
 import type { PlanDTO, PlanSlug, SubscriptionDTO } from "@/lib/subscriptions";
 import styles from "./pricing-page.module.css";
 
@@ -31,7 +32,6 @@ const TOOL_INFO: Array<{ slug: string; href: string; titleKey: DictionarySection
   { slug: "photography-lab", href: "/tools/photography-lab", titleKey: "photographyLab", minPlan: "creator" },
   { slug: "exhibition-planner", href: "/tools/exhibition-planner", titleKey: "exhibitionPlanner", minPlan: "creator" },
   { slug: "open-calls", href: "/tools/open-calls", titleKey: "openCalls", minPlan: "creator" },
-  { slug: "image-to-3d", href: "/tools/image-to-3d", titleKey: "imageTo3d", minPlan: "studio" },
   { slug: "video-generator", href: "/tools/video-generator", titleKey: "videoGenerator", minPlan: "studio" },
   { slug: "website-builder", href: "/tools/website-builder/advanced", titleKey: "websiteBuilder", minPlan: "studio" },
   { slug: "portfolio-pdf", href: "/tools/portfolio-pdf", titleKey: "portfolioPdf", minPlan: "creator" },
@@ -229,7 +229,6 @@ export default function PricingPage() {
     { label: t("pricing", "rowSubdomain"), value: (p) => (included(p, "creator") ? yes : no) },
     { label: t("pricing", "rowBasicStats"), value: (p) => (included(p, "creator") ? yes : no) },
     { label: t("pricing", "rowWebsiteBuilder"), value: (p) => (included(p, "studio") ? yes : no) },
-    { label: t("pricing", "rowImageTo3d"), value: (p) => (included(p, "studio") ? yes : no) },
     { label: t("pricing", "rowArtInContext"), value: (p) => (included(p, "studio") ? yes : no) },
     { label: t("pricing", "rowAdvancedAnalytics"), value: (p) => (included(p, "studio") ? yes : no) },
     { label: t("pricing", "rowSubAdmins"), value: (p) => (included(p, "studio") ? yes : no) },
@@ -254,13 +253,25 @@ export default function PricingPage() {
     },
   ];
 
+  // When the paid plans are hidden, the two FAQs that describe
+  // switching to or buying a paid plan (change plan, one month only)
+  // are hidden too: they would point at actions the visitor cannot
+  // take yet. The other FAQs stay: free trial, billing start, commission.
   const faqs = [
-    { q: t("pricing", "faq1q"), a: t("pricing", "faq1a") },
-    { q: t("pricing", "faq2q"), a: t("pricing", "faq2a") },
-    { q: t("pricing", "faq3q"), a: t("pricing", "faq3a") },
-    { q: t("pricing", "faq4q"), a: t("pricing", "faq4a") },
-    { q: t("pricing", "faq5q"), a: t("pricing", "faq5a") },
-  ];
+    { id: "free", q: t("pricing", "faq1q"), a: t("pricing", "faq1a") },
+    { id: "billing", q: t("pricing", "faq2q"), a: t("pricing", "faq2a") },
+    { id: "change", q: t("pricing", "faq3q"), a: t("pricing", "faq3a") },
+    { id: "commission", q: t("pricing", "faq4q"), a: t("pricing", "faq4a") },
+    { id: "single", q: t("pricing", "faq5q"), a: t("pricing", "faq5a") },
+  ].filter((faq) => SHOW_PAID_PLANS || (faq.id !== "change" && faq.id !== "single"));
+
+  // Paid plans are hidden for now (Nov 2026, lib/plan-visibility.ts):
+  // only the free Discovery plan is shown. The full list from the API
+  // is kept for the locked-tool dialog, which still needs the required
+  // plan's name to say which plan the tool belongs to.
+  const visiblePlans = SHOW_PAID_PLANS
+    ? (plans ?? [])
+    : (plans ?? []).filter((plan) => plan.slug === "discovery");
 
   return (
     <main className={styles.page}>
@@ -277,24 +288,32 @@ export default function PricingPage() {
         <p className={styles.eyebrow}>{t("pricing", "eyebrow")}</p>
         <h1 className={styles.title}>{t("pricing", "title")}</h1>
         <p className={styles.intro}>{t("pricing", "intro")}</p>
-        <div className={styles.toggle} role="group" aria-label={t("pricing", "eyebrow")}>
-          <button type="button" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>
-            {t("pricing", "monthly")}
-          </button>
-          <button type="button" aria-pressed={cycle === "yearly"} onClick={() => setCycle("yearly")}>
-            {t("pricing", "yearly")}{" "}
-            <span className={styles.toggleSave}>({t("pricing", "yearlySave")})</span>
-          </button>
-          <button type="button" aria-pressed={cycle === "single"} onClick={() => setCycle("single")}>
-            {t("pricing", "single")}{" "}
-            <span className={styles.toggleSave}>({t("pricing", "singleNote")})</span>
-          </button>
-        </div>
+        {SHOW_PAID_PLANS && (
+          <div className={styles.toggle} role="group" aria-label={t("pricing", "eyebrow")}>
+            <button type="button" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>
+              {t("pricing", "monthly")}
+            </button>
+            <button type="button" aria-pressed={cycle === "yearly"} onClick={() => setCycle("yearly")}>
+              {t("pricing", "yearly")}{" "}
+              <span className={styles.toggleSave}>({t("pricing", "yearlySave")})</span>
+            </button>
+            <button type="button" aria-pressed={cycle === "single"} onClick={() => setCycle("single")}>
+              {t("pricing", "single")}{" "}
+              <span className={styles.toggleSave}>({t("pricing", "singleNote")})</span>
+            </button>
+          </div>
+        )}
       </section>
 
       <div className={styles.trialNote}>
         <p>{t("pricing", "freeTrialNote")}</p>
       </div>
+
+      {!SHOW_PAID_PLANS && (
+        <div className={styles.trialNote}>
+          <p>{t("pricing", "paidPlansSoon")}</p>
+        </div>
+      )}
 
       <section className={styles.section} aria-label={t("pricing", "eyebrow")}>
         {plans === null && !plansError && (
@@ -311,7 +330,7 @@ export default function PricingPage() {
         {plans !== null && (
           <>
             <div className={styles.plans}>
-              {plans.map((plan) => {
+              {visiblePlans.map((plan) => {
                 const isCurrent = me?.plan.slug === plan.slug;
                 const suffix = priceSuffix(plan);
                 const ugx = ugxText(plan);
@@ -378,7 +397,7 @@ export default function PricingPage() {
               <thead>
                 <tr>
                   <th scope="col" aria-label={t("pricing", "compareTitle")} />
-                  {plans.map((plan) => (
+                  {visiblePlans.map((plan) => (
                     <th key={plan.slug} scope="col">
                       {plan.name}
                     </th>
@@ -389,7 +408,7 @@ export default function PricingPage() {
                 {rows.map((row) => (
                   <tr key={row.label}>
                     <th scope="row">{row.label}</th>
-                    {plans.map((plan) => {
+                    {visiblePlans.map((plan) => {
                       const cell = row.value(plan);
                       return (
                         <td key={plan.slug}>
@@ -419,7 +438,7 @@ export default function PricingPage() {
         <h2>{t("pricing", "faqTitle")}</h2>
         <div className={styles.faq}>
           {faqs.map((faq) => (
-            <article key={faq.q}>
+            <article key={faq.id}>
               <h3>{faq.q}</h3>
               <p>{faq.a}</p>
             </article>

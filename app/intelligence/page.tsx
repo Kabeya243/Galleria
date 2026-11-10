@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BarChart3, Box, Clapperboard, ShieldCheck } from "lucide-react";
+import { BarChart3, Clapperboard, ShieldCheck } from "lucide-react";
 import HubPage, { type HubCard } from "@/components/hub-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 export const metadata = {
   title: "Intelligence: Lakisa",
   description:
-    "What the numbers say, and help thinking: visitor analytics on the dashboard, 3D assets and video.",
+    "What the numbers say, and help thinking: visitor analytics on the dashboard and video.",
 };
 
 export default async function IntelligenceHub() {
@@ -38,13 +38,6 @@ export default async function IntelligenceHub() {
       icon: BarChart3,
       title: "insights",
     description: "insightsDesc",
-      status: "ready",
-    },
-    {
-      href: "/tools/image-to-3d",
-      icon: Box,
-      title: "imageTo3d",
-    description: "imageTo3dDesc",
       status: "ready",
     },
     {

@@ -103,6 +103,7 @@ export default async function HomePage() {
     <Dashboard
       user={user}
       exhibitionCount={dashboard.exhibitionCount}
+      newestExhibition={dashboard.newestExhibition}
       stats={dashboard.stats}
       chart={dashboard.chart}
       chartTotal={dashboard.chartTotal}

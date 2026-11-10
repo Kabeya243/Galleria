@@ -17,6 +17,15 @@ import { db, withDbRetry } from "@/lib/db";
 // (and connect a payment provider first, Flutterwave or Pesapal,
 // otherwise plan changes have no way to be paid). No code change is
 // needed to flip the switch, only the variable.
+//
+// PAID PLANS HIDDEN (Nov 2026): the paid plans are hidden from users
+// for now, but NOT deleted. The flag lives in lib/plan-visibility.ts
+// (SHOW_PAID_PLANS = false, client-safe): the pricing page shows only
+// Discovery, the locked-tool dialog says the paid plans are coming
+// soon, and the "My plan" card hides the plan-change controls. The
+// plans stay in the database and the code (this seed, the server
+// gates, the admin assignment). Flip the flag to true when a payment
+// provider is connected.
 
 // Billing cycles: monthly and yearly subscriptions renew; "single" is
 // a fixed one-month term with no renewal (Creator $5.99, Studio $29).
@@ -157,7 +166,6 @@ const PLAN_DEFAULTS: Array<{
       "Unlimited exhibitions and artworks",
       "100 GB storage",
       "Website Builder (full site)",
-      "Image to 3D",
       "Art in Context",
       "Advanced visitor analytics",
       "Sub-admins",
@@ -186,7 +194,6 @@ export const TOOL_PLAN: Record<string, PlanSlug> = {
   "photography-lab": "creator",
   "exhibition-planner": "creator",
   "open-calls": "creator",
-  "image-to-3d": "studio",
   "video-generator": "studio",
   "website-builder": "studio",
   "website-builder-advanced": "studio",
@@ -206,7 +213,6 @@ export const HUB_TOOLS: Array<{ slug: string; href: string; requiredPlan: PlanSl
   { slug: "photography-lab", href: "/tools/photography-lab", requiredPlan: "creator" },
   { slug: "exhibition-planner", href: "/tools/exhibition-planner", requiredPlan: "creator" },
   { slug: "open-calls", href: "/tools/open-calls", requiredPlan: "creator" },
-  { slug: "image-to-3d", href: "/tools/image-to-3d", requiredPlan: "studio" },
   { slug: "video-generator", href: "/tools/video-generator", requiredPlan: "studio" },
   { slug: "website-builder", href: "/tools/website-builder/advanced", requiredPlan: "studio" },
   { slug: "portfolio-pdf", href: "/tools/portfolio-pdf", requiredPlan: "creator" },

@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
+import { Download, Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
 import LanguageSwitcher from "@/components/language-switcher";
 import { useT } from "@/lib/i18n";
@@ -17,6 +18,12 @@ import styles from "./site-footer.module.css";
 // "#" on purpose: TODO: replace each href with the real Lakisa account
 // URL once the accounts exist. No fake account URL is invented here.
 
+// Minimal shape of the browser's install prompt event (not in the DOM
+// lib): prompt() shows the browser's own install dialog.
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+}
+
 const SOCIALS = [
   { key: "socialInstagram", label: "socialInstagram", icon: Instagram },
   { key: "socialFacebook", label: "socialFacebook", icon: Facebook },
@@ -27,6 +34,24 @@ const SOCIALS = [
 
 export default function SiteFooter() {
   const t = useT();
+  // PWA install: the button only appears when the browser fires
+  // beforeinstallprompt (desktop Chrome/Edge, once the manifest and
+  // service worker are in place). On click it shows the browser's own
+  // install dialog; afterwards the prompt is gone for good.
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  useEffect(() => {
+    const onPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+  }, []);
+  const onInstallClick = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    setInstallPrompt(null);
+  };
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
@@ -50,6 +75,16 @@ export default function SiteFooter() {
               ))}
             </div>
           </div>
+          {installPrompt && (
+            <button
+              type="button"
+              onClick={onInstallClick}
+              className={styles.installButton}
+            >
+              <Download size={16} />
+              {t("footer", "installApp")}
+            </button>
+          )}
         </div>
 
         <nav className={styles.columns} aria-label="Footer">

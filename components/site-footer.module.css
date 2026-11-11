@@ -71,6 +71,38 @@
   color: #ffffff;
 }
 
+/* PWA install button: only rendered when the browser fires
+   beforeinstallprompt (desktop Chrome/Edge). White outline pill,
+   same editorial black & white as the rest of the footer. */
+.installButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.installButton:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+
+.installButton:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
 .columns {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

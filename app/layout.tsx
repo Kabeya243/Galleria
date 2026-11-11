@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import LakisaToast from "@/components/lakisa-toast";
 import CookieBanner from "@/components/cookie-banner";
+import PwaRegister from "@/components/pwa-register";
 import { SITE_URL } from "@/components/seo-jsonld";
 import "@/components/advanced-site-editor.css";
 import "@/components/advanced-site-published.css";
@@ -31,11 +32,22 @@ const dmSans = localFont({
   weight: "400 700",
 });
 
+export const viewport: Viewport = {
+  // Brand black, matching the Lakisa logo and the PWA theme colour.
+  themeColor: "#000000",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Lakisa: Your art, in another space",
   description:
     "Create, curate and share your own immersive virtual art exhibitions.",
+  // PWA: the manifest (app/manifest.ts, served at /manifest.webmanifest)
+  // makes Lakisa installable on desktop from Chrome/Edge.
+  manifest: "/manifest.webmanifest",
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
   // No title template here on purpose: the public pages already set
   // full titles ending in ": Lakisa" ("About: Lakisa", "Feed: Lakisa"),
   // and a template would suffix them a second time.
@@ -84,6 +96,7 @@ export default function RootLayout({
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <PwaRegister />
         {children}
         <LakisaToast />
         <CookieBanner />

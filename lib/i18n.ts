@@ -2341,6 +2341,10 @@ export const DICTIONARY = {
       sw: "Akaunti inakuja: kiungo cha kubadilishwa",
       ln: "Compte ekozala: lien ya kobongola",
     },
+    // PWA install button (footer). Shown only when the browser fires
+    // beforeinstallprompt (desktop Chrome/Edge). English is the fallback
+    // for locales without a translation here.
+    installApp: { fr: "Installer Lakisa", en: "Install Lakisa" },
   },
   // Cookie notice (information only). Every cookie on Lakisa is
   // essential to the platform, so there is no choice to make: the

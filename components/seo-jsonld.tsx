@@ -20,7 +20,7 @@
 const LOCALES = ["en", "fr", "de", "it", "es", "pt", "zh", "ja", "ko", "sw", "ln"] as const;
 
 /** Canonical base URL of the deployed site. Change to https://lakisa.art once the domain is connected. */
-export const SITE_URL = "https://galleria-bice.vercel.app";
+export const SITE_URL = "https://lakisa.art";
 
 /** Absolute URL for a site path (path must start with "/"). */
 export function canonicalUrl(path: string): string {

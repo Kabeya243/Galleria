@@ -1818,6 +1818,59 @@ export const DICTIONARY = {
     onboardingCopied: { fr: "Lien copié", en: "Link copied" },
     onboardingDone: { fr: "Fait", en: "Done" },
   },
+  // Welcome tour (Nov 2026): animated pop-up that walks a new user
+  // through the platform after signup, Photoshop-style. English and
+  // French only; every other locale falls back to English.
+  welcomeTour: {
+    title: { fr: "Bienvenue sur Lakisa", en: "Welcome to Lakisa" },
+    next: { fr: "Suivant", en: "Next" },
+    previous: { fr: "Précédent", en: "Previous" },
+    skip: { fr: "Passer", en: "Skip" },
+    finish: { fr: "Terminer", en: "Finish" },
+    takeTour: { fr: "Faire la visite", en: "Take the tour" },
+    step1Title: { fr: "Bienvenue sur Lakisa", en: "Welcome to Lakisa" },
+    step1Text: {
+      fr: "Lakisa est votre propre galerie 3D sur le web. Cette courte visite vous montre comment ça marche, en sept étapes.",
+      en: "Lakisa is your own 3D gallery on the web. This short tour shows you how it works, in seven steps.",
+    },
+    step1Where: { fr: "Environ 2 minutes", en: "About 2 minutes" },
+    step2Title: { fr: "Votre tableau de bord", en: "Your dashboard" },
+    step2Text: {
+      fr: "Ceci est votre espace créatif. Vous y voyez vos expositions, vos œuvres, vos visites et votre activité.",
+      en: "This is your creative space. You see your exhibitions, your artworks, your visits, and your activity here.",
+    },
+    step2Where: { fr: "Vous êtes ici", en: "You are here now" },
+    step3Title: { fr: "Créer une exposition", en: "Create an exhibition" },
+    step3Text: {
+      fr: "Donnez un nom à votre exposition et choisissez une salle. Il y a 21 salles à choisir, d'une grande salle lumineuse à une galerie en pierre.",
+      en: "Give your show a name and pick a room. There are 21 gallery rooms to choose from, from a bright hall to a stone gallery.",
+    },
+    step3Where: { fr: "Cliquez sur Créer une exposition, en haut à droite", en: "Click Create an exhibition, top right" },
+    step4Title: { fr: "Ajouter vos œuvres", en: "Add your artworks" },
+    step4Text: {
+      fr: "Téléversez des photos de vos œuvres, ou des vidéos et des sculptures 3D. Puis placez-les sur les murs dans l'éditeur 3D, à hauteur d'œil.",
+      en: "Upload photos of your works, or videos and 3D sculptures too. Then place them on the walls in the 3D editor, at eye level.",
+    },
+    step4Where: { fr: "Dans l'éditeur, ajoutez des œuvres depuis votre bibliothèque", en: "Inside the editor, add works from your library" },
+    step5Title: { fr: "Visiter les salles 3D", en: "Walk the 3D rooms" },
+    step5Text: {
+      fr: "Visitez votre galerie comme un visiteur : marchez au clavier ou au tactile, cliquez sur une œuvre pour la voir de près, et utilisez le plan pour passer d'une salle à l'autre.",
+      en: "Visit your gallery like a visitor: walk with your keyboard or by touch, click a work to see it up close, and use the floor plan to move between rooms.",
+    },
+    step5Where: { fr: "Ouvrez une exposition et cliquez sur Entrer dans la salle", en: "Open any exhibition and click Enter the room" },
+    step6Title: { fr: "Publier et partager", en: "Publish and share" },
+    step6Text: {
+      fr: "Quand votre exposition est prête, publiez-la et copiez son lien public. Tout le monde peut la visiter de partout, sur n'importe quel appareil.",
+      en: "When your show is ready, publish it and copy its public link. Anyone can visit it from anywhere, on any device.",
+    },
+    step6Where: { fr: "Dans l'éditeur, Publier, puis copiez le lien", en: "In the editor, Publish, then copy the link" },
+    step7Title: { fr: "Vendre et utiliser les outils", en: "Sell and use the tools" },
+    step7Text: {
+      fr: "Mettez une œuvre en vente sur la marketplace pour recevoir des offres, et utilisez les outils pour tarifer votre travail, faire des certificats, tenir un inventaire et gérer vos contacts.",
+      en: "List a work in the marketplace to receive offers, and use the tools to price your work, make certificates, keep an inventory and manage contacts.",
+    },
+    step7Where: { fr: "Menu à gauche : Marketplace et Ressources", en: "Left menu: Marketplace and Resources" },
+  },
   // Public homepage.
   home: {
     explore: { fr: "Explorer", en: "Explore",

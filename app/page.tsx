@@ -7,6 +7,11 @@ import { parseGalleryRooms, placedArtworks } from "@/lib/rooms";
 import { toServingImageUrl } from "@/lib/r2";
 import { loadUserDashboard } from "@/lib/user-dashboard-data";
 
+// A "new" account (welcome tour): created in the last 30 days. The
+// tour auto-opens once, on the first dashboard visit; older accounts
+// never see it unprompted but can reopen it from the dashboard.
+const NEW_USER_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
 function countRooms(value: string): number {
   try {
     return parseGalleryRooms(value).length;
@@ -102,6 +107,7 @@ export default async function HomePage() {
   return (
     <Dashboard
       user={user}
+      isNewUser={Date.now() - user.createdAt.getTime() < NEW_USER_WINDOW_MS}
       exhibitionCount={dashboard.exhibitionCount}
       newestExhibition={dashboard.newestExhibition}
       stats={dashboard.stats}

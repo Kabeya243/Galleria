@@ -91,6 +91,24 @@
   white-space: nowrap;
 }
 
+/* Welcome tour (Nov 2026): "Take the tour" relaunch button, same
+   ghost pill as the works link, next to the Create button. */
+.tourButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .createButton:disabled {
   opacity: 0.65;
   cursor: default;

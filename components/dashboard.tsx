@@ -6,6 +6,7 @@ import Avatar from "@/components/avatar";
 import Sidebar from "@/components/sidebar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import OnboardingCard, { type OnboardingExhibition } from "@/components/onboarding-card";
+import WelcomeTour, { hasSeenWelcomeTour } from "@/components/welcome-tour";
 import { useT } from "@/lib/i18n";
 import type { RoomModelId } from "@/lib/rooms";
 import {
@@ -15,6 +16,7 @@ import {
   GalleryVerticalEnd,
   Image,
   Plus,
+  Route,
   Search,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -35,6 +37,7 @@ type ChartDay = { label: string; full: string; count: number; isRecentWeek: bool
 
 export default function Dashboard({
   user,
+  isNewUser,
   exhibitionCount,
   newestExhibition,
   stats,
@@ -44,6 +47,9 @@ export default function Dashboard({
   topExhibitions,
 }: {
   user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
+  // True when the account was created recently (server-side, 30 days):
+  // the welcome tour auto-opens once, on the first dashboard visit.
+  isNewUser: boolean;
   exhibitionCount: number;
   newestExhibition: OnboardingExhibition | null;
   stats: {
@@ -63,7 +69,18 @@ export default function Dashboard({
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const firstName = user.name.split(" ")[0] || user.name;
+
+  // Welcome tour (Nov 2026): it opens once, on the first dashboard
+  // visit after the account was created. The "seen" flag is per user
+  // in localStorage, so it never nags; the header button reopens it
+  // any time. localStorage is read after mount, never during render.
+  useEffect(() => {
+    if (isNewUser && !hasSeenWelcomeTour(user.id)) {
+      setShowTour(true);
+    }
+  }, [isNewUser, user.id]);
 
   // Legacy anchor (Nov 2026): the visitor analytics used to live on
   // this page under #visitor-analytics. They are their own page now
@@ -169,6 +186,9 @@ export default function Dashboard({
               <Link href={`/works/${user.id}`} className={styles.worksLink}>
                 {t("works", "myWorks")}
               </Link>
+              <button type="button" className={styles.tourButton} onClick={() => setShowTour(true)}>
+                <Route size={16} /> {t("welcomeTour", "takeTour")}
+              </button>
               <button className={styles.createButton} onClick={() => setShowCreateDialog(true)} disabled={creating}>
                 <Plus size={16} /> {creating ? t("dashboard", "creating") : t("dashboard", "createExhibition")}
               </button>
@@ -181,6 +201,13 @@ export default function Dashboard({
               onCreate={createExhibition}
             />
           )}
+
+          <WelcomeTour
+            userId={user.id}
+            open={showTour}
+            onClose={() => setShowTour(false)}
+            onStartCreating={() => setShowCreateDialog(true)}
+          />
 
           {createError && (
             <div className="editor-error-banner" role="alert">

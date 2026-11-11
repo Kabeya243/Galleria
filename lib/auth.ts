@@ -73,7 +73,9 @@ export async function getCurrentUser() {
     Promise.all([
       db.user.findUnique({
         where: { id: userId },
-        select: { id: true, email: true, name: true, role: true, country: true },
+        // createdAt is read by the home page for the welcome tour: a
+        // new account sees the tour once, on its first dashboard visit.
+        select: { id: true, email: true, name: true, role: true, country: true, createdAt: true },
       }),
       // Profile extras (avatar photo + bio) live in a SavedWork row, not on
       // the User table — see lib/profile.ts. One indexed query, merged here

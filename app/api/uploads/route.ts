@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const MAX_FILE_SIZE = 8 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const allowedMimeTypes = new Set([
   "image/png",
   "image/jpeg",
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
   const contentLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_FILE_SIZE + 64_000) {
-    return NextResponse.json({ error: "Images must be smaller than 8 MB." }, { status: 413 });
+    return NextResponse.json({ error: "Images must be smaller than 5 MB." }, { status: 413 });
   }
 
   let formData: FormData;
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Upload a valid PNG, JPEG, WebP, AVIF, HEIC or HEIF image." }, { status: 415 });
   }
   if (file.size === 0 || file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: "Images must be smaller than 8 MB." }, { status: 413 });
+    return NextResponse.json({ error: "Images must be smaller than 5 MB." }, { status: 413 });
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());

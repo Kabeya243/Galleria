@@ -1065,7 +1065,7 @@ export default function ImageTo3D() {
           {!modelScene && !modelLoading && (
             <div className={styles.emptyBox}>
               <strong>No model loaded yet.</strong>
-              <p>Upload a .glb or .gltf file (up to 50 MB) to preview it here with orbit controls, adjust its scale, rotation and tint, then save it to your library. Saving stores a .glb up to 4.5 MB server-side.</p>
+              <p>Upload a .glb or .gltf file (up to 5 MB) to preview it here with orbit controls, adjust its scale, rotation and tint, then save it to your library. Saving stores a .glb up to 4.5 MB server-side.</p>
             </div>
           )}
         </div>
@@ -1289,7 +1289,7 @@ export default function ImageTo3D() {
                 many for a browser. In RealityScan, go to SCENE 3D / TOOLS → <em>Simplify</em> and set an absolute
                 target triangle count; it creates a new simplified model and keeps the original. Then <em>retexture</em>{" "}
                 the simplified model: a simplified model must be retextured before its textures can be exported with
-                it. Aim for a file well under Lakisa&apos;s 50 MB import limit.
+                it. Aim for a file well under Lakisa&apos;s 5 MB import limit.
               </li>
               <li>
                 <strong>4 · Export mesh + textures as GLB / glTF.</strong> Export → Model &amp; Point Cloud → Binary
@@ -1300,7 +1300,7 @@ export default function ImageTo3D() {
               </li>
               <li>
                 <strong>5 · Import the GLB into Lakisa.</strong> Open the &ldquo;Import .glb / .gltf&rdquo; tab above,
-                choose the exported .glb (max 50 MB), preview it with orbit controls, adjust scale, rotation and tint,
+                choose the exported .glb (max 5 MB), preview it with orbit controls, adjust scale, rotation and tint,
                 then save it to your asset library. The library keeps the name, file details and transform, keep the
                 original .glb file on disk and re-attach it to preview again.
               </li>

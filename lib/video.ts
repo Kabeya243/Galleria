@@ -10,8 +10,8 @@
 // (/api/uploads/video → videos/<userId>/<uuid>.mp4, served same-origin
 // from /api/video/<key>), which is capped at 4.5 MB by Vercel's
 // request-body cap; heavier films go straight to R2 with a presigned
-// PUT URL (/api/uploads/presign, 200 MB), and the stored URL is the
-// same either way. At a gallery-loop bitrate (~1–2 Mbps, 720p) 200 MB
+// PUT URL (/api/uploads/presign, 50 MB), and the stored URL is the
+// same either way. At a gallery-loop bitrate (~1–2 Mbps, 720p) 50 MB
 // fits a film of several minutes.
 // No external video URL is accepted: a third-party mp4 would need CORS
 // headers to load as a WebGL texture (most hosts do not send them), and
@@ -28,7 +28,7 @@
 // browsers allow); sound turns on only from an explicit visitor gesture
 // — the sound button in the artwork detail panel.
 export const VIDEO_MAX_FILE_SIZE = 4_500_000;
-export const VIDEO_DIRECT_MAX_FILE_SIZE = 200 * 1024 * 1024;
+export const VIDEO_DIRECT_MAX_FILE_SIZE = 50 * 1024 * 1024;
 export const VIDEO_MIME_TYPES: Record<string, string> = {
   "video/mp4": "mp4",
 };

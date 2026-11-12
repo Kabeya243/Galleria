@@ -98,7 +98,7 @@ export interface Asset3DRecord {
   polyCount?: number;
 }
 
-export const MAX_ASSET_FILE_BYTES = 50 * 1024 * 1024; // 50 MB, same as R2 uploads
+export const MAX_ASSET_FILE_BYTES = 5 * 1024 * 1024; // 5 MB, same as R2 image uploads
 
 export const ACCEPTED_MODEL_TYPES = [".glb", ".gltf"];
 export const ACCEPTED_IMAGE_TYPES = [".jpg", ".jpeg", ".png", ".webp"];
@@ -109,7 +109,7 @@ export function validateAssetFile(file: File, allowedExtensions: string[]): stri
     return `“${file.name}” is not a supported file. Accepted: ${allowedExtensions.join(", ")}.`;
   }
   if (file.size > MAX_ASSET_FILE_BYTES) {
-    return `“${file.name}” is ${(file.size / 1024 / 1024).toFixed(1)} MB, the limit is 50 MB.`;
+    return `“${file.name}” is ${(file.size / 1024 / 1024).toFixed(1)} MB, the limit is 5 MB.`;
   }
   if (file.size === 0) return `“${file.name}” is empty.`;
   return null;

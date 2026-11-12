@@ -100,7 +100,7 @@ function putToR2(
     };
     xhr.onerror = () => reject(new DirectUploadFailedError());
     xhr.ontimeout = () => reject(new DirectUploadFailedError());
-    // No timeout: a 200 MB upload on a slow connection takes a while,
+    // No timeout: a 50 MB upload on a slow connection takes a while,
     // and the presigned URL itself is valid for an hour.
     xhr.timeout = 0;
     xhr.send(file);

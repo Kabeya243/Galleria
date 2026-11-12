@@ -2944,7 +2944,7 @@ async function compressImage(file: File): Promise<File> {
     return url;
   }
 
-  // Upload one music track (MP3/AAC, ≤ 50 MB) to R2 and keep it as the
+  // Upload one music track (MP3/AAC, ≤ 10 MB) to R2 and keep it as the
   // exhibition's background music. Small files go through the dedicated
   // audio proxy; heavy tracks go straight to R2 with a presigned PUT
   // URL (see lib/direct-upload.ts). The file name (without extension)
@@ -2952,7 +2952,7 @@ async function compressImage(file: File): Promise<File> {
   // click, on loop. Removing the track later only clears the exhibition
   // fields, the R2 file stays (no DeleteObject in the code yet; see
   // the schema comment).
-  const MUSIC_DIRECT_MAX_SIZE = 50 * 1024 * 1024;
+  const MUSIC_DIRECT_MAX_SIZE = 10 * 1024 * 1024;
   const MUSIC_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a"];
   async function uploadMusicFile(file?: File) {
     if (!file) return;
@@ -3083,7 +3083,7 @@ async function compressImage(file: File): Promise<File> {
     }
   }
 
-  // Upload one video file (MP4 H.264, ≤ 200 MB) to R2 and hang it as a
+  // Upload one video file (MP4 H.264, ≤ 50 MB) to R2 and hang it as a
   // video artwork (addVideoArtwork). Small clips go through the
   // dedicated video proxy; longer films go straight to R2 with a
   // presigned PUT URL (see lib/direct-upload.ts). The file name

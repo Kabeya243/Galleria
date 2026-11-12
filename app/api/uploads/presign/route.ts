@@ -34,7 +34,7 @@ const KINDS: Record<
   }
 > = {
   image: {
-    maxSize: 50 * 1024 * 1024,
+    maxSize: 5 * 1024 * 1024,
     prefix: "uploads",
     mimeTypes: {
       "image/png": "png",
@@ -48,7 +48,7 @@ const KINDS: Record<
     servingUrl: (key) => `/api/r2/${key}`,
   },
   video: {
-    maxSize: 200 * 1024 * 1024,
+    maxSize: 50 * 1024 * 1024,
     prefix: "videos",
     mimeTypes: { "video/mp4": "mp4" },
     servingUrl: (key) => `/api/video/${key}`,
@@ -62,7 +62,7 @@ const KINDS: Record<
     typeFromName: (name) => (name.endsWith(".glb") ? "model/gltf-binary" : null),
   },
   audio: {
-    maxSize: 50 * 1024 * 1024,
+    maxSize: 10 * 1024 * 1024,
     prefix: "audio",
     mimeTypes: {
       "audio/mpeg": "mp3",
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   const uploadUrl = await getSignedUrl(
     client,
     new PutObjectCommand({ Bucket: getR2Bucket(), Key: key, ContentType: contentType }),
-    // One hour: a 200 MB upload on a slow connection takes a while,
+    // One hour: a 50 MB upload on a slow connection takes a while,
     // and a signature that expires mid-upload fails the whole PUT.
     { expiresIn: 3600 },
   );

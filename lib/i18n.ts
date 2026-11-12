@@ -784,16 +784,16 @@ export const DICTIONARY = {
     loop: { fr: "Jouer en boucle", en: "Loop" },
     removeMusic: { fr: "Retirer la musique", en: "Remove music" },
     musicHint: {
-      fr: "MP3 ou AAC (.m4a), 50 Mo maximum : un morceau long, en boucle. Pensez à 128 kbps pour un morceau de quelques minutes.",
-      en: "MP3 or AAC (.m4a), 50 MB maximum: a long track, on loop. Export at 128 kbps for a track a few minutes long.",
+      fr: "MP3 ou AAC (.m4a), 10 Mo maximum : un morceau long, en boucle. Pensez à 128 kbps pour un morceau de quelques minutes.",
+      en: "MP3 or AAC (.m4a), 10 MB maximum: a long track, on loop. Export at 128 kbps for a track a few minutes long.",
     },
     onlyOwnMusic: {
       fr: "Only upload music you own or that is free to share.",
       en: "Only upload music you own or that is free to share.",
     },
     musicTooLarge: {
-      fr: "Ce fichier audio est trop lourd (plus de 50 Mo). Essayez un morceau plus court, ou exportez-le à 128 kbps.",
-      en: "This audio file is too large (over 50 MB). Try a shorter track, or export it at 128 kbps.",
+      fr: "Ce fichier audio est trop lourd (plus de 10 Mo). Essayez un morceau plus court, ou exportez-le à 128 kbps.",
+      en: "This audio file is too large (over 10 MB). Try a shorter track, or export it at 128 kbps.",
     },
     musicInvalidFormat: {
       fr: "Ajoutez un fichier audio MP3 ou AAC (.m4a).",
@@ -821,16 +821,16 @@ export const DICTIONARY = {
     addVideo: { fr: "Ajouter une vidéo", en: "Add a video" },
     videoAdded: { fr: "Vidéo ajoutée.", en: "Video added." },
     videoHint: {
-      fr: "MP4 (H.264), 200 Mo maximum : un film plus long, en boucle. Exportez en 720p pour un fichier raisonnable.",
-      en: "MP4 (H.264), 200 MB maximum: a longer film, on loop. Export at 720p for a reasonable file size.",
+      fr: "MP4 (H.264), 50 Mo maximum : un film plus long, en boucle. Exportez en 720p pour un fichier raisonnable.",
+      en: "MP4 (H.264), 50 MB maximum: a longer film, on loop. Export at 720p for a reasonable file size.",
     },
     onlyOwnVideo: {
       fr: "Only upload video you own or that is free to share.",
       en: "Only upload video you own or that is free to share.",
     },
     videoTooLarge: {
-      fr: "Cette vidéo est trop lourde (plus de 200 Mo). Essayez un clip plus court, ou exportez-le en 720p avec un débit plus bas.",
-      en: "This video is too large (over 200 MB). Try a shorter clip, or export it at 720p with a lower bitrate.",
+      fr: "Cette vidéo est trop lourde (plus de 50 Mo). Essayez un clip plus court, ou exportez-le en 720p avec un débit plus bas.",
+      en: "This video is too large (over 50 MB). Try a shorter clip, or export it at 720p with a lower bitrate.",
     },
     videoInvalidFormat: {
       fr: "Ajoutez une vidéo MP4 (H.264).",

@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 // never mix: MP4 (H.264) only, 4.5 MB max (Vercel's request-body cap),
 // stored under videos/<userId>/<uuid>.mp4 and served same-origin from
 // /api/video/<key>. Longer films go straight to R2 with a presigned PUT
-// URL (/api/uploads/presign, 200 MB) and get the same serving URL.
+// URL (/api/uploads/presign, 50 MB) and get the same serving URL.
 // Only video the artist owns or that is free to share may be uploaded
 // — the editor says so next to the upload field.
 const TOO_LARGE =

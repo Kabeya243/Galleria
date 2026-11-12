@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 // so the two never mix: MP3 and AAC only, 4.5 MB max (Vercel's
 // request-body cap), stored under audio/<userId>/<uuid>.<ext> and served
 // same-origin from /api/audio/<key>. Longer tracks go straight to R2
-// with a presigned PUT URL (/api/uploads/presign, 50 MB) and get the
+// with a presigned PUT URL (/api/uploads/presign, 10 MB) and get the
 // same serving URL.
 // Only music the artist owns or that is free to share may be uploaded
 // — the editor says so next to the upload field.

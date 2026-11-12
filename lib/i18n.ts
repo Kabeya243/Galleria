@@ -1929,7 +1929,7 @@ export const DICTIONARY = {
       fr: "Lakisa a été construit par un artiste qui sait ce que c'est de créer sans galerie pour montrer son travail. C'est une porte que nous ouvrons pour les prochains. Venez accrocher vos œuvres.",
       en: "Lakisa was built by an artist who knows what it is to make work with no gallery to show it in. This is a door we are opening for the next ones. Come and hang your work.",
     },
-    founderSign: { fr: "Kabeya Ilunga, fondateur de Lakisa", en: "Kabeya Ilunga, founder of Lakisa" },
+    founderSign: { fr: "fondateur de Lakisa", en: "founder of Lakisa" },
     formTitle: { fr: "Postuler", en: "Apply now" },
     closedText: {
       fr: "Cet appel à candidatures n'accepte pas de candidatures pour le moment.",

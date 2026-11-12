@@ -2,17 +2,17 @@ import { NextResponse } from "next/server";
 import { createSession, getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-// One-click switch from the Kabeya admin account to the Lakisa Official
-// account, without typing a password (Nov 2026). This is NOT a public
-// passwordless login and NOT a generic "log in as any user" endpoint.
-// The switch works in ONE direction only: the current session user must
-// be exactly kabeyailunga243@gmail.com, and the target is hardcoded
-// here on the server to official@lakisa.art (never taken from the
-// request). Everything else gets a 403. The button is only rendered in
-// the admin shell for that one account, but the check below is what
-// actually enforces it. There is deliberately no return button on the
-// Official account: to get back to admin, sign in with the admin
-// password as usual.
+// One-click account switch between Kabeya's two Lakisa accounts, without
+// typing a password (Nov 2026). This is NOT a public passwordless login
+// and NOT a generic "log in as any user" endpoint. The switch works in
+// BOTH directions, and only between these two accounts:
+//   kabeyailunga243@gmail.com (admin) <-> official@lakisa.art (Lakisa Official)
+// The current session user must be exactly one of the two, and the
+// target is hardcoded here on the server from the current user (never
+// taken from the request). Everything else gets a 403. The buttons are
+// only rendered for the matching account (admin shell for the admin,
+// sidebar for the Official account), but the check below is what
+// actually enforces it.
 const ADMIN_EMAIL = "kabeyailunga243@gmail.com";
 const OFFICIAL_EMAIL = "official@lakisa.art";
 
@@ -22,7 +22,14 @@ export async function POST() {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  if (current.email.trim().toLowerCase() !== ADMIN_EMAIL) {
+  const currentEmail = current.email.trim().toLowerCase();
+  const targetEmail =
+    currentEmail === ADMIN_EMAIL
+      ? OFFICIAL_EMAIL
+      : currentEmail === OFFICIAL_EMAIL
+        ? ADMIN_EMAIL
+        : null;
+  if (!targetEmail) {
     return NextResponse.json(
       { error: "Account switching is not available for this account." },
       { status: 403 },
@@ -30,7 +37,7 @@ export async function POST() {
   }
 
   const target = await db.user.findUnique({
-    where: { email: OFFICIAL_EMAIL },
+    where: { email: targetEmail },
     select: { id: true, email: true },
   });
   if (!target) {

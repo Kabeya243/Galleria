@@ -3,23 +3,51 @@
 import { useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
 
-// One-click switch from the Kabeya admin account to the Lakisa Official
-// account (Nov 2026). Renders nothing unless the signed-in email is
-// exactly kabeyailunga243@gmail.com — for every other account (including
-// official@lakisa.art itself) and for visitors there is no button at
-// all. The server endpoint enforces the same rule, so hiding the button
-// is only the first layer, never the security itself.
+// One-click account switch between Kabeya's two Lakisa accounts, without
+// typing a password (Nov 2026). Renders nothing unless the signed-in
+// email is exactly one of the two accounts — for every other account
+// and for visitors there is no button at all. The server endpoint
+// enforces the same rule, so hiding the button is only the first layer,
+// never the security itself.
 //
-// One direction only: admin -> Lakisa Official. There is deliberately
-// no return button on the Official account.
+// Direction follows the signed-in account:
+//   kabeyailunga243@gmail.com (admin) -> official@lakisa.art, label
+//     "Basculer vers Lakisa Official", rendered in the admin shell
+//     (variant "admin").
+//   official@lakisa.art (Lakisa Official) -> kabeyailunga243@gmail.com,
+//     label "Basculer vers l'admin", rendered in the sidebar
+//     (variant "sidebar").
+// The variant only picks the styling so the button matches where it
+// lives (the admin rail and the sidebar rail each hide their own label
+// class when collapsed).
 const ADMIN_EMAIL = "kabeyailunga243@gmail.com";
+const OFFICIAL_EMAIL = "official@lakisa.art";
 
-export default function AccountSwitchButton({ email }: { email: string }) {
+const VARIANTS = {
+  admin: { button: "ad-nav-item", icon: "ad-nav-icon", label: "ad-nav-label" },
+  sidebar: { button: "nav-item", icon: "", label: "nav-item-label" },
+} as const;
+
+export default function AccountSwitchButton({
+  email,
+  variant,
+}: {
+  email: string;
+  variant: "admin" | "sidebar";
+}) {
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only the admin account ever sees this button.
-  if (email.trim().toLowerCase() !== ADMIN_EMAIL) return null;
+  const direction =
+    email.trim().toLowerCase() === ADMIN_EMAIL
+      ? { label: "Basculer vers Lakisa Official" }
+      : email.trim().toLowerCase() === OFFICIAL_EMAIL
+        ? { label: "Basculer vers l'admin" }
+        : null;
+
+  // Only the two accounts ever see a button.
+  if (!direction) return null;
+  const classes = VARIANTS[variant];
 
   async function switchAccount() {
     if (switching) return;
@@ -32,7 +60,7 @@ export default function AccountSwitchButton({ email }: { email: string }) {
       });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error(result?.error ?? "Could not switch accounts.");
-      // Land on the dashboard as Lakisa Official.
+      // Land on the dashboard as the other account.
       window.location.assign("/dashboard");
     } catch (err) {
       console.error("Account switch failed.", err);
@@ -41,19 +69,21 @@ export default function AccountSwitchButton({ email }: { email: string }) {
     }
   }
 
-  const label = switching ? "Basculement…" : "Basculer vers Lakisa Official";
+  const label = switching ? "Basculement…" : direction.label;
 
-  // Matches the admin shell's Sign out item (ad-nav-item): same row,
-  // same collapsed-rail behaviour (label hides, icon stays).
   return (
     <>
-      <button type="button" className="ad-nav-item" onClick={switchAccount} disabled={switching} title="Basculer vers Lakisa Official">
-        <span className="ad-nav-icon">
-          <ArrowLeftRight size={18} />
-        </span>
-        <span className="ad-nav-label">{label}</span>
+      <button type="button" className={classes.button} onClick={switchAccount} disabled={switching} title={direction.label}>
+        {classes.icon ? (
+          <span className={classes.icon}>
+            <ArrowLeftRight size={18} />
+          </span>
+        ) : (
+          <ArrowLeftRight size={17} />
+        )}
+        <span className={classes.label}>{label}</span>
       </button>
-      {error && <span className="ad-nav-item" style={{ color: "#e5484d", fontSize: 12 }}>{error}</span>}
+      {error && <span className={classes.button} style={{ color: "#e5484d", fontSize: 12 }}>{error}</span>}
     </>
   );
 }

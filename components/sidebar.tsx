@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import AccountSwitchButton from "@/components/account-switch-button";
 import Avatar from "@/components/avatar";
 import BrandLogo from "@/components/brand-logo";
 import NotificationBell from "@/components/notification-bell";
@@ -413,6 +414,11 @@ export default function Sidebar({
         </div>
 
         <div className="sidebar-bottom">
+          {/* One-click switch back to the admin account (Nov 2026):
+              only renders for official@lakisa.art, so Kabeya can move
+              from the Lakisa Official account to the admin account
+              without a password. Every other account sees nothing here. */}
+          <AccountSwitchButton email={user.email} variant="sidebar" />
           <div className="profile-chip">
             <Avatar name={user.name} avatarUrl={user.avatarUrl} className="profile-avatar" />
             <div className="profile-copy">

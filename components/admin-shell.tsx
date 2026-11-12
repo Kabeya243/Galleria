@@ -285,8 +285,9 @@ export default function AdminShell({
           {/* One-click switch to Lakisa Official (Nov 2026): only
               renders for kabeyailunga243@gmail.com, so Kabeya can move
               from the admin account to the Official account without a
-              password. One direction only, no return button. */}
-          <AccountSwitchButton email={user.email} />
+              password. The return button lives in the sidebar for the
+              Official account. */}
+          <AccountSwitchButton email={user.email} variant="admin" />
           <button type="button" className="ad-nav-item" onClick={signOut} title="Sign out">
             <span className="ad-nav-icon">
               <LogOut size={18} />

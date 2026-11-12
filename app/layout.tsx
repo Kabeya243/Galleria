@@ -3,8 +3,10 @@ import localFont from "next/font/local";
 import "./globals.css";
 import LakisaToast from "@/components/lakisa-toast";
 import CookieBanner from "@/components/cookie-banner";
+import MobileBurger from "@/components/mobile-burger";
 import PwaRegister from "@/components/pwa-register";
 import { SITE_URL } from "@/components/seo-jsonld";
+import { getCurrentUser } from "@/lib/auth";
 import "@/components/advanced-site-editor.css";
 import "@/components/advanced-site-published.css";
 
@@ -87,16 +89,26 @@ export const metadata: Metadata = {
 
 const themeScript = `(function(){try{var c=localStorage.getItem('sanaa-theme');if(!c){var m=document.cookie.match(/(?:^|; )sanaa-theme=(light|dark|system)/);c=m?m[1]:'system';}var d=c==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):c;document.documentElement.dataset.theme=d;}catch(e){}})();`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Global mobile burger: the auth state decides which links the menu
+  // shows. A failed lookup (no session, DB hiccup) just shows the
+  // signed-out links; it must never take the layout down.
+  let signedIn = false;
+  try {
+    signedIn = (await getCurrentUser()) !== null;
+  } catch {
+    signedIn = false;
+  }
   return (
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <PwaRegister />
+        <MobileBurger signedIn={signedIn} />
         {children}
         <LakisaToast />
         <CookieBanner />

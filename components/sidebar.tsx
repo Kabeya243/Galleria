@@ -301,9 +301,9 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile only (see globals.css): a floating button that opens the
-          nav as a slide-over. On desktop the sidebar is always visible
-          and this button is hidden. */}
+      {/* Kept in the DOM but hidden on every width (see globals.css):
+          the global burger in the root layout is the single menu button
+          on phones, and on desktop the sidebar is always visible. */}
       <button
         type="button"
         className="mobile-nav-toggle"

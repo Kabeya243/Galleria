@@ -693,8 +693,16 @@
     display: none;
   }
 
+  /* No header burger or sign-in pill on mobile: the global burger in
+     the root layout is the single menu button on phones (it opens the
+     same links, plus Sign in / Create account), and the fixed burger
+     would otherwise sit on top of the pill at the top-right. */
   .mobileToggle {
-    display: inline-flex;
+    display: none;
+  }
+
+  .signin {
+    display: none;
   }
 
   .mobileMenu {
@@ -785,8 +793,8 @@
 /* --- Small phones (≤480 px) --- */
 
 @media (max-width: 480px) {
-  /* Header: logo + Sign in + hamburger must fit even at 320 px in the
-     longest locales (e.g. Spanish "Iniciar sesión"). */
+  /* Header: logo only on small phones (Sign in and the hamburger live
+     in the global burger menu). The logo must fit even at 320 px. */
   .header {
     padding: 14px 16px;
     gap: 12px;

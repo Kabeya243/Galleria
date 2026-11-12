@@ -810,7 +810,11 @@ button { color: inherit; }
      icon rail on tablet and mobile. */
   .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 90; width: min(300px, 84vw); min-width: 0; height: 100vh; height: 100dvh; transform: translateX(-105%); transition: transform .25s ease; box-shadow: 0 0 40px rgba(20, 20, 20, .25); }
   .sidebar.open { transform: translateX(0); }
-  .mobile-nav-toggle { display: grid; }
+  /* No sidebar toggle on mobile: the global burger in the root layout
+     is the single menu button on phones (it opens the same links).
+     The old rule that showed this toggle here lost to the base
+     `display: none` later in this file (same specificity, later wins),
+     so the button never appeared — that is the bug Kabeya reported. */
   .sidebar-backdrop { display: block; }
   .nav-item { min-height: 44px; }
   .editor-workspace { grid-template-columns: 175px minmax(280px, 1fr); }
@@ -1446,7 +1450,12 @@ button { font-weight: 600; }
   .galleries-header, .galleries-intro, .galleries-viewer, .galleries-grid { padding-left: 16px; padding-right: 16px; }
   .galleries-viewer-stage { height: 300px; }
   .galleries-viewer-head { flex-direction: column; align-items: start; }
-  .public-nav-toggle { display: inline-flex; }
+  /* No public-nav toggle on mobile: the global burger in the root
+     layout is the single menu button on phones (it opens the same
+     links, plus Sign in). The sign-in button is hidden here too, so
+     it never sits under the fixed global burger at the top-right. */
+  .public-nav-toggle { display: none; }
+  .galleries-signin { display: none; }
 }
 
 /* Admin (CRM) sub-navigation: a row of links under the page header. */
@@ -1942,12 +1951,30 @@ html[data-admin-collapsed="true"] .ad-nav-item { justify-content: center; paddin
    with an honest status badge — never a fake button or a dead link. */
 .hub-dev-badge { display: inline-flex; align-items: center; width: fit-content; margin-top: auto; padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 
-/* Mobile navigation: a floating button (bottom-right, 48px touch
-   target) that opens the sidebar as a slide-over. Hidden on desktop,
-   where the sidebar is always visible. */
+/* Mobile navigation (sidebar toggle): hidden on every width. The
+   global burger in the root layout is the single menu button on
+   phones; on desktop the sidebar is always visible. */
 .mobile-nav-toggle { display: none; position: fixed; right: 16px; bottom: 16px; z-index: 80; width: 48px; height: 48px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--ink); color: var(--paper); box-shadow: 0 4px 16px rgba(20, 20, 20, .25); cursor: pointer; }
 .mobile-nav-toggle:hover { background: #000; }
 .sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 85; border: 0; padding: 0; background: rgba(20, 20, 20, .45); cursor: pointer; }
+
+/* Global mobile burger (components/mobile-burger.tsx, rendered in the
+   root layout): the single menu button on phones, fixed at the
+   top-right on EVERY page, signed in or not. Hidden on desktop.
+   ORDERING MATTERS: the show-rule lives in the media query directly
+   below this base rule. A show-rule placed earlier in this file would
+   lose to this base `display: none` (same specificity, later wins),
+   which is exactly how the sidebar toggle lost its mobile button. */
+.global-burger { display: none; position: fixed; top: 12px; right: 12px; z-index: 120; width: 44px; height: 44px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--ink); color: var(--paper); box-shadow: 0 4px 16px rgba(20, 20, 20, .25); cursor: pointer; }
+.global-burger:hover { background: #000; }
+.global-burger-backdrop { position: fixed; inset: 0; z-index: 119; border: 0; padding: 0; background: transparent; cursor: pointer; }
+.global-burger-menu { position: fixed; top: 64px; right: 12px; z-index: 121; display: flex; flex-direction: column; min-width: 248px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 80px); overflow-y: auto; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-3); box-shadow: 0 18px 48px rgba(0, 0, 0, .25); }
+.global-burger-menu a, .global-burger-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
+.global-burger-menu a:hover, .global-burger-menu button:hover { background: var(--surface-2); }
+.global-burger-divider { height: 1px; margin: 6px 4px; background: var(--line); }
+@media (max-width: 850px) {
+  .global-burger { display: grid; }
+}
 
 /* Hub card grids go down to one column on narrow phones, so nothing
    overflows at 320px. */

@@ -28,6 +28,7 @@ export const ADMIN_PERMISSIONS = {
   "subscriptions.manage": "Manage subscriptions",
   "orders.view": "Orders",
   "orders.manage": "Manage orders",
+  "magazine.manage": "Manage magazine",
   "subadmins.manage": "Manage sub-admins",
 } as const;
 

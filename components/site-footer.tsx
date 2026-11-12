@@ -92,6 +92,7 @@ export default function SiteFooter() {
             <h3>{t("footer", "about")}</h3>
             <Link href="/about">{t("footer", "aboutLakisa")}</Link>
             <Link href="/about#what-we-do">{t("footer", "whatWeDo")}</Link>
+            <Link href="/magazine">{t("nav", "magazine")}</Link>
             <Link href="/about#contact">{t("footer", "contact")}</Link>
           </div>
 

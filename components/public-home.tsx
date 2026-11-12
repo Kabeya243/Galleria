@@ -187,6 +187,7 @@ export default function PublicHome({
           <div className={styles.navLinks}>
             <Link href="/explore">{t("home", "explore")}</Link>
             <Link href="/galleries">{t("home", "exhibitions")}</Link>
+            <Link href="/magazine">{t("nav", "magazine")}</Link>
             <Link href="/create">{t("home", "create")}</Link>
             <div className={styles.dropdown}>
               <button
@@ -264,6 +265,9 @@ export default function PublicHome({
             </Link>
             <Link href="/galleries" onClick={closeMobileMenu}>
               {t("home", "exhibitions")}
+            </Link>
+            <Link href="/magazine" onClick={closeMobileMenu}>
+              {t("nav", "magazine")}
             </Link>
             <Link href="/create" onClick={closeMobileMenu}>
               {t("home", "create")}

@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   LogOut,
   Menu,
+  Newspaper,
   Search,
   ShieldCheck,
   ShoppingBag,
@@ -46,6 +47,7 @@ const SECTION_ROUTES: Record<string, string> = {
   "test-reports": "/admin/test-reports",
   subscriptions: "/admin/subscriptions",
   orders: "/admin/orders",
+  magazine: "/admin/magazine",
   "sub-admins": "/admin/sub-admins",
 };
 
@@ -199,6 +201,12 @@ export default function AdminShell({
       href: "/admin/orders",
       icon: <ShoppingBag size={18} />,
       badge: liveCounts?.orders,
+    },
+    {
+      id: "magazine",
+      label: "Magazine",
+      href: "/admin/magazine",
+      icon: <Newspaper size={18} />,
     },
     {
       id: "sub-admins",

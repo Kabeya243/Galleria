@@ -86,6 +86,7 @@ export default function MobileBurger({ signedIn }: { signedIn: boolean }) {
         { href: "/create", label: t("nav", "create"), icon: Plus },
         { href: "/explore", label: t("nav", "explore"), icon: Compass },
         { href: "/feed", label: t("nav", "feed"), icon: Newspaper },
+        { href: "/magazine", label: t("nav", "magazine"), icon: Newspaper },
         { href: "/messages", label: t("nav", "messages"), icon: MessageSquare },
         { href: "/tools", label: t("nav", "tools"), icon: Wrench },
         { href: "/open-call", label: t("openCall", "heroTitle"), icon: Megaphone },
@@ -97,6 +98,7 @@ export default function MobileBurger({ signedIn }: { signedIn: boolean }) {
         { href: "/explore", label: t("nav", "explore"), icon: Compass },
         { href: "/galleries", label: t("nav", "templates"), icon: GalleryVerticalEnd },
         { href: "/feed", label: t("nav", "feed"), icon: Newspaper },
+        { href: "/magazine", label: t("nav", "magazine"), icon: Newspaper },
         { href: "/tools", label: t("nav", "tools"), icon: Wrench },
         { href: "/open-call", label: t("openCall", "heroTitle"), icon: Megaphone },
       ];

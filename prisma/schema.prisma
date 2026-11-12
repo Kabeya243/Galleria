@@ -23,6 +23,10 @@ model User {
   createdAt    DateTime     @default(now())
   exhibitions  Exhibition[]
   posts        Post[]
+  // Magazine articles written by this account (Nov 2026): see
+  // MagazineArticle below. Only admins can write them; the public
+  // reads published ones at /magazine.
+  magazineArticles MagazineArticle[]
   likes        Like[]
   // Email verification (Nov 2026): set when the visitor confirms the
   // link sent to their inbox at signup. Null for accounts created
@@ -303,6 +307,54 @@ model Like {
 
   @@unique([postId, userId])
   @@index([postId])
+}
+
+// ---------------------------------------------------------------------------
+// Magazine (Nov 2026): the Lakisa editorial magazine at /magazine.
+// Separate from Post (the publication feed, one Post per published
+// exhibition) — a MagazineArticle is a written article with a cover
+// image, Markdown body and a views counter, published by an admin.
+// Only admins can write: the editor and the admin API routes are gated
+// by the "magazine.manage" permission (lib/admin.ts). The public reads
+// published articles; drafts are invisible outside the admin. Views
+// are counted once per visitor per article per day (MagazineView
+// below, anonymous visitorKey cookie, same pattern as VisitLog).
+// ---------------------------------------------------------------------------
+model MagazineArticle {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  title         String
+  excerpt       String?
+  coverImageUrl String
+  // Markdown source, rendered to HTML by lib/magazine-markdown.ts.
+  content       String
+  // "draft" (admin only) or "published" (public at /magazine).
+  status        String    @default("draft")
+  views         Int       @default(0)
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  publishedAt   DateTime?
+  viewsLog      MagazineView[]
+
+  @@index([status, publishedAt])
+  @@index([authorId])
+}
+
+// One row per visitor per article per day: the dedup behind the views
+// counter. visitorKey is the anonymous cookie from lib/visits.ts; day
+// is the UTC midnight of the read. No personal data, no IP stored.
+model MagazineView {
+  id         String          @id @default(cuid())
+  articleId  String
+  article    MagazineArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  visitorKey String
+  day        DateTime
+  createdAt  DateTime        @default(now())
+
+  @@unique([articleId, visitorKey, day])
+  @@index([articleId, day])
 }
 
 model Artwork {

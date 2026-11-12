@@ -1,12 +1,23 @@
 "use client";
 
-// Magazine editor (admin only): title, slug, excerpt, cover image,
-// Markdown body with a live preview, draft/published status. The page
-// that mounts this component already checked the magazine.manage
-// permission server-side; the API routes check it again on every call.
-import { useEffect, useRef, useState } from "react";
+// Magazine editor (admin only): a focused writing tool. Title as a
+// headline, cover with an immediate preview, Markdown body with a
+// Write/Preview toggle whose preview renders the real article page
+// styles (so Preview is the published article, not an approximation),
+// slug, excerpt, draft/published status that is always visible, and
+// save feedback the admin can trust (last-saved time, dirty state,
+// word count). The page that mounts this component already checked
+// the magazine.manage permission server-side; the API routes check
+// it again on every call.
+//
+// The preview byline is always "Lakisa": the public byline never
+// shows the internal author, whoever wrote the article.
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye } from "lucide-react";
 import type { SerializedMagazineArticle } from "@/lib/magazine";
+import editorStyles from "./magazine-editor.module.css";
+import articleStyles from "./magazine-page.module.css";
 
 function slugify(title: string): string {
   const base = title
@@ -17,6 +28,28 @@ function slugify(title: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
   return base || "article";
+}
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function readingMinutes(text: string): number {
+  return Math.max(1, Math.round(wordCount(text) / 200));
+}
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDate(iso: string | null): string {
+  const d = iso ? new Date(iso) : new Date();
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 async function uploadImageFile(file: File): Promise<string> {
@@ -44,6 +77,15 @@ async function uploadImageFile(file: File): Promise<string> {
   return url;
 }
 
+type Snapshot = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  coverImageUrl: string;
+  content: string;
+  status: "draft" | "published";
+};
+
 export default function MagazineEditor({
   article,
 }: {
@@ -67,8 +109,34 @@ export default function MagazineEditor({
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState<Snapshot | null>(
+    article
+      ? {
+          title: article.title,
+          slug: article.slug,
+          excerpt: article.excerpt ?? "",
+          coverImageUrl: article.coverImageUrl ?? "",
+          content: article.content,
+          status: article.status === "published" ? "published" : "draft",
+        }
+      : null,
+  );
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const bodyInputRef = useRef<HTMLInputElement>(null);
+
+  const snapshot: Snapshot = { title, slug, excerpt, coverImageUrl, content, status };
+  const isDirty = useMemo(
+    () =>
+      !savedSnapshot ||
+      JSON.stringify(savedSnapshot) !== JSON.stringify(snapshot),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [title, slug, excerpt, coverImageUrl, content, status, savedSnapshot],
+  );
+
+  const words = wordCount(content);
+  const minutes = readingMinutes(content);
 
   // Live preview: render the Markdown exactly as the public page will.
   useEffect(() => {
@@ -83,7 +151,7 @@ export default function MagazineEditor({
         .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Preview failed."))))
         .then((data) => setPreviewHtml((data as { html: string }).html))
         .catch(() => setPreviewError("The preview could not be rendered."));
-    }, 500);
+    }, 400);
     return () => clearTimeout(timer);
   }, [tab, content]);
 
@@ -136,7 +204,6 @@ export default function MagazineEditor({
   async function save(event?: React.FormEvent) {
     event?.preventDefault();
     setError(null);
-    setSaved(false);
     if (!title.trim()) {
       setError("Give the article a title.");
       return;
@@ -173,7 +240,8 @@ export default function MagazineEditor({
       if (!res.ok || !data?.article) {
         throw new Error(data?.error ?? "The article could not be saved.");
       }
-      setSaved(true);
+      setSavedAt(new Date());
+      setSavedSnapshot({ ...snapshot, title: payload.title, slug: data.article.slug });
       if (!article) {
         router.push(`/admin/magazine/${data.article.id}`);
       } else {
@@ -203,18 +271,68 @@ export default function MagazineEditor({
   }
 
   return (
-    <form
-      className="ad-card"
-      onSubmit={save}
-      style={{ marginTop: 16, display: "grid", gap: 16, maxWidth: 860 }}
-    >
-      <div style={{ display: "grid", gap: 12 }}>
-        <label style={{ display: "grid", gap: 4, fontSize: 14 }}>
-          Title
-          <input value={title} onChange={(e) => onTitleChange(e.target.value)} required />
-        </label>
-        <label style={{ display: "grid", gap: 4, fontSize: 14 }}>
-          Slug (the address: lakisa.art/magazine/{slug || "slug"})
+    <form className={editorStyles.editor} onSubmit={save}>
+      <div className={editorStyles.actionBar}>
+        <span
+          className={`${editorStyles.statusPill} ${
+            status === "published"
+              ? editorStyles.statusPublished
+              : editorStyles.statusDraft
+          }`}
+        >
+          {status === "published" ? "Published" : "Draft"}
+        </span>
+        <span
+          className={`${editorStyles.saveState} ${
+            !isDirty && savedAt ? editorStyles.saveStateSaved : ""
+          } ${isDirty ? editorStyles.saveStateDirty : ""}`}
+        >
+          {saving
+            ? "Saving…"
+            : isDirty
+              ? "Unsaved changes"
+              : savedAt
+                ? `Saved at ${formatTime(savedAt)}`
+                : article
+                  ? "No changes"
+                  : "Not saved yet"}
+        </span>
+        <button
+          type="submit"
+          className={editorStyles.primaryButton}
+          disabled={saving}
+        >
+          {saving ? "Saving…" : article ? "Save changes" : "Create article"}
+        </button>
+        {article && status === "published" && (
+          <a
+            href={`/magazine/${article.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className={editorStyles.secondaryButton}
+          >
+            View public page
+          </a>
+        )}
+      </div>
+
+      <input
+        className={editorStyles.titleInput}
+        value={title}
+        onChange={(e) => onTitleChange(e.target.value)}
+        placeholder="Article title"
+        aria-label="Article title"
+        required
+      />
+
+      <label className={editorStyles.field}>
+        Address
+        <span className={editorStyles.fieldHint}>
+          The public page lives at this address. Edit it with care: changing
+          it breaks the old link.
+        </span>
+        <span className={editorStyles.slugRow}>
+          <span>lakisa.art/magazine/</span>
           <input
             value={slug}
             onChange={(e) => {
@@ -222,23 +340,51 @@ export default function MagazineEditor({
               setSlugTouched(true);
             }}
             placeholder="auto-generated from the title"
+            aria-label="Article slug"
           />
-        </label>
-        <label style={{ display: "grid", gap: 4, fontSize: 14 }}>
-          Excerpt (one or two lines, shown on the list)
-          <textarea value={excerpt} onChange={(e) => setExcerpt(e.target.value)} rows={2} />
-        </label>
-        <div style={{ display: "grid", gap: 4, fontSize: 14 }}>
-          <span>Cover image</span>
-          {coverImageUrl && (
-            <img
-              src={coverImageUrl}
-              alt="Cover preview"
-              style={{ maxWidth: 480, borderRadius: 8, border: "1px solid var(--ad-border)" }}
-            />
-          )}
-          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+        </span>
+      </label>
+
+      <label className={editorStyles.field}>
+        Excerpt
+        <span className={editorStyles.fieldHint}>
+          One or two lines. Shown on the magazine front page and under the
+          headline.
+        </span>
+        <textarea
+          value={excerpt}
+          onChange={(e) => setExcerpt(e.target.value)}
+          rows={2}
+          placeholder="A short standfirst for the article."
+        />
+      </label>
+
+      <div className={editorStyles.field}>
+        <span>Cover image</span>
+        <span className={editorStyles.fieldHint}>
+          The large image at the top of the article and on the front page.
+          Wide images work best (16:9).
+        </span>
+        {coverImageUrl ? (
+          <img
+            src={coverImageUrl}
+            alt="Cover preview"
+            className={editorStyles.coverPreview}
+          />
+        ) : (
+          <button
+            type="button"
+            className={editorStyles.coverEmpty}
+            onClick={() => coverInputRef.current?.click()}
+          >
+            {uploading === "cover" ? "Uploading…" : "Click to upload a cover image"}
+          </button>
+        )}
+        <div className={editorStyles.coverActions}>
+          <label className={editorStyles.fileButton}>
+            {coverImageUrl ? "Change cover" : "Upload cover"}
             <input
+              ref={coverInputRef}
               type="file"
               accept="image/*"
               disabled={uploading === "cover"}
@@ -247,117 +393,201 @@ export default function MagazineEditor({
                 e.target.value = "";
               }}
             />
-            {uploading === "cover" && <span>Uploading…</span>}
           </label>
-          <input
-            value={coverImageUrl}
-            onChange={(e) => setCoverImageUrl(e.target.value)}
-            placeholder="Or paste an image URL"
-          />
-        </div>
-        <div style={{ display: "grid", gap: 4, fontSize: 14 }}>
-          <span>
-            Body (Markdown: # headings, **bold**, *italic*, [links](url), ![images](url))
-          </span>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {coverImageUrl && (
             <button
               type="button"
+              className={editorStyles.secondaryButton}
+              onClick={() => setCoverImageUrl("")}
+            >
+              Remove
+            </button>
+          )}
+          {uploading === "cover" && <span>Uploading…</span>}
+        </div>
+        <input
+          type="text"
+          value={coverImageUrl}
+          onChange={(e) => setCoverImageUrl(e.target.value)}
+          placeholder="Or paste an image URL"
+          aria-label="Cover image URL"
+        />
+      </div>
+
+      <div className={editorStyles.field}>
+        <span>Body</span>
+        <span className={editorStyles.fieldHint}>
+          Markdown: # headings, **bold**, *italic*, [links](url),
+          ![images](url). A lone image line becomes a captioned figure.
+        </span>
+        <div className={editorStyles.bodyToolbar}>
+          <div className={editorStyles.segmented} role="tablist" aria-label="Body view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "write"}
+              className={tab === "write" ? editorStyles.active : ""}
               onClick={() => setTab("write")}
-              disabled={tab === "write"}
-              style={{ fontWeight: tab === "write" ? 700 : 400 }}
             >
               Write
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={tab === "preview"}
+              className={tab === "preview" ? editorStyles.active : ""}
               onClick={() => setTab("preview")}
-              disabled={tab === "preview"}
-              style={{ fontWeight: tab === "preview" ? 700 : 400 }}
             >
               Preview
             </button>
-            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13 }}>
-              Insert image
-              <input
-                type="file"
-                accept="image/*"
-                disabled={uploading === "body"}
-                onChange={(e) => {
-                  void onBodyImageFile(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-            {uploading === "body" && <span>Uploading…</span>}
           </div>
-          {tab === "write" ? (
-            <textarea
-              ref={contentRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={18}
-              style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}
-              required
-            />
-          ) : (
-            <div
-              style={{
-                border: "1px solid var(--ad-border)",
-                borderRadius: 8,
-                padding: 16,
-                minHeight: 320,
-                lineHeight: 1.7,
+          <label className={editorStyles.fileButton}>
+            Insert image
+            <input
+              ref={bodyInputRef}
+              type="file"
+              accept="image/*"
+              disabled={uploading === "body"}
+              onChange={(e) => {
+                void onBodyImageFile(e.target.files?.[0]);
+                e.target.value = "";
               }}
-            >
-              {previewError ? (
-                <p>{previewError}</p>
-              ) : (
-                <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-              )}
-            </div>
-          )}
+            />
+          </label>
+          {uploading === "body" && <span>Uploading…</span>}
+          <span className={editorStyles.wordCount}>
+            {words} words · {minutes} min read
+          </span>
         </div>
-        <label style={{ display: "grid", gap: 4, fontSize: 14, maxWidth: 240 }}>
-          Status
-          <select value={status} onChange={(e) => setStatus(e.target.value as "draft" | "published")}>
-            <option value="draft">Draft (only admins see it)</option>
-            <option value="published">Published (public on /magazine)</option>
-          </select>
-        </label>
+        {tab === "write" ? (
+          <textarea
+            ref={contentRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className={editorStyles.bodyTextarea}
+            placeholder="Write the article here…"
+            aria-label="Article body"
+            required
+          />
+        ) : (
+          <div className={editorStyles.previewPane}>
+            <div className={articleStyles.magazineRoot}>
+              <div className={editorStyles.previewInner}>
+                <header className={articleStyles.articleHeader}>
+                  <p className={articleStyles.articleEyebrow}>
+                    Lakisa · Magazine
+                  </p>
+                  <h1 className={articleStyles.articleTitle}>
+                    {title.trim() || "Untitled"}
+                  </h1>
+                  {excerpt.trim() && (
+                    <p className={articleStyles.articleExcerpt}>{excerpt.trim()}</p>
+                  )}
+                  <p className={articleStyles.articleMeta}>
+                    <span>
+                      By <strong>Lakisa</strong>
+                    </span>
+                    <span aria-hidden="true" className={articleStyles.metaDot}>
+                      ·
+                    </span>
+                    <span>
+                      {formatDate(
+                        article?.publishedAt ?? article?.createdAt ?? null,
+                      )}
+                    </span>
+                    <span aria-hidden="true" className={articleStyles.metaDot}>
+                      ·
+                    </span>
+                    <span>
+                      <Eye size={13} /> {article?.views ?? 0} views
+                    </span>
+                    <span aria-hidden="true" className={articleStyles.metaDot}>
+                      ·
+                    </span>
+                    <span>
+                      {minutes} min read
+                    </span>
+                  </p>
+                </header>
+                {coverImageUrl && (
+                  <div className={articleStyles.articleHero}>
+                    <img
+                      src={coverImageUrl}
+                      alt={title.trim() || "Cover"}
+                      className={articleStyles.articleCover}
+                    />
+                  </div>
+                )}
+                {previewError ? (
+                  <p className={editorStyles.errorText}>{previewError}</p>
+                ) : (
+                  <div
+                    className={articleStyles.articleBody}
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
+      <label className={editorStyles.field} style={{ maxWidth: 320 }}>
+        Status
+        <span className={editorStyles.fieldHint}>
+          Draft is visible only to admins. Published appears on /magazine at
+          once.
+        </span>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as "draft" | "published")}
+        >
+          <option value="draft">Draft (only admins see it)</option>
+          <option value="published">Published (public on /magazine)</option>
+        </select>
+      </label>
+
       {error && (
-        <p role="alert" style={{ color: "var(--ad-danger, #b3261e)", margin: 0 }}>
+        <p role="alert" className={editorStyles.errorText}>
           {error}
         </p>
       )}
-      {saved && <p style={{ margin: 0 }}>Saved.</p>}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <button type="submit" disabled={saving}>
+      <div className={editorStyles.footerActions}>
+        <button
+          type="submit"
+          className={editorStyles.primaryButton}
+          disabled={saving}
+        >
           {saving ? "Saving…" : article ? "Save changes" : "Create article"}
         </button>
         {article && (
           <>
             <button
               type="button"
+              className={editorStyles.dangerButton}
               disabled={deleting}
               onClick={() => {
                 if (confirmDelete) void remove();
                 else setConfirmDelete(true);
               }}
-              style={{ color: "var(--ad-danger, #b3261e)" }}
             >
-              {deleting ? "Deleting…" : confirmDelete ? "Click again to delete" : "Delete article"}
+              {deleting
+                ? "Deleting…"
+                : confirmDelete
+                  ? "Click again to delete"
+                  : "Delete article"}
             </button>
             {confirmDelete && !deleting && (
               <button type="button" onClick={() => setConfirmDelete(false)}>
                 Keep it
               </button>
             )}
-            <a href={`/magazine/${article.slug}`} target="_blank" rel="noreferrer">
-              View public page
-            </a>
+            {status === "published" && (
+              <a href={`/magazine/${article.slug}`} target="_blank" rel="noreferrer">
+                View public page
+              </a>
+            )}
           </>
         )}
       </div>

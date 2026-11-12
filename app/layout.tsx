@@ -33,6 +33,23 @@ const dmSans = localFont({
   variable: "--font-body",
   weight: "400 700",
 });
+// Playfair Display (magazine only): the editorial serif for magazine
+// headlines and standfirsts, self-hosted like the other fonts.
+const playfair = localFont({
+  src: [
+    {
+      path: "./fonts/playfair-display-regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/playfair-display-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+  ],
+  variable: "--font-magazine",
+});
 
 export const viewport: Viewport = {
   // Brand black, matching the Lakisa logo and the PWA theme colour.
@@ -104,7 +121,7 @@ export default async function RootLayout({
     signedIn = false;
   }
   return (
-    <html lang="en" className={`${fraunces.variable} ${dmSans.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${fraunces.variable} ${dmSans.variable} ${playfair.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <PwaRegister />

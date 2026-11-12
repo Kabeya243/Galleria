@@ -106,13 +106,16 @@ export function renderMarkdown(markdown: string): string {
       flushList(items, isOrdered);
       continue;
     }
-    // A lone image line becomes a figure (no wrapping paragraph).
+    // A lone image line becomes a figure with its alt text as caption.
     const imageOnly = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (imageOnly) {
       const safe = safeUrl(imageOnly[2]);
       if (safe) {
+        const caption = escapeHtml(imageOnly[1].trim());
         html.push(
-          `<figure><img src="${safe}" alt="${imageOnly[1]}" loading="lazy" /></figure>`,
+          `<figure><img src="${safe}" alt="${imageOnly[1]}" loading="lazy" />${
+            caption ? `<figcaption>${caption}</figcaption>` : ""
+          }</figure>`,
         );
       }
       i += 1;

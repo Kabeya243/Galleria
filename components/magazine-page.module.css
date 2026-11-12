@@ -1,14 +1,187 @@
-/* Magazine list and article pages (Nov 2026). Editorial layout on the
-   galleries-page shell: wide cards for the list, a centered column
-   for the article body. Theme-aware (var(--paper), --ink, --muted). */
+/* Lakisa Magazine (Nov 2026). Light editorial theme, scoped to the
+   magazine pages: off-white paper #faf8f4, near-black ink, Playfair
+   Display headlines, gold #a38348 accents. The shared header, nav and
+   footer components stay untouched; the .magazineRoot overrides below
+   recolour them for the editorial pages (BrandLogo is forced to its
+   light variant in the components). No em dashes in user-facing text. */
+
+/* Editorial palette, applied to the magazine <main>. Every magazine
+   rule below reads these variables, so the whole section stays in
+   the same light editorial voice. */
+.magazineRoot {
+  --paper: #faf8f4;
+  --ink: #141414;
+  --muted: rgba(20, 20, 20, 0.62);
+  --line: rgba(20, 20, 20, 0.14);
+  --accent: #a38348;
+  --accent-soft: rgba(163, 131, 72, 0.12);
+  --surface: #faf8f4;
+  --surface-2: #f1ede6;
+  --surface-3: #faf8f4;
+  --border: rgba(20, 20, 20, 0.14);
+}
+
+.magazineSerif {
+  font-family: var(--font-magazine), "Playfair Display", Georgia, serif;
+}
+
+/* ---------- List page ---------- */
+
+.masthead {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 72px 44px 40px;
+}
+
+.eyebrow {
+  margin: 0 0 14px;
+  color: var(--accent);
+  font: 700 11px/1.4 var(--font-body), "DM Sans", sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.masthead h1 {
+  margin: 0 0 16px;
+  max-width: 760px;
+  font: 400 clamp(40px, 5vw, 64px)/1.05 var(--font-magazine), "Playfair Display", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.masthead > p:last-child {
+  margin: 0;
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+/* Featured lead story: cover left, words right on desktop; stacked
+   on mobile. A gold rule above and below marks it as the front page. */
+.featured {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 44px 48px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.featuredCover {
+  display: block;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.featuredCover img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  background: var(--surface-2);
+  transition: transform 0.4s ease;
+}
+
+.featuredCover:hover img {
+  transform: scale(1.02);
+}
+
+.featuredBody h2 {
+  margin: 0 0 12px;
+  font: 400 clamp(30px, 3.2vw, 44px)/1.1 var(--font-magazine), "Playfair Display", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.featuredBody h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.featuredBody h2 a:hover {
+  color: var(--accent);
+}
+
+.featuredExcerpt {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.featuredMeta,
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.featuredMeta svg,
+.cardMeta svg {
+  flex: none;
+}
+
+.featuredMeta span,
+.cardMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.metaDot {
+  color: var(--accent);
+}
+
+.readLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.readLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Section heading over the rest of the stories. */
+.sectionHead {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 44px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionHead h2 {
+  margin: 0;
+  font: 400 26px/1.2 var(--font-magazine), "Playfair Display", Georgia, serif;
+}
+
+.sectionHead span {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
 
 .articleGrid {
-  max-width: 1350px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 16px 44px 64px;
+  padding: 24px 44px 72px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px 28px;
 }
 
 .articleCard {
@@ -18,7 +191,7 @@
 
 .coverLink {
   display: block;
-  border-radius: 10px;
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--line);
 }
@@ -26,29 +199,37 @@
 .cover {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 3 / 2;
   object-fit: cover;
   background: var(--surface-2);
+  transition: transform 0.4s ease;
+}
+
+.coverLink:hover .cover {
+  transform: scale(1.02);
 }
 
 .coverFallback {
   display: grid;
   place-items: center;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 3 / 2;
   background: var(--surface-2);
   color: var(--muted);
-  font: 600 13px var(--font-display), Georgia, serif;
+  font: 600 13px var(--font-magazine), "Playfair Display", Georgia, serif;
   letter-spacing: 0.2em;
 }
 
 .cardBody {
-  padding: 14px 2px 0;
+  padding: 16px 2px 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .cardBody h3 {
-  margin: 0 0 6px;
-  font: 600 20px/1.25 var(--font-display), Georgia, serif;
+  margin: 0 0 8px;
+  font: 400 22px/1.25 var(--font-magazine), "Playfair Display", Georgia, serif;
 }
 
 .cardBody h3 a {
@@ -57,14 +238,14 @@
 }
 
 .cardBody h3 a:hover {
-  text-decoration: underline;
+  color: var(--accent);
 }
 
 .cardExcerpt {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -72,51 +253,56 @@
 }
 
 .cardMeta {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.cardMeta svg {
-  flex: none;
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 .emptyState {
   max-width: 560px;
-  margin: 40px auto;
+  margin: 40px auto 72px;
   padding: 32px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: center;
 }
 
 .emptyState strong {
   display: block;
   margin-bottom: 8px;
-  font: 600 18px/1.3 var(--font-display), Georgia, serif;
+  font: 400 20px/1.3 var(--font-magazine), "Playfair Display", Georgia, serif;
 }
 
 .emptyState p {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
-/* Article detail */
+/* ---------- Article page ---------- */
+
+/* Thin gold reading-progress bar, fixed to the viewport top. */
+.progressBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  z-index: 60;
+  transition: width 0.1s linear;
+}
+
 .articleWrap {
-  max-width: 780px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 48px 24px 80px;
+  padding: 40px 44px 80px;
 }
 
 .backLink {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 28px;
+  margin-bottom: 36px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
@@ -127,24 +313,32 @@
   color: var(--ink);
 }
 
-.articleCover {
-  display: block;
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  margin-bottom: 32px;
+/* Centered editorial header: eyebrow, headline, standfirst, byline. */
+.articleHeader {
+  max-width: 860px;
+  margin: 0 auto 36px;
+  text-align: center;
+}
+
+.articleEyebrow {
+  margin: 0 0 16px;
+  color: var(--accent);
+  font: 700 11px/1.4 var(--font-body), "DM Sans", sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .articleTitle {
-  margin: 0 0 12px;
-  font: 450 clamp(30px, 4vw, 44px)/1.1 var(--font-display), Georgia, serif;
+  margin: 0 0 18px;
+  font: 400 clamp(36px, 5vw, 56px)/1.08 var(--font-magazine), "Playfair Display", Georgia, serif;
   letter-spacing: -0.01em;
 }
 
 .articleExcerpt {
-  margin: 0 0 16px;
+  margin: 0 auto 24px;
+  max-width: 640px;
   color: var(--muted);
-  font: 400 18px/1.5 Georgia, serif;
+  font: italic 400 20px/1.55 var(--font-magazine), "Playfair Display", Georgia, serif;
 }
 
 .articleMeta {
@@ -152,8 +346,9 @@
   flex-wrap: wrap;
   gap: 6px 14px;
   align-items: center;
-  padding-bottom: 20px;
-  margin-bottom: 28px;
+  justify-content: center;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
@@ -169,29 +364,51 @@
   gap: 5px;
 }
 
-/* Rendered Markdown body */
+.articleMeta strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.articleHero {
+  max-width: 1080px;
+  margin: 0 auto 48px;
+}
+
+.articleCover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+/* Rendered Markdown body: a readable measure, generous leading. */
 .articleBody {
-  font-size: 16px;
-  line-height: 1.75;
+  max-width: 680px;
+  margin: 0 auto;
+  font-size: 17px;
+  line-height: 1.85;
   color: var(--ink);
 }
 
 .articleBody h2 {
-  margin: 36px 0 12px;
-  font: 600 26px/1.25 var(--font-display), Georgia, serif;
+  margin: 44px 0 14px;
+  font: 400 30px/1.25 var(--font-magazine), "Playfair Display", Georgia, serif;
 }
 
 .articleBody h3 {
-  margin: 28px 0 10px;
-  font: 600 21px/1.3 var(--font-display), Georgia, serif;
+  margin: 36px 0 12px;
+  font: 400 24px/1.3 var(--font-magazine), "Playfair Display", Georgia, serif;
 }
 
 .articleBody p {
-  margin: 0 0 18px;
+  margin: 0 0 20px;
 }
 
 .articleBody a {
-  color: var(--ink);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -202,37 +419,54 @@
 
 .articleBody ul,
 .articleBody ol {
-  margin: 0 0 18px;
+  margin: 0 0 20px;
   padding-left: 24px;
 }
 
 .articleBody li {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.articleBody li::marker {
+  color: var(--accent);
 }
 
 .articleBody blockquote {
-  margin: 0 0 18px;
-  padding: 4px 0 4px 18px;
+  margin: 8px 0 24px;
+  padding: 4px 0 4px 22px;
   border-left: 3px solid var(--accent);
   color: var(--muted);
-  font: 400 18px/1.5 Georgia, serif;
+  font: italic 400 20px/1.55 var(--font-magazine), "Playfair Display", Georgia, serif;
+}
+
+.articleBody blockquote p {
+  margin: 0;
 }
 
 .articleBody hr {
-  margin: 32px 0;
+  margin: 40px auto;
+  width: 64px;
   border: 0;
-  border-top: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
 }
 
 .articleBody figure {
-  margin: 0 0 18px;
+  margin: 32px 0;
 }
 
 .articleBody img {
   display: block;
   max-width: 100%;
-  border-radius: 10px;
+  border-radius: 4px;
   border: 1px solid var(--line);
+}
+
+.articleBody figcaption {
+  margin-top: 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .articleBody code {
@@ -242,9 +476,82 @@
   font-size: 0.9em;
 }
 
+/* More from the magazine, at the end of an article. */
+.moreSection {
+  max-width: 1200px;
+  margin: 72px auto 0;
+  padding: 40px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.moreSection h2 {
+  margin: 0 0 24px;
+  font: 400 26px/1.2 var(--font-magazine), "Playfair Display", Georgia, serif;
+}
+
+.moreGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px 28px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  .featured {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .articleGrid,
+  .moreGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 620px) {
+  .masthead {
+    padding: 48px 20px 28px;
+  }
+
+  .featured {
+    padding: 28px 20px 36px;
+    gap: 24px;
+  }
+
+  .sectionHead {
+    padding: 36px 20px 0;
+  }
+
   .articleGrid {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding: 20px 20px 56px;
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .moreGrid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .articleWrap {
+    padding: 28px 20px 64px;
+  }
+
+  .articleHeader {
+    margin-bottom: 28px;
+  }
+
+  .articleHero {
+    margin-bottom: 36px;
+  }
+
+  .articleBody {
+    font-size: 16px;
+    line-height: 1.8;
+  }
+
+  .moreSection {
+    margin-top: 56px;
   }
 }

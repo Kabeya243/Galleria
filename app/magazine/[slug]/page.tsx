@@ -4,6 +4,7 @@ import MagazineArticlePage from "@/components/magazine-article-page";
 import MagazineIdentify from "@/components/magazine-identify";
 import { renderMarkdown } from "@/lib/magazine-markdown";
 import {
+  getMorePublishedArticles,
   getPublishedArticleBySlug,
   recordMagazineView,
   serializeMagazineArticle,
@@ -50,12 +51,14 @@ export default async function MagazineArticleRoute({
   await recordMagazineView(article.id, ctx.visitorKey);
   const fresh = await getPublishedArticleBySlug(slug);
   const bodyHtml = renderMarkdown(article.content);
+  const more = await getMorePublishedArticles(article.id, 3);
   return (
     <>
       <MagazineIdentify />
       <MagazineArticlePage
         article={serializeMagazineArticle(fresh ?? article)}
         bodyHtml={bodyHtml}
+        more={more}
       />
     </>
   );

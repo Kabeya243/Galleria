@@ -1,0 +1,374 @@
+/* Magazine editor (admin only). A focused writing tool inside the
+   admin panel: it reads the admin --ad-* variables so it follows the
+   admin dark/light theme. The preview pane reuses the public article
+   styles (magazine-page.module.css) wrapped in .magazineRoot, so the
+   preview is the published article, not an approximation. */
+
+.editor {
+  margin-top: 16px;
+  max-width: 860px;
+  display: grid;
+  gap: 20px;
+}
+
+/* Sticky action bar: status, save state, and the main actions stay
+   reachable while writing a long article. */
+.actionBar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--ad-card);
+  border: 1px solid var(--ad-border);
+  border-radius: 12px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.statusPill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.statusDraft {
+  color: var(--ad-tool);
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.statusPublished {
+  color: var(--ad-up);
+  background: rgba(52, 211, 153, 0.14);
+}
+
+.saveState {
+  margin-left: auto;
+  color: var(--ad-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.saveStateSaved {
+  color: var(--ad-up);
+  font-weight: 600;
+}
+
+.saveStateDirty {
+  color: var(--ad-tool);
+  font-weight: 600;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.primaryButton {
+  background: var(--ad-btn-bg);
+  color: var(--ad-btn-ink);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.secondaryButton {
+  background: transparent;
+  color: var(--ad-ink);
+  border-color: var(--ad-border);
+  text-decoration: none;
+}
+
+.dangerButton {
+  background: transparent;
+  color: var(--ad-down);
+  border-color: transparent;
+}
+
+.dangerButton:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* Headline-style title input: the article title, written large. */
+.titleInput {
+  width: 100%;
+  padding: 4px 2px 10px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ad-border);
+  border-radius: 0;
+  color: var(--ad-ink);
+  font: 400 32px/1.2 var(--font-magazine), "Playfair Display", Georgia, serif;
+  outline: none;
+}
+
+.titleInput:focus {
+  border-bottom-color: var(--ad-tool);
+}
+
+.titleInput::placeholder {
+  color: var(--ad-muted);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ad-ink);
+}
+
+.fieldHint {
+  color: var(--ad-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.field input[type="text"],
+.field input:not([type]),
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--ad-input-bg);
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  color: var(--ad-ink);
+  font-size: 14px;
+  font-weight: 400;
+  outline: none;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: var(--ad-tool);
+}
+
+.field textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.slugRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--ad-input-bg);
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.field .slugRow span {
+  flex: none;
+  padding: 10px 0 10px 12px;
+  color: var(--ad-muted);
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.field .slugRow input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px 10px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--ad-ink);
+  font-size: 13px;
+  outline: none;
+}
+
+/* Cover image: a large preview, or a dashed dropzone when empty. */
+.coverPreview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--ad-border);
+  background: var(--ad-row);
+}
+
+.coverEmpty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px dashed var(--ad-border);
+  border-radius: 8px;
+  color: var(--ad-muted);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.coverEmpty:hover {
+  border-color: var(--ad-tool);
+  color: var(--ad-ink);
+}
+
+.coverActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.fileButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  color: var(--ad-ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+}
+
+.fileButton:hover {
+  border-color: var(--ad-tool);
+}
+
+.fileButton input {
+  display: none;
+}
+
+/* Body toolbar: Write/Preview segmented control, insert image,
+   word count. */
+.bodyToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segmented button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ad-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button.active {
+  background: var(--ad-btn-bg);
+  color: var(--ad-btn-ink);
+}
+
+.wordCount {
+  margin-left: auto;
+  color: var(--ad-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.bodyTextarea {
+  width: 100%;
+  min-height: 420px;
+  padding: 14px;
+  background: var(--ad-input-bg);
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  color: var(--ad-ink);
+  font: 400 14px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace;
+  resize: vertical;
+  outline: none;
+}
+
+.bodyTextarea:focus {
+  border-color: var(--ad-tool);
+}
+
+/* The preview renders the real article page styles, wrapped in the
+   editorial theme, so Write and Preview are the same article. */
+.previewPane {
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.previewInner {
+  background: #faf8f4;
+  padding: 36px 28px 48px;
+}
+
+.errorText {
+  margin: 0;
+  color: var(--ad-down);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--ad-border);
+}
+
+.footerActions a {
+  color: var(--ad-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footerActions a:hover {
+  color: var(--ad-ink);
+  text-decoration: underline;
+}
+
+@media (max-width: 620px) {
+  .titleInput {
+    font-size: 26px;
+  }
+
+  .saveState {
+    margin-left: 0;
+    width: 100%;
+  }
+}

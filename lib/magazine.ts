@@ -28,6 +28,7 @@ export function serializeMagazineArticle(article: MagazineArticleWithAuthor) {
     content: article.content,
     status: article.status,
     views: article.views,
+    readingTime: readingTimeMinutes(article.content),
     authorName: MAGAZINE_PUBLIC_AUTHOR,
     createdAt: article.createdAt.toISOString(),
     updatedAt: article.updatedAt.toISOString(),
@@ -74,6 +75,26 @@ export async function uniqueArticleSlug(base: string, excludeId?: string): Promi
 }
 
 const authorSelect = { author: { select: { name: true, email: true } } } as const;
+
+/** Estimated reading time in minutes (about 200 words per minute). */
+export function readingTimeMinutes(content: string): number {
+  const words = content.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+/** Other published articles, newest first (for "More from the magazine"). */
+export async function getMorePublishedArticles(
+  excludeId: string,
+  limit = 3,
+): Promise<SerializedMagazineArticle[]> {
+  const articles = await db.magazineArticle.findMany({
+    where: { status: "published", id: { not: excludeId } },
+    include: authorSelect,
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: limit,
+  });
+  return articles.map(serializeMagazineArticle);
+}
 
 /** Published articles, newest first (most recently published first). */
 export async function getPublishedArticles(): Promise<SerializedMagazineArticle[]> {

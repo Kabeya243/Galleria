@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Eye } from "lucide-react";
 import AdminDenied from "@/components/admin-denied";
 import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox } from "@/components/admin-ui";
+import editorStyles from "@/components/magazine-editor.module.css";
 import { getAdminContext, hasAdminPermission } from "@/lib/admin-data";
 import { getAllMagazineArticles } from "@/lib/magazine";
 
@@ -52,9 +54,48 @@ export default async function AdminMagazineRoute() {
               <tbody>
                 {articles.map((article) => (
                   <tr key={article.id}>
-                    <td>{article.title}</td>
-                    <td>{article.status}</td>
-                    <td>{article.views}</td>
+                    <td>
+                      <Link href={`/admin/magazine/${article.id}`}>
+                        <strong>{article.title}</strong>
+                      </Link>
+                      {article.excerpt && (
+                        <div
+                          style={{
+                            color: "var(--ad-muted)",
+                            fontSize: 12,
+                            marginTop: 2,
+                            maxWidth: 420,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {article.excerpt}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span
+                        className={`${editorStyles.statusPill} ${
+                          article.status === "published"
+                            ? editorStyles.statusPublished
+                            : editorStyles.statusDraft
+                        }`}
+                      >
+                        {article.status}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                        }}
+                      >
+                        <Eye size={13} /> {article.views}
+                      </span>
+                    </td>
                     <td>
                       {article.publishedAt
                         ? new Date(article.publishedAt).toLocaleDateString("en-GB")
@@ -63,6 +104,18 @@ export default async function AdminMagazineRoute() {
                     <td>{article.authorName}</td>
                     <td>
                       <Link href={`/admin/magazine/${article.id}`}>Edit</Link>
+                      {article.status === "published" && (
+                        <>
+                          {" · "}
+                          <a
+                            href={`/magazine/${article.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View
+                          </a>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

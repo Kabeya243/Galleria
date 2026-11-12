@@ -1,7 +1,11 @@
 "use client";
 
-// Public magazine list (/magazine): published articles, newest first.
-// Server-rendered data in, translated chrome via useT. Works logged out.
+// Public magazine front page (/magazine): a featured lead story, then
+// the rest as a clean grid. Light editorial theme (off-white paper,
+// Playfair headlines, gold accents) scoped by styles.magazineRoot;
+// the shared header, nav and footer components are reused. The
+// BrandLogo is forced to its light variant so the black lockup reads
+// on the off-white masthead. Works logged out.
 import Link from "next/link";
 import { ArrowRight, Eye } from "lucide-react";
 import BrandLogo from "@/components/brand-logo";
@@ -21,6 +25,46 @@ function formatDate(iso: string | null, tag: string): string {
   });
 }
 
+function Meta({
+  article,
+  tag,
+  t,
+  showAuthor = true,
+}: {
+  article: SerializedMagazineArticle;
+  tag: string;
+  t: ReturnType<typeof useT>;
+  showAuthor?: boolean;
+}) {
+  return (
+    <>
+      <span>{formatDate(article.publishedAt ?? article.createdAt, tag)}</span>
+      <span aria-hidden="true" className={styles.metaDot}>
+        ·
+      </span>
+      <span>
+        <Eye size={13} /> {article.views} {t("magazine", "views")}
+      </span>
+      {showAuthor && (
+        <>
+          <span aria-hidden="true" className={styles.metaDot}>
+            ·
+          </span>
+          <span>
+            {t("magazine", "by")} {article.authorName}
+          </span>
+        </>
+      )}
+      <span aria-hidden="true" className={styles.metaDot}>
+        ·
+      </span>
+      <span>
+        {article.readingTime} {t("magazine", "minRead")}
+      </span>
+    </>
+  );
+}
+
 export default function MagazineListPage({
   articles,
 }: {
@@ -29,11 +73,12 @@ export default function MagazineListPage({
   const t = useT();
   const { locale } = useLocale();
   const tag = LOCALE_TAGS[locale] ?? "en-GB";
+  const [featured, ...rest] = articles;
   return (
-    <main className="galleries-page">
+    <main className={`galleries-page ${styles.magazineRoot}`}>
       <header className="galleries-header">
         <Link className="brand-lockup" href="/">
-          <BrandLogo variant="horizontal" height={52} />
+          <BrandLogo variant="horizontal" height={52} theme="light" />
         </Link>
         <PublicNav
           links={[
@@ -46,8 +91,8 @@ export default function MagazineListPage({
         />
       </header>
 
-      <section className="galleries-intro">
-        <p className="eyebrow">{t("magazine", "eyebrow")}</p>
+      <section className={styles.masthead}>
+        <p className={styles.eyebrow}>{t("magazine", "eyebrow")}</p>
         <h1>{t("magazine", "title")}</h1>
         <p>{t("magazine", "copy")}</p>
       </section>
@@ -58,46 +103,94 @@ export default function MagazineListPage({
           <p>{t("magazine", "empty")}</p>
         </div>
       ) : (
-        <section className={styles.articleGrid} aria-label={t("magazine", "magazine")}>
-          {articles.map((article) => (
-            <article key={article.id} className={styles.articleCard}>
+        <>
+          {featured && (
+            <section
+              className={styles.featured}
+              aria-label={t("magazine", "featured")}
+            >
               <Link
-                href={`/magazine/${article.slug}`}
-                className={styles.coverLink}
-                aria-label={`${t("magazine", "readArticle")}, ${article.title}`}
+                href={`/magazine/${featured.slug}`}
+                className={styles.featuredCover}
+                aria-label={`${t("magazine", "readArticle")}, ${featured.title}`}
               >
-                {article.coverImageUrl ? (
+                {featured.coverImageUrl ? (
                   <img
-                    src={article.coverImageUrl}
-                    alt={article.title}
-                    className={styles.cover}
-                    loading="lazy"
+                    src={featured.coverImageUrl}
+                    alt={featured.title}
+                    loading="eager"
                   />
                 ) : (
                   <span className={styles.coverFallback}>LAKISA</span>
                 )}
               </Link>
-              <div className={styles.cardBody}>
-                <h3>
-                  <Link href={`/magazine/${article.slug}`}>{article.title}</Link>
-                </h3>
-                {article.excerpt && <p className={styles.cardExcerpt}>{article.excerpt}</p>}
-                <p className={styles.cardMeta}>
-                  <span>
-                    {formatDate(article.publishedAt ?? article.createdAt, tag)}
-                  </span>
-                  <span>
-                    <Eye size={13} /> {article.views} {t("magazine", "views")}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <Link href={`/magazine/${article.slug}`}>
-                    {t("magazine", "readArticle")} <ArrowRight size={13} />
+              <div className={styles.featuredBody}>
+                <p className={styles.eyebrow}>{t("magazine", "featured")}</p>
+                <h2>
+                  <Link href={`/magazine/${featured.slug}`}>{featured.title}</Link>
+                </h2>
+                {featured.excerpt && (
+                  <p className={styles.featuredExcerpt}>{featured.excerpt}</p>
+                )}
+                <p className={styles.featuredMeta}>
+                  <Meta article={featured} tag={tag} t={t} />
+                </p>
+                <p style={{ margin: "18px 0 0" }}>
+                  <Link
+                    href={`/magazine/${featured.slug}`}
+                    className={styles.readLink}
+                  >
+                    {t("magazine", "readArticle")} <ArrowRight size={14} />
                   </Link>
                 </p>
               </div>
-            </article>
-          ))}
-        </section>
+            </section>
+          )}
+
+          {rest.length > 0 && (
+            <>
+              <div className={styles.sectionHead}>
+                <h2>{t("magazine", "latestStories")}</h2>
+              </div>
+              <section
+                className={styles.articleGrid}
+                aria-label={t("magazine", "latestStories")}
+              >
+                {rest.map((article) => (
+                  <article key={article.id} className={styles.articleCard}>
+                    <Link
+                      href={`/magazine/${article.slug}`}
+                      className={styles.coverLink}
+                      aria-label={`${t("magazine", "readArticle")}, ${article.title}`}
+                    >
+                      {article.coverImageUrl ? (
+                        <img
+                          src={article.coverImageUrl}
+                          alt={article.title}
+                          className={styles.cover}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className={styles.coverFallback}>LAKISA</span>
+                      )}
+                    </Link>
+                    <div className={styles.cardBody}>
+                      <h3>
+                        <Link href={`/magazine/${article.slug}`}>{article.title}</Link>
+                      </h3>
+                      {article.excerpt && (
+                        <p className={styles.cardExcerpt}>{article.excerpt}</p>
+                      )}
+                      <p className={styles.cardMeta}>
+                        <Meta article={article} tag={tag} t={t} />
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            </>
+          )}
+        </>
       )}
       <SiteFooter />
     </main>

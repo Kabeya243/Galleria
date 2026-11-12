@@ -11,7 +11,7 @@ VALUES
     'lakisa-open-call-for-young-artists',
     'Your own gallery: Lakisa opens its first open call for young artists',
     'Lakisa is opening its doors. Young artists can now submit one to three works for a curated exhibition in a real 3D gallery. No fees, no account needed.',
-    '/api/r2/magazine/open-call-sunlight-gallery.png',
+    'https://pub-0ff0606dd41247bcae65ba5509230aff.r2.dev/magazine/open-call-sunlight-gallery.png',
     $$What would you hang in your own gallery?
 
 Lakisa is a 3D gallery platform, made in Africa. Today, it opens its first call for young artists.

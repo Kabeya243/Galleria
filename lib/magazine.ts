@@ -10,6 +10,14 @@ export type MagazineArticleWithAuthor = Prisma.MagazineArticleGetPayload<{
   include: { author: { select: { name: true; email: true } } };
 }>;
 
+/**
+ * Public byline: always "Lakisa". Kabeya's personal name must never
+ * appear on the public platform, so the public serializer never
+ * surfaces the author's real name or email, whoever the internal
+ * author is. Admin reads use serializeMagazineArticleForAdmin.
+ */
+export const MAGAZINE_PUBLIC_AUTHOR = "Lakisa";
+
 export function serializeMagazineArticle(article: MagazineArticleWithAuthor) {
   return {
     id: article.id,
@@ -20,10 +28,19 @@ export function serializeMagazineArticle(article: MagazineArticleWithAuthor) {
     content: article.content,
     status: article.status,
     views: article.views,
-    authorName: article.author.name,
+    authorName: MAGAZINE_PUBLIC_AUTHOR,
     createdAt: article.createdAt.toISOString(),
     updatedAt: article.updatedAt.toISOString(),
     publishedAt: article.publishedAt ? article.publishedAt.toISOString() : null,
+  };
+}
+
+/** Admin-only serializer: the real internal author (never public). */
+export function serializeMagazineArticleForAdmin(article: MagazineArticleWithAuthor) {
+  return {
+    ...serializeMagazineArticle(article),
+    authorName: article.author.name,
+    authorEmail: article.author.email,
   };
 }
 
@@ -88,13 +105,16 @@ export async function getMagazineArticleById(
   });
 }
 
-/** All articles, newest first (admin list, drafts included). */
-export async function getAllMagazineArticles(): Promise<SerializedMagazineArticle[]> {
+/** All articles, newest first (admin list, drafts included). Uses the
+ * admin serializer so the editor sees the real internal author. */
+export async function getAllMagazineArticles(): Promise<
+  ReturnType<typeof serializeMagazineArticleForAdmin>[]
+> {
   const articles = await db.magazineArticle.findMany({
     include: authorSelect,
     orderBy: [{ createdAt: "desc" }],
   });
-  return articles.map(serializeMagazineArticle);
+  return articles.map(serializeMagazineArticleForAdmin);
 }
 
 /**

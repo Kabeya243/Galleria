@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db, withDbRetry } from "@/lib/db";
 import {
   getAllMagazineArticles,
-  serializeMagazineArticle,
+  serializeMagazineArticleForAdmin,
   slugifyArticleTitle,
   uniqueArticleSlug,
 } from "@/lib/magazine";
@@ -74,5 +74,5 @@ export async function POST(request: Request) {
       include: { author: { select: { name: true, email: true } } },
     }),
   );
-  return NextResponse.json({ article: serializeMagazineArticle(created) }, { status: 201 });
+  return NextResponse.json({ article: serializeMagazineArticleForAdmin(created) }, { status: 201 });
 }

@@ -4,7 +4,7 @@ import { requireAdminPermission } from "@/lib/admin";
 import { db, withDbRetry } from "@/lib/db";
 import {
   getMagazineArticleById,
-  serializeMagazineArticle,
+  serializeMagazineArticleForAdmin,
   slugifyArticleTitle,
   uniqueArticleSlug,
 } from "@/lib/magazine";
@@ -42,7 +42,7 @@ export async function GET(
   if (!article) {
     return NextResponse.json({ error: "Article not found." }, { status: 404 });
   }
-  return NextResponse.json({ article: serializeMagazineArticle(article) });
+  return NextResponse.json({ article: serializeMagazineArticleForAdmin(article) });
 }
 
 export async function PUT(
@@ -89,7 +89,7 @@ export async function PUT(
       include: { author: { select: { name: true, email: true } } },
     }),
   );
-  return NextResponse.json({ article: serializeMagazineArticle(updated) });
+  return NextResponse.json({ article: serializeMagazineArticleForAdmin(updated) });
 }
 
 export async function DELETE(

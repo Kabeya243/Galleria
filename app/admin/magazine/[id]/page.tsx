@@ -4,7 +4,7 @@ import AdminDenied from "@/components/admin-denied";
 import { AdminHero } from "@/components/admin-shell";
 import MagazineEditor from "@/components/magazine-editor";
 import { getAdminContext, hasAdminPermission } from "@/lib/admin-data";
-import { getMagazineArticleById, serializeMagazineArticle } from "@/lib/magazine";
+import { getMagazineArticleById, serializeMagazineArticleForAdmin } from "@/lib/magazine";
 
 export const metadata = {
   title: "Edit article: Lakisa",
@@ -31,7 +31,7 @@ export default async function AdminMagazineEditRoute({
         title={`Edit: ${article.title}`}
         description={`${article.views} views · ${article.status}${article.publishedAt ? ` · published ${new Date(article.publishedAt).toLocaleDateString("en-GB")}` : ""}.`}
       />
-      <MagazineEditor article={serializeMagazineArticle(article)} />
+      <MagazineEditor article={serializeMagazineArticleForAdmin(article)} />
     </>
   );
 }

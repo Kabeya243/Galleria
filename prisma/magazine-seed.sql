@@ -1,5 +1,7 @@
 -- Seed: the first Lakisa Magazine article (the open call story).
--- Published, attributed to the manager (kabeyailunga243@gmail.com).
+-- Published, attributed to the Lakisa Official account
+-- (official@lakisa.art). The public byline always reads "Lakisa":
+-- see MAGAZINE_PUBLIC_AUTHOR in lib/magazine.ts.
 -- Safe to re-run: ON CONFLICT (slug) DO NOTHING.
 INSERT INTO "MagazineArticle"
   ("id", "slug", "title", "excerpt", "coverImageUrl", "content", "status", "views", "authorId", "createdAt", "updatedAt", "publishedAt")
@@ -33,7 +35,7 @@ Your first 3D exhibition, free.
 The call is open now. Apply at [lakisa.art/open-call](https://lakisa.art/open-call).$$,
     'published',
     0,
-    'cmw3dv7ns0000jy080hbd1qv1',
+    '63e6fac6-3fcc-47b8-a2f7-05c89f6f87f6',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP

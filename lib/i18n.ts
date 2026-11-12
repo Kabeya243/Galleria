@@ -1871,6 +1871,132 @@ export const DICTIONARY = {
     },
     step7Where: { fr: "Menu à gauche : Marketplace et Ressources", en: "Left menu: Marketplace and Resources" },
   },
+  // Public launch open call (/open-call): announcement, form and the
+  // confirmation pop-up that proposes a free account after applying.
+  openCall: {
+    eyebrow: { fr: "LAKISA · OPEN CALL", en: "LAKISA · OPEN CALL" },
+    heroTitle: { fr: "Open Call", en: "Open Call" },
+    heroSub: {
+      fr: "Lakisa est ouvert. Un appel aux jeunes artistes.",
+      en: "Lakisa is open. A call for young artists.",
+    },
+    intro: {
+      fr: "Lakisa est un nouveau lieu pour montrer l'art. C'est une galerie 3D que vous construisez vous-même, en ligne, et que tout le monde peut visiter, de partout dans le monde.",
+      en: "Lakisa is a new place to show art. It is a 3D gallery you build yourself, online, and anyone in the world can walk through it.",
+    },
+    curatedLine: {
+      fr: "Une exposition curatée par Lakisa. Aucun frais pour postuler ou participer.",
+      en: "An exhibition curated by Lakisa. No fees to apply or take part.",
+    },
+    whatYouGetTitle: { fr: "Ce que vous obtenez", en: "What you get" },
+    whatYouGet1: {
+      fr: "Votre propre exposition 3D sur Lakisa, gratuite.",
+      en: "Your own 3D exhibition on Lakisa, free.",
+    },
+    whatYouGet2: {
+      fr: "Un lien public à partager avec qui vous voulez.",
+      en: "A public link you can share with anyone.",
+    },
+    whatYouGet3: {
+      fr: "Votre travail montré sur la plateforme Lakisa.",
+      en: "Your work shown on the Lakisa platform.",
+    },
+    offerNote: {
+      fr: "L'offre exacte pour les artistes sélectionnés sera annoncée bientôt.",
+      en: "The exact offer for selected artists will be announced soon.",
+    },
+    whoTitle: { fr: "Qui peut participer", en: "Who can apply" },
+    whoText: {
+      fr: "Les jeunes artistes qui font de la peinture, du dessin, de la photographie, des collages, de la sculpture ou des techniques mixtes, et qui n'ont jamais eu de galerie pour montrer leur travail.",
+      en: "Young artists who make paintings, drawings, photographs, collages, sculptures or mixed media, and who have never had a gallery show their work.",
+    },
+    curatedNote: {
+      fr: "Lakisa sélectionne et curate les œuvres et les artistes pour cette exposition.",
+      en: "Lakisa selects and curates the works and the artists for this exhibition.",
+    },
+    scopeNote: {
+      fr: "Le périmètre exact (Afrique seulement, ou jeunes artistes de partout, et une éventuelle limite d'âge) sera confirmé bientôt.",
+      en: "The exact scope (Africa only, or young artists everywhere, and any age limit) will be confirmed soon.",
+    },
+    howTitle: { fr: "Comment participer", en: "How to apply" },
+    howText: {
+      fr: "Remplissez le formulaire ci-dessous et envoyez 1 à 3 œuvres. Aucun compte n'est nécessaire pour participer.",
+      en: "Fill in the form below and send 1 to 3 works. No account needed to apply.",
+    },
+    deadlineTba: { fr: "Date limite : à confirmer", en: "Deadline: to be announced" },
+    deadlineLabel: { fr: "Date limite", en: "Deadline" },
+    founderNote: {
+      fr: "Lakisa a été construit par un artiste qui sait ce que c'est de créer sans galerie pour montrer son travail. C'est une porte que nous ouvrons pour les prochains. Venez accrocher vos œuvres.",
+      en: "Lakisa was built by an artist who knows what it is to make work with no gallery to show it in. This is a door we are opening for the next ones. Come and hang your work.",
+    },
+    founderSign: { fr: "Kabeya Ilunga, fondateur de Lakisa", en: "Kabeya Ilunga, founder of Lakisa" },
+    formTitle: { fr: "Postuler", en: "Apply now" },
+    closedText: {
+      fr: "Cet appel à candidatures n'accepte pas de candidatures pour le moment.",
+      en: "This open call is not accepting applications right now.",
+    },
+    sendApplication: { fr: "Envoyer ma candidature", en: "Send application" },
+    sending: { fr: "Envoi…", en: "Sending…" },
+    chooseFile: { fr: "Choisir…", en: "Choose…" },
+    uploading: { fr: "Téléversement…", en: "Uploading…" },
+    uploaded: { fr: "Téléversé :", en: "Uploaded:" },
+    fileHint: {
+      fr: "Images (PNG, JPEG, WebP, AVIF) et PDF, 4 Mo max.",
+      en: "Images (PNG, JPEG, WebP, AVIF) and PDF, max 4 MB.",
+    },
+    uploadError: {
+      fr: "Le fichier n'a pas pu être téléversé.",
+      en: "Could not upload the file.",
+    },
+    uploadRetry: {
+      fr: "Le fichier n'a pas pu être téléversé. Réessayez.",
+      en: "Could not upload the file. Try again.",
+    },
+    sendError: {
+      fr: "Votre candidature n'a pas pu être envoyée.",
+      en: "Could not send your application.",
+    },
+    sendRetry: {
+      fr: "Votre candidature n'a pas pu être envoyée. Réessayez.",
+      en: "Could not send your application. Try again.",
+    },
+    confirmTitle: {
+      fr: "Merci, votre candidature a bien été reçue.",
+      en: "Thank you, your application was received.",
+    },
+    confirmText: {
+      fr: "Créez un compte Lakisa gratuit pour suivre votre candidature et construire votre propre exposition 3D.",
+      en: "Create a free Lakisa account to follow your application and build your own 3D exhibition.",
+    },
+    createAccount: { fr: "Créer mon compte gratuit", en: "Create my free account" },
+    notNow: { fr: "Pas maintenant", en: "Not now" },
+    receivedTitle: { fr: "Candidature reçue.", en: "Application received." },
+    receivedText: {
+      fr: "Merci. L'organisateur vous recontactera si votre candidature est sélectionnée.",
+      en: "Thank you. The organiser will get back to you if your application is selected.",
+    },
+    fieldName: { fr: "Nom de l'artiste", en: "Artist name" },
+    fieldEmail: { fr: "E-mail", en: "Email" },
+    fieldPresentation: { fr: "Courte présentation / démarche", en: "Short presentation / approach" },
+    fieldWork1: { fr: "Œuvre 1 (image)", en: "Work 1 (image)" },
+    fieldWork1Title: { fr: "Titre de l'œuvre 1", en: "Work 1 title" },
+    fieldWork1Medium: { fr: "Médium de l'œuvre 1", en: "Work 1 medium" },
+    fieldWork1Dimensions: { fr: "Dimensions de l'œuvre 1", en: "Work 1 dimensions" },
+    fieldWork2: { fr: "Œuvre 2 (image)", en: "Work 2 (image)" },
+    fieldWork2Title: { fr: "Titre de l'œuvre 2", en: "Work 2 title" },
+    fieldWork2Medium: { fr: "Médium de l'œuvre 2", en: "Work 2 medium" },
+    fieldWork2Dimensions: { fr: "Dimensions de l'œuvre 2", en: "Work 2 dimensions" },
+    fieldWork3: { fr: "Œuvre 3 (image)", en: "Work 3 (image)" },
+    fieldWork3Title: { fr: "Titre de l'œuvre 3", en: "Work 3 title" },
+    fieldWork3Medium: { fr: "Médium de l'œuvre 3", en: "Work 3 medium" },
+    fieldWork3Dimensions: { fr: "Dimensions de l'œuvre 3", en: "Work 3 dimensions" },
+    fieldLink: { fr: "Lien Instagram ou portfolio", en: "Instagram or portfolio link" },
+    fieldTerms: { fr: "Conditions de l'appel", en: "Terms of the open call" },
+    termsOption: {
+      fr: "J'ai lu et j'accepte les conditions de cet appel.",
+      en: "I have read and accept the terms of this open call.",
+    },
+  },
   // Public homepage.
   home: {
     explore: { fr: "Explorer", en: "Explore",

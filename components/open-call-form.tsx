@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import styles from "@/components/tools.module.css";
+import { useT } from "@/lib/i18n";
 
 // The public open-call form (no sign-in): renders the call's fields,
 // uploads file answers through the dedicated public upload route, and
 // submits the answers. File answers are stored in R2 first and the
 // returned key travels with the response.
+//
+// After a successful submission, a confirmation pop-up opens and
+// proposes a free Lakisa account (to follow the application and build
+// an exhibition): "Create my free account" goes to /register, "Not
+// now" closes the pop-up. The submission is already saved at that
+// point, so closing the pop-up changes nothing about it.
 export type PublicCallField = {
   id: string;
   label: string;
@@ -22,12 +30,24 @@ export default function OpenCallForm({
   slug: string;
   fields: PublicCallField[];
 }) {
+  const t = useT();
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [files, setFiles] = useState<Record<string, { key: string; name: string } | null>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Escape closes the confirmation pop-up, like the other dialogs.
+  useEffect(() => {
+    if (!showConfirm) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowConfirm(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showConfirm]);
 
   function setValue(id: string, value: unknown) {
     setValues((current) => ({ ...current, [id]: value }));
@@ -45,14 +65,14 @@ export default function OpenCallForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Could not upload the file.");
+        setError(data.error ?? t("openCall", "uploadError"));
         return;
       }
       const uploaded = { key: data.key as string, name: data.name as string };
       setFiles((current) => ({ ...current, [fieldId]: uploaded }));
       setValue(fieldId, uploaded);
     } catch {
-      setError("Could not upload the file. Try again.");
+      setError(t("openCall", "uploadRetry"));
     } finally {
       setUploading((current) => ({ ...current, [fieldId]: false }));
     }
@@ -70,12 +90,13 @@ export default function OpenCallForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Could not send your application.");
+        setError(data.error ?? t("openCall", "sendError"));
         return;
       }
       setSubmitted(true);
+      setShowConfirm(true);
     } catch {
-      setError("Could not send your application. Try again.");
+      setError(t("openCall", "sendRetry"));
     } finally {
       setSubmitting(false);
     }
@@ -83,10 +104,52 @@ export default function OpenCallForm({
 
   if (submitted) {
     return (
-      <div className={styles.emptyBox}>
-        <strong>Application received.</strong>
-        <p>Thank you. The organiser will get back to you if your application is selected.</p>
-      </div>
+      <>
+        <div className={styles.emptyBox}>
+          <strong>{t("openCall", "receivedTitle")}</strong>
+          <p>{t("openCall", "receivedText")}</p>
+        </div>
+        {showConfirm && (
+          <div
+            className="publish-dialog-overlay"
+            role="presentation"
+            onClick={() => setShowConfirm(false)}
+          >
+            <div
+              className="publish-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t("openCall", "confirmTitle")}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="welcome-tour-close"
+                onClick={() => setShowConfirm(false)}
+                aria-label={t("common", "close")}
+              >
+                ×
+              </button>
+              <h2 className="publish-dialog-title">{t("openCall", "confirmTitle")}</h2>
+              <p style={{ margin: "0 0 20px", fontSize: 15, lineHeight: 1.6 }}>
+                {t("openCall", "confirmText")}
+              </p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link href="/register" className="primary-button">
+                  {t("openCall", "createAccount")}
+                </Link>
+                <button
+                  type="button"
+                  className="create-dialog-cancel"
+                  onClick={() => setShowConfirm(false)}
+                >
+                  {t("openCall", "notNow")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -148,7 +211,7 @@ export default function OpenCallForm({
                 onChange={(e) => setValue(field.id, e.target.value)}
                 required={field.required}
               >
-                <option value="">Choose…</option>
+                <option value="">{t("openCall", "chooseFile")}</option>
                 {field.options.map((option) => (
                   <option key={option} value={option}>
                     {option}
@@ -192,12 +255,12 @@ export default function OpenCallForm({
                   }}
                   required={field.required && !files[field.id]}
                 />
-                {uploading[field.id] && <span style={{ fontSize: 13, color: "var(--muted)" }}>Uploading…</span>}
+                {uploading[field.id] && <span style={{ fontSize: 13, color: "var(--muted)" }}>{t("openCall", "uploading")}</span>}
                 {files[field.id] && (
-                  <span style={{ fontSize: 13 }}>Uploaded: {files[field.id]?.name}</span>
+                  <span style={{ fontSize: 13 }}>{t("openCall", "uploaded")} {files[field.id]?.name}</span>
                 )}
                 <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                  Images (PNG, JPEG, WebP, AVIF) and PDF, max 4 MB.
+                  {t("openCall", "fileHint")}
                 </span>
               </span>
             )}
@@ -211,7 +274,7 @@ export default function OpenCallForm({
       )}
       <div>
         <button type="submit" className="primary-button" disabled={submitting}>
-          {submitting ? "Sending…" : "Send application"}
+          {submitting ? t("openCall", "sending") : t("openCall", "sendApplication")}
         </button>
       </div>
     </form>

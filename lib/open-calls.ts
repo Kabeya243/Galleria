@@ -1,6 +1,13 @@
 // Open Calls (Nov 2026): shared field types, slug building and answer
 // validation for the owner API, the public form and the responses list.
 
+// The launch open call (Nov 2026): the public page /open-call shows
+// this call, looked up by slug. Its fields have stable ids (launch-*)
+// so the page can translate their labels; the stored labels are
+// English. Edit the call (title, description, deadline, status,
+// fields) in the Open Calls tool; the page follows the record.
+export const LAUNCH_OPEN_CALL_SLUG = "lakisa-launch";
+
 export const OPEN_CALL_FIELD_TYPES = [
   "short_text",
   "long_text",

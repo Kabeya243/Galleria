@@ -60,8 +60,10 @@ export default function AccountSwitchButton({
       });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error(result?.error ?? "Could not switch accounts.");
-      // Land on the dashboard as the other account.
-      window.location.assign("/dashboard");
+      // Land on the dashboard as the other account. The dashboard is
+      // "/" (there is no /dashboard page — app/dashboard only holds
+      // plan, analytics and orders).
+      window.location.assign("/");
     } catch (err) {
       console.error("Account switch failed.", err);
       setError(err instanceof Error ? err.message : "Could not switch accounts.");

@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import AdminThemeToggle from "@/components/admin-theme-toggle";
+import AccountSwitchButton from "@/components/account-switch-button";
 import BrandLogo from "@/components/brand-logo";
 
 const COLLAPSED_KEY = "sanaa-admin-collapsed";
@@ -281,6 +282,11 @@ export default function AdminShell({
 
         <div className="ad-sidebar-bottom">
           <span className="ad-sidebar-group">Account</span>
+          {/* One-click switch to Lakisa Official (Nov 2026): only
+              renders for kabeyailunga243@gmail.com, so Kabeya can move
+              from the admin account to the Official account without a
+              password. One direction only, no return button. */}
+          <AccountSwitchButton email={user.email} />
           <button type="button" className="ad-nav-item" onClick={signOut} title="Sign out">
             <span className="ad-nav-icon">
               <LogOut size={18} />

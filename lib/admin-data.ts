@@ -174,6 +174,44 @@ function breakdown(
     .slice(0, 6);
 }
 
+// Friendly labels for SavedWork kinds (certificates and the document
+// tools, plus every other kind the /api/saved-work endpoint accepts).
+// Unknown kinds fall back to a title-cased version of the slug.
+const SAVED_WORK_KIND_LABELS: Record<string, string> = {
+  certificate: "Certificates",
+  presentation: "Presentations",
+  "exhibition-plan": "Exhibition plans",
+  "marketing-asset": "Marketing assets",
+  "print-job": "Print jobs",
+  "context-project": "Art in context",
+  mockup: "Mockups",
+  palette: "Palettes",
+  "photo-edit": "Photo edits",
+  "frame-preset": "Frame presets",
+  "exhibition-version": "Exhibition versions",
+  "collection-record": "Collection records",
+  "accessibility-pack": "Accessibility packs",
+  "education-pack": "Education packs",
+  "ai-concept": "AI concepts",
+  "ai-analysis": "AI analyses",
+  "asset-3d": "3D assets",
+  "video-project": "Video projects",
+  website: "Websites",
+  "digital-twin": "Digital twins",
+  profile: "Profiles",
+  "portfolio-pdf": "Portfolio PDFs",
+  "work-kinds": "Work kinds",
+};
+
+function savedWorkKindLabel(kind: string): string {
+  const known = SAVED_WORK_KIND_LABELS[kind];
+  if (known) return known;
+  return kind
+    .split("-")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
 export async function loadAdminOverview() {
   const now = new Date();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -200,6 +238,9 @@ export async function loadAdminOverview() {
     cityGroups,
     uniqueVisitors30Rows,
     returningVisitors30Rows,
+    savedWorkKindGroups,
+    certificatesThisWeek,
+    documentsThisWeek,
   ] = await Promise.all([
     db.user.findMany({ select: { createdAt: true } }),
     db.exhibition.findMany({ select: { createdAt: true } }),
@@ -312,6 +353,12 @@ export async function loadAdminOverview() {
         SELECT 1 FROM "VisitLog" v2
         WHERE v2."visitorKey" = v."visitorKey" AND v2.day < ${thirtyDaysAgo}
       )`,
+    // Saved documents (SavedWork): certificates and the other document
+    // tools. The database row is the source of truth for what was
+    // generated and saved; the R2 file is the durable archive copy.
+    db.savedWork.groupBy({ by: ["kind"], _count: { _all: true } }),
+    db.savedWork.count({ where: { kind: "certificate", createdAt: { gte: sevenDaysAgo } } }),
+    db.savedWork.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
   ]);
 
   const userCount = userDates.length;
@@ -319,6 +366,19 @@ export async function loadAdminOverview() {
   const artworkCount = artworkDates.length;
   const storageBytes = Number(storage[0]?.total ?? 0);
   const views = totalViews._sum.views ?? 0;
+
+  // Certificates and saved documents (SavedWork rows, all users).
+  const documentsByKind = savedWorkKindGroups
+    .map((g) => ({ name: savedWorkKindLabel(g.kind), count: g._count._all }))
+    .sort((a, b) => b.count - a.count);
+  const documentCount = documentsByKind.reduce((sum, k) => sum + k.count, 0);
+  const certificateCount =
+    savedWorkKindGroups.find((g) => g.kind === "certificate")?._count._all ?? 0;
+  // Short mix for the Documents card note, e.g. "Certificates 12 · Presentations 5".
+  const documentsBreakdown = documentsByKind
+    .slice(0, 4)
+    .map((k) => `${k.name} ${k.count}`)
+    .join(" · ");
 
   // Titles for the Recent visits table (exhibitions and artworks the
   // visits point at). Removed ones show as "Removed exhibition" /
@@ -445,6 +505,12 @@ export async function loadAdminOverview() {
     storageBytes,
     views,
     publicExhibitions,
+    certificateCount,
+    certificatesThisWeek,
+    documentCount,
+    documentsThisWeek,
+    documentsByKind,
+    documentsBreakdown,
     usersThisWeek,
     exhibitionsThisWeek,
     artworksThisWeek,

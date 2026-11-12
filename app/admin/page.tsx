@@ -18,7 +18,7 @@ import {
 export const metadata = {
   title: "Admin: Lakisa",
   description:
-    "The platform overview for the owner: users, exhibitions, artworks, visits and tool use.",
+    "The platform overview for the owner: users, exhibitions, artworks, visits, certificates, documents and tool use.",
 };
 
 export default async function AdminOverviewRoute() {
@@ -46,6 +46,11 @@ export default async function AdminOverviewRoute() {
     storageBytes,
     views,
     publicExhibitions,
+    certificateCount,
+    certificatesThisWeek,
+    documentCount,
+    documentsThisWeek,
+    documentsBreakdown,
     usersThisWeek,
     exhibitionsThisWeek,
     artworksThisWeek,
@@ -130,6 +135,20 @@ export default async function AdminOverviewRoute() {
             <strong className="ad-stat-value">{views}</strong>
             <span className="ad-stat-delta ad-delta-flat">All exhibitions, all time</span>
             <span className="ad-stat-note">{visitsTotal30} in the last 30 days (VisitLog)</span>
+          </div>
+          <div className="ad-card ad-stat">
+            <span className="ad-stat-label">Certificates</span>
+            <strong className="ad-stat-value">{certificateCount}</strong>
+            <span className="ad-stat-delta ad-delta-flat">All certificates, all time</span>
+            <span className="ad-stat-note">{certificatesThisWeek} generated in the last 7 days</span>
+          </div>
+          <div className="ad-card ad-stat">
+            <span className="ad-stat-label">Documents</span>
+            <strong className="ad-stat-value">{documentCount}</strong>
+            <span className="ad-stat-delta ad-delta-flat">{documentsThisWeek} generated in the last 7 days</span>
+            <span className="ad-stat-note">
+              {documentsBreakdown === "" ? "No documents saved yet" : documentsBreakdown}
+            </span>
           </div>
         </div>
 

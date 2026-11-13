@@ -4,6 +4,8 @@
 // theme picks which one shows ([data-theme="light"] on <html>); pages
 // with a fixed background (the black landing page, the noir auth
 // screens) force one variant with `theme` instead.
+// The lockup is the wireframe cube + "LAKISA" in Playfair Display Bold.
+// There is no "& Gallery" line anymore (removed November 2026).
 export type BrandLogoVariant = "horizontal" | "icon" | "principal";
 
 const FILES: Record<BrandLogoVariant, { dark: string; light: string }> = {
@@ -21,25 +23,11 @@ const FILES: Record<BrandLogoVariant, { dark: string; light: string }> = {
   },
 };
 
-// Same lockups without the small "& Gallery" line under LAKISA, for
-// instances that want the wordmark alone (homepage header, November
-// 2026). Only the horizontal lockup has a tagline, so only it ships
-// a no-tagline file; other variants fall back to their normal file.
-const FILES_NO_TAGLINE: Record<BrandLogoVariant, { dark: string; light: string }> = {
-  horizontal: {
-    dark: "/brand/lakisa-horizontal-noir-notagline.svg",
-    light: "/brand/lakisa-horizontal-blanc-notagline.svg",
-  },
-  icon: FILES.icon,
-  principal: FILES.principal,
-};
-
 export default function BrandLogo({
   variant = "horizontal",
   theme = "auto",
   themeScope = "site",
   height,
-  tagline = true,
   className = "",
 }: {
   variant?: BrandLogoVariant;
@@ -49,11 +37,9 @@ export default function BrandLogo({
   themeScope?: "site" | "admin";
   /** Height in px (overrides the CSS default for the variant). */
   height?: number;
-  /** False hides the small "& Gallery" line under LAKISA (horizontal lockup only). Default true. */
-  tagline?: boolean;
   className?: string;
 }) {
-  const files = tagline ? FILES[variant] : FILES_NO_TAGLINE[variant];
+  const files = FILES[variant];
   const showDark = theme !== "light";
   const showLight = theme !== "dark";
   return (

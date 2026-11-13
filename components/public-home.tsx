@@ -181,7 +181,7 @@ export default function PublicHome({
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/">
-          <BrandLogo variant="horizontal" theme="dark" height={80} tagline={false} />
+          <BrandLogo variant="horizontal" theme="dark" height={80} />
         </Link>
         <nav className={styles.nav} aria-label="Main">
           <div className={styles.navLinks}>

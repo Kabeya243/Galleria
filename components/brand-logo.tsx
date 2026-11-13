@@ -4,8 +4,11 @@
 // theme picks which one shows ([data-theme="light"] on <html>); pages
 // with a fixed background (the black landing page, the noir auth
 // screens) force one variant with `theme` instead.
-// The lockup is the wireframe cube + "LAKISA" in Playfair Display Bold.
-// There is no "& Gallery" line anymore (removed November 2026).
+// The lockup is the wireframe cube + "LAKISA" in Montserrat ExtraBold
+// (bold geometric sans-serif, Artsy spirit). The wordmark is baked into
+// the SVGs as vector outlines, so it renders identically everywhere
+// with no font dependency. There is no "& Gallery" line anymore
+// (removed November 2026).
 export type BrandLogoVariant = "horizontal" | "icon" | "principal";
 
 const FILES: Record<BrandLogoVariant, { dark: string; light: string }> = {

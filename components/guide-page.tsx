@@ -448,8 +448,11 @@ export default function GuidePage() {
         <section className={styles.section}>
           <h2>{t("guide", "needHelp")}</h2>
           <p>{t("guide", "needHelpText")}</p>
-          <a className={styles.mailLink} href="mailto:contact@kabeyailunga.com">
-            <Mail size={16} /> contact@kabeyailunga.com
+          <a className={styles.mailLink} href="mailto:hello@lakisa.art">
+            <Mail size={16} /> hello@lakisa.art
+          </a>
+          <a className={styles.mailLink} href="mailto:team@lakisa.art">
+            <Mail size={16} /> team@lakisa.art
           </a>
         </section>
       </div>

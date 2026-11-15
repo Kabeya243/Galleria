@@ -19,9 +19,8 @@ import styles from "./legal-page.module.css";
 // server-side visit records (city from the network address, device,
 // operating system, browser). All cookies are essential to the
 // platform; the cookie notice only informs visitors. Lakisa runs no
-// third-party advertising tracker. Contact is the founder's published
-// studio address, contact@kabeyailunga.com, TODO: replace with a
-// Lakisa address once one exists. No fake address invented.
+// third-party advertising tracker. Contact is hello@lakisa.art
+// (public) and team@lakisa.art (team).
 //
 // Nothing here is copied from any other platform's privacy policy.
 
@@ -97,7 +96,7 @@ const SECTIONS: Section[] = [
       "Access your data: your profile, your artworks and your exhibitions are visible to you in your workspace, and you can download the files you uploaded.",
       "Correct it: change your display name, biography and profile photo in Settings, and edit any artwork or exhibition you own.",
       "Delete it: delete individual artworks and exhibitions, or delete your whole account in Settings, which deletes everything attached to it (see section 5).",
-      "Ask us about it: write to contact@kabeyailunga.com if you want a copy of the personal data we hold about you, or if you want something corrected or deleted that you cannot change yourself. We will answer within a reasonable time.",
+      "Ask us about it: write to team@lakisa.art if you want a copy of the personal data we hold about you, or if you want something corrected or deleted that you cannot change yourself. We will answer within a reasonable time.",
     ],
   },
   {
@@ -105,7 +104,7 @@ const SECTIONS: Section[] = [
     title: "7. Security",
     body: [
       "We protect your data with the measures a small platform can reasonably provide: passwords are stored as one-way hashes, never in plain text; sign-in sessions use a secure cookie; and access to the database and file storage is limited to the people who run the platform.",
-      "No system is perfectly secure. If you believe your account has been compromised, change your password and write to contact@kabeyailunga.com. If we discover a breach that affects your personal data, we will tell you what happened and what we are doing about it.",
+      "No system is perfectly secure. If you believe your account has been compromised, change your password and write to team@lakisa.art. If we discover a breach that affects your personal data, we will tell you what happened and what we are doing about it.",
     ],
   },
   {
@@ -126,7 +125,7 @@ const SECTIONS: Section[] = [
     id: "contact",
     title: "10. Contact",
     body: [
-      "Lakisa is operated from Uganda. For any question about this policy, or about your personal data, write to contact@kabeyailunga.com.",
+      "Lakisa is operated from Uganda. For any question about this policy, or about your personal data, write to hello@lakisa.art.",
     ],
   },
 ];
@@ -179,8 +178,11 @@ export default function PrivacyPage() {
 
         <section className={styles.section}>
           <p>{t("legal", "contactLine")}</p>
-          <a className={styles.mailLink} href="mailto:contact@kabeyailunga.com">
-            <Mail size={16} /> contact@kabeyailunga.com
+          <a className={styles.mailLink} href="mailto:hello@lakisa.art">
+            <Mail size={16} /> hello@lakisa.art
+          </a>
+          <a className={styles.mailLink} href="mailto:team@lakisa.art">
+            <Mail size={16} /> team@lakisa.art
           </a>
         </section>
       </div>

@@ -12,10 +12,8 @@ import styles from "./legal-page.module.css";
 // The body is in English: English is the language of Lakisa's legal
 // documents, and the French translation is planned (see the note at
 // the top of the page, translated through the dictionary). Contact is
-// the founder's published studio address, contact@kabeyailunga.com —
-// TODO: replace with a Lakisa address (e.g. legal@lakisa.art) once one
-// exists. No fake address invented. Governing law is Uganda, where
-// Lakisa is run from.
+// Contact is hello@lakisa.art (public) and team@lakisa.art (team).
+// Governing law is Uganda, where Lakisa is run from.
 //
 // Nothing here is copied from any other platform's terms.
 
@@ -46,7 +44,7 @@ const SECTIONS: Section[] = [
     body: [
       "To create an account, give us an email address and choose a password, or sign in with Google. You are responsible for keeping your password secret and for everything done through your account.",
       "Give us accurate information and keep it up to date. One person, one account: do not create accounts for other people, and do not share your account with someone else.",
-      "Tell us promptly at contact@kabeyailunga.com if you believe someone else is using your account. Lakisa is not liable for loss caused by unauthorised use of your account if you did not keep your credentials safe.",
+      "Tell us promptly at team@lakisa.art if you believe someone else is using your account. Lakisa is not liable for loss caused by unauthorised use of your account if you did not keep your credentials safe.",
       "You may delete your account at any time from Settings. Deleting your account deletes your exhibitions, your artworks and your profile with them. That deletion is permanent.",
     ],
   },
@@ -56,7 +54,7 @@ const SECTIONS: Section[] = [
     body: [
       "You keep every right in the work you upload: your images, your texts, your exhibition titles and descriptions, and any audio or video you add. Lakisa claims nothing over your artworks.",
       "By uploading content, you give Lakisa only the permission it needs to run the Service: to store your content, display it to the people you choose to share it with, and make the technical copies (such as resized images) needed for the 3D rooms to load. That permission ends when you delete the content or your account, except for copies kept in ordinary backups, which are removed as the backups rotate.",
-      "You are responsible for what you upload. Only upload work you own or have the right to share, and do not upload work that infringes someone else's copyright, trademark or other rights. If you believe content on Lakisa infringes your rights, write to contact@kabeyailunga.com with a link to the content and a description of your claim, and we will look into it.",
+      "You are responsible for what you upload. Only upload work you own or have the right to share, and do not upload work that infringes someone else's copyright, trademark or other rights. If you believe content on Lakisa infringes your rights, write to team@lakisa.art with a link to the content and a description of your claim, and we will look into it.",
       "Lakisa's own name, logo and the design of the platform belong to Lakisa. You may not copy them or use them to suggest an endorsement that does not exist.",
     ],
   },
@@ -113,7 +111,7 @@ const SECTIONS: Section[] = [
     body: [
       "These terms are governed by the laws of Uganda, where Lakisa is operated from. Any dispute about them will be settled in the courts of Uganda.",
       "If any part of these terms is found unenforceable, the rest of them still applies.",
-      "For any question about these terms, or about Lakisa in general, write to us at contact@kabeyailunga.com.",
+      "For any question about these terms, or about Lakisa in general, write to us at hello@lakisa.art.",
     ],
   },
 ];
@@ -158,8 +156,11 @@ export default function TermsPage() {
         ))}
 
         <section className={styles.section}>
-          <a className={styles.mailLink} href="mailto:contact@kabeyailunga.com">
-            <Mail size={16} /> contact@kabeyailunga.com
+          <a className={styles.mailLink} href="mailto:hello@lakisa.art">
+            <Mail size={16} /> hello@lakisa.art
+          </a>
+          <a className={styles.mailLink} href="mailto:team@lakisa.art">
+            <Mail size={16} /> team@lakisa.art
           </a>
         </section>
       </div>

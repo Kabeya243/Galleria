@@ -21,10 +21,7 @@ import styles from "./about-page.module.css";
 // homepage. Sections carry the anchors the footer links to: #what-we-do,
 // #guide, #help, #contact.
 //
-// Contact: Lakisa has no dedicated inbox yet, so the contact section
-// points at the founder's published studio address,
-// contact@kabeyailunga.com — TODO: replace with a Lakisa address
-// (e.g. bonjour@lakisa.art) once one exists. No fake address invented.
+// Contact: public inbox hello@lakisa.art, team inbox team@lakisa.art.
 export default function AboutPage() {
   const t = useT();
   return (
@@ -114,8 +111,11 @@ export default function AboutPage() {
       <section className={styles.section} id="contact">
         <h2>{t("about", "contactTitle")}</h2>
         <p className={styles.sectionIntro}>{t("about", "contactText")}</p>
-        <a className={styles.mailLink} href="mailto:contact@kabeyailunga.com">
-          <Mail size={16} /> contact@kabeyailunga.com
+        <a className={styles.mailLink} href="mailto:hello@lakisa.art">
+          <Mail size={16} /> hello@lakisa.art
+        </a>
+        <a className={styles.mailLink} href="mailto:team@lakisa.art">
+          <Mail size={16} /> team@lakisa.art
         </a>
       </section>
 

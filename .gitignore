@@ -15,3 +15,8 @@ yarn-debug.log*
 pnpm-debug.log*
 __pycache__/
 *.pyc
+
+# Local backups and reset scripts (never in the repo)
+backups/
+RESET_PLAN.md
+reset-to-zero.sh

@@ -12,8 +12,12 @@ export async function PATCH(request: Request) {
     const input = profileUpdateSchema.parse(await request.json());
     const updated = await db.user.update({
       where: { id: user.id },
-      data: { name: input.name },
-      select: { id: true, email: true, name: true },
+      data: {
+        name: input.name,
+        ...(input.role !== undefined ? { role: input.role } : {}),
+        ...(input.country !== undefined ? { country: input.country } : {}),
+      },
+      select: { id: true, email: true, name: true, role: true, country: true },
     });
     // Avatar + bio live in the "profile" SavedWork row (no DB migration).
     const profile =

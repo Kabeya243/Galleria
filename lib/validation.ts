@@ -51,6 +51,15 @@ export const registrationSchema = credentialsSchema.extend({
 
 export const profileUpdateSchema = z.object({
   name: z.string().trim().min(2).max(60),
+  // Role and country (Nov 2026): what the account does on Lakisa
+  // (Artist, Curator, Gallery, Collector, Art Advisor, Institution,
+  // Other) and where they are based. Email signup asks for both, but
+  // Google sign-in cannot — Google gives no role or country — so
+  // accounts created that way arrive with both empty, and the
+  // dashboard prompts them to complete their profile. Optional here
+  // so a name-only update (avatar, bio) never has to resend them.
+  role: z.enum(USER_ROLES).optional(),
+  country: z.string().trim().max(80).optional(),
   // Profile extras (avatar photo URL from the R2 upload proxy, short bio).
   // Stored in the "profile" SavedWork row, not on the User table — see
   // lib/profile.ts. Nullable so the avatar can be removed (null clears it).

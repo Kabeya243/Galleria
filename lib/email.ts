@@ -67,6 +67,38 @@ export async function sendVerificationEmail(to: string, verifyUrl: string): Prom
   return true;
 }
 
+// Open-call acknowledgement (Nov 2026): a short receipt sent to the
+// applicant the moment their application is saved, from the public
+// inbox hello@lakisa.art. Bilingual (English + French) because the
+// calls are. Returns false — without throwing — when SMTP is not
+// configured, so a missing mail setup never breaks the submission
+// itself; the application is already stored either way.
+export async function sendOpenCallAcknowledgementEmail(
+  to: string,
+  callTitle: string,
+): Promise<boolean> {
+  const transporter = getTransporter();
+  if (!transporter) return false;
+  await transporter.sendMail({
+    from: "Lakisa <hello@lakisa.art>",
+    to,
+    subject: `We received your application — ${callTitle}`,
+    text:
+      `Hello,\n\nThank you! We received your application for "${callTitle}". ` +
+      `Our team will review it and get back to you.\n\n` +
+      `Bonjour,\n\nMerci ! Nous avons bien reçu votre candidature pour "${callTitle}". ` +
+      `Notre équipe va l'examiner et reviendra vers vous.\n\n` +
+      `Lakisa\nhello@lakisa.art`,
+    html:
+      `<p>Hello,</p><p>Thank you! We received your application for "<strong>${callTitle}</strong>". ` +
+      `Our team will review it and get back to you.</p>` +
+      `<p>Bonjour,</p><p>Merci ! Nous avons bien reçu votre candidature pour "<strong>${callTitle}</strong>". ` +
+      `Notre équipe va l'examiner et reviendra vers vous.</p>` +
+      `<p>Lakisa<br><a href="mailto:hello@lakisa.art">hello@lakisa.art</a></p>`,
+  });
+  return true;
+}
+
 // New-message notification (Nov 2026): tells the recipient someone
 // wrote to them on Lakisa, with a short excerpt and a link to the
 // conversation. Returns false — without throwing — when SMTP is not

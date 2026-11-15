@@ -38,6 +38,70 @@ const STATUS_LABEL: Record<string, string> = {
   closed: "Closed",
 };
 
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "avif"];
+
+// One work a response can contribute to an exhibition: the image file
+// plus the details the form asked for next to it. The launch call
+// asks per work for a file, a title, a medium and dimensions
+// (launch-work1 + launch-work1-title + ...), so the matching fields
+// are found by id suffix first, then by label.
+type ImportCandidate = {
+  fileFieldId: string;
+  fileName: string;
+  fileKey: string;
+  selected: boolean;
+  title: string;
+  artist: string;
+  medium: string;
+  dimensions: string;
+};
+
+function textAnswer(fields: FieldRow[], answers: Record<string, unknown>, fieldId: string): string {
+  const value = answers[fieldId];
+  return typeof value === "string" ? value : "";
+}
+
+function buildImportCandidates(
+  fields: FieldRow[],
+  answers: Record<string, unknown>,
+): ImportCandidate[] {
+  const artistField = fields.find(
+    (f) =>
+      f.type !== "file" &&
+      /name|artist/i.test(f.label),
+  );
+  const artist = artistField?.id ? textAnswer(fields, answers, artistField.id) : "";
+  const candidates: ImportCandidate[] = [];
+  for (const field of fields) {
+    if (field.type !== "file" || !field.id) continue;
+    const file = answers[field.id] as { key?: string; name?: string } | undefined;
+    if (!file || typeof file !== "object" || !file.key || !file.name) continue;
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!IMAGE_EXTENSIONS.includes(extension)) continue;
+    const bySuffix = (suffix: string) =>
+      fields.find((f) => f.id === `${field.id}-${suffix}`)?.id;
+    const byLabel = (keyword: RegExp) =>
+      fields.find((f) => f.type !== "file" && keyword.test(f.label))?.id;
+    const titleId = bySuffix("title") ?? byLabel(/title/i);
+    const mediumId = bySuffix("medium") ?? byLabel(/medium/i);
+    const dimensionsId = bySuffix("dimensions") ?? byLabel(/dimension/i);
+    candidates.push({
+      fileFieldId: field.id,
+      fileName: file.name,
+      fileKey: file.key,
+      selected: true,
+      title:
+        (titleId ? textAnswer(fields, answers, titleId) : "") ||
+        file.name.replace(/\.[^.]+$/, "") ||
+        "Untitled work",
+      artist,
+      medium: mediumId ? textAnswer(fields, answers, mediumId) : "",
+      dimensions: dimensionsId ? textAnswer(fields, answers, dimensionsId) : "",
+    });
+  }
+  return candidates;
+}
+
 function publicUrl(slug: string): string {
   if (typeof window === "undefined") return `/open-calls/${slug}`;
   return `${window.location.origin}/open-calls/${slug}`;
@@ -65,6 +129,100 @@ export default function OpenCallsTool() {
   const [notice, setNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  // Add-to-exhibition import (per response).
+  const [exhibitions, setExhibitions] = useState<{ id: string; title: string }[]>([]);
+  const [exhibitionsLoaded, setExhibitionsLoaded] = useState(false);
+  const [importResponseId, setImportResponseId] = useState<string | null>(null);
+  const [importExhibitionId, setImportExhibitionId] = useState("");
+  const [importWorks, setImportWorks] = useState<ImportCandidate[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    count: number;
+    exhibitionId: string;
+    exhibitionTitle: string;
+  } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const loadExhibitions = useCallback(async () => {
+    if (exhibitionsLoaded) return;
+    try {
+      const res = await fetch("/api/exhibitions");
+      if (!res.ok) throw new Error("Could not load your exhibitions.");
+      const json = (await res.json()) as { exhibitions?: { id: string; title: string }[] };
+      const list = (json.exhibitions ?? []).map((e) => ({ id: e.id, title: e.title }));
+      setExhibitions(list);
+      setExhibitionsLoaded(true);
+      if (list.length > 0) setImportExhibitionId((current) => current || list[0].id);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Could not load your exhibitions.");
+    }
+  }, [exhibitionsLoaded]);
+
+  const openImport = useCallback(
+    (response: { id: string; answers: Record<string, unknown> }) => {
+      if (!detail) return;
+      setImportResponseId(response.id);
+      setImportWorks(buildImportCandidates(detail.fields, response.answers));
+      setImportResult(null);
+      setImportError(null);
+      void loadExhibitions();
+    },
+    [detail, loadExhibitions],
+  );
+
+  const runImport = useCallback(async () => {
+    if (!detail || !importResponseId || !importExhibitionId) return;
+    const selected = importWorks.filter((w) => w.selected);
+    if (selected.length === 0) {
+      setImportError("Select at least one work to add.");
+      return;
+    }
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+    try {
+      const res = await fetch(
+        `/api/open-calls/${encodeURIComponent(detail.id)}/responses/${encodeURIComponent(importResponseId)}/import`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            exhibitionId: importExhibitionId,
+            works: selected.map((w) => ({
+              fileFieldId: w.fileFieldId,
+              title: w.title,
+              artist: w.artist,
+              medium: w.medium,
+              dimensions: w.dimensions,
+            })),
+          }),
+        },
+      );
+      const json = (await res.json()) as {
+        artworks?: { id: string; title: string }[];
+        exhibitionTitle?: string;
+        error?: string;
+        failed?: { error: string }[];
+      };
+      if (!res.ok) throw new Error(json.error ?? "Could not add those works.");
+      const exhibition = exhibitions.find((e) => e.id === importExhibitionId);
+      setImportResult({
+        count: json.artworks?.length ?? 0,
+        exhibitionId: importExhibitionId,
+        exhibitionTitle: json.exhibitionTitle ?? exhibition?.title ?? "the exhibition",
+      });
+      if (json.failed && json.failed.length > 0) {
+        setImportError(
+          `${json.failed.length} work${json.failed.length > 1 ? "s" : ""} could not be added: ${json.failed[0].error}`,
+        );
+      }
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Could not add those works.");
+    } finally {
+      setImporting(false);
+    }
+  }, [detail, importResponseId, importExhibitionId, importWorks, exhibitions]);
 
   // Create form.
   const [title, setTitle] = useState("");
@@ -541,9 +699,26 @@ export default function OpenCallsTool() {
             </button>
           </div>
 
-          <h3 style={{ fontSize: 15, margin: "0 0 10px" }}>
-            Responses ({detail.responses.length})
-          </h3>
+          <div
+            style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "0 0 10px" }}
+          >
+            <h3 style={{ fontSize: 15, margin: 0 }}>Responses ({detail.responses.length})</h3>
+            {detail.responses.length > 0 && (
+              <a
+                className="primary-button"
+                href={`/api/open-calls/${encodeURIComponent(detail.id)}/export`}
+                style={{ marginLeft: "auto", textDecoration: "none" }}
+              >
+                Download responses (CSV)
+              </a>
+            )}
+          </div>
+          <p style={{ fontSize: 13, color: "#555", margin: "0 0 14px" }}>
+            The CSV holds every response with its files as download links. To hang a
+            submitted work in one of your exhibitions, use “Add to exhibition” on its
+            row: the file is copied into your library and added to the exhibition you
+            choose.
+          </p>
           {detail.responses.length === 0 ? (
             <div className={styles.emptyBox}>
               <strong>No responses yet.</strong>
@@ -558,6 +733,7 @@ export default function OpenCallsTool() {
                     {detail.fields.map((field) => (
                       <th key={field.id ?? field.label}>{field.label}</th>
                     ))}
+                    <th>Use it</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -579,10 +755,213 @@ export default function OpenCallsTool() {
                           </td>
                         );
                       })}
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.iconButton}
+                          onClick={() => openImport(response)}
+                        >
+                          Add to exhibition
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {importResponseId && detail && (
+            <div
+              style={{
+                marginTop: 20,
+                padding: 16,
+                border: "1px solid #ddd",
+                borderRadius: 10,
+                background: "#faf9f6",
+              }}
+            >
+              <h4 style={{ fontSize: 15, margin: "0 0 6px" }}>Add to exhibition</h4>
+              <p style={{ fontSize: 13, color: "#555", margin: "0 0 14px" }}>
+                Response received{" "}
+                {new Date(
+                  detail.responses.find((r) => r.id === importResponseId)?.createdAt ?? "",
+                ).toLocaleString("en-GB")}
+                . Each image below becomes a work in the exhibition you choose, and
+                joins your library (“Mes œuvres”). The submission itself stays
+                untouched.
+              </p>
+              {exhibitions.length === 0 ? (
+                <p style={{ fontSize: 13 }}>
+                  You have no exhibition yet.{" "}
+                  <a href="/dashboard">Create one in your dashboard first</a>, then come back
+                  here.
+                </p>
+              ) : (
+                <>
+                  <label className={styles.field} style={{ maxWidth: 420, marginBottom: 14 }}>
+                    <span>Exhibition</span>
+                    <select
+                      value={importExhibitionId}
+                      onChange={(e) => setImportExhibitionId(e.target.value)}
+                    >
+                      {exhibitions.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {importWorks.length === 0 ? (
+                    <p style={{ fontSize: 13 }}>
+                      This response has no image file to hang (only PDFs or no files).
+                      Download its files from the table above instead.
+                    </p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+                      {importWorks.map((work, index) => (
+                        <div
+                          key={work.fileFieldId}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 8,
+                            padding: 12,
+                            border: "1px solid #e3e0d9",
+                            borderRadius: 8,
+                            background: "#fff",
+                          }}
+                        >
+                          <label
+                            style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={work.selected}
+                              onChange={(e) =>
+                                setImportWorks((current) =>
+                                  current.map((w, i) =>
+                                    i === index ? { ...w, selected: e.target.checked } : w,
+                                  ),
+                                )
+                              }
+                            />
+                            <a
+                              href={`/api/open-calls/files/${work.fileKey}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {work.fileName}
+                            </a>
+                          </label>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                              gap: 8,
+                            }}
+                          >
+                            <label className={styles.field} style={{ margin: 0 }}>
+                              <span>Title</span>
+                              <input
+                                value={work.title}
+                                onChange={(e) =>
+                                  setImportWorks((current) =>
+                                    current.map((w, i) =>
+                                      i === index ? { ...w, title: e.target.value } : w,
+                                    ),
+                                  )
+                                }
+                                maxLength={200}
+                              />
+                            </label>
+                            <label className={styles.field} style={{ margin: 0 }}>
+                              <span>Artist</span>
+                              <input
+                                value={work.artist}
+                                onChange={(e) =>
+                                  setImportWorks((current) =>
+                                    current.map((w, i) =>
+                                      i === index ? { ...w, artist: e.target.value } : w,
+                                    ),
+                                  )
+                                }
+                                maxLength={200}
+                              />
+                            </label>
+                            <label className={styles.field} style={{ margin: 0 }}>
+                              <span>Medium</span>
+                              <input
+                                value={work.medium}
+                                onChange={(e) =>
+                                  setImportWorks((current) =>
+                                    current.map((w, i) =>
+                                      i === index ? { ...w, medium: e.target.value } : w,
+                                    ),
+                                  )
+                                }
+                                maxLength={200}
+                              />
+                            </label>
+                            <label className={styles.field} style={{ margin: 0 }}>
+                              <span>Dimensions</span>
+                              <input
+                                value={work.dimensions}
+                                onChange={(e) =>
+                                  setImportWorks((current) =>
+                                    current.map((w, i) =>
+                                      i === index ? { ...w, dimensions: e.target.value } : w,
+                                    ),
+                                  )
+                                }
+                                maxLength={100}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => void runImport()}
+                      disabled={
+                        importing || importWorks.filter((w) => w.selected).length === 0
+                      }
+                    >
+                      {importing
+                        ? "Adding…"
+                        : `Add ${importWorks.filter((w) => w.selected).length} work${
+                            importWorks.filter((w) => w.selected).length > 1 ? "s" : ""
+                          } to exhibition`}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      onClick={() => {
+                        setImportResponseId(null);
+                        setImportResult(null);
+                        setImportError(null);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
+              {importError && (
+                <p style={{ color: "#a00", fontSize: 13, margin: "12px 0 0" }}>{importError}</p>
+              )}
+              {importResult && (
+                <p style={{ color: "#1a7a2e", fontSize: 13, margin: "12px 0 0" }}>
+                  Added {importResult.count} work{importResult.count > 1 ? "s" : ""} to “
+                  {importResult.exhibitionTitle}”.{" "}
+                  <a href={`/editor/${importResult.exhibitionId}`}>Open the exhibition</a> to
+                  arrange them on the wall.
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -9,6 +9,7 @@ import OnboardingCard, { type OnboardingExhibition } from "@/components/onboardi
 import WelcomeTour, { hasSeenWelcomeTour } from "@/components/welcome-tour";
 import { useT } from "@/lib/i18n";
 import type { RoomModelId } from "@/lib/rooms";
+import { USER_ROLES } from "@/lib/validation";
 import {
   ArrowUpRight,
   Compass,
@@ -46,7 +47,7 @@ export default function Dashboard({
   chartRange,
   topExhibitions,
 }: {
-  user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
+  user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean; role?: string | null; country?: string | null };
   // True when the account was created recently (server-side, 30 days):
   // the welcome tour auto-opens once, on the first dashboard visit.
   isNewUser: boolean;
@@ -71,6 +72,62 @@ export default function Dashboard({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const firstName = user.name.split(" ")[0] || user.name;
+
+  // Complete your profile (Nov 2026): Google sign-in gives no role or
+  // country, so accounts created that way arrive without them — and
+  // the admin cannot tell an artist from a curator, or where anyone
+  // is based. This card asks once, on the dashboard, until the two
+  // fields are filled or the visitor dismisses it. Dismissal is
+  // per-account (localStorage) so it never nags after "Not now".
+  const [profileRole, setProfileRole] = useState(user.role ?? "");
+  const [profileCountry, setProfileCountry] = useState(user.country ?? "");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileNote, setProfileNote] = useState<string | null>(null);
+  const [profileDone, setProfileDone] = useState(false);
+  const [profileDismissed, setProfileDismissed] = useState(false);
+  useEffect(() => {
+    try {
+      setProfileDismissed(
+        window.localStorage.getItem(`lakisa-profile-prompt-${user.id}`) === "dismissed",
+      );
+    } catch {
+      setProfileDismissed(false);
+    }
+  }, [user.id]);
+  const profileIncomplete = (!user.role || !user.country) && !profileDone && !profileDismissed;
+
+  async function saveProfilePrompt() {
+    setProfileSaving(true);
+    setProfileNote(null);
+    try {
+      const response = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: user.name,
+          role: profileRole || undefined,
+          country: profileCountry.trim() || undefined,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Could not save your profile.");
+      setProfileDone(true);
+      router.refresh();
+    } catch (error) {
+      setProfileNote(error instanceof Error ? error.message : "Could not save your profile.");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  function dismissProfilePrompt() {
+    try {
+      window.localStorage.setItem(`lakisa-profile-prompt-${user.id}`, "dismissed");
+    } catch {
+      // Dismissal is a nicety; without storage the card just shows again.
+    }
+    setProfileDismissed(true);
+  }
 
   // Welcome tour (Nov 2026): it opens once, on the first dashboard
   // visit after the account was created. The "seen" flag is per user
@@ -225,6 +282,69 @@ export default function Dashboard({
             newestExhibition={newestExhibition}
             onCreate={() => setShowCreateDialog(true)}
           />
+
+          {profileIncomplete && (
+            <section
+              className={styles.card}
+              aria-label="Complete your profile"
+              style={{ marginBottom: 20 }}
+            >
+              <div className="section-heading">
+                <div>
+                  <span className="eyebrow">Your profile</span>
+                  <h2>Tell us who you are</h2>
+                  <p className={styles.cardSub}>
+                    Are you an artist, a curator, a collector? And where are you based?
+                    It helps us invite you to the right open calls and shows.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "end" }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, minWidth: 200, flex: 1 }}>
+                  <span>{t("auth", "yourRole")}</span>
+                  <select
+                    value={profileRole}
+                    onChange={(e) => setProfileRole(e.target.value)}
+                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #ccc", fontSize: 14 }}
+                  >
+                    <option value="">{t("auth", "chooseRole")}</option>
+                    {USER_ROLES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, minWidth: 200, flex: 1 }}>
+                  <span>{t("auth", "country")}</span>
+                  <input
+                    value={profileCountry}
+                    onChange={(e) => setProfileCountry(e.target.value)}
+                    placeholder={t("auth", "countryPlaceholder")}
+                    maxLength={80}
+                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #ccc", fontSize: 14 }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={styles.createButton}
+                  onClick={() => void saveProfilePrompt()}
+                  disabled={profileSaving}
+                >
+                  {profileSaving ? "Saving…" : "Save"}
+                </button>
+                <button type="button" onClick={dismissProfilePrompt} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#666", padding: "10px 4px" }}>
+                  Not now
+                </button>
+              </div>
+              {profileNote && (
+                <p style={{ color: "#a00", fontSize: 13, margin: "10px 0 0" }}>{profileNote}</p>
+              )}
+              <p style={{ fontSize: 12, color: "#777", margin: "10px 0 0" }}>
+                You can change these anytime in <Link href="/settings">Settings</Link>.
+              </p>
+            </section>
+          )}
 
           <section className={styles.stats} aria-label={t("dashboard", "yourStatistics")}>
             {statCards.map((card) => (

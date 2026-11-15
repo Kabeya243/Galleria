@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sendOpenCallAcknowledgementEmail } from "@/lib/email";
 import { validateAnswers } from "@/lib/open-calls";
 
 // Submit an application to a published open call (no sign-in needed:
@@ -42,5 +43,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const response = await db.openCallResponse.create({
     data: { openCallId: call.id, answers: checked.answers },
   });
+  // Automatic acknowledgement of receipt, from hello@lakisa.art.
+  // Best effort only: the application is already saved, and a mail
+  // failure must never turn a good submission into an error. The
+  // applicant's address is the first email-type field with an answer.
+  const emailField = call.fields.find((f) => f.type === "email");
+  const applicantEmail =
+    emailField && typeof checked.answers[emailField.id] === "string"
+      ? (checked.answers[emailField.id] as string)
+      : "";
+  if (applicantEmail) {
+    sendOpenCallAcknowledgementEmail(applicantEmail, call.title).catch((err) => {
+      console.error("Open-call acknowledgement email failed:", err);
+    });
+  }
   return NextResponse.json({ ok: true, responseId: response.id });
 }

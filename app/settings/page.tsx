@@ -20,6 +20,8 @@ export default async function SettingsRoute() {
         email: user.email,
         avatarUrl: user.avatarUrl ?? null,
         bio: user.bio ?? null,
+        role: user.role ?? null,
+        country: user.country ?? null,
         createdAt: full?.createdAt.toISOString() ?? null,
         exhibitionCount,
       }}

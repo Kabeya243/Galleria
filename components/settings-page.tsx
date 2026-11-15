@@ -12,6 +12,7 @@ import ThemeToggle from "@/components/theme-toggle";
 import LanguageSwitcher from "@/components/language-switcher";
 import { LOCALE_TAGS, useLocale, useT } from "@/lib/i18n";
 import { applyTheme, getStoredTheme, type ThemeChoice } from "@/lib/theme";
+import { USER_ROLES } from "@/lib/validation";
 
 // Square-crop an image file to a 512 px JPEG (centre crop) in the browser,
 // so the avatar upload is small and always square before it reaches R2.
@@ -35,7 +36,7 @@ async function squareCropToJpeg(file: File, size = 512): Promise<File> {
 export default function SettingsPage({
   user,
 }: {
-  user: { id: string; name: string; email: string; avatarUrl: string | null; bio: string | null; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
+  user: { id: string; name: string; email: string; avatarUrl: string | null; bio: string | null; role: string | null; country: string | null; createdAt: string | null; exhibitionCount: number; isAdmin?: boolean };
 }) {
   const router = useRouter();
   const t = useT();
@@ -43,6 +44,8 @@ export default function SettingsPage({
   const [theme, setTheme] = useState<ThemeChoice>("system");
   const [name, setName] = useState(user.name);
   const [bio, setBio] = useState(user.bio ?? "");
+  const [role, setRole] = useState(user.role ?? "");
+  const [country, setCountry] = useState(user.country ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatarUrl);
   const [avatarNote, setAvatarNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -81,7 +84,12 @@ export default function SettingsPage({
       const response = await fetch("/api/settings/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, bio: bio.trim() === "" ? null : bio.trim() }),
+        body: JSON.stringify({
+          name,
+          bio: bio.trim() === "" ? null : bio.trim(),
+          role: role || undefined,
+          country: country.trim() || undefined,
+        }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? t("settings", "couldNotUpdateProfile"));
@@ -342,6 +350,32 @@ export default function SettingsPage({
                   placeholder={t("settings", "bioPlaceholder")}
                 />
                 <small>{t("settings", "bioHint")}</small>
+              </div>
+              <div className="settings-field">
+                <label htmlFor="settings-role">{t("auth", "yourRole")}</label>
+                <select
+                  id="settings-role"
+                  value={role}
+                  onChange={(event) => setRole(event.target.value)}
+                >
+                  <option value="">{t("auth", "chooseRole")}</option>
+                  {USER_ROLES.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="settings-field">
+                <label htmlFor="settings-country">{t("auth", "country")}</label>
+                <input
+                  id="settings-country"
+                  autoComplete="country-name"
+                  maxLength={80}
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                  placeholder={t("auth", "countryPlaceholder")}
+                />
               </div>
               <div className="settings-field">
                 <label htmlFor="settings-email">{t("settings", "email")}</label>

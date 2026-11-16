@@ -24,7 +24,7 @@ type ArtworkRef = { id: string; title: string; imageUrl: string };
 declare global {
   interface Window {
     EDITOR_CONFIG?: { projectId: string; templateId: string; artworks: ArtworkRef[] };
-    AtelierEditor?: { init: () => void; destroy: () => void };
+    AtelierEditor?: { init: () => void; destroy: () => void; openSizePresets?: () => void };
     fabric?: unknown;
   }
 }

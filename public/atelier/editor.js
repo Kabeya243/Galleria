@@ -9,6 +9,31 @@
   const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
   const palette = ["#ffffff","#f5f2ec","#f0e2cd","#d9e3d8","#293f39","#c86643","#e9c778","#6a6488","#d9e8ed","#202623"];
   const samples = [["#f1d0b1","#c86643","#f5eddb"],["#f0e2cd","#42584b","#f6d69a"],["#d9e3d8","#b8644d","#293f39"],["#e6d9e7","#685377","#f4e7d4"],["#d4e4eb","#315e68","#e4c477"],["#f2e7cb","#9f583f","#343b34"],["#e2e8de","#527264","#e8ba73"],["#293f39","#c86643","#f5eddb"]];
+  // Tailles prédéfinies (façon Photoshop) pour « Créer votre format ».
+  // Dimensions en portrait ; l'orientation Paysage les inverse à l'usage.
+  const SIZE_PRESETS = [
+    { id:"print", label:"Impression", presets:[
+      {name:"A0",w:841,h:1189,unit:"mm"},{name:"A1",w:594,h:841,unit:"mm"},
+      {name:"A2",w:420,h:594,unit:"mm"},{name:"A3",w:297,h:420,unit:"mm"},
+      {name:"A4",w:210,h:297,unit:"mm"},{name:"A5",w:148,h:210,unit:"mm"},
+      {name:"A6",w:105,h:148,unit:"mm"},{name:"B4",w:250,h:353,unit:"mm"},
+      {name:"B5",w:176,h:250,unit:"mm"},{name:"B6",w:125,h:176,unit:"mm"},
+      {name:"Letter",w:216,h:279,unit:"mm"},{name:"Legal",w:216,h:356,unit:"mm"},
+      {name:"Tabloïd",w:279,h:432,unit:"mm"},{name:"Carte postale",w:100,h:150,unit:"mm"},
+      {name:"Carte de visite",w:85,h:55,unit:"mm"},
+    ]},
+    { id:"social", label:"Réseaux sociaux", presets:[
+      {name:"Post carré",w:1080,h:1080,unit:"px"},{name:"Story / Reel",w:1080,h:1920,unit:"px"},
+      {name:"Post paysage",w:1080,h:566,unit:"px"},{name:"Bannière Facebook",w:820,h:312,unit:"px"},
+      {name:"Post LinkedIn",w:1200,h:627,unit:"px"},{name:"Couverture X",w:1500,h:500,unit:"px"},
+    ]},
+    { id:"web", label:"Web & écran", presets:[
+      {name:"Présentation 16:9",w:1920,h:1080,unit:"px"},{name:"Présentation 4:3",w:1600,h:1200,unit:"px"},
+      {name:"Bannière web",w:1920,h:600,unit:"px"},{name:"Écran HD",w:1280,h:720,unit:"px"},
+    ]},
+  ];
+  let presetCategory = "print";
+  let presetOrientation = "portrait";
   const state = { initialized:false, project:{id:null,name:"Design sans titre",pages:[]}, pageIndex:0, canvas:null, zoom:1, history:[], historyIndex:-1, restoring:false, saved:false, activeTab:"templates", grid:false, safe:false, snapLines:[], autoSave:null };
   const currentPage = () => state.project.pages[state.pageIndex];
   const activeObjects = () => state.canvas?.getActiveObjects() || [];
@@ -161,8 +186,9 @@
       root.innerHTML=`<div class="action-card"><h3>Vos designs enregistrés</h3><p>Ouvrez un design pour le modifier, dupliquez-le ou supprimez-le.</p></div><div id="designs-list" class="design-list"></div>`;
       loadDesigns();
     } else if (state.activeTab==="templates") {
-      root.innerHTML=`<input class="panel-search" id="template-search" placeholder="Rechercher un modèle…"><div class="action-card"><h3>Créer votre format</h3><div class="field"><label>Unité</label><select id="custom-unit"><option value="px">Pixels</option><option value="mm">Millimètres</option><option value="cm">Centimètres</option></select></div><div class="field-row"><div class="field"><label>Largeur</label><input id="custom-width" type="number" value="1080" min="1" max="6000"></div><div class="field"><label>Hauteur</label><input id="custom-height" type="number" value="1080" min="1" max="6000"></div></div><button id="create-custom">Créer une page vierge</button></div><div class="panel-template-list" id="panel-template-list" style="display:contents"></div>`;
+      root.innerHTML=`<input class="panel-search" id="template-search" placeholder="Rechercher un modèle…"><div class="action-card"><h3>Créer votre format</h3><div class="field"><label>Unité</label><select id="custom-unit"><option value="px">Pixels</option><option value="mm">Millimètres</option><option value="cm">Centimètres</option></select></div><div class="field-row"><div class="field"><label>Largeur</label><input id="custom-width" type="number" value="1080" min="1" max="6000"></div><div class="field"><label>Hauteur</label><input id="custom-height" type="number" value="1080" min="1" max="6000"></div></div><button id="create-custom">Créer une page vierge</button><button id="open-size-presets" class="panel-action">Tailles prédéfinies · A4, A3, B5…</button></div><div class="panel-template-list" id="panel-template-list" style="display:contents"></div>`;
       root.querySelector("#create-custom").onclick=()=>{const unit=$("#custom-unit").value,factor={px:1,mm:96/25.4,cm:96/2.54}[unit],rawWidth=Number($("#custom-width").value),rawHeight=Number($("#custom-height").value),width=Math.round(rawWidth*factor),height=Math.round(rawHeight*factor);if(!width||!height||width>6000||height>6000){toast("Dimensions valides requises (1 à 6000 px après conversion).",true);return;}const physicalWidthMm=unit==="px"?rawWidth*25.4/96:unit==="cm"?rawWidth*10:rawWidth,physicalHeightMm=unit==="px"?rawHeight*25.4/96:unit==="cm"?rawHeight*10:rawHeight;state.project={id:null,name:$("#project-name").value,pages:[{width,height,physicalWidthMm,physicalHeightMm,background:"#ffffff",objects:[]}]};setPage(state.project.pages[0]);};
+      root.querySelector("#open-size-presets").onclick=openSizePresets;
       loadTemplatesIntoPanel(); root.querySelector("#template-search").addEventListener("input",filterTemplates);
     } else if(state.activeTab==="elements") {
       root.innerHTML=`<div class="element-button" data-shape="rect"><span>▭</span>Rectangle</div><div class="element-button" data-shape="roundRect"><span>▢</span>Arrondi</div><div class="element-button" data-shape="circle"><span>◯</span>Cercle</div><div class="element-button" data-shape="triangle"><span>△</span>Triangle</div><div class="element-button" data-shape="line"><span>―</span>Ligne</div><div class="element-button" data-shape="arrow"><span>➜</span>Flèche</div><div class="element-button" data-shape="star"><span>☆</span>Étoile</div><div class="action-card"><h3>Calques</h3><p>Sélectionnez un élément pour le personnaliser. Glissez dans la liste des calques pour changer l’ordre.</p></div>`;
@@ -228,6 +254,48 @@
     } catch(error){list.innerHTML=`<div class="action-card">${escapeHTML(error.message)}</div>`;}
   }
   function filterTemplates(event){const query=event.target.value.toLocaleLowerCase("fr");$$(".panel-template").forEach(button=>button.hidden=!button.dataset.name.toLocaleLowerCase("fr").includes(query));}
+  function presetDims(preset){return presetOrientation==="landscape"?{w:preset.h,h:preset.w}:{w:preset.w,h:preset.h};}
+  function renderSizePresetGrid() {
+    const grid=$("#size-preset-grid");if(!grid)return;
+    const category=SIZE_PRESETS.find(item=>item.id===presetCategory)||SIZE_PRESETS[0];
+    grid.innerHTML=category.presets.map((preset)=>{
+      const dims=presetDims(preset);
+      const scale=Math.min(1,36/dims.w,44/dims.h);
+      const tw=Math.max(6,Math.round(dims.w*scale)),th=Math.max(6,Math.round(dims.h*scale));
+      return `<button class="size-preset-item" data-preset="${escapeHTML(preset.name)}" title="${escapeHTML(preset.name)} · ${dims.w} × ${dims.h} ${preset.unit}"><span class="size-preset-thumb" style="width:${tw}px;height:${th}px"></span><strong>${escapeHTML(preset.name)}</strong><small>${dims.w} × ${dims.h} ${preset.unit}</small></button>`;
+    }).join("");
+    $$(".size-preset-item",grid).forEach(button=>button.onclick=()=>applySizePreset(button.dataset.preset));
+    $$(".size-preset-tab").forEach(button=>button.classList.toggle("active",button.dataset.category===presetCategory));
+    $$("[data-orient]").forEach(button=>button.classList.toggle("active",button.dataset.orient===presetOrientation));
+  }
+  function applySizePreset(name) {
+    const preset=SIZE_PRESETS.flatMap(item=>item.presets).find(item=>item.name===name);
+    const widthInput=$("#custom-width"),heightInput=$("#custom-height"),unitSelect=$("#custom-unit");
+    if(!preset||!widthInput||!heightInput||!unitSelect){closeSizePresets();return;}
+    const dims=presetDims(preset);
+    unitSelect.value=preset.unit;widthInput.value=dims.w;heightInput.value=dims.h;
+    closeSizePresets();
+    toast(`Format ${preset.name} appliqué (${dims.w} × ${dims.h} ${preset.unit}).`);
+  }
+  function openSizePresets() {
+    closeSizePresets();
+    const scope=document.querySelector(".atelier-scope")||document.body;
+    const overlay=document.createElement("div");
+    overlay.className="size-preset-overlay";overlay.id="size-preset-overlay";
+    overlay.innerHTML=`<div class="size-preset-dialog" role="dialog" aria-modal="true" aria-label="Tailles prédéfinies"><div class="size-preset-head"><div><p class="eyebrow">NOUVEAU FORMAT</p><h3>Tailles prédéfinies</h3></div><button class="icon-button" id="size-preset-close" title="Fermer" aria-label="Fermer">×</button></div><div class="size-preset-tabs">${SIZE_PRESETS.map(item=>`<button class="size-preset-tab" data-category="${item.id}">${escapeHTML(item.label)}</button>`).join("")}</div><div class="size-preset-orient"><span>Orientation</span><button data-orient="portrait">Portrait</button><button data-orient="landscape">Paysage</button></div><div class="size-preset-grid" id="size-preset-grid"></div><p class="size-preset-note">Cliquez sur un format pour l’appliquer au formulaire « Créer votre format », puis « Créer une page vierge ».</p></div>`;
+    scope.appendChild(overlay);
+    $$(".size-preset-tab",overlay).forEach(button=>button.onclick=()=>{presetCategory=button.dataset.category;renderSizePresetGrid();});
+    $$("[data-orient]",overlay).forEach(button=>button.onclick=()=>{presetOrientation=button.dataset.orient;renderSizePresetGrid();});
+    $("#size-preset-close",overlay).onclick=closeSizePresets;
+    overlay.addEventListener("mousedown",(event)=>{if(event.target===overlay)closeSizePresets();});
+    document.addEventListener("keydown",closeSizePresetsOnEscape);
+    renderSizePresetGrid();
+  }
+  function closeSizePresetsOnEscape(event){if(event.key==="Escape")closeSizePresets();}
+  function closeSizePresets() {
+    document.removeEventListener("keydown",closeSizePresetsOnEscape);
+    const overlay=$("#size-preset-overlay");if(overlay)overlay.remove();
+  }
   async function openTemplate(id) {
     try {const response=await fetch(`/api/atelier/templates/${encodeURIComponent(id)}`);if(!response.ok)throw new Error((await response.json()).detail||"Modèle introuvable.");const template=await response.json();const page=template.pages?.[0]||template;state.project={id:null,name:template.name,pages:JSON.parse(JSON.stringify(template.pages||[page]))};$("#project-name").value=state.project.name;setPage(state.project.pages[0],0);toast("Modèle ouvert. Personnalisez-le à votre façon.");}
     catch(error){toast(error.message,true);}
@@ -406,6 +474,6 @@
     try {const response=await fetch(`/api/atelier/projects/${encodeURIComponent(id)}`);if(!response.ok)throw new Error((await response.json()).detail||"Projet introuvable.");state.project=await response.json();state.project.pages=state.project.pages||[state.project];$("#project-name").value=state.project.name||"Design sans titre";state.saved=true;$("#save-status").textContent="Enregistré";setPage(state.project.pages[0],0);}
     catch(error){toast(error.message,true);state.project.pages=[{width:1080,height:1080,background:"#ffffff",objects:[]}];setPage(state.project.pages[0]);}
   }
-  window.AtelierEditor={init,destroy(){if(state.autoSave)window.clearInterval(state.autoSave);if(state.canvas)state.canvas.dispose();state.initialized=false;}};
+  window.AtelierEditor={init,openSizePresets,destroy(){if(state.autoSave)window.clearInterval(state.autoSave);if(state.canvas)state.canvas.dispose();state.initialized=false;}};
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);
 })();

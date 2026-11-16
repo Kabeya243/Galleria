@@ -136,12 +136,14 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
             <div className="pages-bar">
               <button id="prev-page" className="icon-button" title="Page précédente">‹</button>
               <div id="page-list" className="page-list" />
-              <button id="duplicate-page" className="icon-button" title="Dupliquer la page">⧉</button>
+              <button id="next-page" className="icon-button" title="Page suivante">›</button>
+              <span className="bar-divider" aria-hidden="true" />
+              <button id="add-page-bar" className="page-action primary" title="Ajouter une page"><span aria-hidden="true">＋</span><span className="page-action-label">Ajouter une page</span></button>
+              <button id="duplicate-page" className="page-action" title="Dupliquer la page"><span aria-hidden="true">⧉</span><span className="page-action-label">Dupliquer la page</span></button>
               <button id="rename-page" className="icon-button" title="Renommer la page">✎</button>
               <button id="move-page-left" className="icon-button" title="Déplacer la page à gauche">←</button>
               <button id="move-page-right" className="icon-button" title="Déplacer la page à droite">→</button>
               <button id="delete-page" className="icon-button" title="Supprimer la page">×</button>
-              <button id="next-page" className="icon-button" title="Page suivante">›</button>
             </div>
           </section>
           <aside className="properties-panel">

@@ -440,6 +440,12 @@
   cursor: pointer;
 }
 .atelier-scope .page-chip.active { border-color: var(--atelier-gold); color: var(--atelier-gold); background: var(--atelier-gold-soft); }
+.atelier-scope .pages-bar { overflow-x: auto; }
+.atelier-scope .bar-divider { width: 1px; height: 22px; background: var(--line); flex-shrink: 0; }
+.atelier-scope .page-action { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600; border: 1px solid var(--atelier-gold); border-radius: 6px; color: var(--atelier-gold); background: transparent; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+.atelier-scope .page-action:hover { background: var(--atelier-gold-soft); }
+.atelier-scope .page-action.primary { background: var(--atelier-gold); color: var(--atelier-gold-ink); }
+.atelier-scope .page-action.primary:hover { filter: brightness(1.08); background: var(--atelier-gold); }
 .atelier-scope .page-rename-input {
   border: 1px solid var(--atelier-gold);
   border-radius: 4px;
@@ -563,6 +569,8 @@
   .atelier-scope .properties-panel { border-left: 0; border-top: 1px solid var(--line); }
   .atelier-scope .workspace-toolbar { height: 34px; }
   .atelier-scope .pages-bar { height: 40px; }
+  .atelier-scope .page-action-label { display: none; }
+  .atelier-scope .page-action { padding: 6px 9px; }
   .atelier-scope .editor-topbar { height: 52px; padding: 0 7px; gap: 5px; }
   .atelier-scope .editor-brand { font-size: 12px; }
   .atelier-scope .top-divider { height: 22px; }

@@ -17,6 +17,7 @@ import ExhibitionShare from "@/components/exhibition-share";
 import LanguageSwitcher from "@/components/language-switcher";
 import { loadRenderQuality, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import { hasUsableTour, tourStopToTeleportTarget, type GuidedTour } from "@/lib/tour";
+import { VIEW_PRESETS, type CameraViewPreset } from "@/lib/editor-params";
 import { describeVrError, detectXrSupport, requestVrSession, type XrSupport } from "@/lib/webxr";
 import { useT } from "@/lib/i18n";
 import type { Artwork } from "@/lib/demo-data";
@@ -269,6 +270,22 @@ export default function PublicExhibition({
   const [walking, setWalking] = useState(false);
   const movementKeys = useRef(new Set<string>());
   const walkReset = useRef(0);
+  // Visitor POV (the editor's View buttons, for the visit): Eye /
+  // Wide / High / Plan, carried as a nonce'd request the scene's walk
+  // controls apply. Eye is the room's default; changing rooms resets
+  // to it, and the Entrance button restores it with the entrance.
+  const [cameraView, setCameraView] = useState<CameraViewPreset>("eye");
+  const [viewRequest, setViewRequest] = useState<{ nonce: number; view: CameraViewPreset } | null>(null);
+  const viewNonce = useRef(0);
+  function requestCameraView(view: CameraViewPreset) {
+    setCameraView(view);
+    viewNonce.current += 1;
+    setViewRequest({ nonce: viewNonce.current, view });
+  }
+  function resetCameraView() {
+    setCameraView("eye");
+    setViewRequest(null);
+  }
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState<string | null>(null);
 
@@ -428,6 +445,7 @@ export default function PublicExhibition({
     const room = exhibition.rooms[index];
     if (!room) return;
     exitTour();
+    resetCameraView();
     setActiveRoomId(room.id);
     setSelected(undefined);
   }
@@ -445,8 +463,10 @@ export default function PublicExhibition({
         walkMode
         walking={walking}
         input={movementKeys}
-        onRoomChange={(id) => { setActiveRoomId(id); setSelected(undefined); }}
+        onRoomChange={(id) => { resetCameraView(); setActiveRoomId(id); setSelected(undefined); }}
         resetSignal={walkReset}
+        viewRequest={viewRequest}
+        walkToArtworkOnSelect
         quality={quality}
         onQualityChange={handleQualityChange}
         teleportTarget={teleportTarget}
@@ -555,8 +575,22 @@ export default function PublicExhibition({
           onClose={() => setShowListView(false)}
         />
       )}
-      {walking && <div className="public-controls-hint"><span>CLICK THE FLOOR OR USE WASD / ARROWS TO WALK</span><i /> <span>DRAG TO LOOK</span><i /> <span>USE THE FLOOR PLAN TO CHANGE ROOMS</span></div>}
-      {walking && <button className="public-reset-view" onClick={() => { exitTour(); walkReset.current += 1; }}>↺ Entrance</button>}
+      {walking && <div className="public-controls-hint"><span>CLICK AN ARTWORK OR THE FLOOR TO WALK THERE</span><i /> <span>DRAG TO LOOK</span><i /> <span>USE THE FLOOR PLAN TO CHANGE ROOMS</span></div>}
+      {walking && (
+        <div className="public-pov" role="group" aria-label="Point of view">
+          {(Object.keys(VIEW_PRESETS) as CameraViewPreset[]).map((view) => (
+            <button
+              key={view}
+              type="button"
+              className={cameraView === view ? "active" : ""}
+              aria-pressed={cameraView === view}
+              title={view === "eye" ? "Eye level view" : view === "wide" ? "Wide view from the front-right corner" : view === "high" ? "High view from above (ceiling hidden)" : "Plan view from above (ceiling hidden)"}
+              onClick={() => requestCameraView(view)}
+            >{VIEW_PRESETS[view].label}</button>
+          ))}
+        </div>
+      )}
+      {walking && <button className="public-reset-view" onClick={() => { exitTour(); resetCameraView(); setSelected(undefined); walkReset.current += 1; }}>↺ Entrance</button>}
       {walking && (
         <ExhibitionAudioPlayer
           music={music ?? null}

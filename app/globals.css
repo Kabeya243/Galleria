@@ -900,6 +900,38 @@ button { color: inherit; }
   text-transform: uppercase;
   cursor: pointer;
 }
+/* Visitor point of view (Eye / Wide / High / Plan): above the music
+   control, right side, same pill as the Entrance button. The active
+   view reads dark, like the editor's View buttons. */
+.public-pov {
+  position: absolute;
+  z-index: 3;
+  right: 24px;
+  bottom: 158px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
+}
+.public-pov button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: 700 10px var(--font-body), "DM Sans", sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.public-pov button.active {
+  background: #141414;
+  color: #fdfdfc;
+}
 /* Background-music control (one track per exhibition): above the
    "Entrance" button, right side, clear of the walk pad (left) and the
    room nav (centred). Never covers an artwork: it sits on the HUD
@@ -969,6 +1001,8 @@ button { color: inherit; }
   .music-control { right: 12px; bottom: 160px; }
   .music-control input[type="range"] { width: 56px; }
   .music-control .music-title { max-width: 90px; }
+  .public-pov { right: 12px; bottom: 206px; }
+  .public-pov button { padding: 0 8px; }
 }
 
 @media (max-width: 620px) {

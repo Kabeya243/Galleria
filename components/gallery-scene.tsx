@@ -3094,6 +3094,12 @@ function SunlightRoom({
   quality,
   hideCeiling,
   appearingId,
+  // Editor only: wall painting — the wall double-clicked in the 3D
+  // view (back / left / right / front). Selecting a wall opens the
+  // Inspector's "Wall paint" section; the colour is rendered below
+  // from room.wallPaint over room.wallColor / sideWallColor.
+  selectedWallId,
+  onWallSelect,
 }: {
   room: GalleryRoom;
   offsetX: number;
@@ -3127,6 +3133,11 @@ function SunlightRoom({
   // The artwork just added (the editor's appearingId): it fades in
   // instead of popping onto the wall.
   appearingId?: string | null;
+  // Editor only: wall painting — the wall double-clicked in the 3D
+  // view. Generic rooms accept the same props for call-site parity
+  // (their procedural shell has no per-wall meshes to select).
+  selectedWallId?: string | null;
+  onWallSelect?: (wallId: WallId | string) => void;
 }) {
   const textures = useMemo(() => getSunlightTextures(), []);
   // Floor pattern (Claude's fpat): a procedural parquet, herringbone
@@ -3138,6 +3149,41 @@ function SunlightRoom({
   );
   const floorShine = room.floorShine ?? FLOOR_SHINE_DEFAULT;
   const ceilingHidden = (room.ceilingHidden ?? false) || hideCeiling;
+  // Wall colours: the room's own back / side colours, with a
+  // per-wall paint override winning where one was painted (the
+  // editor's Wall paint). The walls below read these, so the Room
+  // settings colours and the double-click paint actually show.
+  const backWallColor = room.wallPaint?.back ?? room.wallColor;
+  const sideWallColor = room.sideWallColor;
+  const frontWallColor = room.wallPaint?.front ?? sideWallColor;
+  const leftWallColor = room.wallPaint?.left ?? sideWallColor;
+  const rightWallColor = room.wallPaint?.right ?? sideWallColor;
+  // Double-click a wall (editor only) to select it for painting:
+  // the Inspector's "Wall paint" section opens for that wall. The
+  // single click still walks (handleWalkClick), as with artworks.
+  const handleWallDoubleClick = (wallId: WallId) => (event: ThreeEvent<MouseEvent>) => {
+    if (!editable) return;
+    event.stopPropagation();
+    onWallSelect?.(wallId);
+  };
+  // The selected wall reads in 3D too: a thin orange edge frame on
+  // its box, so the Inspector's wall name matches what is seen.
+  const wallEdgeGeometries = useMemo(() => ({
+    back: new THREE.EdgesGeometry(new THREE.BoxGeometry(22, 5, 0.3)),
+    front: new THREE.EdgesGeometry(new THREE.BoxGeometry(22, 5, 0.3)),
+    left: new THREE.EdgesGeometry(new THREE.BoxGeometry(0.3, 5, 26)),
+    right: new THREE.EdgesGeometry(new THREE.BoxGeometry(0.3, 5, 26)),
+  }), []);
+  useEffect(() => () => Object.values(wallEdgeGeometries).forEach((geometry) => geometry.dispose()), [wallEdgeGeometries]);
+  const WALL_POSITIONS: Record<WallId, [number, number, number]> = {
+    back: [0, 2.5, -14.15],
+    front: [0, 2.5, 12.15],
+    left: [-11.15, 2.5, -1],
+    right: [11.15, 2.5, -1],
+  };
+  const selectedWall = selectedWallId as WallId | null;
+  const selectedWallPosition = selectedWall ? WALL_POSITIONS[selectedWall] : undefined;
+  const selectedWallEdges = selectedWall ? wallEdgeGeometries[selectedWall] : undefined;
   // Ceiling slab: an extruded 28 × 30 rectangle with the seven skylight
   // openings cut out (the source's shape + ExtrudeGeometry).
   const slabGeometry = useMemo(() => {
@@ -3226,23 +3272,33 @@ function SunlightRoom({
           envMapIntensity={0.9}
         />
       </mesh>
-      {/* Walls: back, front, left, right (inner faces at z -14/12, x -11/11) */}
-      <mesh position={[0, 2.5, -14.15]} receiveShadow onClick={handleWalkClick}>
+      {/* Walls: back, front, left, right (inner faces at z -14/12, x -11/11).
+          Each reads the room's colour (back wall / side walls, with a
+          per-wall paint override) — the Room settings colours and the
+          double-click paint actually show. Double-click a wall in the
+          editor to select it for painting. */}
+      <mesh position={[0, 2.5, -14.15]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("back")}>
         <boxGeometry args={[22, 5, 0.3]} />
-        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+        <meshStandardMaterial color={backWallColor} roughness={0.92} />
       </mesh>
-      <mesh position={[0, 2.5, 12.15]} receiveShadow onClick={handleWalkClick}>
+      <mesh position={[0, 2.5, 12.15]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("front")}>
         <boxGeometry args={[22, 5, 0.3]} />
-        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+        <meshStandardMaterial color={frontWallColor} roughness={0.92} />
       </mesh>
-      <mesh position={[-11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick}>
+      <mesh position={[-11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("left")}>
         <boxGeometry args={[0.3, 5, 26]} />
-        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+        <meshStandardMaterial color={leftWallColor} roughness={0.92} />
       </mesh>
-      <mesh position={[11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick}>
+      <mesh position={[11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("right")}>
         <boxGeometry args={[0.3, 5, 26]} />
-        <meshStandardMaterial color={SUNLIGHT_WALL_COLOR} roughness={0.92} />
+        <meshStandardMaterial color={rightWallColor} roughness={0.92} />
       </mesh>
+      {/* The selected wall's edge frame (editor only, Sunlight). */}
+      {selectedWallPosition && selectedWallEdges && (
+        <lineSegments position={selectedWallPosition} geometry={selectedWallEdges}>
+          <lineBasicMaterial color="#c2410c" />
+        </lineSegments>
+      )}
       {/* Ceiling slab with the seven skylight openings — colour and
           roughness from the editor's ceiling finish; hidden when the
           ceiling is hidden (checkbox or a top-down camera view). */}
@@ -3542,6 +3598,11 @@ function GenericRoom({
   // The artwork just added (the editor's appearingId): it fades in
   // instead of popping onto the wall.
   appearingId?: string | null;
+  // Wall painting: declared for call-site parity with SunlightRoom,
+  // but ignored here — a generic shell is procedural geometry with
+  // no per-wall meshes to select or repaint (Sunlight only, for now).
+  selectedWallId?: string | null;
+  onWallSelect?: (wallId: WallId | string) => void;
 }) {
   const layout = roomLayouts[room.layout];
   const def = galleryDef(room.layout);
@@ -4437,6 +4498,7 @@ export default function GalleryScene({
   onSunlightElementUpdate,
   selectedWallId,
   onWallSelect,
+  walkToArtworkOnSelect,
   onEditStart,
   onEditEnd,
   onElementDrop,
@@ -4503,6 +4565,12 @@ export default function GalleryScene({
   // Editor only: wall painting — the wall clicked in the 3D view.
   selectedWallId?: string | null;
   onWallSelect?: (wallId: WallId | string) => void;
+  // Public visit only: clicking an artwork walks the visitor to its
+  // stand point (2.2 m in front, facing it) instead of only opening
+  // the detail panel. The walk stops there; WASD / the walk pad take
+  // over from there, so the visitor can step closer if they want.
+  // The editor leaves this off: a click there selects, never walks.
+  walkToArtworkOnSelect?: boolean;
   // Editor only: a drag (or any discrete edit) is starting / ending, so
   // the editor can snapshot once per action for Ctrl+Z.
   onEditStart?: () => void;
@@ -4690,11 +4758,31 @@ export default function GalleryScene({
   // a click that selects must not also move the camera, so a destination
   // set by an earlier floor click is cancelled and the look target is
   // released. The rooms call this instead of onSelect directly.
+  // Public visit only (walkToArtworkOnSelect): the click instead walks
+  // the visitor to the artwork's stand point — 2.2 m in front, facing
+  // it — and stops there. The walk controls slow into the target and
+  // a movement key cancels it, so the visitor can step closer from
+  // there if they want. Only the active room's artworks walk: a piece
+  // in another room is never a walk target (teleport handles that).
   const handleArtworkSelect = useCallback((id: string, additive?: boolean) => {
+    if (walkToArtworkOnSelect && walkMode) {
+      const artwork = artworks.find((item) => item.id === id);
+      const activeId = activeRoomId ?? room.id;
+      if (artwork && artwork.roomId === activeId) {
+        const stand = artworkStandPoint(artwork);
+        const roomIndex = Math.max(0, sceneRooms.findIndex((sceneRoom) => sceneRoom.id === artwork.roomId));
+        const ox = offsets[roomIndex] ?? 0;
+        const oz = zOffsets[roomIndex] ?? 0;
+        destination.current = new Vector3(ox + stand.x, 0, oz + stand.z);
+        lookYaw.current = stand.yaw;
+        onSelect?.(id, additive);
+        return;
+      }
+    }
     destination.current = null;
     lookYaw.current = null;
     onSelect?.(id, additive);
-  }, [onSelect]);
+  }, [onSelect, walkToArtworkOnSelect, walkMode, artworks, activeRoomId, room.id, sceneRooms, offsets, zOffsets]);
 
   const handleDragStart = (id: string, mode: "move" | "resize", event: ThreeEvent<PointerEvent>) => {
     if (!editable) return;
@@ -4942,6 +5030,8 @@ export default function GalleryScene({
       showMeasure={showMeasure}
       hideCeiling={hideCeiling}
       appearingId={appearingId}
+      selectedWallId={selectedWallId}
+      onWallSelect={onWallSelect}
       onFloorClick={walkMode ? (point) => {
         // Clamp the walk target to the active room's walkable bounds:
         // a click on a wall (or outside the room) is brought back

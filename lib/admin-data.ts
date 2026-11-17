@@ -29,6 +29,7 @@ export function adminSections(access: AdminAccess): string[] {
     ...(hasAdminPermission(access, "subscriptions.view") ? ["subscriptions"] : []),
     ...(hasAdminPermission(access, "orders.view") ? ["orders"] : []),
     ...(hasAdminPermission(access, "magazine.manage") ? ["magazine"] : []),
+    ...(access.isManager ? ["artdrive"] : []),
     ...(access.isManager ? ["sub-admins"] : []),
   ];
 }

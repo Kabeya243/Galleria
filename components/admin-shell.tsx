@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ClipboardCheck,
   CreditCard,
+  HardDrive,
   Images,
   LayoutDashboard,
   LayoutGrid,
@@ -48,6 +49,7 @@ const SECTION_ROUTES: Record<string, string> = {
   subscriptions: "/admin/subscriptions",
   orders: "/admin/orders",
   magazine: "/admin/magazine",
+  artdrive: "/admin/artdrive",
   "sub-admins": "/admin/sub-admins",
 };
 
@@ -207,6 +209,12 @@ export default function AdminShell({
       label: "Magazine",
       href: "/admin/magazine",
       icon: <Newspaper size={18} />,
+    },
+    {
+      id: "artdrive",
+      label: "ArtDrive",
+      href: "/admin/artdrive",
+      icon: <HardDrive size={18} />,
     },
     {
       id: "sub-admins",

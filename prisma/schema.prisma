@@ -66,6 +66,9 @@ model User {
   // Open calls (Nov 2026): calls for applications the user creates
   // in /tools/open-calls. See OpenCall below.
   openCalls     OpenCall[]
+  // ArtDrive (Nov 2026): files the manager shares by link, Drive-style.
+  // See ArtDriveFile below.
+  artDriveFiles ArtDriveFile[]
   // Subscription (Nov 2026): one row per account, the plan the account
   // is on. Every account starts on Discovery (free); the row is created
   // lazily on first read by lib/subscriptions.ts. See SubscriptionPlan
@@ -1129,4 +1132,31 @@ model OpenCallResponse {
   createdAt  DateTime @default(now())
 
   @@index([openCallId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// ArtDrive (Nov 2026): a Drive-style file share, manager only for now.
+// The manager uploads a file in /admin/artdrive and gets a public link
+// (lakisa.art/artdrive/<token>) to send to anyone; the recipient opens
+// the page and downloads the file, no account needed. Files live in R2
+// under artdrive/<token>/<uuid>; the row holds the name, type and size
+// shown on the share page. The token is random and unguessable, so the
+// link itself is the access control, exactly like a Drive share link.
+// Applied by `prisma db push` on deploy (see vercel.json).
+// ---------------------------------------------------------------------------
+model ArtDriveFile {
+  id        String   @id @default(cuid())
+  // Public share token (16 URL-safe chars), the /artdrive/<token> slug.
+  token     String   @unique
+  fileName  String
+  mimeType  String
+  size      Int
+  r2Key     String
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  downloads Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId, createdAt])
 }

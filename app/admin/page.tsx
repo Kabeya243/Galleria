@@ -4,6 +4,7 @@ import AdminDenied from "@/components/admin-denied";
 import AdminHashRedirect from "@/components/admin-hash-redirect";
 import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox, ShareBars, Sparkline } from "@/components/admin-ui";
+import { db } from "@/lib/db";
 import {
   adminSections,
   formatBytes,
@@ -39,6 +40,16 @@ export default async function AdminOverviewRoute() {
     redirect(sections[0] === "overview" ? "/admin" : `/admin/${sections[0]}`);
   }
   const overview = await loadAdminOverview();
+  // ArtDrive (manager only): the latest files shared by link, with a
+  // shortcut to the ArtDrive page from the dashboard.
+  const artDriveFiles = access.isManager
+    ? await db.artDriveFile.findMany({
+        where: { ownerId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: { id: true, token: true, fileName: true, size: true, downloads: true, createdAt: true },
+      })
+    : [];
   const {
     userCount,
     exhibitionCount,
@@ -566,6 +577,53 @@ export default async function AdminOverviewRoute() {
             </div>
           )}
         </section>
+        {/* ArtDrive: files shared by link (manager only) */}
+        {access.isManager && (
+          <section className="ad-card ad-table-card">
+            <div className="ad-card-head">
+              <div>
+                <h2>ArtDrive</h2>
+                <p className="ad-card-sub">Files you shared by link, like Drive</p>
+              </div>
+              <a className="ad-card-link" href="/admin/artdrive">
+                Open ArtDrive
+              </a>
+            </div>
+            {artDriveFiles.length === 0 ? (
+              <EmptyBox
+                title="No files shared yet."
+                body="Upload a file in ArtDrive and send its link to anyone."
+              />
+            ) : (
+              <div className="ad-table-wrap">
+                <table className="ad-table">
+                  <thead>
+                    <tr>
+                      <th>File</th>
+                      <th>Size</th>
+                      <th>Shared</th>
+                      <th>Downloads</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {artDriveFiles.map((file) => (
+                      <tr key={file.id}>
+                        <td>
+                          <Link href={`/artdrive/${file.token}`} target="_blank">
+                            {file.fileName}
+                          </Link>
+                        </td>
+                        <td>{formatBytes(file.size)}</td>
+                        <td>{file.createdAt.toLocaleDateString("en-GB")}</td>
+                        <td>{file.downloads}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       <p className="ad-foot">

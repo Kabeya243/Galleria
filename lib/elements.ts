@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { partitionDimsOf } from "@/lib/editor-params";
+import type { PartitionWall } from "@/lib/rooms";
 
 // Every placeable object in the Elements palette. The first seven are the
 // core set; the rest come from Kabeya's reference photos of real galleries
@@ -209,6 +210,25 @@ export function roomElementCollisionBlocks(
     });
   }
   return blocks;
+}
+
+// Collision blocks of the Room settings partition walls (the
+// partitionWalls array, separate from the Asset Library elements
+// above): same rotated-rectangle shape, so the walk controls can block
+// them too. A horizontal wall runs along X (ry 0), a vertical wall
+// along Z (ry 90°). Thickness is the editor's partition default
+// (PARTITION_DIMS.thickness.default, 0.15 m).
+export function partitionWallCollisionBlocks(
+  walls: PartitionWall[] | undefined,
+): { x: number; z: number; ry: number; hl: number; hw: number }[] {
+  if (!walls) return [];
+  return walls.map((wall) => ({
+    x: wall.x,
+    z: wall.z,
+    ry: wall.orientation === "vertical" ? Math.PI / 2 : 0,
+    hl: wall.length / 2,
+    hw: 0.075,
+  }));
 }
 
 // A new element, placed sensibly for its type: floor pieces near the

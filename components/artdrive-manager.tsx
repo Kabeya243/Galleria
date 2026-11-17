@@ -224,6 +224,17 @@ export default function ArtDriveManager() {
 
   return (
     <div>
+      {/* Phones: the 5-column table is too wide for a phone (the
+          actions alone are three buttons), so below 640px the table
+          hides and each file becomes a stacked card with the same
+          actions. Desktop keeps the table. */}
+      <style>{`
+        .ad-drive-cards { display: none; }
+        @media (max-width: 640px) {
+          .ad-drive-table-wrap { display: none; }
+          .ad-drive-cards { display: flex; flex-direction: column; gap: 12px; }
+        }
+      `}</style>
       <input
         ref={inputRef}
         type="file"
@@ -304,7 +315,8 @@ export default function ArtDriveManager() {
           No files shared yet. Upload your first file and send its link to anyone.
         </p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
+        <>
+          <div className="ad-drive-table-wrap" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: "left", opacity: 0.7, fontSize: 12 }}>
@@ -366,7 +378,91 @@ export default function ArtDriveManager() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+          <div className="ad-drive-cards">
+            {files.map((file) => (
+              <div
+                key={file.id}
+                style={{
+                  border: "1px solid var(--ad-border)",
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                  background: "var(--ad-card)",
+                }}
+              >
+                <a
+                  href={file.shareLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: "block",
+                    marginBottom: 4,
+                    color: "inherit",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {fileIcon(file.mimeType, file.fileName)} {file.fileName}
+                </a>
+                <p style={{ margin: "0 0 12px", fontSize: 12, opacity: 0.7 }}>
+                  {formatSize(file.size)} · {formatDate(file.createdAt)} · {file.downloads}{" "}
+                  download{file.downloads === 1 ? "" : "s"}
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <button
+                    type="button"
+                    style={{ ...btnBase, padding: "10px 16px", fontSize: 13 }}
+                    onClick={() => void copyLink(file)}
+                  >
+                    {copied === file.id ? "Copied ✓" : "Copy link"}
+                  </button>
+                  <a
+                    href={`/api/artdrive/${file.token}/download`}
+                    download={file.fileName}
+                    style={{
+                      ...btnBase,
+                      padding: "10px 16px",
+                      fontSize: 13,
+                      textDecoration: "none",
+                      display: "inline-block",
+                    }}
+                  >
+                    Download
+                  </a>
+                  {confirming === file.id ? (
+                    <>
+                      <button
+                        type="button"
+                        style={{ ...btnDanger, padding: "10px 16px", fontSize: 13 }}
+                        disabled={deleting === file.id}
+                        onClick={() => void deleteFile(file)}
+                      >
+                        {deleting === file.id ? "Deleting…" : "Confirm delete"}
+                      </button>
+                      <button
+                        type="button"
+                        style={{ ...btnBase, padding: "10px 16px", fontSize: 13 }}
+                        onClick={() => setConfirming(null)}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      style={{ ...btnBase, padding: "10px 16px", fontSize: 13 }}
+                      onClick={() => setConfirming(file.id)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

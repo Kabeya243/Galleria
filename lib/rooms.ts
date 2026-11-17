@@ -674,11 +674,9 @@ export type FloorType = keyof typeof floorTypes;
 
 const floorTypeKeys = Object.keys(floorTypes) as [FloorType, ...FloorType[]];
 
-// Light moods per room. Sunlight is the only one a room can take now —
-// the Sunlight Gallery's sun, skylights and IBL are fixed by the
-// reference room and do not follow a mood. The retired moods stay in
-// the enum so rooms saved with one still validate; parseGalleryRooms
-// coerces them to "sunlight" on load.
+// Light moods per room: each tints the room's key light through
+// sunlightSunColor (the Sunlight sun, and the generic rooms' fallback
+// sun). All five stay valid, so a room saved with one keeps it.
 export const lightTypes = {
   sunlight: { label: "Sunlight" },
   "spot-warm": { label: "Spot · Warm" },
@@ -917,11 +915,9 @@ export function parseGalleryRooms(value: string): GalleryRoom[] {
         if (typeof next.layout === "string" && !(next.layout in roomLayouts)) {
           next.layout = "sunlight";
         }
-        // The Sunlight Gallery's sun, skylights and IBL are fixed by
-        // the reference room: a retired light mood never applies.
-        if (typeof next.lightType === "string" && next.lightType !== "sunlight") {
-          next.lightType = "sunlight";
-        }
+        // The light mood is kept as saved: it tints the room's key
+        // light (sunlightSunColor), so a room saved with "Spot · Cool"
+        // still reads cool when it reopens.
         // Rooms saved before floor types / light types / elements existed:
         // fill them in from what the room already looks like.
         if (typeof next.floorType !== "string") {

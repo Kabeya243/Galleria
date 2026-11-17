@@ -1511,8 +1511,10 @@ button { font-weight: 600; }
    scroll and nothing inside could either. Restore normal window
    scrolling whenever the Admin is on screen (:has keeps every other
    page on the locked-window shell). The sticky sidebar / topbar then
-   work as designed. */
-html:has(.ad-root), html:has(.ad-root) body { overflow-y: auto; }
+   work as designed. height: auto matters too: with html/body stuck at
+   height: 100%, only the body element scrolls and the document itself
+   never grows, so the page does not scroll on mobile. */
+html:has(.ad-root), html:has(.ad-root) body { overflow-y: auto; height: auto; }
 
 /* Reserve the scrollbar space on every admin page, so the sidebar and
    the content never shift sideways when moving between a short page

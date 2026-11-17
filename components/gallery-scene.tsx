@@ -46,8 +46,9 @@ import {
   type SunlightTextFont,
 } from "@/lib/sunlight-elements";
 import { galleryDef, galleryHangWalls, isGalleryLayout, roomFloorCenterZ } from "@/lib/gallery-defs";
-import { buildGalleryShell, disposeGroup, GalleryEnvironment, GalleryWalkControls } from "@/components/gallery-rooms";
-import { FLOOR_SHINE_DEFAULT, partitionDimsOf, sunlightPartitionDimsOf } from "@/lib/editor-params";
+import { applyRoomFinishes, buildGalleryShell, ceilingFinishProps, disposeGroup, floorFinishProps, GalleryEnvironment, GalleryWalkControls, wallFinishProps } from "@/components/gallery-rooms";
+import { FLOOR_SHINE_DEFAULT, PARTITION_DIMS, partitionDimsOf, sunlightPartitionDimsOf } from "@/lib/editor-params";
+import { partitionWallCollisionBlocks } from "@/lib/elements";
 import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
 import { floorPatternTexture } from "@/lib/floor-patterns";
 import { VIDEO_PLAY_DISTANCE_M, VIDEO_PLAY_FACING_DOT } from "@/lib/video";
@@ -3058,16 +3059,89 @@ function SunlightAoWall({
   );
 }
 
+// Partition walls from the Room settings (room.partitionWalls — the
+// "Add a partition wall" section, separate from the Asset Library
+// partition elements): a plain wall box, floor-standing, in the room's
+// side-wall colour unless the wall carries its own paint. Height and
+// thickness are the editor's partition defaults — the Room settings
+// only store orientation / position / length.
+function PartitionWallMeshes({ walls, fallbackColor }: { walls: GalleryRoom["partitionWalls"]; fallbackColor: string }) {
+  if (!walls?.length) return null;
+  return (
+    <>
+      {walls.map((wall) => {
+        const height = PARTITION_DIMS.height.default;
+        const thickness = PARTITION_DIMS.thickness.default;
+        const horizontal = wall.orientation === "horizontal";
+        return (
+          <mesh
+            key={wall.id}
+            position={[wall.x, height / 2, wall.z]}
+            rotation={[0, horizontal ? 0 : Math.PI / 2, 0]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[wall.length, height, thickness]} />
+            <meshStandardMaterial color={wall.color ?? fallbackColor} roughness={0.92} />
+          </mesh>
+        );
+      })}
+    </>
+  );
+}
+
+// Ceiling spotlights for a room whose shell brings none: three spots
+// hung just under the ceiling, aimed straight down, spread along the
+// room's length. Used when the Room settings "Ceiling spotlights" is
+// on and the shell has no SpotLight of its own.
+function CeilingSpotlights({
+  width,
+  depth,
+  height,
+  centerZ,
+  color,
+}: {
+  width: number;
+  depth: number;
+  height: number;
+  centerZ: number;
+  color: string;
+}) {
+  const targets = useMemo(() => [-width / 4, 0, width / 4].map(() => new Object3D()), [width]);
+  const xs = [-width / 4, 0, width / 4];
+  return (
+    <>
+      {xs.map((x, i) => (
+        <primitive key={`t${i}`} object={targets[i]} position={[x, 0, centerZ]} />
+      ))}
+      {xs.map((x, i) => (
+        <spotLight
+          key={x}
+          position={[x, height - 0.15, centerZ]}
+          target={targets[i]}
+          angle={0.6}
+          penumbra={0.5}
+          intensity={18}
+          distance={height + depth}
+          decay={1.2}
+          color={color}
+        />
+      ))}
+    </>
+  );
+}
+
 // The Sunlight Gallery room — the whole "Galerie lumière" scene, exact:
 // 22 × 26 m, 5 m high, procedural concrete floor, off-white walls, the
 // ceiling slab with its seven skylight openings (4 diffusers with a warm
 // point light each, 3 open sky panels hidden by default), the cloud sky
 // above, contact shadows and LED strips, three freestanding panels, two
 // pedestals with sculptures, the double door on the left wall and the
-// dark band on the right wall. Materials and finishes are fixed by the
-// design; the editor's finish fields do not alter them. The artworks
-// hang on the panels (and keep the SANAA frame system); the placeable
-// 3D elements stay functional.
+// dark band on the right wall. The artworks hang on the panels (and
+// keep the SANAA frame system); the placeable 3D elements stay
+// functional. The Room settings finishes do apply here: the floor
+// colour / pattern / shine, the wall and ceiling textures, the ceiling
+// spotlights and the partition walls.
 function SunlightRoom({
   room,
   offsetX,
@@ -3158,6 +3232,27 @@ function SunlightRoom({
   const frontWallColor = room.wallPaint?.front ?? sideWallColor;
   const leftWallColor = room.wallPaint?.left ?? sideWallColor;
   const rightWallColor = room.wallPaint?.right ?? sideWallColor;
+  // Floor finish: the pattern wins when one is set; otherwise the
+  // room's floor colour tints the concrete (the map is multiplied by
+  // the colour, so the default grey keeps the reference look).
+  const floorFinish = useMemo(() => {
+    if (floorPattern) return { map: floorPattern, color: "#ffffff" };
+    return { map: textures.floor, color: room.floorColor ?? SUNLIGHT_FLOOR_COLOR };
+  }, [floorPattern, room.floorColor, textures.floor]);
+  // Wall finishes: a texture map for the Room settings wall texture
+  // (plaster grain tinted to the wall colour, concrete, or planks for
+  // wood), per wall — the map carries the colour, so the material
+  // colour is white when a map is present.
+  const wallFinishes = useMemo(() => {
+    const mk = (color: string) => wallFinishProps(color, room.wallTexture, 22, 5);
+    return { back: mk(backWallColor), front: mk(frontWallColor), left: mk(leftWallColor), right: mk(rightWallColor) };
+  }, [room.wallTexture, backWallColor, frontWallColor, leftWallColor, rightWallColor]);
+  // Ceiling finish: a texture map for the Room settings ceiling
+  // texture, with the editor's ceiling colour and roughness.
+  const ceilingFinish = useMemo(
+    () => ceilingFinishProps(room, SUNLIGHT_WIDTH, SUNLIGHT_DEPTH),
+    [room.ceilingTexture, room.ceilingColor, room.ceilingRoughness],
+  );
   // Double-click a wall (editor only) to select it for painting:
   // the Inspector's "Wall paint" section opens for that wall. The
   // single click still walks (handleWalkClick), as with artworks.
@@ -3261,12 +3356,12 @@ function SunlightRoom({
 
   return (
     <group position={[offsetX, 0, offsetZ]}>
-      {/* Concrete floor (or the editor's floor pattern, with its shine) */}
+      {/* Concrete floor (or the editor's floor pattern, with its shine) — the room's floor colour tints the concrete when no pattern is set. */}
       <mesh position={[0, 0, SUNLIGHT_FLOOR_CENTER_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow onClick={handleWalkClick}>
         <planeGeometry args={[SUNLIGHT_WIDTH, SUNLIGHT_DEPTH]} />
         <meshStandardMaterial
-          map={floorPattern ?? textures.floor ?? undefined}
-          color={floorPattern || textures.floor ? "#ffffff" : SUNLIGHT_FLOOR_COLOR}
+          map={floorFinish.map ?? undefined}
+          color={floorFinish.color}
           roughness={1 - floorShine / 100}
           metalness={0.05}
           envMapIntensity={0.9}
@@ -3274,24 +3369,24 @@ function SunlightRoom({
       </mesh>
       {/* Walls: back, front, left, right (inner faces at z -14/12, x -11/11).
           Each reads the room's colour (back wall / side walls, with a
-          per-wall paint override) — the Room settings colours and the
-          double-click paint actually show. Double-click a wall in the
-          editor to select it for painting. */}
+          per-wall paint override) and the Room settings wall texture —
+          the colours and the double-click paint actually show. Double-click
+          a wall in the editor to select it for painting. */}
       <mesh position={[0, 2.5, -14.15]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("back")}>
         <boxGeometry args={[22, 5, 0.3]} />
-        <meshStandardMaterial color={backWallColor} roughness={0.92} />
+        <meshStandardMaterial map={wallFinishes.back.map ?? undefined} color={wallFinishes.back.color} roughness={wallFinishes.back.roughness} />
       </mesh>
       <mesh position={[0, 2.5, 12.15]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("front")}>
         <boxGeometry args={[22, 5, 0.3]} />
-        <meshStandardMaterial color={frontWallColor} roughness={0.92} />
+        <meshStandardMaterial map={wallFinishes.front.map ?? undefined} color={wallFinishes.front.color} roughness={wallFinishes.front.roughness} />
       </mesh>
       <mesh position={[-11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("left")}>
         <boxGeometry args={[0.3, 5, 26]} />
-        <meshStandardMaterial color={leftWallColor} roughness={0.92} />
+        <meshStandardMaterial map={wallFinishes.left.map ?? undefined} color={wallFinishes.left.color} roughness={wallFinishes.left.roughness} />
       </mesh>
       <mesh position={[11.15, 2.5, -1]} receiveShadow onClick={handleWalkClick} onDoubleClick={handleWallDoubleClick("right")}>
         <boxGeometry args={[0.3, 5, 26]} />
-        <meshStandardMaterial color={rightWallColor} roughness={0.92} />
+        <meshStandardMaterial map={wallFinishes.right.map ?? undefined} color={wallFinishes.right.color} roughness={wallFinishes.right.roughness} />
       </mesh>
       {/* The selected wall's edge frame (editor only, Sunlight). */}
       {selectedWallPosition && selectedWallEdges && (
@@ -3299,11 +3394,12 @@ function SunlightRoom({
           <lineBasicMaterial color="#c2410c" />
         </lineSegments>
       )}
-      {/* Ceiling slab with the seven skylight openings — colour and
-          roughness from the editor's ceiling finish; hidden when the
-          ceiling is hidden (checkbox or a top-down camera view). */}
+      {/* Ceiling slab with the seven skylight openings — colour,
+          roughness and texture from the editor's ceiling finish;
+          hidden when the ceiling is hidden (checkbox or a top-down
+          camera view). */}
       <mesh geometry={slabGeometry} position={[0, SUNLIGHT_HEIGHT, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow visible={!ceilingHidden}>
-        <meshStandardMaterial color={room.ceilingColor ?? SUNLIGHT_CEILING_COLOR} roughness={room.ceilingRoughness ?? 0.95} />
+        <meshStandardMaterial map={ceilingFinish.map ?? undefined} color={ceilingFinish.color} roughness={ceilingFinish.roughness} />
       </mesh>
       {/* Cloud sky, 30 m above the ceiling */}
       <mesh position={[0, SUNLIGHT_HEIGHT + 30, -2]} rotation={[Math.PI / 2, 0, 0]}>
@@ -3529,6 +3625,19 @@ function SunlightRoom({
           <CuratorialTextPlane text={room.curatorialText} maxWidthM={9} wallColor={SUNLIGHT_WALL_COLOR} />
         </group>
       )}
+      {/* Ceiling spotlights from the Room settings (the Sunlight shell
+          brings none of its own) and the partition walls the owner
+          added to this room. */}
+      {room.spotlights && (
+        <CeilingSpotlights
+          width={SUNLIGHT_WIDTH}
+          depth={SUNLIGHT_DEPTH}
+          height={SUNLIGHT_HEIGHT}
+          centerZ={SUNLIGHT_FLOOR_CENTER_Z}
+          color={sunlightSunColor(room.lightType)}
+        />
+      )}
+      <PartitionWallMeshes walls={room.partitionWalls} fallbackColor={room.sideWallColor} />
     </group>
   );
 }
@@ -3542,6 +3651,10 @@ function SunlightRoom({
 // The shell brings its own lights — no Sunlight rig here, so a dark
 // loft stays dark and a stone gallery stays warm. Sunlight 3D
 // elements are not rendered here: they belong to the Sunlight room.
+// The Room settings finishes are applied to the shell in place by
+// the finishes effect below (floor / wall / ceiling colours and
+// textures, floor pattern and shine, ceiling spotlights), so the
+// settings actually show instead of the reference look.
 function GenericRoom({
   room,
   offsetX,
@@ -3611,6 +3724,37 @@ function GenericRoom({
   // exactly the artworks its owner hung, or bare walls.
   const shell = useMemo(() => buildGalleryShell(room.layout), [room.layout]);
   useEffect(() => () => disposeGroup(shell.group), [shell]);
+  // The Room settings finishes (floor / wall / ceiling colours and
+  // textures, floor pattern and shine, ceiling spotlights) are applied
+  // to the shell in place: the shell is built once per layout from its
+  // reference file, with its finishes baked in, so without this the
+  // settings never showed. The effect re-runs when a finish changes;
+  // the previous room's finishes are restored first (the shell is
+  // shared across rooms of the same layout).
+  const [hasShellSpots, setHasShellSpots] = useState(false);
+  useEffect(() => {
+    const { cleanup, hasSpotlights } = applyRoomFinishes(shell.group, room);
+    setHasShellSpots(hasSpotlights);
+    return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    shell,
+    room.floorColor,
+    room.floorTexture,
+    room.floorType,
+    room.floorPattern,
+    room.floorShine,
+    room.wallColor,
+    room.sideWallColor,
+    room.wallTexture,
+    room.wallPaint,
+    room.ceilingColor,
+    room.ceilingTexture,
+    room.ceilingFinish,
+    room.ceilingRoughness,
+    room.ceilingHidden,
+    room.spotlights,
+  ]);
   const qualityCfg = RENDER_QUALITY_CONFIG[quality ?? "high"];
   // Fallback shadow sun for shells lit by hemisphere + points only
   // (Vitrine, Loft, Musée, Parquet, Classique, Atrium blanc,
@@ -3668,7 +3812,7 @@ function GenericRoom({
             position={[layout.width * 0.25, layout.height - 0.6, floorCenterZ + layout.depth * 0.2]}
             target={fallbackSunTarget}
             intensity={0.7}
-            color="#fff0d8"
+            color={sunlightSunColor(room.lightType)}
             castShadow
             shadow-mapSize-width={qualityCfg.directionalShadowMapSize}
             shadow-mapSize-height={qualityCfg.directionalShadowMapSize}
@@ -3741,6 +3885,20 @@ function GenericRoom({
           <CuratorialTextPlane text={room.curatorialText} maxWidthM={9} wallColor={layout.wallColor} />
         </group>
       )}
+      {/* Ceiling spotlights from the Room settings, when the shell
+          brings none of its own (the shell's own spots follow the same
+          switch via the finishes effect) — and the partition walls the
+          owner added to this room. */}
+      {room.spotlights && !hasShellSpots && (
+        <CeilingSpotlights
+          width={layout.width}
+          depth={layout.depth}
+          height={layout.height}
+          centerZ={floorCenterZ}
+          color={sunlightSunColor(room.lightType)}
+        />
+      )}
+      <PartitionWallMeshes walls={room.partitionWalls} fallbackColor={room.sideWallColor} />
     </group>
   );
 }
@@ -4009,13 +4167,15 @@ function SunlightWalkControls({
     // socle, vitrine, banc, fauteuils…), rebuilt every frame so a moved
     // element's block follows it — plus the blocks of any Asset Library
     // partition added to this room, so the visitor cannot walk through
-    // that wall either. Sculptures add their own block (the pedestal),
-    // rebuilt the same way so a dragged pedestal's block follows it.
-    // The spotlight contributes no block.
+    // that wall either, plus the blocks of the partition walls the
+    // owner added in the Room settings. Sculptures add their own block
+    // (the pedestal), rebuilt the same way so a dragged pedestal's
+    // block follows it. The spotlight contributes no block.
     const blocks = [
       ...SUNLIGHT_BLOCKS,
       ...sunlightElementCollisionBlocks(rooms[roomIndex]?.sunlightElements ?? []),
       ...roomElementCollisionBlocks(rooms[roomIndex]?.elements ?? []),
+      ...partitionWallCollisionBlocks(rooms[roomIndex]?.partitionWalls),
       ...(artworks ?? [])
         .filter((item) => item.sculptureUrl && item.roomId === rooms[roomIndex]?.id)
         .map((item) => ({

@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   BackSide,
+  Box3,
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
@@ -44,6 +45,7 @@ import {
   LatheGeometry,
   LineBasicMaterial,
   LineSegments,
+  Matrix4,
   MathUtils,
   Mesh,
   MeshBasicMaterial,
@@ -71,10 +73,11 @@ import {
   type Texture,
 } from "three";
 import { roomLayouts, type GalleryRoom, type RoomLayout } from "@/lib/rooms";
+import { floorPatternTexture } from "@/lib/floor-patterns";
 import type { Artwork } from "@/lib/demo-data";
 import { SCULPTURE_COLLISION_HALF_M } from "@/lib/sculpture";
-import { roomElementCollisionBlocks } from "@/lib/elements";
-import { galleryDef } from "@/lib/gallery-defs";
+import { partitionWallCollisionBlocks, roomElementCollisionBlocks } from "@/lib/elements";
+import { galleryDef, roomFloorCenterZ } from "@/lib/gallery-defs";
 import { CAMERA_HEIGHT_EASE, VIEW_PRESETS, WALK_ACCEL, WALK_ARRIVE_DIST, WALK_DECEL, WALK_STOP_EPS, type CameraViewPreset } from "@/lib/editor-params";
 import { PHOTO, photoTexture } from "@/lib/gallery-photos";
 import { sunlightHitWith } from "@/lib/sunlight";
@@ -2892,6 +2895,323 @@ const SHELL_SHADOW_SUN_LAYOUTS: ReadonlySet<RoomLayout> = new Set([
   "atrium-lattes",
 ]);
 
+// ---- Room finishes: applying the editor's Room settings to a shell ----
+// The generic shells are built once per layout from their reference
+// files, with their finishes baked in — so the Room settings colours,
+// textures, floor, ceiling and spotlights never showed in the scene.
+// applyRoomFinishes re-finishes a built shell in place: it finds the
+// main floor, the four outer walls and the ceiling by their geometry
+// (size + position against the layout's dimensions and the def's hang
+// walls) and swaps their material maps / colours / roughness for the
+// room's finishes. A surface is only touched when its finish differs
+// from the layout preset, so a room never customised keeps its
+// reference look. SpotLights in the shell follow room.spotlights.
+// It returns a cleanup that restores the shell's original materials
+// and disposes the override textures it created, plus whether the
+// shell had any SpotLight (so the caller knows whether to add its own
+// ceiling spots when the room asks for them).
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return { h: 32, s: 40, l: 55 };
+  const r = parseInt(m[1], 16) / 255;
+  const g = parseInt(m[2], 16) / 255;
+  const b = parseInt(m[3], 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l: l * 100 };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+  else if (max === g) h = ((b - r) / d + 2) * 60;
+  else h = ((r - g) / d + 4) * 60;
+  return { h, s: s * 100, l: l * 100 };
+}
+
+// Dark speckle colour for deuxConcrete, as "r,g,b", darkened from a hex.
+function darkenHex(hex: string, factor: number): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return "60,55,45";
+  return m.slice(1).map((part) => Math.round(parseInt(part, 16) * factor)).join(",");
+}
+
+// A wall / ceiling texture map for a finish + colour, or null when the
+// finish is plain colour (the material colour carries it). Brick and
+// marble have no dedicated generator here, so they reuse the plaster
+// grain — the colour is exact, the grain is a stand-in.
+function finishMap(texture: string, color: string, w: number, h: number): CanvasTexture | null {
+  const rep: [number, number] = [Math.max(1, w / 3), Math.max(1, h / 3)];
+  switch (texture) {
+    case "plaster":
+    case "stone-plaster":
+    case "brick":
+    case "marble":
+      return plasterT(color, rep);
+    case "concrete":
+    case "stone-concrete":
+      return deuxConcrete(256, color, darkenHex(color, 0.55), rep, texture === "stone-concrete");
+    case "wood":
+      return floorPatternTexture("parquet");
+    default:
+      return null;
+  }
+}
+
+export type FinishProps = { map: CanvasTexture | null; color: string; roughness: number; mapOwned: boolean };
+
+// The floor's material props for a room: the floor pattern wins, then
+// the floor texture + colour, with the shine as roughness.
+export function floorFinishProps(room: GalleryRoom, w: number, d: number): FinishProps {
+  const roughness = 1 - (room.floorShine ?? 70) / 100;
+  const pattern = room.floorPattern ?? "original";
+  if (pattern !== "original") {
+    return { map: floorPatternTexture(pattern), color: "#ffffff", roughness, mapOwned: false };
+  }
+  const color = room.floorColor;
+  switch (room.floorTexture) {
+    case "parquet": {
+      const { h, s, l } = hexToHsl(color);
+      return { map: herring(h, s, Math.max(40, Math.min(70, l)), [w / 5.1, d / 5.1]), color: "#ffffff", roughness, mapOwned: true };
+    }
+    case "wood":
+      return { map: floorPatternTexture("parquet"), color: "#ffffff", roughness, mapOwned: false };
+    case "concrete":
+    case "stone-concrete":
+    case "stone":
+      return { map: deuxConcrete(512, color, darkenHex(color, 0.55), [Math.max(1, w / 4), Math.max(1, d / 4)], room.floorTexture === "stone-concrete"), color: "#ffffff", roughness, mapOwned: true };
+    case "marble":
+      return { map: null, color, roughness: Math.min(roughness, 0.35), mapOwned: true };
+    default:
+      return { map: null, color, roughness, mapOwned: true };
+  }
+}
+
+// A wall's material props for a colour + texture.
+export function wallFinishProps(color: string, texture: string, w: number, h: number): FinishProps {
+  const map = finishMap(texture, color, w, h);
+  return { map, color: map ? "#ffffff" : color, roughness: texture === "marble" ? 0.4 : 0.92, mapOwned: true };
+}
+
+// A ceiling's material props for a room.
+export function ceilingFinishProps(room: GalleryRoom, w: number, d: number): FinishProps {
+  const map = finishMap(room.ceilingTexture, room.ceilingColor, w, d);
+  return { map, color: map ? "#ffffff" : room.ceilingColor, roughness: room.ceilingRoughness ?? 0.95, mapOwned: true };
+}
+
+export function applyRoomFinishes(
+  group: Group,
+  room: GalleryRoom,
+): { cleanup: () => void; hasSpotlights: boolean } {
+  const preset = roomLayouts[room.layout];
+  const def = galleryDef(room.layout);
+  const W = preset.width;
+  const D = preset.depth;
+  const H = preset.height;
+  const FCZ = roomFloorCenterZ(room.layout);
+  const shine = room.floorShine ?? 70;
+  const floorDiffers =
+    room.floorColor !== preset.floorColor ||
+    room.floorTexture !== preset.floorTexture ||
+    (room.floorPattern ?? "original") !== "original" ||
+    shine !== 70;
+  const wallDiffers =
+    room.wallColor !== preset.wallColor ||
+    room.sideWallColor !== preset.sideWallColor ||
+    room.wallTexture !== preset.wallTexture ||
+    Object.keys(room.wallPaint ?? {}).length > 0;
+  const ceilingDiffers =
+    room.ceilingColor !== preset.ceilingColor ||
+    room.ceilingTexture !== preset.ceilingTexture ||
+    (room.ceilingRoughness ?? 0.95) !== 0.95;
+  const ceilingHidden = room.ceilingHidden ?? false;
+
+  group.updateWorldMatrix(true, true);
+  const inv = new Matrix4().copy(group.matrixWorld).invert();
+
+  type Original = {
+    material: MeshStandardMaterial;
+    map: Texture | null;
+    bumpMap: Texture | null;
+    bumpScale: number;
+    color: string;
+    roughness: number;
+    visible: boolean;
+  };
+  const originals = new Map<Mesh, Original>();
+  const clones: Material[] = [];
+  const ownedMaps: Texture[] = [];
+  const spotOriginals = new Map<SpotLight, boolean>();
+  let hasSpotlights = false;
+
+  // How many meshes share one material instance: a shared material is
+  // cloned before it is touched, so a pedestal never inherits a wall's
+  // new colour.
+  const useCount = new Map<Material, number>();
+  group.traverse((obj) => {
+    const mesh = obj as Mesh;
+    const mat = mesh.material as Material | Material[] | undefined;
+    if (!mat) return;
+    if (Array.isArray(mat)) mat.forEach((m) => useCount.set(m, (useCount.get(m) ?? 0) + 1));
+    else useCount.set(mat, (useCount.get(mat) ?? 0) + 1);
+  });
+
+  const apply = (mesh: Mesh, props: FinishProps) => {
+    let mat = mesh.material as MeshStandardMaterial | MeshStandardMaterial[] | undefined;
+    if (!mat || Array.isArray(mat) || typeof mat.color === "undefined") return;
+    if (!originals.has(mesh)) {
+      originals.set(mesh, {
+        material: mat,
+        map: mat.map ?? null,
+        bumpMap: mat.bumpMap ?? null,
+        bumpScale: mat.bumpScale ?? 0,
+        color: `#${mat.color.getHexString()}`,
+        roughness: mat.roughness ?? 0.9,
+        visible: mesh.visible,
+      });
+      if ((useCount.get(mat) ?? 0) > 1) {
+        const clone = mat.clone();
+        clones.push(clone);
+        mesh.material = clone;
+        mat = clone;
+      }
+    }
+    if (props.map && props.mapOwned) ownedMaps.push(props.map);
+    mat.map = props.map;
+    mat.bumpMap = props.map;
+    mat.bumpScale = props.map ? 0.3 : 0;
+    mat.color.set(props.color);
+    mat.roughness = props.roughness;
+    mat.needsUpdate = true;
+  };
+
+  const setVisible = (mesh: Mesh, visible: boolean) => {
+    if (!originals.has(mesh)) {
+      const mat = mesh.material as MeshStandardMaterial | undefined;
+      if (!mat || Array.isArray(mat)) return;
+      originals.set(mesh, {
+        material: mat,
+        map: mat.map ?? null,
+        bumpMap: mat.bumpMap ?? null,
+        bumpScale: mat.bumpScale ?? 0,
+        color: `#${mat.color.getHexString()}`,
+        roughness: mat.roughness ?? 0.9,
+        visible: mesh.visible,
+      });
+    }
+    mesh.visible = visible;
+  };
+
+  // Room-local bounding box of a mesh (the builders place meshes in
+  // room-local coordinates, sometimes inside a small sub-group).
+  const localBox = (mesh: Mesh): Box3 | null => {
+    const geo = mesh.geometry as BufferGeometry;
+    if (!geo.boundingBox) geo.computeBoundingBox();
+    const bb = geo.boundingBox;
+    if (!bb) return null;
+    const box = bb.clone();
+    box.applyMatrix4(mesh.matrixWorld);
+    box.applyMatrix4(inv);
+    return box;
+  };
+
+  const close = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
+
+  type Candidate = { mesh: Mesh; sx: number; sy: number; sz: number; cx: number; cy: number; cz: number };
+  const candidates: Candidate[] = [];
+  group.traverse((obj) => {
+    const mesh = obj as Mesh;
+    if (!mesh.isMesh) return;
+    const mat = mesh.material as Material | Material[] | undefined;
+    if (!mat || Array.isArray(mat)) return;
+    const box = localBox(mesh);
+    if (!box) return;
+    candidates.push({
+      mesh,
+      sx: box.max.x - box.min.x,
+      sy: box.max.y - box.min.y,
+      sz: box.max.z - box.min.z,
+      cx: (box.max.x + box.min.x) / 2,
+      cy: (box.max.y + box.min.y) / 2,
+      cz: (box.max.z + box.min.z) / 2,
+    });
+  });
+
+  // Floor: the large flat plane at y = 0 spanning the room.
+  if (floorDiffers) {
+    const floor = candidates
+      .filter((c) => c.sy < 0.3 && close(c.cy, 0, 0.15) && close(c.sx, W, W * 0.15) && close(c.sz, D, D * 0.15) && close(c.cz, FCZ, 1))
+      .sort((a, b) => b.sx * b.sz - a.sx * a.sz)[0];
+    if (floor) apply(floor.mesh, floorFinishProps(room, floor.sx, floor.sz));
+  }
+
+  // Ceiling: the large flat plane at y = height spanning the room.
+  if (ceilingDiffers || ceilingHidden) {
+    const ceiling = candidates
+      .filter((c) => c.sy < 0.3 && close(c.cy, H, 0.6) && close(c.sx, W, W * 0.15) && close(c.sz, D, D * 0.15) && close(c.cz, FCZ, 1))
+      .sort((a, b) => b.sx * b.sz - a.sx * a.sz)[0];
+    if (ceiling) {
+      if (ceilingDiffers) apply(ceiling.mesh, ceilingFinishProps(room, ceiling.sx, ceiling.sz));
+      setVisible(ceiling.mesh, !ceilingHidden);
+    }
+  }
+
+  // Walls: the four outer walls, located by the def's hang walls
+  // (authoritative for hanging and collisions). The back wall takes
+  // the back-wall colour, the other three the side-wall colour, each
+  // with its per-wall paint override where one was painted.
+  if (wallDiffers && def?.hangWalls) {
+    for (const face of def.hangWalls) {
+      if (face.id !== "back" && face.id !== "left" && face.id !== "right" && face.id !== "front") continue;
+      const isBack = face.id === "back";
+      const color = isBack
+        ? (room.wallPaint?.back ?? room.wallColor)
+        : (room.wallPaint?.[face.id as "left" | "right" | "front"] ?? room.sideWallColor);
+      const alongX = Math.abs(face.nz) > 0.5; // normal along Z: the wall runs along X (back / front)
+      const len = face.halfLen * 2;
+      const h = face.maxY - face.minY;
+      const cy = (face.minY + face.maxY) / 2;
+      const matches = candidates.filter((c) => {
+        if (!close(c.cy, cy, 0.6) || !close(c.cx, face.cx, 0.6) || !close(c.cz, face.cz, 0.6)) return false;
+        if (alongX) return close(c.sx, len, len * 0.15) && close(c.sy, h, h * 0.15) && c.sz < 0.6;
+        return close(c.sz, len, len * 0.15) && close(c.sy, h, h * 0.15) && c.sx < 0.6;
+      });
+      for (const match of matches) {
+        const w = alongX ? match.sx : match.sz;
+        apply(match.mesh, wallFinishProps(color, room.wallTexture, w, match.sy));
+      }
+    }
+  }
+
+  // Spotlights in the shell follow the room's ceiling-spotlights switch.
+  group.traverse((obj) => {
+    if ((obj as SpotLight).isSpotLight) {
+      const light = obj as SpotLight;
+      hasSpotlights = true;
+      if (!spotOriginals.has(light)) spotOriginals.set(light, light.visible);
+      light.visible = room.spotlights;
+    }
+  });
+
+  const cleanup = () => {
+    for (const [mesh, orig] of originals) {
+      if (mesh.material !== orig.material) mesh.material = orig.material;
+      orig.material.map = orig.map;
+      orig.material.bumpMap = orig.bumpMap;
+      orig.material.bumpScale = orig.bumpScale;
+      orig.material.color.set(orig.color);
+      orig.material.roughness = orig.roughness;
+      orig.material.needsUpdate = true;
+      mesh.visible = orig.visible;
+    }
+    for (const [light, visible] of spotOriginals) light.visible = visible;
+    for (const tex of ownedMaps) tex.dispose();
+    for (const clone of clones) clone.dispose();
+  };
+  return { cleanup, hasSpotlights };
+}
+
 export function buildGalleryShell(layout: RoomLayout): {
   group: Group;
   tick?: (dt: number) => void;
@@ -3280,6 +3600,7 @@ export function GalleryWalkControls(props: {
     const blocks = [
       ...(def?.blocks ?? []),
       ...roomElementCollisionBlocks(rooms[roomIndex]?.elements ?? []),
+      ...partitionWallCollisionBlocks(rooms[roomIndex]?.partitionWalls),
       ...(artworks ?? [])
         .filter((item) => item.sculptureUrl && item.roomId === rooms[roomIndex]?.id)
         .map((item) => ({

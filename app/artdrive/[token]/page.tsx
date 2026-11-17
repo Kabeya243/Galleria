@@ -39,16 +39,33 @@ export default async function ArtDriveSharePage({
 
   return (
     <main
+      className="artdrive-share-main"
       style={{
-        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "32px 16px 48px",
         background: "var(--background, #0e0e0e)",
         color: "var(--foreground, #f5f5f5)",
       }}
     >
+      {/* The app locks the window (html, body { overflow: hidden;
+          height: 100% }) and this page has no :has() scroll restore,
+          so a file taller than the viewport could never be scrolled
+          to its Download button on mobile. The main itself is the
+          scroll container (100dvh, 100vh fallback), so the page
+          scrolls without touching the shared stylesheet. The preview
+          is shorter on phones so the Download button is reachable
+          sooner. */}
+      <style>{`
+        .artdrive-share-main { height: 100vh; height: 100dvh; overflow-y: auto; overflow-x: hidden; padding: 32px 16px 48px; }
+        .artdrive-share-img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: #000; }
+        .artdrive-share-pdf { display: block; width: 100%; height: 70vh; border: 0; background: #fff; }
+        @media (max-width: 640px) {
+          .artdrive-share-main { padding: 20px 12px 32px; }
+          .artdrive-share-img { max-height: 46vh; }
+          .artdrive-share-pdf { height: 46vh; }
+        }
+      `}</style>
       <Link href="/" aria-label="Lakisa home" style={{ marginBottom: 28 }}>
         <BrandLogo variant="horizontal" height={36} />
       </Link>
@@ -68,13 +85,13 @@ export default async function ArtDriveSharePage({
           <img
             src={previewUrl}
             alt={file.fileName}
-            style={{ display: "block", width: "100%", maxHeight: "70vh", objectFit: "contain", background: "#000" }}
+            className="artdrive-share-img"
           />
         ) : isPdf(file.mimeType) ? (
           <iframe
             src={previewUrl}
             title={file.fileName}
-            style={{ display: "block", width: "100%", height: "70vh", border: 0, background: "#fff" }}
+            className="artdrive-share-pdf"
           />
         ) : (
           <div

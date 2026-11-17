@@ -768,6 +768,10 @@ export const galleryRoomSchema = z.object({
   spotlights: z.boolean().default(true),
   partitionWalls: z.array(partitionWallSchema).max(8).default([]),
   curatorialText: z.string().max(300).default(""),
+  // Per-room override for the curatorial-text plane position on the back
+  // wall (x = horizontal, y = height in metres). Absent = the layout's
+  // default position from lib/gallery-defs.ts.
+  curatorialTextPosition: z.object({ x: z.number(), y: z.number() }).optional(),
   // One choice re-floors the room (colour + texture together).
   floorType: z.enum(floorTypeKeys).default("charcoal"),
   // Light mood for the room. Sunlight is the only live value; the

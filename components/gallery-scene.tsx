@@ -3730,9 +3730,14 @@ function GenericRoom({
         </group>
       )}
       {/* Curatorial text on the back wall, when set — at the height
-          and z the room's def gives (0.14 m in front of the wall). */}
+          and z the room's def gives (0.14 m in front of the wall), or
+          at the room's own curatorialTextPosition override when set. */}
       {room.curatorialText && def?.curatorialText && (
-        <group position={[0, def.curatorialText.y, def.curatorialText.z]}>
+        <group position={[
+          room.curatorialTextPosition?.x ?? 0,
+          room.curatorialTextPosition?.y ?? def.curatorialText.y,
+          def.curatorialText.z,
+        ]}>
           <CuratorialTextPlane text={room.curatorialText} maxWidthM={9} wallColor={layout.wallColor} />
         </group>
       )}

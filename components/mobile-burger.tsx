@@ -78,6 +78,13 @@ export default function MobileBurger({ signedIn }: { signedIn: boolean }) {
     window.location.assign("/login");
   }
 
+  // The public exhibition has its own top bar (back link, list view,
+  // share, info) at the same top-right spot: the fixed global burger
+  // would sit on top of its share/info buttons on phones (seen on the
+  // REBOOT visit, Nov 2026), so it stays hidden there. Visitors get
+  // back via the exhibition's own "Lakisa" back link.
+  if (pathname === "/exhibition" || pathname.startsWith("/exhibition/")) return null;
+
   const links: BurgerLink[] = signedIn
     ? [
         { href: "/", label: t("nav", "dashboard"), icon: Grid2X2 },

@@ -1,26 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Footprints, Hand, Headset, Keyboard, List, MousePointer2, Music, Route, Volume2, VolumeX } from "lucide-react";
 import Avatar from "@/components/avatar";
-import type { RenderQuality } from "@/lib/render-quality";
-import { RENDER_QUALITIES, recommendQuality } from "@/lib/render-quality";
 import type { XrSupport } from "@/lib/webxr";
 import { useT } from "@/lib/i18n";
 
 // Entry screen (public exhibition): shown before the visitor enters the
 // 3D room. Title, artist, estimated visit time, the control scheme
-// (keyboard / mouse / touch), a sound toggle, and a quality choice with
-// the automatic recommendation for this device. Pure black & white,
-// editorial, mobile-first.
+// (keyboard / mouse / touch) and a sound toggle. The exhibition always
+// renders at High quality now — there is no quality choice here anymore.
+// Pure black & white, editorial, mobile-first.
 export default function ExhibitionEntryScreen({
   title,
   ownerName,
   ownerAvatarUrl,
   artworkCount,
   roomCount,
-  quality,
-  onQualityChange,
   soundOn,
   onSoundChange,
   musicTitle = null,
@@ -41,8 +36,6 @@ export default function ExhibitionEntryScreen({
   ownerAvatarUrl?: string | null;
   artworkCount: number;
   roomCount: number;
-  quality: RenderQuality;
-  onQualityChange: (quality: RenderQuality) => void;
   soundOn: boolean;
   onSoundChange: (on: boolean) => void;
   musicTitle?: string | null;
@@ -57,20 +50,10 @@ export default function ExhibitionEntryScreen({
   vrStatus?: string | null;
 }) {
   const t = useT();
-  const [recommended, setRecommended] = useState<RenderQuality>("high");
-  useEffect(() => {
-    setRecommended(recommendQuality());
-  }, []);
 
   // ~45 seconds per artwork + 1 minute to arrive and look around,
   // at least 2 minutes for the smallest shows.
   const estimatedMinutes = Math.max(2, Math.ceil(artworkCount * 0.75) + 1);
-  const qualityLabel: Record<RenderQuality, string> = {
-    high: t("entry", "qualityHigh"),
-    medium: t("entry", "qualityMedium"),
-    low: t("entry", "qualityLow"),
-  };
-
   return (
     <div className="exhibition-entry" role="dialog" aria-modal="true" aria-label={title}>
       <div className="entry-creator">
@@ -124,28 +107,6 @@ export default function ExhibitionEntryScreen({
             <small>{soundOn ? t("entry", "soundOn") : t("entry", "soundOff")}</small>
           </span>
         </button>
-        <div className="entry-quality" role="group" aria-label={t("entry", "quality")}>
-          <span className="entry-quality-label">
-            <strong>{t("entry", "quality")}</strong>
-            <small>{t("entry", "qualityNote")}</small>
-          </span>
-          <div className="entry-quality-buttons">
-            {RENDER_QUALITIES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => onQualityChange(option)}
-                aria-pressed={quality === option}
-                className={quality === option ? "active" : ""}
-              >
-                {qualityLabel[option]}
-                {option === recommended && (
-                  <em> · {t("entry", "qualityRecommended")}</em>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="entry-actions">

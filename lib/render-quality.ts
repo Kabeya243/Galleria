@@ -81,54 +81,23 @@ export function isRenderQuality(value: unknown): value is RenderQuality {
   return value === "high" || value === "medium" || value === "low";
 }
 
-/** Default quality: touch / coarse-pointer devices start on Medium —
-// a phone GPU pays for every 1024 px shadow map. Desktops start on High. */
+/** Default quality: always High (Nov 2026) — the visible High /
+ * Medium / Low switch was removed at Kabeya's request, so every
+ * device renders at High and no stored tier is honoured anymore. */
 export function detectDefaultQuality(): RenderQuality {
-  if (typeof window === "undefined") return "high";
-  try {
-    if (window.matchMedia("(pointer: coarse)").matches) return "medium";
-    if (navigator.maxTouchPoints > 0 && window.matchMedia("(pointer: none)").matches) return "medium";
-  } catch {
-    // matchMedia unavailable — fall through to High.
-  }
   return "high";
 }
 
 export function loadRenderQuality(): RenderQuality {
-  if (typeof window === "undefined") return "high";
-  try {
-    const stored = window.localStorage.getItem(RENDER_QUALITY_STORAGE_KEY);
-    if (isRenderQuality(stored)) return stored;
-  } catch {
-    // Storage unavailable (private mode, blocked) — fall through.
-  }
-  return detectDefaultQuality();
+  // Any tier a visitor stored before the switch was removed is
+  // ignored: the exhibition always renders at High now.
+  return "high";
 }
 
-// --- Automatic recommendation for the entry screen ----------------------
-// A device-aware recommendation, shown as "Recommended" next to the
-// quality choice before the visitor enters. It weighs the same signals
-// a visitor's hardware actually reports: a coarse pointer (touch) or
-// little memory drops the tier, a slow connection drops it further.
-// The visitor can always override it — this only picks the default.
+// --- Automatic recommendation -------------------------------------------
+// Kept for callers that still ask: the answer is always High now,
+// since the quality choice itself was removed.
 export function recommendQuality(): RenderQuality {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return "high";
-  try {
-    const nav = navigator as Navigator & {
-      deviceMemory?: number;
-      connection?: { effectiveType?: string; saveData?: boolean };
-    };
-    const coarse = window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
-    const lowMemory = typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4;
-    const slowConnection =
-      nav.connection?.saveData === true ||
-      (typeof nav.connection?.effectiveType === "string" &&
-        ["slow-2g", "2g", "3g"].includes(nav.connection.effectiveType));
-    if (slowConnection || (coarse && lowMemory)) return "low";
-    if (coarse || lowMemory) return "medium";
-  } catch {
-    // Any signal unreadable — fall through to High.
-  }
   return "high";
 }
 

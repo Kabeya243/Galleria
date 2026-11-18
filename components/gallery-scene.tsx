@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Sus
 import { ACESFilmicToneMapping, AdditiveBlending, BackSide, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Euler, ExtrudeGeometry, Group, InstancedMesh, MathUtils, Mesh, MeshBasicMaterial, Object3D, Path, Plane, PlaneGeometry, PMREMGenerator, Raycaster, RepeatWrapping, Scene, Shape, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, VideoTexture, VSMShadowMap, type DirectionalLight, type WebGLRenderer } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as THREE from "three";
-import { loadRenderQuality, RENDER_QUALITIES, RENDER_QUALITY_CONFIG, RENDER_QUALITY_LABELS, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
+import { RENDER_QUALITY_CONFIG, type RenderQuality } from "@/lib/render-quality";
 import type { Artwork } from "@/lib/demo-data";
 import { resolveFrameSpec } from "@/lib/demo-data";
 import type { FrameSpec } from "@/lib/demo-data";
@@ -424,80 +424,6 @@ function ContactDecal({ width, depth }: { width: number; depth: number }) {
       <planeGeometry args={[width, depth]} />
       <meshBasicMaterial map={texture} transparent depthWrite={false} />
     </mesh>
-  );
-}
-
-// Render-quality switch (High / Medium / Low), overlaid on the viewer.
-// Rendered by GalleryScene itself so it appears in the editor, the
-// public exhibition and the galleries page without touching any of
-// those components. Inline styles only — the global stylesheet and the
-// white-gallery design are untouched.
-//
-// Placement (Phase 8): the pill must never cover another control. At
-// top:12 it sat on top of the public exhibition's info button (the
-// 67px topbar overlays the canvas) and on top of the editor's
-// "Add artwork" button (top:14, right:14 in the same corner), so both
-// were unclickable. The offset follows the canvas it is rendered in:
-// below the public topbar, below the editor's Add button, flush at the
-// top everywhere else (galleries viewer).
-// z-index: 1 only — just above the 3D canvas, strictly below every
-// dialog (topbar z-2, info card z-3, minimap z-4, list view z-5,
-// entry z-6, share panel inside the topbar). At z-20 it floated over
-// the share panel's close button and the top of the detail panel.
-function RenderQualityToggle({ quality, onChange, canvasClassName }: { quality: RenderQuality; onChange: (quality: RenderQuality) => void; canvasClassName?: string }) {
-  const top = canvasClassName?.includes("public-gallery-canvas")
-    ? 79
-    : canvasClassName?.includes("editor-canvas")
-      ? 56
-      : 12;
-  return (
-    <div
-      className="render-quality-toggle"
-      role="group"
-      aria-label="Render quality"
-      title="Render quality: High: shadows, reflections and environment lighting on. Medium: smaller shadow maps. Low: shadows and environment off."
-      style={{
-        position: "absolute",
-        top,
-        right: 12,
-        zIndex: 1,
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-        padding: 3,
-        borderRadius: 999,
-        background: "rgba(255, 255, 255, 0.92)",
-        boxShadow: "0 1px 6px rgba(0, 0, 0, 0.14)",
-        fontSize: 11,
-        lineHeight: 1,
-        color: "#555550",
-        userSelect: "none",
-      }}
-    >
-      <span className="rq-label" style={{ padding: "0 6px 0 8px", letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 10 }}>Quality</span>
-      {RENDER_QUALITIES.map((option) => (
-        <button
-          key={option}
-          type="button"
-          aria-pressed={quality === option}
-          onClick={(event) => {
-            event.stopPropagation();
-            onChange(option);
-          }}
-          style={{
-            border: "none",
-            cursor: "pointer",
-            borderRadius: 999,
-            padding: "5px 9px",
-            fontSize: 11,
-            background: quality === option ? "#2b2b28" : "transparent",
-            color: quality === option ? "#ffffff" : "#555550",
-          }}
-        >
-          {RENDER_QUALITY_LABELS[option]}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -4890,27 +4816,11 @@ export default function GalleryScene({
   const [dragCursor, setDragCursor] = useState<string | null>(null);
   const [hoveredArtwork, setHoveredArtwork] = useState<{ id: string; cursor: string } | null>(null);
 
-  // Photorealism: render-quality tier (High / Medium / Low), persisted
-  // per user in localStorage. Defaults to Medium on touch devices.
-  // Initialised to High for SSR, then corrected on mount from storage
-  // so the server render never mismatches the client. Toggling
-  // mid-session only flips light/env flags — the Canvas itself is never
-  // remounted, so walk mode, drags and selection keep working. When the
-  // parent controls the quality (public entry screen), its value wins.
-  const [internalQuality, setInternalQuality] = useState<RenderQuality>("high");
-  const quality = controlledQuality ?? internalQuality;
-  useEffect(() => {
-    if (controlledQuality) return;
-    setInternalQuality(loadRenderQuality());
-  }, [controlledQuality]);
-  const handleQualityChange = useCallback((next: RenderQuality) => {
-    if (onQualityChange) {
-      onQualityChange(next);
-    } else {
-      setInternalQuality(next);
-    }
-    saveRenderQuality(next);
-  }, [onQualityChange]);
+  // Render quality is always High now (Nov 2026): the visible
+  // High / Medium / Low switch was removed at Kabeya's request, so
+  // there is no stored tier and no toggle handler left. The parent
+  // may still pass a quality; otherwise High is used everywhere.
+  const quality = controlledQuality ?? "high";
   const qualityCfg = RENDER_QUALITY_CONFIG[quality];
 
   // Sunlight: the sun slider (0-100, default 35) — the source's sun
@@ -5353,7 +5263,6 @@ export default function GalleryScene({
       </Canvas>
       {!bare && (
         <>
-          <RenderQualityToggle quality={quality} onChange={handleQualityChange} canvasClassName={className} />
           {activeIsSunlight && <SunSlider value={sunValue} onChange={setSunValue} canvasClassName={className} />}
         </>
       )}

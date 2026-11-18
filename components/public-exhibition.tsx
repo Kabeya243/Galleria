@@ -15,7 +15,7 @@ import ExhibitionListView from "@/components/exhibition-list-view";
 import ExhibitionEntryScreen from "@/components/exhibition-entry-screen";
 import ExhibitionShare from "@/components/exhibition-share";
 import LanguageSwitcher from "@/components/language-switcher";
-import { loadRenderQuality, saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
+import { saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import { hasUsableTour, tourStopToTeleportTarget, type GuidedTour } from "@/lib/tour";
 import { VIEW_PRESETS, type CameraViewPreset } from "@/lib/editor-params";
 import { describeVrError, detectXrSupport, requestVrSession, type XrSupport } from "@/lib/webxr";
@@ -162,7 +162,7 @@ export default function PublicExhibition({
   // draws the camera dot and its direction line from it.
   const cameraStateRef = useRef<CameraState | null>(null);
   useEffect(() => {
-    setQuality(loadRenderQuality());
+    // Quality is always High now: no stored tier is read back.
     try {
       if (window.localStorage.getItem("sanaa-sound") === "off") setSoundOn(false);
     } catch {
@@ -540,8 +540,6 @@ export default function PublicExhibition({
           ownerAvatarUrl={exhibition.ownerAvatarUrl}
           artworkCount={exhibition.artworks.length}
           roomCount={exhibition.rooms.length}
-          quality={quality}
-          onQualityChange={handleQualityChange}
           soundOn={soundOn}
           onSoundChange={handleSoundChange}
           musicTitle={music?.title ?? null}
@@ -575,7 +573,6 @@ export default function PublicExhibition({
           onClose={() => setShowListView(false)}
         />
       )}
-      {walking && <div className="public-controls-hint"><span>CLICK AN ARTWORK OR THE FLOOR TO WALK THERE</span><i /> <span>DRAG TO LOOK</span><i /> <span>USE THE FLOOR PLAN TO CHANGE ROOMS</span></div>}
       {walking && (
         <div className="public-pov" role="group" aria-label="Point of view">
           {(Object.keys(VIEW_PRESETS) as CameraViewPreset[]).map((view) => (

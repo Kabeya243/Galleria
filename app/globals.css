@@ -517,8 +517,6 @@ button { color: inherit; }
 .public-room-nav button.active { background: var(--surface-2); color: #3d4038; }
 .public-room-nav button span { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
 .public-room-label i, .public-art-meta i { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
-.public-controls-hint { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 9px 13px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--muted); font: 500 7px "DM Sans", sans-serif; letter-spacing: .1em; white-space: nowrap; }
-.public-controls-hint i { height: 10px; width: 1px; background: var(--border); }
 .public-fullscreen { position: absolute; right: 24px; bottom: 25px; }
 .public-vr-button { right: 65px; }
 .public-vr-button[aria-pressed="true"] { background: #141414; color: #fdfdfc; border-color: #141414; }
@@ -998,19 +996,10 @@ button { color: inherit; }
 }
 .entry-music span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 620px) {
-  .music-control { right: 12px; bottom: 160px; }
-  .music-control input[type="range"] { width: 56px; }
-  .music-control .music-title { max-width: 90px; }
-  .public-pov { right: 12px; bottom: 206px; }
-  .public-pov button { padding: 0 8px; }
-}
-
-@media (max-width: 620px) {
   .auth-page { display: block; min-height: 100vh;   }
 
 
   @media (max-width: 620px) {
-    .public-room-nav { bottom: 78px; }
     .public-room-nav button span { max-width: 62px; }
     .editor-assets-panel { border: 2px solid var(--ink); }
   }
@@ -1019,10 +1008,6 @@ button { color: inherit; }
   .public-gallery-canvas canvas:active { cursor: grabbing; }
   @media (max-width: 620px) {
     .walk-start-card { padding: 18px; }
-    .public-controls-hint { bottom: 10px; left: auto; right: 12px; max-width: calc(100vw - 132px); transform: none; font-size: 6px; white-space: normal; }
-    .public-controls-hint i:last-of-type, .public-controls-hint span:last-child { display: none; }
-    .public-room-nav { bottom: 112px; }
-    .walk-pad { bottom: 62px; }
   }
   .auth-art-panel { display: none; }
   .auth-form-panel { min-height: 100vh; padding: 35px 22px; }
@@ -1078,13 +1063,54 @@ button { color: inherit; }
   .stage-tools-float { right: 8px; }
   .stage-add-button { right: 8px; top: 8px; }
   .editor-statusbar { min-height: 25px; font-size: 7px; }
-  .public-topbar { height: 58px; padding: 0 13px; }
-  .public-room-label { left: 13px; top: 73px; }
-  .public-controls-hint { bottom: 21px; font-size: 6px; }
-  .public-fullscreen { right: 10px; bottom: 17px; }
-  .public-vr-button { right: 51px; }
-  .public-footer { right: 12px; bottom: 65px; left: 12px; font-size: 6px; }
   .artwork-info-card { right: 12px; }
+}
+
+/* Public exhibition on phones (Nov 2026, from Kabeya's screenshot):
+   the viewer controls used to float mid-screen and overlap each other
+   (quality pill, viewpoint bar, music, walk pad, Entrance, floor plan
+   and the hint bars all fighting for the same space). Mobile layout is
+   now a clean stack — compact header, viewpoints in one row directly
+   under it, canvas in the middle, movement + Entrance + floor plan in
+   a bottom zone — with consistent spacing and no overlaps at 390px.
+   Desktop rules above are untouched; everything here is <=620px only. */
+@media (max-width: 620px) {
+  /* Header: icon-only back link, one-line truncated title, compact actions. */
+  .public-topbar { height: calc(56px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 10px 0; gap: 6px; }
+  .public-back { font-size: 0; gap: 0; }
+  .public-title { min-width: 0; flex: 1; }
+  .public-title span, .public-creator-avatar { display: none; }
+  .public-title strong { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .public-topbar-actions { gap: 4px; }
+  .public-topbar-actions .public-info-button { width: 28px; height: 28px; }
+  .public-topbar-actions select { max-width: 86px; padding: 4px 6px; font-size: 10px; }
+  /* Viewpoints: one centred row directly under the header, 40px targets. */
+  .public-pov { top: calc(64px + env(safe-area-inset-top, 0px)); right: 12px; left: 12px; bottom: auto; transform: none; justify-content: center; padding: 4px; }
+  .public-pov button { flex: 1; min-height: 40px; padding: 0 6px; font-size: 10px; }
+  /* Room label sits under the viewpoint row, clear of the canvas. */
+  .public-room-label { left: 12px; top: calc(116px + env(safe-area-inset-top, 0px)); }
+  /* Bottom strip: room navigation, full width, scrolls instead of overflowing. */
+  .public-room-nav { left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: none; max-width: none; justify-content: flex-start; }
+  .public-room-nav button span { max-width: 62px; }
+  /* Movement pad, bottom-left above the room strip, 44px touch targets. */
+  .walk-pad { left: 12px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); }
+  /* Floor plan (minimap), bottom-left above the movement pad. */
+  .exhibition-minimap { left: 12px; bottom: calc(172px + env(safe-area-inset-bottom, 0px)); }
+  .minimap-toggle { min-height: 40px; }
+  /* Entrance + fullscreen, bottom-right above the room strip. */
+  .public-reset-view { right: 55px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); min-height: 40px; }
+  .public-fullscreen { right: 12px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); width: 40px; height: 40px; }
+  .public-vr-button { right: 158px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); width: 40px; height: 40px; }
+  /* Music, right side above Entrance, compact. */
+  .music-control { right: 12px; bottom: calc(122px + env(safe-area-inset-bottom, 0px)); max-width: calc(100vw - 24px); }
+  .music-control input[type="range"] { width: 48px; }
+  .music-control .music-title { max-width: 72px; }
+  /* The footer credit would collide with the bottom controls. */
+  .public-footer { display: none; }
+  /* Tour panel and artwork card: full-width sheets, not floating pills. */
+  .tour-panel { left: 12px; right: 12px; top: calc(116px + env(safe-area-inset-top, 0px)); bottom: auto; width: auto; max-height: 42vh; }
+  .artwork-info-card { right: 12px; left: 12px; width: auto; max-height: calc(100dvh - 200px); }
+  .public-fullscreen-note { right: 12px; left: 12px; bottom: calc(122px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* Pure black & white editorial design (landing reference). Replaces the
@@ -1272,7 +1298,7 @@ button { font-weight: 600; }
 
 .public-topbar { border-bottom: 1px solid var(--line); background: var(--surface); }
 .public-back, .public-title strong, .public-room-label { color: var(--ink); font-family: var(--font-body), "DM Sans", sans-serif; font-weight: 700; text-transform: none; }
-.public-info-button, .public-fullscreen, .public-room-nav, .public-controls-hint, .artwork-info-card {
+.public-info-button, .public-fullscreen, .public-room-nav, .artwork-info-card {
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
@@ -1280,7 +1306,6 @@ button { font-weight: 600; }
   box-shadow: 0 4px 16px rgba(36, 30, 22, .1);
 }
 .public-room-nav button.active { background: var(--accent-soft); color: var(--ink); }
-.public-controls-hint { font-family: var(--font-body), "DM Sans", sans-serif; font-weight: 600; }
 .artwork-info-card h1 { font-family: var(--font-display), Georgia, serif; font-weight: 450; text-transform: none; }
 .public-footer { font-family: var(--font-body), "DM Sans", sans-serif; font-weight: 500; color: var(--muted); }
 
@@ -2067,16 +2092,6 @@ button, a, [role="button"] {
    scrollbar. */
 .public-room-nav { overflow-x: auto; scrollbar-width: none; }
 .public-room-nav::-webkit-scrollbar { display: none; }
-
-/* Render-quality pill (components/gallery-scene.tsx): larger touch
-   targets on coarse pointers, and the "Quality" wordmark drops off
-   on very narrow phones so the three buttons still fit. */
-@media (pointer: coarse) {
-  .render-quality-toggle button { min-height: 36px; min-width: 44px; padding: 8px 12px; }
-}
-@media (max-width: 430px) {
-  .render-quality-toggle .rq-label { display: none; }
-}
 
 /* Editor panel toggle: hidden on desktop (the panels are always
    visible there), a real button on small screens — see

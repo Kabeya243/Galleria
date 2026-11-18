@@ -576,7 +576,7 @@ button { color: inherit; }
 /* In the editor the caption bar sits at the bottom left (bottom 13px,
    ~24px tall), so the plan rides above it instead of covering it. */
 .editor-stage .exhibition-minimap { bottom: 48px; }
-.minimap-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font: 600 12px var(--font-body), "DM Sans", sans-serif; cursor: pointer; box-shadow: 0 4px 16px rgba(36, 30, 22, .1); }
+.minimap-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 25%, transparent); backdrop-filter: blur(10px); color: var(--ink); font: 600 12px var(--font-body), "DM Sans", sans-serif; cursor: pointer; box-shadow: 0 4px 16px rgba(36, 30, 22, .1); }
 .minimap-panel { width: min(320px, calc(100vw - 48px)); margin-bottom: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 12px 35px rgba(36, 30, 22, .14); }
 .minimap-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; max-height: 180px; overflow-y: auto; }
 .minimap-list > li > button { font: 700 11px var(--font-body), "DM Sans", sans-serif; letter-spacing: .06em; text-transform: uppercase; background: none; border: none; padding: 0; cursor: pointer; color: var(--ink); }
@@ -867,12 +867,11 @@ button { color: inherit; }
 .walk-pad button {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, .22);
+  background: color-mix(in srgb, var(--surface) 25%, transparent); backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
   font-size: 18px;
   font-weight: 600;
-  color: rgba(42, 38, 35, .55);
-  backdrop-filter: blur(2px);
+  color: var(--ink);
   touch-action: none;
   user-select: none;
   cursor: pointer;
@@ -890,7 +889,7 @@ button { color: inherit; }
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 25%, transparent); backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
   color: var(--ink);
   font: 700 10px var(--font-body), "DM Sans", sans-serif;
@@ -911,7 +910,7 @@ button { color: inherit; }
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 25%, transparent); backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
 }
 .public-pov button {
@@ -930,24 +929,41 @@ button { color: inherit; }
   background: #141414;
   color: #fdfdfc;
 }
-/* Background-music control (one track per exhibition): above the
-   "Entrance" button, right side, clear of the walk pad (left) and the
-   room nav (centred). Never covers an artwork: it sits on the HUD
-   strip only. Buttons are 44 px tall on touch. */
-.music-control {
+/* Background-music control (one track per exhibition): minimised to a
+   single ♫ icon (.music-toggle) at the old bar's spot; tapping it opens
+   this panel to its left, tapping again closes it. Same translucent
+   treatment as the other viewer buttons. */
+.music-toggle {
   position: absolute;
   z-index: 3;
   right: 24px;
   bottom: 112px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 25%, transparent); backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
+  color: var(--ink);
+  cursor: pointer;
+}
+.music-toggle.playing { background: color-mix(in srgb, var(--surface) 45%, transparent); }
+.music-control {
+  position: absolute;
+  z-index: 3;
+  right: 76px;
+  bottom: 110px;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  max-width: calc(100vw - 48px);
-  padding: 6px 10px;
+  min-height: 40px;
+  max-width: calc(100vw - 128px);
+  padding: 4px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 25%, transparent); backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(36, 30, 22, .1);
   color: var(--ink);
   font: 600 11px var(--font-body), "DM Sans", sans-serif;
@@ -1101,8 +1117,9 @@ button { color: inherit; }
   .public-reset-view { right: 55px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); min-height: 40px; }
   .public-fullscreen { right: 12px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); width: 40px; height: 40px; }
   .public-vr-button { right: 158px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); width: 40px; height: 40px; }
-  /* Music, right side above Entrance, compact. */
-  .music-control { right: 12px; bottom: calc(122px + env(safe-area-inset-bottom, 0px)); max-width: calc(100vw - 24px); }
+  /* Music icon at the old bar's spot; the panel opens above it. */
+  .music-toggle { right: 12px; bottom: calc(122px + env(safe-area-inset-bottom, 0px)); }
+  .music-control { right: 12px; bottom: calc(174px + env(safe-area-inset-bottom, 0px)); max-width: calc(100vw - 24px); }
   .music-control input[type="range"] { width: 48px; }
   .music-control .music-title { max-width: 72px; }
   /* The footer credit would collide with the bottom controls. */

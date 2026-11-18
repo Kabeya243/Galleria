@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Music, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
 // Background music for a public exhibition (option A: one track per
 // exhibition). Plain <audio>: no WebAudio, no library, no playlist.
+// Minimised by default (Nov 2026): a single music icon (♫) sits in the
+// viewer chrome; tapping it opens the full player (play/pause, title,
+// mute, volume) and tapping it again closes it. The <audio> element
+// itself is always mounted, so autoplay on entry and ducking keep
+// working whether the panel is open or not.
 // The parent (PublicExhibition) owns the two decisions — `enabled`
 // (the visitor's sound choice from the entry screen, persisted as
 // `sanaa-sound`) and `ducked` (true while the audio-guide TTS is
@@ -40,6 +45,8 @@ export default function ExhibitionAudioPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(music?.volume ?? 0.5);
+  // The full player is hidden behind one music icon; tap to open/close.
+  const [open, setOpen] = useState(false);
   // True only when the visitor paused the track by hand — sound being
   // switched back on must not override that choice.
   const pausedByHandRef = useRef(false);
@@ -87,7 +94,7 @@ export default function ExhibitionAudioPlayer({
 
   if (!music) return null; // no music on this exhibition: no control at all
   return (
-    <div className="music-control" role="group" aria-label={t("music", "music")}>
+    <>
       <audio
         ref={audioRef}
         src={music.url}
@@ -98,39 +105,53 @@ export default function ExhibitionAudioPlayer({
       />
       <button
         type="button"
-        aria-label={playing ? t("music", "pauseMusic") : t("music", "playMusic")}
-        aria-pressed={playing}
-        onClick={() => {
-          const el = audioRef.current;
-          if (!el) return;
-          if (el.paused) {
-            pausedByHandRef.current = false;
-            void el.play().catch(() => setPlaying(false));
-          } else {
-            pausedByHandRef.current = true;
-            el.pause(); // a click is a user gesture: play() is allowed here
-          }
-        }}
+        className={`music-toggle${playing ? " playing" : ""}`}
+        aria-label={t("music", "music")}
+        aria-expanded={open}
+        title={music.title?.trim() ? music.title : t("music", "music")}
+        onClick={() => setOpen((value) => !value)}
       >
-        {playing ? <Pause size={16} /> : <Play size={16} />}
+        <Music size={17} />
       </button>
-      <span className="music-title">{music.title?.trim() ? music.title : t("music", "music")}</span>
-      <button
-        type="button"
-        aria-label={volume === 0 ? t("music", "unmuteMusic") : t("music", "muteMusic")}
-        onClick={() => setVolume((v) => (v === 0 ? 0.5 : 0))}
-      >
-        {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
-      </button>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.05}
-        value={volume}
-        aria-label={t("music", "musicVolume")}
-        onChange={(e) => setVolume(Number(e.target.value))}
-      />
-    </div>
+      {open && (
+        <div className="music-control" role="group" aria-label={t("music", "music")}>
+          <button
+            type="button"
+            aria-label={playing ? t("music", "pauseMusic") : t("music", "playMusic")}
+            aria-pressed={playing}
+            onClick={() => {
+              const el = audioRef.current;
+              if (!el) return;
+              if (el.paused) {
+                pausedByHandRef.current = false;
+                void el.play().catch(() => setPlaying(false));
+              } else {
+                pausedByHandRef.current = true;
+                el.pause(); // a click is a user gesture: play() is allowed here
+              }
+            }}
+          >
+            {playing ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+          <span className="music-title">{music.title?.trim() ? music.title : t("music", "music")}</span>
+          <button
+            type="button"
+            aria-label={volume === 0 ? t("music", "unmuteMusic") : t("music", "muteMusic")}
+            onClick={() => setVolume((v) => (v === 0 ? 0.5 : 0))}
+          >
+            {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={volume}
+            aria-label={t("music", "musicVolume")}
+            onChange={(e) => setVolume(Number(e.target.value))}
+          />
+        </div>
+      )}
+    </>
   );
 }

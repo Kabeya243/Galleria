@@ -19,6 +19,8 @@
   --surface-2: #f1ede6;
   --surface-3: #faf8f4;
   --border: rgba(20, 20, 20, 0.14);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 .magazineSerif {
@@ -330,6 +332,7 @@
 
 .articleTitle {
   margin: 0 0 18px;
+  color: var(--ink);
   font: 400 clamp(36px, 5vw, 56px)/1.08 var(--font-magazine), "Playfair Display", Georgia, serif;
   letter-spacing: -0.01em;
 }

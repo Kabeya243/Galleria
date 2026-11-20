@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminDenied from "@/components/admin-denied";
+import AdminExhibitionHighlight from "@/components/admin-exhibition-highlight";
 import { AdminHero } from "@/components/admin-shell";
 import { EmptyBox } from "@/components/admin-ui";
 import {
@@ -20,13 +21,14 @@ export default async function AdminExhibitionsRoute() {
     return <AdminDenied user={user} />;
   }
   if (!hasAdminPermission(access, "exhibitions.view")) redirect("/admin");
+  const canHighlight = hasAdminPermission(access, "exhibitions.highlight");
   const allExhibitions = await loadAdminExhibitions();
   return (
     <>
       <AdminHero
         eyebrow={access.isManager ? "ADMIN · FOR THE OWNER ONLY" : "ADMIN · SUB-ADMIN"}
         title="All exhibitions"
-        description={`${allExhibitions.length} exhibitions, who built it, whether it is public, how many works it holds and how many visits it received.`}
+        description={`${allExhibitions.length} exhibitions, who built it, whether it is public, how many works it holds and how many visits it received. The Highlight star puts a public exhibition on the homepage hero; with nothing highlighted the hero shows the newest public exhibition.`}
       />
       <div className="ad-section">
         {allExhibitions.length === 0 ? (
@@ -39,6 +41,7 @@ export default async function AdminExhibitionsRoute() {
                   <th>Exhibition</th>
                   <th>Owner</th>
                   <th>Status</th>
+                  <th>Highlight</th>
                   <th>Artworks</th>
                   <th>Visits</th>
                   <th>Updated</th>
@@ -58,6 +61,13 @@ export default async function AdminExhibitionsRoute() {
                       {exhibition.owner.name} ({exhibition.owner.email})
                     </td>
                     <td>{exhibition.status}</td>
+                    <td>
+                      <AdminExhibitionHighlight
+                        exhibitionId={exhibition.id}
+                        highlighted={exhibition.highlightedAt !== null}
+                        canHighlight={canHighlight}
+                      />
+                    </td>
                     <td>{exhibition.artworkCount}</td>
                     <td>{exhibition.views}</td>
                     <td>{exhibition.updatedAt.toLocaleDateString("en-GB")}</td>

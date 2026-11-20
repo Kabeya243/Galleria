@@ -261,6 +261,11 @@ model Exhibition {
   tour        String?
   views       Int        @default(0)
   publishedAt DateTime?
+  // Homepage highlight (Nov 2026): set from the admin exhibitions
+  // list. The public homepage hero shows the most recently
+  // highlighted public exhibition; with none highlighted it falls
+  // back to the newest public exhibition. Null = not highlighted.
+  highlightedAt DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   ownerId     String

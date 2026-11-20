@@ -630,6 +630,7 @@ export async function loadAdminExhibitions() {
       title: true,
       slug: true,
       status: true,
+      highlightedAt: true,
       views: true,
       createdAt: true,
       updatedAt: true,

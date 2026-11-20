@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import Dashboard from "@/components/dashboard";
 import PublicHome, { type FeaturedPreview, type PublicHomeExhibition } from "@/components/public-home";
 import { JsonLd, organizationJsonLd } from "@/components/seo-jsonld";
@@ -48,21 +49,33 @@ async function findPublicExhibitions(): Promise<PublicHomeExhibition[]> {
   });
 }
 
-// The hero preview: the newest public exhibition with its first three
+// The hero preview: the most recently highlighted public exhibition
+// (set by the admin from /admin/exhibitions), with its first three
 // artworks that have an image — the real works, shown live in 3D.
+// With nothing highlighted, the newest public exhibition.
+// Highlighted shows that are not public (draft, private-link,
+// password) never reach the homepage.
 async function findFeaturedPreview(): Promise<FeaturedPreview | null> {
-  const exhibition = await db.exhibition.findFirst({
-    where: { status: "public", visibility: "public" },
-    include: {
-      owner: { select: { name: true } },
-      artworks: {
-        where: { imageUrl: { not: null } },
-        select: { id: true, title: true, imageUrl: true, roomId: true },
-        orderBy: { createdAt: "asc" },
-      },
+  const where = { status: "public", visibility: "public" };
+  const include = {
+    owner: { select: { name: true } },
+    artworks: {
+      where: { imageUrl: { not: null } },
+      select: { id: true, title: true, imageUrl: true, roomId: true },
+      orderBy: { createdAt: "asc" },
     },
-    orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
-  });
+  } satisfies Prisma.ExhibitionInclude;
+  const exhibition =
+    (await db.exhibition.findFirst({
+      where: { ...where, highlightedAt: { not: null } },
+      include,
+      orderBy: { highlightedAt: { sort: "desc", nulls: "last" } },
+    })) ??
+    (await db.exhibition.findFirst({
+      where,
+      include,
+      orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
+    }));
   if (!exhibition) return null;
   const { placed, count } = placedArtworks(exhibition.rooms, exhibition.artworks);
   const artworks = placed

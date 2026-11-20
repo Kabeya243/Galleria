@@ -21,6 +21,7 @@ export const ADMIN_PERMISSIONS = {
   "stats.view": "Statistics",
   "users.view": "Users",
   "exhibitions.view": "Exhibitions",
+  "exhibitions.highlight": "Highlight exhibitions",
   "artworks.view": "Artworks",
   "galleries.view": "Galleries",
   "galleries.manage": "Manage galleries",

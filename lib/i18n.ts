@@ -3405,6 +3405,12 @@ export const DICTIONARY = {
       fr: "La même image est réutilisée, aucun nouveau téléversement.",
       en: "The same image is reused, no new upload.",
     },
+    inventoryHintTitle: { fr: "Besoin de la liste complète ?", en: "Looking for the full list?" },
+    inventoryHint: {
+      fr: "L'inventaire montre chaque œuvre avec son lieu de stockage et sa valeur.",
+      en: "The inventory lists every work with its storage location and value.",
+    },
+    openInventory: { fr: "Ouvrir l'inventaire", en: "Open the inventory" },
   },
   // Public creator wall (/works/[id]), "Mes travaux / designs / créations".
   works: {

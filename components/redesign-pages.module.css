@@ -493,6 +493,48 @@
   color: var(--rd-t2);
 }
 
+/* Small removable tag (artwork membership in exhibitions). */
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--rd-border);
+  background: var(--rd-surface-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rd-t2);
+  white-space: nowrap;
+}
+
+.tag button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--rd-t2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tag button:hover {
+  background: var(--rd-surface-3);
+  color: var(--rd-text);
+}
+
 /* ------------------------------------------------------------------ */
 /* Tables (inventory, certificates) — scroll sideways on phones        */
 /* ------------------------------------------------------------------ */

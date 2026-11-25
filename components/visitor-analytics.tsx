@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import styles from "@/components/tools.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 
 export type AnalyticsDay = { date: string; visits: number; unique: number };
 export type CountRow = { name: string; count: number };
@@ -143,35 +144,30 @@ export default function VisitorAnalytics({
 
   function shareRow(rows: CountRow[], total: number) {
     return rows.map((row) => (
-      <li key={row.name} style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
-          <span>{row.name}</span>
-          <span>
-            {row.count} · {total > 0 ? Math.round((row.count / total) * 100) : 0}%
-          </span>
-        </div>
-        <div style={{ height: 6, marginTop: 5, borderRadius: 3, background: "var(--line)" }}>
-          <div
-            style={{
-              width: `${total > 0 ? Math.max((row.count / total) * 100, 2) : 0}%`,
-              height: "100%",
-              borderRadius: 3,
-              background: "var(--gold, #ffffff)",
-            }}
+      <div key={row.name} className={page.barRow}>
+        <span>{row.name}</span>
+        <span className={page.barTrack}>
+          <span
+            className={page.barFill}
+            style={{ width: `${total > 0 ? Math.max((row.count / total) * 100, 2) : 0}%`, display: "block" }}
           />
-        </div>
-      </li>
+        </span>
+        <span className={`${page.barValue} ${dash.tnum}`}>
+          {row.count} · {total > 0 ? Math.round((row.count / total) * 100) : 0}%
+        </span>
+      </div>
     ));
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", gap: 14, alignItems: "end", flexWrap: "wrap", marginBottom: 24 }}>
-        <label className={styles.field} style={{ minWidth: 280, flex: 1 }}>
-          Exhibition
+    <div className={page.sectionStack}>
+      <div style={{ display: "flex", gap: 14, alignItems: "end", flexWrap: "wrap" }}>
+        <label className={page.field} style={{ minWidth: 280, flex: 1 }}>
+          <span>Exhibition</span>
           <select
             value={selectedId}
             onChange={(e) => router.push(`${basePath}?exhibitionId=${e.target.value}${selectSuffix}`)}
+            className={page.select}
           >
             {exhibitions.map((e) => (
               <option key={e.id} value={e.id}>
@@ -183,7 +179,7 @@ export default function VisitorAnalytics({
         </label>
         <button
           type="button"
-          className="galleries-open-button"
+          className={page.btn}
           onClick={downloadCsv}
           disabled={downloading || !hasVisits}
           title={hasVisits ? "Download a CSV report of this exhibition's visits" : "No visits to export yet"}
@@ -197,8 +193,8 @@ export default function VisitorAnalytics({
           the first visit. Only the breakdowns (artworks, devices,
           sources, countries) wait for real visits. */}
       {!hasVisits && (
-        <div className={styles.emptyBox} style={{ marginBottom: 24 }}>
-          <strong>No visits yet for “{selectedTitle}”.</strong>
+        <div className={page.emptyState} style={{ border: "1px solid var(--rd-border)", borderRadius: 16, padding: "24px 20px" }}>
+          <h3>No visits yet for “{selectedTitle}”.</h3>
           <p>
             Visit history starts from when per-day visit tracking was added (November 2026): earlier visits only
             count towards the exhibition&apos;s total views, not this chart. Every time someone opens the public
@@ -208,54 +204,44 @@ export default function VisitorAnalytics({
         </div>
       )}
 
-      <div className={styles.summaryRow}>
+      <div className={dash.kpis}>
         {totals.map((t) => (
-          <div key={t.label}>
-            <strong>{t.value}</strong>
-            <span>{t.label}</span>
-          </div>
+          <article key={t.label} className={`${dash.card} ${dash.kpi}`}>
+            <div className={dash.kpiLabel}>
+              <span>{t.label}</span>
+            </div>
+            <div className={`${dash.kpiValue} ${dash.tnum}`}>{t.value}</div>
+          </article>
         ))}
       </div>
-      <p style={{ margin: "0 0 24px", color: "var(--muted)", fontSize: 12 }}>
+      <p className={dash.cardSub} style={{ margin: 0 }}>
         Visits count each time this exhibition is opened. Opening an artwork&apos;s details counts towards that
         artwork&apos;s views, not towards visits.
       </p>
 
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Visits: last 30 days</h2>
-        <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
+      <section>
+        <h2 style={{ margin: "0 0 4px", fontSize: 19, fontWeight: 700 }}>Visits: last 30 days</h2>
+        <p className={dash.cardSub} style={{ margin: "0 0 16px" }}>
           One bar per day. The number above a bar is that day&apos;s visits; unique visitors count each anonymous
           visitor once per day.
         </p>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 140 }}>
+        <div className={dash.chart} style={{ gap: 3 }}>
           {daily.map((d) => (
             <div
               key={d.date}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}
+              className={dash.barWrap}
               title={`${prettyDate(d.date)}: ${d.visits} visit${d.visits === 1 ? "" : "s"}, ${d.unique} unique`}
             >
-              <span style={{ fontSize: 10, color: "var(--muted)" }}>{d.visits > 0 ? d.visits : ""}</span>
+              {d.visits > 0 && <span className={`${dash.barValue} ${dash.tnum}`}>{d.visits}</span>}
               <div
-                style={{
-                  width: "100%",
-                  maxWidth: 22,
-                  height: `${d.visits > 0 ? Math.max((d.visits / maxDaily) * 100, 6) : 1.5}%`,
-                  background: d.visits === maxDaily && d.visits > 0 ? "#ffffff" : "var(--ink)",
-                  opacity: d.visits > 0 ? 0.85 : 0.25,
-                  borderRadius: "2px 2px 0 0",
-                }}
+                className={`${dash.bar} ${d.visits === maxDaily && d.visits > 0 ? dash.barRecent : ""}`}
+                style={{ height: `${d.visits > 0 ? Math.max((d.visits / maxDaily) * 100, 6) : 2}%`, maxWidth: 22 }}
               />
+              <span className={dash.barLabel} />
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 3, marginTop: 6 }}>
-          {daily.map((d, i) => (
-            <span key={d.date} style={{ flex: 1, textAlign: "center", fontSize: 10, color: "var(--muted)" }}>
-              {i % 5 === 0 ? new Date(`${d.date}T00:00:00Z`).getUTCDate() : ""}
-            </span>
-          ))}
-        </div>
-        <p style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: 12 }}>
+        <p className={dash.cardSub} style={{ margin: "12px 0 0" }}>
           {prettyDate(daily[0]?.date ?? "")} – {prettyDate(daily[daily.length - 1]?.date ?? "")}
           {" · "}
           {uniqueVisitors30} unique visitor{uniqueVisitors30 === 1 ? "" : "s"} in the period
@@ -264,36 +250,33 @@ export default function VisitorAnalytics({
 
       {hasVisits && (
         <>
-          <section style={{ marginBottom: 32 }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Most viewed artworks</h2>
-            <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
+          <section>
+            <h2 style={{ margin: "0 0 4px", fontSize: 19, fontWeight: 700 }}>Most viewed artworks</h2>
+            <p className={dash.cardSub} style={{ margin: "0 0 16px" }}>
               Counted when a visitor opens an artwork&apos;s detail panel. Exhibition views without opening an artwork
               are not attributed to any work.
             </p>
             {topArtworks.length === 0 ? (
-              <div className={styles.emptyBox}>
-                <strong>No artwork views yet.</strong>
-                <p>Visitors have opened the exhibition, but nobody has opened an artwork&apos;s details so far.</p>
-              </div>
+              <p className={dash.empty}>No artwork views yet. Visitors have opened the exhibition, but nobody has opened an artwork&apos;s details so far.</p>
             ) : (
-              <div className={styles.tableScroll}>
-                <table className={styles.inventoryTable}>
-                <thead>
-                  <tr>
-                    <th>Artwork</th>
-                    <th>Detail views</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topArtworks.map((a, i) => (
-                    <tr key={a.id}>
-                      <td>
-                        {i + 1}. {a.title}
-                      </td>
-                      <td>{a.views}</td>
+              <div className={page.tableWrap}>
+                <table className={page.table}>
+                  <thead>
+                    <tr>
+                      <th>Artwork</th>
+                      <th>Detail views</th>
                     </tr>
-                  ))}
-                </tbody>
+                  </thead>
+                  <tbody>
+                    {topArtworks.map((a, i) => (
+                      <tr key={a.id}>
+                        <td>
+                          {i + 1}. {a.title}
+                        </td>
+                        <td className={dash.tnum}>{a.views}</td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
               </div>
             )}
@@ -301,59 +284,50 @@ export default function VisitorAnalytics({
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 28 }}>
             <section>
-              <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Devices</h2>
-              <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>From the visitor&apos;s browser.</p>
+              <h2 style={{ margin: "0 0 4px", fontSize: 19, fontWeight: 700 }}>Devices</h2>
+              <p className={dash.cardSub} style={{ margin: "0 0 12px" }}>From the visitor&apos;s browser.</p>
               {devices.length === 0 ? (
-                <p style={{ color: "var(--muted)", fontSize: 13 }}>No device data yet.</p>
+                <p className={dash.empty}>No device data yet.</p>
               ) : (
-                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{shareRow(devices, totalVisitsAllTime)}</ul>
+                <div>{shareRow(devices, totalVisitsAllTime)}</div>
               )}
             </section>
             <section>
-              <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Traffic sources</h2>
-              <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
+              <h2 style={{ margin: "0 0 4px", fontSize: 19, fontWeight: 700 }}>Traffic sources</h2>
+              <p className={dash.cardSub} style={{ margin: "0 0 12px" }}>
                 Where visitors came from, by referrer. “Direct or unknown” means no referrer was sent.
               </p>
               {referrers.length === 0 ? (
-                <p style={{ color: "var(--muted)", fontSize: 13 }}>No referrer data yet.</p>
+                <p className={dash.empty}>No referrer data yet.</p>
               ) : (
-                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{shareRow(referrers, totalVisitsAllTime)}</ul>
+                <div>{shareRow(referrers, totalVisitsAllTime)}</div>
               )}
             </section>
             <section>
-              <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Countries</h2>
-              <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 13 }}>
+              <h2 style={{ margin: "0 0 4px", fontSize: 19, fontWeight: 700 }}>Countries</h2>
+              <p className={dash.cardSub} style={{ margin: "0 0 12px" }}>
                 Only where the platform reports a country. “Unknown” is shown otherwise, never guessed.
               </p>
               {countries.length === 0 ? (
-                <p style={{ color: "var(--muted)", fontSize: 13 }}>No country data yet.</p>
+                <p className={dash.empty}>No country data yet.</p>
               ) : (
-                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{shareRow(countries, totalVisitsAllTime)}</ul>
+                <div>{shareRow(countries, totalVisitsAllTime)}</div>
               )}
             </section>
           </div>
         </>
       )}
 
-      <aside
-        style={{
-          marginTop: 36,
-          padding: 18,
-          border: "1px solid var(--line)",
-          borderRadius: 8,
-          background: "var(--room-color)",
-          fontSize: 13,
-          lineHeight: 1.6,
-          color: "var(--muted)",
-        }}
-      >
-        <strong style={{ color: "var(--ink)" }}>Privacy: what is (and isn&apos;t) collected.</strong>
-        <br />
-        Visits are counted with an anonymous random id stored in a cookie on the visitor&apos;s own browser. No names,
-        no email addresses, no IP addresses and no personal data are collected or stored. Country is recorded only
-        when the hosting platform reports it; device type comes from the browser&apos;s user-agent and the referrer
-        from the page the visitor came from. Only aggregate counts are shown here. Individual visits cannot be traced
-        back to a person. Data is kept to the minimum needed to answer “how is this exhibition doing?”.
+      <aside className={dash.card}>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: "var(--rd-t2)" }}>
+          <strong style={{ color: "var(--rd-text)" }}>Privacy: what is (and isn&apos;t) collected.</strong>
+          <br />
+          Visits are counted with an anonymous random id stored in a cookie on the visitor&apos;s own browser. No names,
+          no email addresses, no IP addresses and no personal data are collected or stored. Country is recorded only
+          when the hosting platform reports it; device type comes from the browser&apos;s user-agent and the referrer
+          from the page the visitor came from. Only aggregate counts are shown here. Individual visits cannot be traced
+          back to a person. Data is kept to the minimum needed to answer “how is this exhibition doing?”.
+        </p>
       </aside>
     </div>
   );

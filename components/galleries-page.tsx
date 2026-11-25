@@ -6,8 +6,7 @@ import { Eye, Footprints, PenLine, Search, Star } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
-import Sidebar from "@/components/sidebar";
-import ThemeToggle from "@/components/theme-toggle";
+import RedesignShell from "@/components/redesign-shell";
 import { ceilingTextures, createGalleryRoom, floorTextures, floorTexturesFr, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, wallTexturesFr, type RoomCategory, type RoomLayout } from "@/lib/rooms";
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
 import { useLocale, useT, type Locale } from "@/lib/i18n";
@@ -1104,23 +1103,11 @@ export default function GalleriesPage({
     );
   }
 
+  // Signed-in: the redesign shell. The room catalogue itself (live 3D
+  // preview, canvas-painted finish cards) keeps its own visual system.
   return (
-    <main className="app-shell">
-      <Sidebar user={user} active="galleries" exhibitionCount={ownExhibitionCount} />
-
-      <section className="dashboard-main">
-        <header className="topbar">
-          <div className="breadcrumbs"><span>{t("common", "workspace")}</span><span className="crumb-slash">/</span><strong>{t("galleries", "title")}</strong></div>
-          <div className="topbar-actions">
-            <ThemeToggle />
-            {/* Phase 8: the Search / Notifications / Help buttons were
-                dead — no handler, no backend — so they were removed.
-                The working exhibition search is on the dashboard. */}
-          </div>
-        </header>
-
-        <div className="dashboard-content">{galleriesContent}</div>
-      </section>
-    </main>
+    <RedesignShell user={user} active="galleries" exhibitionCount={ownExhibitionCount}>
+      {galleriesContent}
+    </RedesignShell>
   );
 }

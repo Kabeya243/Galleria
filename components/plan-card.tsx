@@ -5,6 +5,8 @@ import { PlanChangeDialog, type PlanChangePayload } from "@/components/subscript
 import { useLocale, useT } from "@/lib/i18n";
 import { SHOW_PAID_PLANS } from "@/lib/plan-visibility";
 import type { PlanDTO, SubscriptionDTO } from "@/lib/subscriptions";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 
 // "My plan" card (Nov 2026): the account's current plan and its usage
 // against the plan limits, with a plan change flow, and the account's
@@ -135,107 +137,106 @@ export default function PlanCard() {
   ];
 
   return (
-    <section
-      style={{
-        padding: 20,
-        border: "1px solid var(--line)",
-        borderRadius: 12,
-        background: "var(--surface)",
-      }}
-    >
-      <h2 style={{ margin: "0 0 4px", fontSize: 17 }}>{t("pricing", "myPlan")}</h2>
-      <p style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700 }}>{me.plan.name}</p>
-      {me.subscription.billingCycle === "single" && me.subscription.endsAt && (
-        <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--muted)" }}>
-          {t("pricing", "singleEnds")}{" "}
-          {new Date(me.subscription.endsAt).toLocaleDateString(locale)}
-        </p>
-      )}
-      <dl style={{ margin: "0 0 16px", display: "grid", gap: 8 }}>
-        {usageRows.map((row) => (
-          <div
-            key={row.label}
-            style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}
-          >
-            <dt style={{ color: "var(--muted)" }}>{row.label}</dt>
-            <dd style={{ margin: 0, fontWeight: 600 }}>
-              {row.used} / {row.limit === null ? t("pricing", "unlimited") : row.limit}
-            </dd>
+    <div className={page.sectionStack}>
+      <section className={dash.card} aria-label={t("pricing", "myPlan")}>
+        <div className={dash.cardHead}>
+          <div>
+            <span className={dash.eyebrow}>{t("pricing", "myPlan")}</span>
+            <h2>{me.plan.name}</h2>
+            {me.subscription.billingCycle === "single" && me.subscription.endsAt && (
+              <p className={dash.cardSub}>
+                {t("pricing", "singleEnds")}{" "}
+                {new Date(me.subscription.endsAt).toLocaleDateString(locale)}
+              </p>
+            )}
           </div>
-        ))}
-      </dl>
+          <span className={`${page.pill} ${page.pillLive}`}>
+            {t("pricing", "currentPlan")}
+          </span>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          {usageRows.map((row) => (
+            <div key={row.label} className={page.barRow}>
+              <span>{row.label}</span>
+              <span className={page.barTrack}>
+                <span
+                  className={page.barFill}
+                  style={{
+                    width: row.limit ? `${Math.min(100, (row.used / row.limit) * 100)}%` : "100%",
+                    display: "block",
+                  }}
+                />
+              </span>
+              <span className={`${page.barValue} ${dash.tnum}`}>
+                {row.used} / {row.limit === null ? t("pricing", "unlimited") : row.limit}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {me.referralCode && (
-        <div
-          style={{
-            margin: "0 0 16px",
-            padding: 12,
-            border: "1px dashed var(--line)",
-            borderRadius: 10,
-          }}
-        >
-          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700 }}>
-            {t("pricing", "referralTitle")}
-          </p>
-          <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
-            {t("pricing", "referralShare")}
-          </p>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <section className={dash.card} aria-label={t("pricing", "referralTitle")}>
+          <div className={dash.cardHead}>
+            <div>
+              <span className={dash.eyebrow}>{t("pricing", "referralTitle")}</span>
+              <h2>{t("pricing", "referralTitle")}</h2>
+              <p className={dash.cardSub}>{t("pricing", "referralShare")}</p>
+            </div>
+          </div>
+          <div className={page.formActions} style={{ marginTop: 12 }}>
             <code
               style={{
                 fontSize: 15,
                 fontWeight: 700,
                 letterSpacing: 1,
-                padding: "6px 10px",
-                border: "1px solid var(--line)",
-                borderRadius: 8,
-                background: "var(--paper)",
+                padding: "8px 12px",
+                border: "1px solid var(--rd-border)",
+                borderRadius: 9,
+                background: "var(--rd-surface-2)",
+                color: "var(--rd-text)",
               }}
             >
               {me.referralCode}
             </code>
-            <button type="button" className="publish-dialog-cancel" onClick={() => void copyReferralLink()}>
+            <button type="button" className={page.btn} onClick={() => void copyReferralLink()}>
               {copied ? t("pricing", "referralCopied") : t("pricing", "referralCopyLink")}
             </button>
           </div>
-        </div>
+        </section>
       )}
+
       {!SHOW_PAID_PLANS && me.plan.slug === "discovery" && (
-        <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
-          {t("pricing", "paidPlansSoon")}
-        </p>
+        <p className={dash.cardSub}>{t("pricing", "paidPlansSoon")}</p>
       )}
+
       {target && (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <select
-            value={target.slug}
-            onChange={(event) => setTargetSlug(event.target.value)}
-            aria-label={t("pricing", "changePlan")}
-            style={{
-              height: 40,
-              padding: "0 10px",
-              border: "1px solid var(--line)",
-              borderRadius: 999,
-              background: "var(--paper)",
-              color: "var(--ink)",
-              font: "inherit",
-              fontSize: 13,
-            }}
-          >
-            {others.map((plan) => (
-              <option key={plan.slug} value={plan.slug}>
-                {plan.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="publish-dialog-submit"
-            onClick={() => setDialogOpen(true)}
-          >
-            {t("pricing", "changePlan")}
-          </button>
-        </div>
+        <section className={dash.card} aria-label={t("pricing", "changePlan")}>
+          <div className={page.formActions}>
+            <select
+              value={target.slug}
+              onChange={(event) => setTargetSlug(event.target.value)}
+              aria-label={t("pricing", "changePlan")}
+              className={page.select}
+              style={{ maxWidth: 220 }}
+            >
+              {others.map((plan) => (
+                <option key={plan.slug} value={plan.slug}>
+                  {plan.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={`${page.btn} ${page.btnCta}`}
+              onClick={() => setDialogOpen(true)}
+            >
+              {t("pricing", "changePlan")}
+            </button>
+          </div>
+        </section>
       )}
+
       {dialogOpen && target && (
         <PlanChangeDialog
           currentPlan={me.plan}
@@ -246,6 +247,6 @@ export default function PlanCard() {
           onConfirm={confirmChange}
         />
       )}
-    </section>
+    </div>
   );
 }

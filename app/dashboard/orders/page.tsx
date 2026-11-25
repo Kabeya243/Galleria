@@ -1,18 +1,19 @@
 import { redirect } from "next/navigation";
+import RedesignShell from "@/components/redesign-shell";
 import OrdersList from "@/components/orders-list";
-import Sidebar from "@/components/sidebar";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { toClientOrder } from "@/lib/marketplace-sales";
+import page from "@/components/redesign-pages.module.css";
 
 export const metadata = {
   title: "My orders: Lakisa",
   description: "The works you bought and sold on the marketplace, with the fee split of each order.",
 };
 
-// "My orders" (Nov 2026): every marketplace order the user is part
-// of, as buyer and as seller, with the fee split recorded at the time
-// of the sale. Reached from the sidebar.
+// "My orders" (Nov 2026, Phase 2 shell): every marketplace order the
+// user is part of, as buyer and as seller, with the fee split recorded
+// at the time of the sale. Reached from the sidebar.
 export default async function DashboardOrdersRoute() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -28,29 +29,23 @@ export default async function DashboardOrdersRoute() {
     take: 200,
   });
   return (
-    <div className="app-shell">
-      <Sidebar user={user} active="orders" exhibitionCount={exhibitionCount} />
-
-      <main className="dashboard-main">
-        <div className="dashboard-content">
-          <div className="welcome-row">
-            <div>
-              <span className="eyebrow">Marketplace</span>
-              <h1>My orders</h1>
-              <p className="welcome-copy">
-                The works you bought and sold on Lakisa. The buyer pays Lakisa, Lakisa keeps its
-                commission, pays the payment fee, and sends the rest to the seller. Automatic
-                payment is not connected yet, so orders by card stay pending payment; until then,
-                a buyer can pay the seller directly by Mobile Money or bank transfer, send the
-                transaction reference, and the seller confirms receipt by hand. A manual payment
-                carries no payment fee, only the Lakisa commission.
-              </p>
-            </div>
-          </div>
-
-          <OrdersList orders={rows.map((row) => toClientOrder(row))} userId={user.id} />
+    <RedesignShell user={user} active="orders" exhibitionCount={exhibitionCount}>
+      <div className={page.pageHead}>
+        <div>
+          <span className={page.eyebrow}>Marketplace</span>
+          <h1>My orders</h1>
+          <p className={page.pageSub}>
+            The works you bought and sold on Lakisa. The buyer pays Lakisa, Lakisa keeps its
+            commission, pays the payment fee, and sends the rest to the seller. Automatic
+            payment is not connected yet, so orders by card stay pending payment; until then,
+            a buyer can pay the seller directly by Mobile Money or bank transfer, send the
+            transaction reference, and the seller confirms receipt by hand. A manual payment
+            carries no payment fee, only the Lakisa commission.
+          </p>
         </div>
-      </main>
-    </div>
+      </div>
+
+      <OrdersList orders={rows.map((row) => toClientOrder(row))} userId={user.id} />
+    </RedesignShell>
   );
 }

@@ -6,7 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
 import { db } from "@/lib/db";
-import styles from "@/components/tools.module.css";
+import dash from "@/components/redesign-dashboard.module.css";
+import page from "@/components/redesign-pages.module.css";
 
 export const metadata = {
   title: "Inventory & Collections: Lakisa Tools",
@@ -40,33 +41,41 @@ export default async function InventoryRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
+      redesign
+      redesignActive="inventory"
       title="inventory"
       eyebrowOverride={`TOOLS · INVENTORY · ${artworks.length} ARTWORK${artworks.length === 1 ? "" : "S"}`}
       description="inventoryDesc"
     >
-      <div className={styles.summaryRow}>
-        <div>
-          <strong>{artworks.length}</strong>
-          <span>artworks in total</span>
-        </div>
-        <div>
-          <strong>{inPublic}</strong>
-          <span>in published exhibitions</span>
-        </div>
-        <div>
-          <strong>{inDrafts}</strong>
-          <span>in drafts</span>
-        </div>
+      <div className={dash.kpis} style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        <article className={`${dash.card} ${dash.kpi}`}>
+          <div className={dash.kpiLabel}>
+            <span>Artworks in total</span>
+          </div>
+          <div className={`${dash.kpiValue} ${dash.tnum}`}>{artworks.length}</div>
+        </article>
+        <article className={`${dash.card} ${dash.kpi}`}>
+          <div className={dash.kpiLabel}>
+            <span>In published exhibitions</span>
+          </div>
+          <div className={`${dash.kpiValue} ${dash.tnum}`}>{inPublic}</div>
+        </article>
+        <article className={`${dash.card} ${dash.kpi}`}>
+          <div className={dash.kpiLabel}>
+            <span>In drafts</span>
+          </div>
+          <div className={`${dash.kpiValue} ${dash.tnum}`}>{inDrafts}</div>
+        </article>
       </div>
 
       {artworks.length === 0 ? (
-        <div className={styles.emptyBox}>
-          <strong>No artworks yet.</strong>
+        <section className={`${dash.card} ${page.emptyState}`}>
+          <h3>No artworks yet.</h3>
           <p>Open an exhibition in the editor and add your first work, it will show up here.</p>
-          <Link href="/exhibitions" className="galleries-open-button">
+          <Link href="/exhibitions" className={`${page.btn} ${page.btnCta}`}>
             Go to your exhibitions
           </Link>
-        </div>
+        </section>
       ) : (
         <InventoryTable artworks={artworks} />
       )}

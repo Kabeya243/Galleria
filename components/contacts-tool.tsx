@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Search, Trash2 } from "lucide-react";
-import styles from "./tools.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 
 type Contact = {
   id: string;
@@ -134,136 +135,121 @@ export default function ContactsTool() {
   }
 
   return (
-    <div>
-      <form className={styles.contactForm} onSubmit={addContact}>
-        <label className={styles.field}>
-          <span>Name</span>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Who is it?" required />
-        </label>
-        <label className={styles.field}>
-          <span>Role</span>
-          <select value={role} onChange={(event) => setRole(event.target.value)}>
-            {CONTACT_ROLES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.field}>
-          <span>Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-          />
-        </label>
-        <label className={styles.field}>
-          <span>Notes</span>
-          <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Met at… interested in…" />
-        </label>
-        <button type="submit" className="primary-button" disabled={saving}>
-          {saving ? "Saving…" : "Add contact"}
-        </button>
-      </form>
-      {saveError && (
-        <p role="alert" className={styles.resultNote}>
-          {saveError}
-        </p>
-      )}
-      {migratedCount > 0 && (
-        <p role="status" className={styles.resultNote}>
-          {migratedCount} {migratedCount === 1 ? "contact" : "contacts"} moved from this browser into your account.
-        </p>
-      )}
+    <div className={page.sectionStack}>
+      <section className={dash.card} aria-label="Add a contact">
+        <form className={page.form} onSubmit={addContact}>
+          <div className={page.formGrid}>
+            <label className={page.field}>
+              <span>Name</span>
+              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Who is it?" required className={page.input} />
+            </label>
+            <label className={page.field}>
+              <span>Role</span>
+              <select value={role} onChange={(event) => setRole(event.target.value)} className={page.select}>
+                {CONTACT_ROLES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={page.field}>
+              <span>Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                className={page.input}
+              />
+            </label>
+            <label className={page.field}>
+              <span>Notes</span>
+              <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Met at… interested in…" className={page.input} />
+            </label>
+          </div>
+          <div className={page.formActions}>
+            <button type="submit" className={`${page.btn} ${page.btnCta}`} disabled={saving}>
+              {saving ? "Saving…" : "Add contact"}
+            </button>
+          </div>
+        </form>
+        {saveError && (
+          <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "12px 0 0" }}>
+            {saveError}
+          </p>
+        )}
+        {migratedCount > 0 && (
+          <p role="status" style={{ color: "var(--rd-green)", fontSize: 13, margin: "12px 0 0" }}>
+            {migratedCount} {migratedCount === 1 ? "contact" : "contacts"} moved from this browser into your account.
+          </p>
+        )}
+      </section>
 
       {!loaded ? (
-        <div className={styles.emptyBox}>
-          <strong>Loading your contacts…</strong>
-        </div>
+        <p className={dash.empty}>Loading your contacts…</p>
       ) : loadError ? (
-        <div className={styles.emptyBox}>
-          <strong>Could not load your contacts.</strong>
+        <section className={`${dash.card} ${page.emptyState}`}>
+          <h3>Could not load your contacts.</h3>
           <p>{loadError}</p>
-        </div>
+        </section>
       ) : contacts.length === 0 ? (
-        <div className={styles.emptyBox}>
-          <strong>No contacts yet.</strong>
+        <section className={`${dash.card} ${page.emptyState}`}>
+          <h3>No contacts yet.</h3>
           <p>Add the people around your work: collectors, curators, galleries, advisors.</p>
-        </div>
+        </section>
       ) : (
-        <div>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              maxWidth: 420,
-              marginBottom: 16,
-              padding: "9px 12px",
-              border: "1px solid var(--line)",
-              borderRadius: 8,
-            }}
-          >
+        <section className={dash.card}>
+          <label className={page.searchField} style={{ marginBottom: 8 }}>
             <Search size={16} aria-hidden="true" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by name, role or email…"
               aria-label="Search contacts"
-              style={{
-                border: "none",
-                outline: "none",
-                background: "transparent",
-                color: "inherit",
-                fontSize: 14,
-                width: "100%",
-              }}
             />
           </label>
           {visibleContacts.length === 0 ? (
-            <div className={styles.emptyBox}>
-              <strong>No contacts match.</strong>
-              <p>Try a different search, or clear it to see everyone.</p>
-            </div>
+            <p className={dash.empty}>No contacts match. Try a different search, or clear it to see everyone.</p>
           ) : (
-        <div className={styles.tableScroll}>
-          <table className={styles.inventoryTable}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Email</th>
-              <th>Notes</th>
-              <th aria-label="Delete" />
-            </tr>
-          </thead>
-          <tbody>
-            {visibleContacts.map((contact) => (
-              <tr key={contact.id}>
-                <td>{contact.name}</td>
-                <td>{contact.role}</td>
-                <td>{contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : "N/A"}</td>
-                <td>{contact.notes || "N/A"}</td>
-                <td>
-                  <button
-                    className={styles.iconButton}
-                    onClick={() => void removeContact(contact.id)}
-                    aria-label={`Delete ${contact.name}`}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          </table>
-        </div>
+            <div className={page.tableWrap}>
+              <table className={page.table}>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Email</th>
+                    <th>Notes</th>
+                    <th aria-label="Delete" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleContacts.map((contact) => (
+                    <tr key={contact.id}>
+                      <td style={{ fontWeight: 700 }}>{contact.name}</td>
+                      <td>{contact.role}</td>
+                      <td>{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "var(--rd-accent)" }}>{contact.email}</a> : "N/A"}</td>
+                      <td>{contact.notes || "N/A"}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className={page.btn}
+                          onClick={() => void removeContact(contact.id)}
+                          aria-label={`Delete ${contact.name}`}
+                          style={{ padding: "6px 9px" }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </section>
       )}
-      <p className={styles.resultNote}>Saved to your account. They sync to every browser and device you sign in with.</p>
+      <p className={dash.cardSub}>Saved to your account. They sync to every browser and device you sign in with.</p>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
+import RedesignShell from "@/components/redesign-shell";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import { useT, type DictionarySection } from "@/lib/i18n";
+import page from "./redesign-pages.module.css";
 
 // Shared shell for every Tools page: the workspace sidebar (Tools active)
 // and the topbar, then a page header and the tool itself. Keeps the nine
@@ -12,6 +14,11 @@ import { useT, type DictionarySection } from "@/lib/i18n";
 // every tool page switches language; the four pages with a live count in
 // the eyebrow (inventory, marketplace, present-sell, teams) pass their
 // eyebrow as a plain string instead (eyebrowOverride).
+//
+// Phase 2: the tools in the redesign scope (inventory, contacts,
+// documents, price-your-work, and the /tools index) pass
+// redesign + redesignActive and render inside the redesign shell
+// instead. Every other tool keeps the old shell untouched.
 export default function ToolsShell({
   user,
   exhibitionCount,
@@ -19,6 +26,8 @@ export default function ToolsShell({
   eyebrow,
   description,
   eyebrowOverride,
+  redesign = false,
+  redesignActive = "resources",
   children,
 }: {
   user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
@@ -27,9 +36,27 @@ export default function ToolsShell({
   eyebrow?: DictionarySection<"toolpages">;
   description: DictionarySection<"toolpages">;
   eyebrowOverride?: string;
+  redesign?: boolean;
+  redesignActive?: string;
   children: ReactNode;
 }) {
   const t = useT();
+  if (redesign) {
+    return (
+      <RedesignShell user={user} active={redesignActive} exhibitionCount={exhibitionCount}>
+        <div className={page.pageHead}>
+          <div>
+            <span className={page.eyebrow}>
+              {eyebrowOverride ?? (eyebrow ? t("toolpages", eyebrow) : "")}
+            </span>
+            <h1>{t("toolpages", title)}</h1>
+            <p className={page.pageSub}>{t("toolpages", description)}</p>
+          </div>
+        </div>
+        {children}
+      </RedesignShell>
+    );
+  }
   return (
     <main className="app-shell">
       <Sidebar user={user} active="tools" exhibitionCount={exhibitionCount} />

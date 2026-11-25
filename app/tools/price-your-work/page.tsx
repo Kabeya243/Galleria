@@ -21,6 +21,8 @@ export default async function PriceYourWorkRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
+      redesign
+      redesignActive="price"
       title="priceYourWork"
       eyebrow="priceYourWorkEyebrow"
       description="priceYourWorkDesc"

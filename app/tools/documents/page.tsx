@@ -76,6 +76,8 @@ export default async function DocumentsRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
+      redesign
+      redesignActive="certificates"
       title="documents"
       eyebrow="documentsEyebrow"
       description="documentsDesc"

@@ -21,6 +21,8 @@ export default async function ContactsRoute() {
     <ToolsShell
       user={user}
       exhibitionCount={exhibitionCount}
+      redesign
+      redesignActive="contacts"
       title="contacts"
       eyebrow="contactsEyebrow"
       description="contactsDesc"

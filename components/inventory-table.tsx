@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useState } from "react";
-import styles from "@/components/tools.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 
 // Inventory table with a local search (Nov 2026): the search only
 // filters the rows on this page — title, medium, exhibition — it never
@@ -28,69 +29,58 @@ export default function InventoryTable({ artworks }: { artworks: InventoryArtwor
   );
 
   return (
-    <div>
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          maxWidth: 420,
-          marginBottom: 16,
-          padding: "9px 12px",
-          border: "1px solid var(--line)",
-          borderRadius: 8,
-        }}
-      >
+    <div className={page.sectionStack}>
+      <label className={page.searchField}>
         <Search size={16} aria-hidden="true" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by title, medium or exhibition…"
           aria-label="Search inventory"
-          style={{
-            border: "none",
-            outline: "none",
-            background: "transparent",
-            color: "inherit",
-            fontSize: 14,
-            width: "100%",
-          }}
         />
       </label>
       {visible.length === 0 ? (
-        <div className={styles.emptyBox}>
-          <strong>No artworks match.</strong>
+        <section className={`${dash.card} ${page.emptyState}`}>
+          <h3>No artworks match.</h3>
           <p>Try a different search, or clear it to see everything.</p>
-        </div>
+        </section>
       ) : (
-        <div className={styles.tableScroll}>
-          <table className={styles.inventoryTable}>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Medium</th>
-                <th>Dimensions</th>
-                <th>Year</th>
-                <th>Exhibition</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((artwork) => (
-                <tr key={artwork.id}>
-                  <td>
-                    <Link href={`/editor/${artwork.exhibition.id}`}>{artwork.title}</Link>
-                  </td>
-                  <td>{artwork.medium}</td>
-                  <td>{artwork.dimensions}</td>
-                  <td>{artwork.year}</td>
-                  <td>{artwork.exhibition.title}</td>
-                  <td>{artwork.exhibition.status === "public" ? "Published" : "Draft"}</td>
+        <section className={dash.card}>
+          <div className={page.tableWrap}>
+            <table className={page.table}>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Medium</th>
+                  <th>Dimensions</th>
+                  <th>Year</th>
+                  <th>Exhibition</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {visible.map((artwork) => (
+                  <tr key={artwork.id}>
+                    <td>
+                      <Link href={`/editor/${artwork.exhibition.id}`} style={{ color: "var(--rd-text)", fontWeight: 700, textDecoration: "none" }}>
+                        {artwork.title}
+                      </Link>
+                    </td>
+                    <td>{artwork.medium}</td>
+                    <td>{artwork.dimensions}</td>
+                    <td>{artwork.year}</td>
+                    <td>{artwork.exhibition.title}</td>
+                    <td>
+                      <span className={`${page.pill} ${artwork.exhibition.status === "public" ? page.pillLive : page.pillDraft}`}>
+                        {artwork.exhibition.status === "public" ? "Published" : "Draft"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </div>
   );

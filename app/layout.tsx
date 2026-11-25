@@ -50,6 +50,14 @@ const playfair = localFont({
   ],
   variable: "--font-magazine",
 });
+// Manrope (redesign shell + dashboard, Phase 1): the UI sans of the
+// new design, self-hosted like the other fonts. Only the redesign
+// components use this variable, so the rest of the site is untouched.
+const manrope = localFont({
+  src: "./fonts/manrope-variable.woff2",
+  variable: "--font-redesign",
+  weight: "200 800",
+});
 
 export const viewport: Viewport = {
   // Brand black, matching the Lakisa logo and the PWA theme colour.
@@ -121,7 +129,7 @@ export default async function RootLayout({
     signedIn = false;
   }
   return (
-    <html lang="en" className={`${fraunces.variable} ${dmSans.variable} ${playfair.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${fraunces.variable} ${dmSans.variable} ${playfair.variable} ${manrope.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <PwaRegister />

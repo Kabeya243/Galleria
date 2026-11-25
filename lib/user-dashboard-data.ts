@@ -7,6 +7,8 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { db, withDbRetry } from "@/lib/db";
+import { toServingImageUrl } from "@/lib/r2";
+import { parseGalleryRooms, placedArtworks } from "@/lib/rooms";
 import { getExhibitionAnalytics } from "@/lib/visitor-analytics-server";
 import type {
   AnalyticsDay,
@@ -59,7 +61,9 @@ async function loadOwnExhibitions(user: DashboardUser) {
       where: { ownerId: user.id },
       include: {
         artworks: {
-          select: { id: true, createdAt: true, imageUrl: true },
+          // roomId is selected so placedArtworks() can tell which works
+          // are actually hung in a room (cover image for the top list).
+          select: { id: true, createdAt: true, imageUrl: true, roomId: true },
           orderBy: { createdAt: "desc" },
         },
         _count: { select: { artworks: true } },
@@ -120,17 +124,39 @@ export async function loadUserDashboard(user: DashboardUser) {
   const topExhibitions = [...exhibitions]
     .sort((a, b) => b.views - a.views)
     .slice(0, 6)
-    .map((exhibition) => ({
+    .map((exhibition) => {
+      // Cover + room count for the ranked top list (redesign, Phase 1):
+      // the first placed artwork with an image, and the number of rooms
+      // in the show. A show with no placed image has no cover.
+      const { coverImageUrl } = placedArtworks(exhibition.rooms, exhibition.artworks);
+      let roomCount = 0;
+      try {
+        roomCount = parseGalleryRooms(exhibition.rooms).length;
+      } catch {
+        roomCount = 0;
+      }
+      return {
+        id: exhibition.id,
+        title: exhibition.title,
+        slug: exhibition.slug,
+        status: exhibition.status,
+        views: exhibition.views,
+        artworkCount: exhibition._count.artworks,
+        coverImageUrl: coverImageUrl ? toServingImageUrl(coverImageUrl) : null,
+        roomCount,
+      };
+    });
+
+  return {
+    exhibitionCount: exhibitions.length,
+    // Every own exhibition (id, title, slug, status) for the ⌘K
+    // command palette search. Newest first.
+    exhibitions: exhibitions.map((exhibition) => ({
       id: exhibition.id,
       title: exhibition.title,
       slug: exhibition.slug,
       status: exhibition.status,
-      views: exhibition.views,
-      artworkCount: exhibition._count.artworks,
-    }));
-
-  return {
-    exhibitionCount: exhibitions.length,
+    })),
     // The most recently updated exhibition: the guided start ("Create
     // your first exhibition in 3 steps") opens it in the editor for
     // steps 2 and 3. Null when the account has no exhibition yet.

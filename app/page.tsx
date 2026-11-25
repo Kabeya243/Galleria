@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import Dashboard from "@/components/dashboard";
+import RedesignDashboard from "@/components/redesign-dashboard";
 import PublicHome, { type FeaturedPreview, type PublicHomeExhibition } from "@/components/public-home";
 import { JsonLd, organizationJsonLd } from "@/components/seo-jsonld";
 import { getCurrentUser } from "@/lib/auth";
@@ -117,12 +117,16 @@ export default async function HomePage() {
   // one long scrolling page).
   const dashboard = await loadUserDashboard(user);
 
+  // Redesign dashboard (Phase 1, Nov 2026): the signed-in home page
+  // renders the new shell + dashboard on the same real data. The
+  // public (signed-out) homepage below is untouched.
   return (
-    <Dashboard
+    <RedesignDashboard
       user={user}
       isNewUser={Date.now() - user.createdAt.getTime() < NEW_USER_WINDOW_MS}
       exhibitionCount={dashboard.exhibitionCount}
       newestExhibition={dashboard.newestExhibition}
+      exhibitions={dashboard.exhibitions}
       stats={dashboard.stats}
       chart={dashboard.chart}
       chartTotal={dashboard.chartTotal}

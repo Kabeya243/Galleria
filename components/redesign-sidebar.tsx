@@ -70,7 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "dashboard", href: "/", label: "dashboard", icon: Home },
       { id: "exhibitions", href: "/exhibitions", label: "myExhibitions", icon: GalleryVerticalEnd, count: true },
-      { id: "published", href: "/explore", label: "publishedExhibitions", icon: Compass },
+      { id: "published", href: "/exhibitions?status=published", label: "publishedExhibitions", icon: Compass },
       { id: "artworks", href: "/artworks", label: "myArtworks", icon: Image },
       { id: "editor", href: "/exhibitions", label: "editor3d", icon: Boxes },
     ],

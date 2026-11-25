@@ -1,18 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import Sidebar from "@/components/sidebar";
+import RedesignShell from "@/components/redesign-shell";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
-import ThemeToggle from "@/components/theme-toggle";
 import styles from "./public-home.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 import { useT } from "@/lib/i18n";
 import { handleCoverImageError } from "@/lib/image-fallback";
 
 // Explore: the public exhibitions. Signed-in users see it
-// inside their workspace (sidebar), visitors see the public header —
-// either way the grid is the same list of exhibitions to walk through.
+// inside their workspace (redesign shell), visitors see the public
+// header — either way the grid is the same list of exhibitions to walk
+// through. The prototype's category chips are reduced to what the
+// data supports: every room, or the rooms published in the last 7
+// days. There is no medium stored per exhibition, so no
+// Painting/Photography filter is invented.
 export type ExploreExhibition = {
   id: string;
   title: string;
@@ -23,63 +29,105 @@ export type ExploreExhibition = {
   artworkCount: number;
   views: number;
   coverImageUrl: string | null;
+  publishedAt: string | null;
 };
 
 function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
   const t = useT();
+  const [onlyNew, setOnlyNew] = useState(false);
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const visible = onlyNew
+    ? exhibitions.filter((item) => item.publishedAt && new Date(item.publishedAt).getTime() >= weekAgo)
+    : exhibitions;
+  const newCount = exhibitions.filter(
+    (item) => item.publishedAt && new Date(item.publishedAt).getTime() >= weekAgo,
+  ).length;
+
   return (
-    <section className="galleries-grid" id="exhibitions">
-      {exhibitions.length === 0 ? (
-        <div className={styles.emptyState}>
-          <strong>{t("explore", "noPublic")}</strong>
+    <>
+      <div className={page.chips} role="group" aria-label={t("explore", "filterLabel")}>
+        <button
+          type="button"
+          className={`${page.chip}${!onlyNew ? ` ${page.chipOn}` : ""}`}
+          aria-pressed={!onlyNew}
+          onClick={() => setOnlyNew(false)}
+        >
+          {t("explore", "filterAll")} · {exhibitions.length}
+        </button>
+        <button
+          type="button"
+          className={`${page.chip}${onlyNew ? ` ${page.chipOn}` : ""}`}
+          aria-pressed={onlyNew}
+          onClick={() => setOnlyNew(true)}
+        >
+          {t("explore", "filterNew")} · {newCount}
+        </button>
+      </div>
+
+      {visible.length === 0 ? (
+        <div className={`${dash.card} ${page.emptyState}`}>
+          <h3>{t("explore", "noPublic")}</h3>
           <p>{t("explore", "noPublicDesc")}</p>
-          <Link href="/register" className="galleries-open-button">
+          <Link href="/register" className={`${page.btn} ${page.btnCta}`}>
             {t("explore", "createAccount")} <ArrowRight size={15} />
           </Link>
         </div>
       ) : (
-        exhibitions.map((exhibition) => (
-          <article key={exhibition.id} className={`gallery-card ${styles.card}`}>
-            <Link
-              href={`/exhibition/${exhibition.slug}`}
-              className={styles.coverLink}
-              aria-label={`${t("explore", "visit")}, ${exhibition.title}`}
-            >
-              {exhibition.coverImageUrl ? (
-                <img
-                  src={exhibition.coverImageUrl}
-                  alt={exhibition.title}
-                  className={styles.cover}
-                  loading="lazy"
-                  onError={handleCoverImageError}
-                />
-              ) : (
-                <span className={styles.coverFallback}>LAKISA</span>
-              )}
-            </Link>
-            <div className="gallery-card-body">
-              <h3>
-                <Link href={`/exhibition/${exhibition.slug}`}>{exhibition.title}</Link>
-              </h3>
-              <p>{exhibition.artistName}</p>
-              <p className="gallery-card-finishes">
-                {exhibition.roomCount} {exhibition.roomCount === 1 ? t("exhibitions", "room") : t("exhibitions", "rooms")} ·{" "}
-                {exhibition.artworkCount} {exhibition.artworkCount === 1 ? t("exhibitions", "artwork") : t("exhibitions", "artworks")} ·{" "}
-                {exhibition.views} {exhibition.views === 1 ? t("exhibitions", "visitSingular") : t("exhibitions", "visits")}
-              </p>
-              <div className="gallery-card-actions">
-                <Link href={`/exhibition/${exhibition.slug}`} className="galleries-open-button">
-                  {t("explore", "visitExhibition")} <ArrowUpRight size={14} />
-                </Link>
-                {/* No "Send a message" button on the card: messaging the
-                    exhibitor lives in the rooms menu inside the
-                    exhibition visit itself (see public-exhibition). */}
+        <div className={page.gridCards}>
+          {visible.map((exhibition) => (
+            <article key={exhibition.id} className={page.expoCard}>
+              <Link
+                href={`/exhibition/${exhibition.slug}`}
+                className={page.expoCover}
+                aria-label={`${t("explore", "visit")}, ${exhibition.title}`}
+              >
+                {exhibition.coverImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={exhibition.coverImageUrl}
+                    alt={exhibition.title}
+                    loading="lazy"
+                    onError={handleCoverImageError}
+                  />
+                ) : (
+                  <span className={page.expoCoverFallback}>LAKISA</span>
+                )}
+                <span className={`${page.pill} ${page.pillLive} ${page.pillOnCover}`}>
+                  <span className={page.pillDot} aria-hidden="true" />
+                  {t("explore", "liveNow")}
+                </span>
+              </Link>
+              <div className={page.expoBody}>
+                <h3 className={page.expoTitle}>
+                  <Link href={`/exhibition/${exhibition.slug}`} style={{ color: "inherit", textDecoration: "none" }}>
+                    {exhibition.title}
+                  </Link>
+                </h3>
+                <p className={page.expoMeta}>{exhibition.artistName}</p>
+                <div className={page.expoFoot}>
+                  <span>
+                    {exhibition.roomCount} {exhibition.roomCount === 1 ? t("exhibitions", "room") : t("exhibitions", "rooms")} ·{" "}
+                    {exhibition.artworkCount} {exhibition.artworkCount === 1 ? t("exhibitions", "artwork") : t("exhibitions", "artworks")}
+                  </span>
+                  <span>
+                    <b className={dash.tnum}>{exhibition.views}</b>{" "}
+                    {exhibition.views === 1 ? t("exhibitions", "visitSingular") : t("exhibitions", "visits")}
+                  </span>
+                </div>
+                <div className={page.expoActions}>
+                  <Link href={`/exhibition/${exhibition.slug}`} className={page.btn}>
+                    {t("explore", "visitExhibition")} <ArrowUpRight size={14} />
+                  </Link>
+                  {/* No "Send a message" button on the card: messaging the
+                      exhibitor lives in the rooms menu inside the
+                      exhibition visit itself (see public-exhibition). */}
+                </div>
               </div>
-            </div>
-          </article>
-        ))
+            </article>
+          ))}
+        </div>
       )}
-    </section>
+    </>
   );
 }
 
@@ -128,32 +176,14 @@ export default function ExplorePage({
   }
 
   return (
-    <main className="app-shell">
-      <Sidebar user={user} active="explore" exhibitionCount={ownExhibitionCount} />
-
-      <section className="dashboard-main">
-        <header className="topbar">
-          <div className="breadcrumbs"><span>{t("common", "workspace")}</span><span className="crumb-slash">/</span><strong>{t("explore", "explore")}</strong></div>
-          <div className="topbar-actions">
-            <ThemeToggle />
-            {/* Phase 8: the Search / Notifications / Help buttons were
-                dead — no handler, no backend — so they were removed.
-                The working exhibition search is on the dashboard. */}
-          </div>
-        </header>
-
-        <div className="dashboard-content">
-          <section className="welcome-row">
-            <div>
-              <p className="eyebrow"><span className="status-dot" /> {t("explore", "exploreOther")}</p>
-              <h1>{t("explore", "title")}<span className="title-period">.</span></h1>
-              <p className="welcome-copy">{t("explore", "copySignedIn")}</p>
-            </div>
-          </section>
-
-          <ExhibitionGrid exhibitions={exhibitions} />
+    <RedesignShell user={user} active="explore" exhibitionCount={ownExhibitionCount}>
+      <div className={page.pageHead}>
+        <div>
+          <h1>{t("explore", "title")}</h1>
+          <p className={page.pageSub}>{t("explore", "copySignedIn")}</p>
         </div>
-      </section>
-    </main>
+      </div>
+      <ExhibitionGrid exhibitions={exhibitions} />
+    </RedesignShell>
   );
 }

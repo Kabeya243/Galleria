@@ -47,6 +47,7 @@ async function findPublicExhibitions(): Promise<ExploreExhibition[]> {
       artworkCount: count,
       views: exhibition.views,
       coverImageUrl: toServingImageUrl(coverImageUrl),
+      publishedAt: exhibition.publishedAt ? exhibition.publishedAt.toISOString() : null,
     };
   });
 }

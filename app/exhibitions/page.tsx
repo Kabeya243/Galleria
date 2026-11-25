@@ -43,9 +43,17 @@ async function findOwnExhibitions(ownerId: string): Promise<OwnExhibition[]> {
   });
 }
 
-export default async function ExhibitionsRoute() {
+export default async function ExhibitionsRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const { status } = await searchParams;
   const exhibitions = await findOwnExhibitions(user.id);
-  return <ExhibitionsPage user={user} exhibitions={exhibitions} />;
+  // The "Published exhibitions" nav entry lands here with
+  // ?status=published, pre-filtering to the live rooms.
+  const initialStatus = status === "published" ? "published" : status === "draft" ? "draft" : "all";
+  return <ExhibitionsPage user={user} exhibitions={exhibitions} initialStatus={initialStatus} />;
 }

@@ -3331,6 +3331,11 @@ export const DICTIONARY = {
     searchPlaceholder: { fr: "Rechercher une exposition…", en: "Search your exhibitions…" },
     searchAria: { fr: "Rechercher vos expositions", en: "Search your exhibitions" },
     noMatch: { fr: "Aucune exposition ne correspond à cette recherche.", en: "No exhibition matches this search." },
+    filterAll: { fr: "Toutes", en: "All" },
+    filterPublished: { fr: "Publiées", en: "Published" },
+    filterDraft: { fr: "Brouillons", en: "Drafts" },
+    filterLabel: { fr: "Filtrer les expositions", en: "Filter exhibitions" },
+    createHint: { fr: "Choisissez une salle, accrochez vos œuvres, publiez.", en: "Pick a room, hang your works, publish." },
   },
   // Reusable artwork library (/artworks), "Mes œuvres".
   library: {
@@ -3582,6 +3587,10 @@ export const DICTIONARY = {
       sw: "Ingia",
       ln: "Kokɔtɔ",
     },
+    filterAll: { fr: "Toutes les salles", en: "All rooms" },
+    filterNew: { fr: "Nouveautés de la semaine", en: "New this week" },
+    filterLabel: { fr: "Filtrer les expositions", en: "Filter exhibitions" },
+    liveNow: { fr: "En ligne", en: "Live now" },
   },
   // Publication feed (/feed), published exhibitions, newest first.
   feed: {

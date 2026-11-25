@@ -9,7 +9,7 @@ import { LOCALE_TAGS, useLocale, useT, type Locale } from "@/lib/i18n";
 import styles from "./feed-page.module.css";
 import page from "./redesign-pages.module.css";
 import dash from "./redesign-dashboard.module.css";
-import { handleCoverImageError } from "@/lib/image-fallback";
+import { coverImageRef, handleCoverImageError } from "@/lib/image-fallback";
 import { toServingImageUrl } from "@/lib/r2-urls";
 
 // Publication feed (/feed) — adapted from the standalone scaffold
@@ -211,7 +211,7 @@ function FeedList({ redesign = false }: { redesign?: boolean }) {
                     src={toServingImageUrl(post.coverImageUrl) ?? post.coverImageUrl}
                     alt={post.title}
                     loading="lazy"
-                    onError={handleCoverImageError}
+                    onError={handleCoverImageError} ref={coverImageRef}
                   />
                 </div>
                 <div className={page.postActions}>
@@ -291,7 +291,7 @@ function FeedList({ redesign = false }: { redesign?: boolean }) {
           const artistName = post.artist.name ?? "";
           return (
             <article key={post.id} className={styles.post}>
-              <img src={toServingImageUrl(post.coverImageUrl) ?? post.coverImageUrl} alt={post.title} className={styles.cover} loading="lazy" onError={handleCoverImageError} />
+              <img src={toServingImageUrl(post.coverImageUrl) ?? post.coverImageUrl} alt={post.title} className={styles.cover} loading="lazy" onError={handleCoverImageError} ref={coverImageRef} />
               <div className={styles.postBody}>
                 <div className={styles.artistRow}>
                   {post.artist.avatarUrl ? (

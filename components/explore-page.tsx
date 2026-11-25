@@ -10,7 +10,7 @@ import styles from "./public-home.module.css";
 import page from "./redesign-pages.module.css";
 import dash from "./redesign-dashboard.module.css";
 import { useT } from "@/lib/i18n";
-import { handleCoverImageError } from "@/lib/image-fallback";
+import { coverImageRef, handleCoverImageError } from "@/lib/image-fallback";
 
 // Explore: the public exhibitions. Signed-in users see it
 // inside their workspace (redesign shell), visitors see the public
@@ -87,7 +87,7 @@ function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
                     src={exhibition.coverImageUrl}
                     alt={exhibition.title}
                     loading="lazy"
-                    onError={handleCoverImageError}
+                    onError={handleCoverImageError} ref={coverImageRef}
                   />
                 ) : (
                   <span className={page.expoCoverFallback}>LAKISA</span>

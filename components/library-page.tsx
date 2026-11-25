@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Check, Plus, Search, Trash2 } from "lucide-react";
 import RedesignShell from "@/components/redesign-shell";
 import { useT } from "@/lib/i18n";
-import { handleCoverImageError } from "@/lib/image-fallback";
+import { coverImageRef, handleCoverImageError } from "@/lib/image-fallback";
 import type { LibraryWorkItem } from "@/lib/library";
 import {
   DirectUploadFailedError,
@@ -389,7 +389,7 @@ export default function LibraryPage({
                     src={work.imageUrl}
                     alt={work.altText ?? work.title}
                     loading="lazy"
-                    onError={handleCoverImageError}
+                    onError={handleCoverImageError} ref={coverImageRef}
                   />
                 ) : work.sculptureUrl ? (
                   <span

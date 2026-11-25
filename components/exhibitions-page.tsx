@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ArrowRight, ArrowUpRight, PenLine, Plus, Search, Trash2 } from "lucide-react";
 import RedesignShell from "@/components/redesign-shell";
 import { useT } from "@/lib/i18n";
-import { handleCoverImageError } from "@/lib/image-fallback";
+import { coverImageRef, handleCoverImageError } from "@/lib/image-fallback";
 import styles from "./redesign-pages.module.css";
 import dash from "./redesign-dashboard.module.css";
 
@@ -177,7 +177,7 @@ export default function ExhibitionsPage({
                             src={exhibition.coverImageUrl}
                             alt={exhibition.title}
                             loading="lazy"
-                            onError={handleCoverImageError}
+                            onError={handleCoverImageError} ref={coverImageRef}
                           />
                         ) : (
                           <span className={styles.expoCoverFallback}>LAKISA</span>

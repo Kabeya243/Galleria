@@ -25,7 +25,8 @@ import { ToolLockedDialog } from "@/components/subscription-dialogs";
 import { useT } from "@/lib/i18n";
 import type { PlanDTO, PlanSlug } from "@/lib/subscriptions";
 import { useEffect, useState } from "react";
-import styles from "./tools.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 
 // Plan badges on the hub cards (Nov 2026, subscriptions): each tool
 // shows the plan it needs (nothing for Discovery), and a card above
@@ -270,83 +271,53 @@ export default function ToolsPage({
       title="toolsHub"
       eyebrow="toolsHubEyebrow"
       description="toolsHubDesc"
+      redesign
+      redesignActive="resources"
     >
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          maxWidth: 420,
-          marginBottom: 20,
-          padding: "9px 12px",
-          border: "1px solid var(--line)",
-          borderRadius: 8,
-          background: "var(--card, transparent)",
-        }}
-      >
+      <label className={page.searchField}>
         <Search size={16} aria-hidden="true" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t("tools", "searchTools")}
           aria-label={t("tools", "searchTools")}
-          style={{
-            border: "none",
-            outline: "none",
-            background: "transparent",
-            color: "inherit",
-            fontSize: 14,
-            width: "100%",
-          }}
         />
       </label>
 
       {visibleTools.length === 0 && visibleAudiences.length === 0 ? (
-        <p style={{ color: "var(--muted)", fontSize: 14 }}>{t("tools", "noToolsMatch")}</p>
+        <p className={dash.empty}>{t("tools", "noToolsMatch")}</p>
       ) : (
         <>
-          <section className="galleries-grid">
+          <div className={page.gridCards}>
             {visibleTools.map((tool) => {
               const label = `${t("tools", "open")}, ${t("tools", tool.title)}`;
               const requiredPlan = requiredPlanFor(tool.href);
               const locked = planRank(requiredPlan) > planRank(currentPlanSlug);
               const badge =
                 requiredPlan === "discovery" ? null : (
-                  <span
-                    style={{
-                      alignSelf: "flex-start",
-                      padding: "3px 10px",
-                      border: "1px solid var(--line)",
-                      borderRadius: 999,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                    }}
-                  >
+                  <span className={`${page.pill} ${page.pillAmber}`}>
                     {planDisplayName(requiredPlan)}
                   </span>
                 );
               const body = (
                 <>
-                  <span className={styles.toolIcon}>
+                  <span className={page.hubIcon}>
                     <tool.icon size={22} />
                   </span>
                   {badge}
                   <h3>{t("tools", tool.title)}</h3>
                   <p>{t("tools", tool.description)}</p>
-                  <span className={styles.toolOpen}>
+                  <span className={page.hubOpen}>
                     {t("tools", "open")} <ArrowRight size={15} />
                   </span>
                 </>
               );
               return (
-                <article key={tool.href} className={`gallery-card ${styles.toolCard}`}>
+                <article key={tool.href} className={page.hubCard}>
                   {locked ? (
                     <button
                       type="button"
                       onClick={() => openTool(tool)}
-                      className={styles.toolCardLink}
                       aria-label={`${label}, ${t("pricing", "requiresPlan")} ${planDisplayName(requiredPlan)}`}
                       style={{
                         border: "none",
@@ -354,6 +325,14 @@ export default function ToolsPage({
                         font: "inherit",
                         textAlign: "left",
                         cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        gap: 8,
+                        padding: 0,
+                        color: "inherit",
+                        width: "100%",
+                        height: "100%",
                       }}
                     >
                       {body}
@@ -363,41 +342,41 @@ export default function ToolsPage({
                       href={tool.href}
                       target="_blank"
                       rel="noreferrer"
-                      className={styles.toolCardLink}
                       aria-label={label}
+                      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, color: "inherit", textDecoration: "none", width: "100%", height: "100%" }}
                     >
                       {body}
                     </a>
                   ) : (
-                    <Link href={tool.href} className={styles.toolCardLink} aria-label={label}>
+                    <Link href={tool.href} aria-label={label} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, color: "inherit", textDecoration: "none", width: "100%", height: "100%" }}>
                       {body}
                     </Link>
                   )}
                 </article>
               );
             })}
-          </section>
+          </div>
 
           {visibleAudiences.length > 0 && (
-            <section className={styles.audienceSection}>
-              <p className="eyebrow">
-                <span className="status-dot" /> {t("tools", "whoItIsFor")}
+            <section>
+              <p className={page.eyebrow} style={{ margin: "4px 0 12px" }}>
+                {t("tools", "whoItIsFor")}
               </p>
-              <h2>{t("tools", "onePlatform")}</h2>
-              <div className="galleries-grid">
+              <h2 style={{ margin: "0 0 16px", fontSize: 19, fontWeight: 700 }}>{t("tools", "onePlatform")}</h2>
+              <div className={page.gridCards}>
                 {visibleAudiences.map((audience) => (
-                  <article key={audience.href} className={`gallery-card ${styles.toolCard}`}>
+                  <article key={audience.href} className={page.hubCard}>
                     <Link
                       href={audience.href}
-                      className={styles.toolCardLink}
                       aria-label={`Lakisa, ${t("tools", audience.title)}`}
+                      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, color: "inherit", textDecoration: "none", width: "100%", height: "100%" }}
                     >
-                      <span className={styles.toolIcon}>
+                      <span className={page.hubIcon}>
                         <audience.icon size={22} />
                       </span>
                       <h3>{t("tools", audience.title)}</h3>
                       <p>{t("tools", audience.description)}</p>
-                      <span className={styles.toolOpen}>
+                      <span className={page.hubOpen}>
                         Read more <ArrowRight size={15} />
                       </span>
                     </Link>

@@ -535,6 +535,59 @@
   color: var(--rd-text);
 }
 
+/* Hub cards (tools index, gallery templates): icon + title + text. */
+.hubCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border);
+  border-radius: 16px;
+  padding: 20px 22px;
+  color: var(--rd-text);
+  text-decoration: none;
+}
+
+a.hubCard:hover,
+button.hubCard:hover {
+  border-color: var(--rd-border-2);
+}
+
+.hubCard h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hubCard p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--rd-t2);
+  line-height: 1.5;
+}
+
+.hubIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--rd-accent-soft);
+  color: var(--rd-accent);
+}
+
+.hubOpen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rd-accent);
+}
+
 /* ------------------------------------------------------------------ */
 /* Tables (inventory, certificates) — scroll sideways on phones        */
 /* ------------------------------------------------------------------ */

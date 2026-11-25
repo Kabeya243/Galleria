@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import Sidebar from "@/components/sidebar";
+import RedesignShell from "@/components/redesign-shell";
 import { useLocale, useT, LOCALE_TAGS } from "@/lib/i18n";
-import styles from "./messages.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 
-// One conversation (/messages/[id]): the thread with the other person,
-// the inquiry context when there is one, and a reply box. Opening the
-// thread marks the reader's received messages as read (the API does
-// that on GET). Only the two participants can open it.
+// One conversation (/messages/[id], Phase 2, Nov 2026): the thread
+// with the other person, the inquiry context when there is one, and a
+// reply box. Opening the thread marks the reader's received messages
+// as read (the API does that on GET). Only the two participants can
+// open it.
 
 type Message = {
   id: string;
@@ -261,67 +263,74 @@ export default function MessagesThread({
         : null;
 
   return (
-    <div className={styles.page}>
-      <Sidebar user={user} active="messages" exhibitionCount={ownExhibitionCount} />
-      <main className={styles.main}>
-        <div className={styles.head}>
-          <Link className={styles.back} href="/messages">
-            ← Messages
-          </Link>
-        </div>
-        {error && <p className={styles.error}>{error}</p>}
-        {loading ? (
-          <p className={styles.empty}>Opening the conversation…</p>
-        ) : !conversation ? (
-          <p className={styles.empty}>This conversation does not exist, or it is not yours.</p>
-        ) : (
-          <>
-            <div className={styles.threadHead}>
-              <div className={styles.threadHeadRow}>
-                <span className={styles.avatar} aria-hidden="true">
-                  {initial(conversation.otherUser.name)}
-                </span>
-                <div>
-                  <div className={styles.name}>{conversation.otherUser.name}</div>
-                  {context && <div className={styles.context}>{context}</div>}
-                </div>
-              </div>
-              <div className={styles.threadActions}>
-                <button
-                  type="button"
-                  className={styles.actionButton}
-                  onClick={() => {
-                    setReportingConversation(true);
-                    setReportingMessageId(null);
-                    setReportNotice("");
-                  }}
-                >
-                  {t("messagesSafety", "reportConversation")}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.actionButton} ${styles.actionDanger}`}
-                  disabled={blockBusy}
-                  onClick={toggleBlock}
-                >
-                  {blockedByMe
-                    ? t("messagesSafety", "unblockUser")
-                    : blockConfirm
-                      ? t("messagesSafety", "confirm")
-                      : t("messagesSafety", "blockUser")}
-                </button>
+    <RedesignShell user={user} active="messages" exhibitionCount={ownExhibitionCount}>
+      <Link href="/messages" className={dash.cardLink}>
+        ← Messages
+      </Link>
+
+      {error && (
+        <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: 0 }}>
+          {error}
+        </p>
+      )}
+
+      {loading ? (
+        <p className={dash.empty}>Opening the conversation…</p>
+      ) : !conversation ? (
+        <p className={dash.empty}>This conversation does not exist, or it is not yours.</p>
+      ) : (
+        <section className={dash.card}>
+          <div className={page.pageHead} style={{ marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span className={page.rowAvatar} aria-hidden="true">
+                {initial(conversation.otherUser.name)}
+              </span>
+              <div>
+                <h1 style={{ margin: 0, fontSize: 19, fontWeight: 700 }}>{conversation.otherUser.name}</h1>
+                {context && <p className={page.pageSub} style={{ margin: "2px 0 0" }}>{context}</p>}
               </div>
             </div>
-            {blockConfirm && !blockedByMe && (
-              <p className={styles.notice}>{t("messagesSafety", "blockConfirm")}</p>
-            )}
-            {blockNotice && <p className={styles.notice}>{blockNotice}</p>}
-            {reportNotice && <p className={styles.notice}>{reportNotice}</p>}
-            {(reportingMessageId || reportingConversation) && (
-              <div className={styles.reportBox}>
-                <label htmlFor="report-reason">{t("messagesSafety", "reportReason")}</label>
+            <div className={page.pageActions}>
+              <button
+                type="button"
+                className={page.btn}
+                onClick={() => {
+                  setReportingConversation(true);
+                  setReportingMessageId(null);
+                  setReportNotice("");
+                }}
+              >
+                {t("messagesSafety", "reportConversation")}
+              </button>
+              <button
+                type="button"
+                className={`${page.btn} ${page.btnDanger}`}
+                disabled={blockBusy}
+                onClick={toggleBlock}
+              >
+                {blockedByMe
+                  ? t("messagesSafety", "unblockUser")
+                  : blockConfirm
+                    ? t("messagesSafety", "confirm")
+                    : t("messagesSafety", "blockUser")}
+              </button>
+            </div>
+          </div>
+
+          {blockConfirm && !blockedByMe && (
+            <p style={{ fontSize: 13, color: "var(--rd-amber)", margin: "0 0 8px" }}>
+              {t("messagesSafety", "blockConfirm")}
+            </p>
+          )}
+          {blockNotice && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{blockNotice}</p>}
+          {reportNotice && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{reportNotice}</p>}
+
+          {(reportingMessageId || reportingConversation) && (
+            <div className={page.form} style={{ marginBottom: 12 }}>
+              <label className={page.field}>
+                <span>{t("messagesSafety", "reportReason")}</span>
                 <select
-                  id="report-reason"
+                  className={page.select}
                   value={reportReason}
                   onChange={(event) => setReportReason(event.target.value as ReportReason)}
                 >
@@ -331,81 +340,90 @@ export default function MessagesThread({
                     </option>
                   ))}
                 </select>
-                <div className={styles.reportRow}>
-                  <button
-                    type="button"
-                    className={styles.send}
-                    disabled={reportBusy}
-                    onClick={sendReport}
-                  >
-                    {reportBusy ? "…" : t("messagesSafety", "sendReport")}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={() => {
-                      setReportingMessageId(null);
-                      setReportingConversation(false);
-                    }}
-                  >
-                    {t("common", "cancel")}
-                  </button>
-                </div>
+              </label>
+              <div className={page.formActions}>
+                <button
+                  type="button"
+                  className={`${page.btn} ${page.btnCta}`}
+                  disabled={reportBusy}
+                  onClick={sendReport}
+                >
+                  {reportBusy ? "…" : t("messagesSafety", "sendReport")}
+                </button>
+                <button
+                  type="button"
+                  className={page.btn}
+                  onClick={() => {
+                    setReportingMessageId(null);
+                    setReportingConversation(false);
+                  }}
+                >
+                  {t("common", "cancel")}
+                </button>
               </div>
-            )}
-            <div className={styles.thread}>
-              {messages.length === 0 ? (
-                <p className={styles.empty}>No messages yet.</p>
-              ) : (
-                messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`${styles.msg} ${m.senderId === user.id ? styles.mine : styles.theirs}`}
-                  >
-                    {m.body}
-                    <span className={styles.msgTime}>{time(m.createdAt)}</span>
-                    {m.senderId !== user.id && (
-                      <span className={styles.msgActions}>
-                        <button
-                          type="button"
-                          className={styles.msgReport}
-                          onClick={() => {
-                            setReportingMessageId(m.id);
-                            setReportingConversation(false);
-                            setReportNotice("");
-                          }}
-                        >
-                          {t("messagesSafety", "report")}
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                ))
-              )}
-              <div ref={bottomRef} />
             </div>
-            {blockedByMe && <p className={styles.notice}>{t("messagesSafety", "blockedNotice")}</p>}
-            <form className={styles.reply} onSubmit={sendReply}>
-              <textarea
-                aria-label="Write a reply"
-                value={reply}
-                maxLength={4000}
-                disabled={blockedByMe}
-                onChange={(event) => setReply(event.target.value)}
-                placeholder={`Write to ${conversation.otherUser.name}…`}
-              />
-              <button
-                type="submit"
-                className={styles.send}
-                disabled={sending || blockedByMe || !reply.trim()}
-              >
-                {sending ? "Sending…" : "Send"}
-              </button>
-            </form>
-            {sendError && <p className={styles.error}>{sendError}</p>}
-          </>
-        )}
-      </main>
-    </div>
+          )}
+
+          <div className={page.msgBubbles}>
+            {messages.length === 0 ? (
+              <p className={dash.empty}>No messages yet.</p>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`${page.msgBubble} ${m.senderId === user.id ? page.msgBubbleMe : page.msgBubbleThem}`}
+                >
+                  {m.body}
+                  <div className={page.msgTime}>{time(m.createdAt)}</div>
+                  {m.senderId !== user.id && (
+                    <div>
+                      <button
+                        type="button"
+                        className={dash.cardLink}
+                        style={{ fontSize: 12 }}
+                        onClick={() => {
+                          setReportingMessageId(m.id);
+                          setReportingConversation(false);
+                          setReportNotice("");
+                        }}
+                      >
+                        {t("messagesSafety", "report")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {blockedByMe && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{t("messagesSafety", "blockedNotice")}</p>}
+
+          <form className={page.msgComposer} onSubmit={sendReply}>
+            <textarea
+              aria-label="Write a reply"
+              value={reply}
+              maxLength={4000}
+              disabled={blockedByMe}
+              onChange={(event) => setReply(event.target.value)}
+              placeholder={`Write to ${conversation.otherUser.name}…`}
+              className={page.textarea}
+            />
+            <button
+              type="submit"
+              className={`${page.btn} ${page.btnCta}`}
+              disabled={sending || blockedByMe || !reply.trim()}
+            >
+              {sending ? "Sending…" : "Send"}
+            </button>
+          </form>
+          {sendError && (
+            <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "8px 0 0" }}>
+              {sendError}
+            </p>
+          )}
+        </section>
+      )}
+    </RedesignShell>
   );
 }

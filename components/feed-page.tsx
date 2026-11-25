@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import Sidebar from "@/components/sidebar";
+import RedesignShell from "@/components/redesign-shell";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
-import ThemeToggle from "@/components/theme-toggle";
 import { LOCALE_TAGS, useLocale, useT, type Locale } from "@/lib/i18n";
 import styles from "./feed-page.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 import { handleCoverImageError } from "@/lib/image-fallback";
 import { toServingImageUrl } from "@/lib/r2-urls";
 
@@ -20,6 +21,11 @@ import { toServingImageUrl } from "@/lib/r2-urls";
 // like endpoints need a signed-in session (401 → inline sign-in note).
 // The User model has no avatar field, so the artist-initial fallback
 // from the scaffold is kept.
+//
+// Phase 2: the signed-in feed renders in the redesign shell with the
+// prototype's post cards. The signed-out (public) feed keeps its own
+// header and the original card styles — the redesign tokens only exist
+// inside the shell.
 
 type Post = {
   id: string;
@@ -87,7 +93,7 @@ async function fetchFeedPage(nextCursor: string | null): Promise<FeedResponse> {
   throw lastError instanceof Error ? lastError : new Error("Feed request failed.");
 }
 
-function FeedList() {
+function FeedList({ redesign = false }: { redesign?: boolean }) {
   const t = useT();
   const { locale } = useLocale();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -158,6 +164,106 @@ function FeedList() {
       });
     }
   };
+
+  if (redesign) {
+    return (
+      <div className={page.sectionStack}>
+        {actionError && (
+          <p role="status" style={{ color: "var(--rd-red)", fontSize: 13, margin: 0 }}>
+            {actionError}
+          </p>
+        )}
+
+        {loading && <p className={dash.empty}>{t("feed", "loading")}</p>}
+
+        {!loading && error && (
+          <div className={dash.card}>
+            <p role="alert" style={{ margin: "0 0 12px" }}>{t("feed", "error")}</p>
+            <button type="button" onClick={() => void loadPage(null, false)} className={page.btn}>
+              {t("feed", "retry")}
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && posts.length === 0 && <p className={dash.empty}>{t("feed", "empty")}</p>}
+
+        {posts.map((post) => {
+          const artistName = post.artist.name ?? "";
+          return (
+            <article key={post.id} className={`${dash.card} ${page.post}`}>
+              {post.artist.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={post.artist.avatarUrl} alt="" className={page.postAvatar} />
+              ) : (
+                <span aria-hidden="true" className={page.postAvatar}>
+                  {artistName.trim().charAt(0).toUpperCase()}
+                </span>
+              )}
+              <div className={page.postBody}>
+                <div className={page.postHead}>
+                  <strong>{artistName}</strong>
+                  <time dateTime={post.createdAt}>{formatDate(post.createdAt, locale)}</time>
+                </div>
+                <h2 style={{ margin: "6px 0 0", fontSize: 16, fontWeight: 700 }}>{post.title}</h2>
+                <div className={page.postImage}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={toServingImageUrl(post.coverImageUrl) ?? post.coverImageUrl}
+                    alt={post.title}
+                    loading="lazy"
+                    onError={handleCoverImageError}
+                  />
+                </div>
+                <div className={page.postActions}>
+                  <Link href={post.visitUrl} className={`${page.btn} ${page.btnCta}`}>
+                    {t("feed", "visit")}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => void toggleLike(post)}
+                    disabled={busyPosts.has(post.id)}
+                    aria-label={`${post.likedByMe ? t("feed", "unlike") : t("feed", "like")}, ${post.likeCount}`}
+                    aria-pressed={post.likedByMe}
+                    className={`${page.postAction}${post.likedByMe ? ` ${page.postActionActive}` : ""}`}
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      width="15"
+                      height="15"
+                      fill={post.likedByMe ? "currentColor" : "none"}
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M20.8 8.7c0 4.1-8.8 10-8.8 10s-8.8-5.9-8.8-10a4.7 4.7 0 0 1 8.8-2.3 4.7 4.7 0 0 1 8.8 2.3Z"
+                      />
+                    </svg>
+                    <span className={dash.tnum}>{post.likeCount}</span>
+                  </button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+
+        {!loading && !error && hasMore && (
+          <div>
+            <button
+              type="button"
+              disabled={loadingMore}
+              onClick={() => void loadPage(cursor, true)}
+              className={page.btn}
+            >
+              {loadingMore ? t("feed", "loadingMore") : t("feed", "loadMore")}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={styles.feedColumn}>
@@ -299,37 +405,16 @@ export default function FeedPage({
   }
 
   return (
-    <main className="app-shell">
-      <Sidebar user={user} active="feed" exhibitionCount={ownExhibitionCount} />
-
-      <section className="dashboard-main">
-        <header className="topbar">
-          <div className="breadcrumbs">
-            <span>{t("common", "workspace")}</span>
-            <span className="crumb-slash">/</span>
-            <strong>{t("feed", "feed")}</strong>
-          </div>
-          <div className="topbar-actions">
-            <ThemeToggle />
-          </div>
-        </header>
-
-        <div className="dashboard-content">
-          <section className="welcome-row">
-            <div>
-              <p className="eyebrow">
-                <span className="status-dot" /> {t("feed", "eyebrow")}
-              </p>
-              <h1>{t("feed", "title")}</h1>
-              <p className="welcome-copy">{t("feed", "copy")}</p>
-            </div>
-          </section>
-
-          <section aria-label={t("feed", "feedLabel")}>
-            <FeedList />
-          </section>
+    <RedesignShell user={user} active="feed" exhibitionCount={ownExhibitionCount}>
+      <div className={page.pageHead}>
+        <div>
+          <h1>{t("feed", "title")}</h1>
+          <p className={page.pageSub}>{t("feed", "copy")}</p>
         </div>
+      </div>
+      <section aria-label={t("feed", "feedLabel")}>
+        <FeedList redesign />
       </section>
-    </main>
+    </RedesignShell>
   );
 }

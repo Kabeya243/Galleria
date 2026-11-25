@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import Sidebar from "@/components/sidebar";
+import RedesignShell from "@/components/redesign-shell";
 import { useLocale, LOCALE_TAGS } from "@/lib/i18n";
-import styles from "./messages.module.css";
+import page from "./redesign-pages.module.css";
+import dash from "./redesign-dashboard.module.css";
 
 // Polling interval for the conversation list: no WebSocket, a plain
 // GET every few seconds, paused while the tab is hidden (see the
 // effect below).
 const POLL_MS = 5000;
 
-// Inbox (/messages): the signed-in user's conversations, newest first.
-// Each row shows the other person, the inquiry context when there is
-// one, the last message and the unread count. Messages are private:
-// the API only ever returns conversations the reader belongs to.
+// Inbox (/messages, Phase 2, Nov 2026): the signed-in user's
+// conversations, newest first. Each row shows the other person, the
+// inquiry context when there is one, the last message and the unread
+// count. Messages are private: the API only ever returns
+// conversations the reader belongs to.
 
 type Conversation = {
   id: string;
@@ -42,7 +44,7 @@ export default function MessagesInbox({
   user,
   ownExhibitionCount,
 }: {
-  user: { name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
+  user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
   ownExhibitionCount: number;
 }) {
   const { locale } = useLocale();
@@ -118,53 +120,65 @@ export default function MessagesInbox({
     new Intl.DateTimeFormat(LOCALE_TAGS[locale], { day: "numeric", month: "short" }).format(new Date(value));
 
   return (
-    <div className={styles.page}>
-      <Sidebar user={user} active="messages" exhibitionCount={ownExhibitionCount} />
-      <main className={styles.main}>
-        <div className={styles.head}>
-          <h1 className={styles.title}>Messages</h1>
+    <RedesignShell user={user} active="messages" exhibitionCount={ownExhibitionCount}>
+      <div className={page.pageHead}>
+        <div>
+          <h1>Messages</h1>
+          <p className={page.pageSub}>
+            Private conversations with other people on Lakisa, and inquiries about exhibitions and artworks.
+          </p>
         </div>
-        <p className={styles.sub}>
-          Private conversations with other people on Lakisa, and inquiries about exhibitions and artworks.
+      </div>
+
+      {error && (
+        <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: 0 }}>
+          {error}
         </p>
-        {error && <p className={styles.error}>{error}</p>}
-        {loading ? (
-          <p className={styles.empty}>Loading your messages…</p>
-        ) : conversations.length === 0 ? (
-          <p className={styles.empty}>
-            No messages yet. When someone writes to you, or you write to an exhibitor, the conversation
+      )}
+
+      {loading ? (
+        <p className={dash.empty}>Loading your messages…</p>
+      ) : conversations.length === 0 ? (
+        <section className={`${dash.card} ${page.emptyState}`}>
+          <h3>No messages yet</h3>
+          <p>
+            When someone writes to you, or you write to an exhibitor, the conversation
             shows up here.
           </p>
-        ) : (
-          <ul className={styles.list}>
+        </section>
+      ) : (
+        <section className={dash.card} aria-label="Conversations">
+          <ul className={page.rows}>
             {conversations.map((c) => {
               const context = contextLabel(c);
               return (
-                <li key={c.id}>
-                  <Link className={styles.row} href={`/messages/${c.id}`}>
-                    <span className={styles.avatar} aria-hidden="true">
-                      {initial(c.otherUser.name)}
+                <li key={c.id} className={page.row}>
+                  <span className={page.rowAvatar} aria-hidden="true">
+                    {initial(c.otherUser.name)}
+                  </span>
+                  <span className={page.rowMain}>
+                    <span className={page.rowTitle}>
+                      <Link href={`/messages/${c.id}`}>{c.otherUser.name}</Link>
                     </span>
-                    <span className={styles.body}>
-                      <span className={styles.top}>
-                        <span className={styles.name}>{c.otherUser.name}</span>
-                        <span className={styles.time}>{time(c.updatedAt)}</span>
+                    {context && <span className={page.rowSub}>{context}</span>}
+                    {c.lastMessage && (
+                      <span className={page.rowSub} style={c.unreadCount > 0 ? { color: "var(--rd-text)", fontWeight: 700 } : undefined}>
+                        {c.lastMessage.body}
                       </span>
-                      {context && <span className={styles.context}>{context}</span>}
-                      {c.lastMessage && (
-                        <span className={`${styles.snippet} ${c.unreadCount > 0 ? styles.unread : ""}`}>
-                          {c.lastMessage.body}
-                        </span>
-                      )}
+                    )}
+                  </span>
+                  <span className={page.rowSide}>
+                    <span className={page.rowValue}>
+                      <span>{time(c.updatedAt)}</span>
                     </span>
-                    {c.unreadCount > 0 && <span className={styles.badge}>{c.unreadCount}</span>}
-                  </Link>
+                    {c.unreadCount > 0 && <span className={page.msgUnread}>{c.unreadCount}</span>}
+                  </span>
                 </li>
               );
             })}
           </ul>
-        )}
-      </main>
-    </div>
+        </section>
+      )}
+    </RedesignShell>
   );
 }

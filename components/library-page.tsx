@@ -249,10 +249,11 @@ export default function LibraryPage({
     >
       <div className={page.pageHead}>
         <div>
+          <span className={dash.eyebrow}>
+            {t("library", "yourLibrary")} {works.length}
+          </span>
           <h1>{t("library", "title")}</h1>
-          <p className={page.pageSub}>
-            {t("library", "copy")} {t("library", "yourLibrary")} {works.length}
-          </p>
+          <p className={page.pageSub}>{t("library", "copy")}</p>
         </div>
         <div className={page.pageActions}>
           <button

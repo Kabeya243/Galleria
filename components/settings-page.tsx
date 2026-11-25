@@ -279,7 +279,7 @@ export default function SettingsPage({
             </div>
           </div>
           <div style={{ display: "flex", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
-            <Avatar name={user.name} avatarUrl={avatarUrl} className="settings-avatar" />
+            <Avatar name={user.name} avatarUrl={avatarUrl} className={page.avatarLg} />
             <div style={{ display: "grid", gap: 6, flex: 1, minWidth: 240 }}>
               <strong style={{ fontSize: 16 }}>{user.name}</strong>
               <span className={dash.cardSub}>

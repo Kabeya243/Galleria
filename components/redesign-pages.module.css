@@ -442,6 +442,8 @@
 .rowMain {
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .rowTitle {
@@ -674,6 +676,22 @@ button.hubCard:hover {
   font-size: 12px;
   font-weight: 400;
   color: var(--rd-t3);
+}
+
+/* Large profile avatar (Settings): gold disc, dark serif initials,
+   mirroring the sidebar avatar. The old .settings-avatar class relied
+   on the legacy --accent token, which is black in the light theme, so
+   its black initials were invisible on the disc. */
+.avatarLg {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--rd-accent);
+  color: #141414;
+  font: 600 22px var(--font-redesign), inherit;
 }
 
 .input,

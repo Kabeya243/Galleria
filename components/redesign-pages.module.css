@@ -666,9 +666,22 @@ button.hubCard:hover {
   color: var(--rd-t2);
 }
 
+.field > label {
+  color: var(--rd-t2);
+}
+
+.field small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--rd-t3);
+}
+
 .input,
 .select,
-.textarea {
+.textarea,
+.field input,
+.field textarea,
+.field select {
   width: 100%;
   padding: 10px 12px;
   border-radius: 9px;
@@ -679,6 +692,11 @@ button.hubCard:hover {
   font-size: 14px;
 }
 
+.field input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .textarea {
   min-height: 110px;
   resize: vertical;
@@ -687,7 +705,10 @@ button.hubCard:hover {
 
 .input:focus,
 .select:focus,
-.textarea:focus {
+.textarea:focus,
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
   outline: 2px solid var(--rd-accent);
   outline-offset: 0;
   border-color: var(--rd-accent);

@@ -73,6 +73,8 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
 
       <div className="editor-shell">
         <header className="editor-topbar">
+          {/* Mobile (Canva) : retour vers la page d'accueil Atelier. */}
+          <a className="editor-back" href="/tools/portfolio-pdf" title="Retour à l'accueil Atelier" aria-label="Retour à l'accueil Atelier">←</a>
           <a className="editor-brand" href="/" title="Retour à l'accueil">
             <BrandLogo variant="horizontal" height={48} />
           </a>
@@ -114,6 +116,7 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
             <div className="rail-bottom"><button className="tool-tab" id="add-page"><span>⊞</span>Page +</button></div>
           </aside>
           <aside className="left-panel" id="left-panel">
+            <div className="sheet-handle" id="panel-handle" aria-hidden="true" />
             <div className="panel-heading">
               <div><p className="eyebrow" id="panel-kicker">COMMENCER</p><h2 id="panel-title">Modèles</h2></div>
               <button id="panel-close" className="icon-button" title="Fermer">×</button>
@@ -147,9 +150,12 @@ export default function AtelierEditor({ artworks, standalone }: { artworks: Artw
             </div>
           </section>
           <aside className="properties-panel">
+            <div className="sheet-handle" id="properties-handle" aria-hidden="true" />
             <div className="properties-heading">
               <div><p className="eyebrow">PERSONNALISER</p><h2 id="properties-title">Page</h2></div>
               <span className="selection-dot" />
+              {/* Mobile (Canva) : ferme la feuille des proprietes. */}
+              <button id="properties-close" className="icon-button" title="Fermer" aria-label="Fermer">×</button>
             </div>
             <div id="properties-content" className="properties-content" />
             <div id="layers-section" className="layers-section" />

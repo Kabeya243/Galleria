@@ -2054,6 +2054,12 @@ html[data-admin-collapsed="true"] .ad-nav-item { justify-content: center; paddin
   .global-burger { display: grid; }
 }
 
+/* Atelier (Canva) : l'editeur possede l'ecran, le burger de la
+   plateforme ne doit pas flotter sur sa barre du haut (il recouvrait
+   le bouton Exporter). La page d'accueil Atelier n'utilise pas
+   .atelier-scope, le burger y reste donc visible. */
+body:has(.atelier-scope) .global-burger { display: none; }
+
 /* Hub card grids go down to one column on narrow phones, so nothing
    overflows at 320px. */
 @media (max-width: 620px) {

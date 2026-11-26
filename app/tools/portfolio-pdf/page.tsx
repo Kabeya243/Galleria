@@ -4,18 +4,22 @@
 // 8 Nov 2026 on Kabeya's decision). Owner-only: the user's own artworks
 // are available inside the editor ("Mes œuvres" tab) as placeable images.
 //
-// The page is NOT wrapped in the platform shell: like Canva, the editor owns
-// the screen. The platform menu stays present as a collapsed icon-only
-// rail on the left (Sidebar `collapsible`, icons only by default) —
-// hovering the rail unfolds the full menu as an overlay floating above
-// the editor (the editor never shifts), moving the mouse away folds it
-// back after a short delay; the toggle button stays as the click
-// fallback (touch devices have no hover). The editor's own top bar
-// (logo SANAA) links back to the dashboard.
+// Like Canva, the tool opens on a home page (AtelierHome: saved designs
+// + templates) and the editor opens after a choice — ?project=<id> for a
+// saved design, ?template=<id> for a template, ?new=1 for a blank page.
+// The page is NOT wrapped in the platform shell: like Canva, the editor
+// owns the screen. The platform menu stays present as a collapsed
+// icon-only rail on the left (Sidebar `collapsible`, icons only by
+// default) — hovering the rail unfolds the full menu as an overlay
+// floating above the editor (the editor never shifts), moving the mouse
+// away folds it back after a short delay; the toggle button stays as
+// the click fallback (touch devices have no hover). The editor's own
+// top bar (logo SANAA) links back to the dashboard.
 
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import AtelierEditor from "@/components/atelier-editor";
+import AtelierHome from "@/components/atelier-home";
 import { getCurrentUser } from "@/lib/auth";
 import { requireToolAccess } from "@/lib/subscriptions";
 import { logToolUse } from "@/lib/tool-use";
@@ -30,7 +34,7 @@ export const metadata = {
 export default async function PortfolioPdfRoute({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; template?: string }>;
+  searchParams: Promise<{ project?: string; template?: string; new?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -38,6 +42,8 @@ export default async function PortfolioPdfRoute({
   await logToolUse("portfolio-pdf", user.id);
   const params = await searchParams;
   const projectId = typeof params.project === "string" ? params.project : "";
+  const templateId = typeof params.template === "string" ? params.template : "";
+  const openEditor = projectId !== "" || templateId !== "" || params.new !== undefined;
   const [exhibitionCount, artworks] = await Promise.all([
     db.exhibition.count({ where: { ownerId: user.id } }),
     db.artwork.findMany({
@@ -51,13 +57,17 @@ export default async function PortfolioPdfRoute({
     <div className="atelier-standalone-page">
       <Sidebar user={user} active="tools" exhibitionCount={exhibitionCount} collapsible />
       <div className="atelier-standalone-main">
-        <AtelierEditor
-          key={projectId}
-          standalone
-          artworks={artworks
-            .filter((a) => a.imageUrl !== null)
-            .map((a) => ({ id: a.id, title: a.title, imageUrl: a.imageUrl as string }))}
-        />
+        {openEditor ? (
+          <AtelierEditor
+            key={projectId}
+            standalone
+            artworks={artworks
+              .filter((a) => a.imageUrl !== null)
+              .map((a) => ({ id: a.id, title: a.title, imageUrl: a.imageUrl as string }))}
+          />
+        ) : (
+          <AtelierHome />
+        )}
       </div>
     </div>
   );

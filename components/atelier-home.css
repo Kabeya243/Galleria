@@ -1,0 +1,184 @@
+/* Atelier home (Canva-like): designs + templates, responsive.
+   Same tokens as the editor (--paper, --ink, --muted, --line,
+   --surface-2/3) so the page follows the light/dark toggle. */
+
+.atelier-home-scope {
+  --atelier-gold: #c9a86a;
+  --atelier-gold-ink: #141210;
+  --atelier-gold-soft: rgba(201, 168, 106, 0.16);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--paper);
+}
+
+[data-theme="light"] .atelier-home-scope {
+  --atelier-gold: #8a6d2b;
+  --atelier-gold-soft: rgba(138, 109, 43, 0.12);
+}
+
+.atelier-home {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+  font-family: Manrope, system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.atelier-home-hero { margin-bottom: 28px; }
+.atelier-home-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--atelier-gold);
+}
+.atelier-home-hero h1 {
+  margin: 0 0 6px;
+  font-family: Fraunces, Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.atelier-home-subtitle { margin: 0; font-size: 15px; color: var(--muted); }
+
+.atelier-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.atelier-home-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  background: var(--atelier-gold);
+  color: var(--atelier-gold-ink);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.atelier-home-create:hover { filter: brightness(1.06); }
+.atelier-home-search {
+  flex: 1;
+  min-width: 200px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.atelier-home-search:focus { border-color: var(--atelier-gold); }
+
+.atelier-home-section { margin-top: 32px; }
+.atelier-home-section h2 {
+  margin: 0 0 14px;
+  font-family: Fraunces, Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+.atelier-home-muted { color: var(--muted); font-size: 14px; }
+.atelier-home-error {
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 14px;
+}
+.atelier-home-error button {
+  border: 0;
+  background: none;
+  color: var(--atelier-gold);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.atelier-home-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.atelier-home-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--ink);
+}
+.atelier-home-card:hover .atelier-home-thumb { outline: 2px solid var(--atelier-gold); }
+.atelier-home-thumb {
+  display: block;
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.atelier-home-thumb img,
+.atelier-home-thumb-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.atelier-home-thumb-letter {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-family: Fraunces, Georgia, serif;
+  font-size: 44px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.atelier-home-thumb-empty { display: block; width: 100%; height: 100%; background: var(--surface-2); }
+.atelier-home-card-name {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.atelier-home-card-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tablette : 3 colonnes. */
+@media (max-width: 1100px) {
+  .atelier-home-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Mobile (390 px) : 2 colonnes comme Canva, recherche pleine largeur
+   sous le bouton, titres lisibles, aucune carte coupee. */
+@media (max-width: 600px) {
+  .atelier-home { padding: 20px 16px 40px; }
+  .atelier-home-hero { margin-bottom: 22px; }
+  .atelier-home-hero h1 { font-size: 26px; }
+  .atelier-home-subtitle { font-size: 14px; }
+  .atelier-home-actions { flex-direction: column; }
+  .atelier-home-create { justify-content: center; width: 100%; }
+  .atelier-home-search { width: 100%; min-width: 0; }
+  .atelier-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .atelier-home-section { margin-top: 26px; }
+  .atelier-home-section h2 { font-size: 18px; }
+}

@@ -120,12 +120,73 @@
       fitCanvas(); renderPageList(); updateDimensions(); renderLayers(); updateProperties();
     });
   }
+  // Distance du haut d'un element au haut de la coquille de l'editeur,
+  // en remontant la chaine offsetParent : offsetTop seul ne suffit pas,
+  // les elements n'ont pas tous le meme ancetre positionne (le viewport
+  // se mesure depuis .workspace, le panneau depuis la coquille).
+  function topInShell(el) {
+    const shell = document.querySelector(".editor-shell");
+    let top = 0;
+    let node = el;
+    while (node && node !== shell) {
+      top += node.offsetTop;
+      node = node.offsetParent;
+      if (!node) break;
+    }
+    return top;
+  }
+  // Hauteur du viewport cachee par les feuilles ouvertes (mobile).
+  // Mesuree sur les positions de mise en page (offsetTop ignore les
+  // transformations) : pendant la glissade d'ouverture, le rectangle
+  // visuel est encore en mouvement et donnerait un recouvrement faux.
+  function sheetsOverlapHeight(viewport) {
+    const vTop = topInShell(viewport), vBottom = vTop + viewport.offsetHeight;
+    let overlap = 0;
+    const panel = $("#left-panel");
+    if (panel && !panel.classList.contains("closed")) {
+      const pTop = topInShell(panel), pBottom = pTop + panel.offsetHeight;
+      overlap += Math.max(0, Math.min(pBottom, vBottom) - Math.max(pTop, vTop));
+    }
+    const props = document.querySelector(".properties-panel");
+    if (props && props.classList.contains("sheet-open")) {
+      const pTop = topInShell(props), pBottom = pTop + props.offsetHeight;
+      overlap += Math.max(0, Math.min(pBottom, vBottom) - Math.max(pTop, vTop));
+    }
+    return overlap;
+  }
   function fitCanvas() {
     if (!state.canvas) return;
     const viewport = $("#canvas-viewport");
     const page = currentPage();
-    const ratio = Math.min((viewport.clientWidth - 80) / page.width, (viewport.clientHeight - 80) / page.height, 1);
-    setZoom(Math.max(.12, ratio));
+    // Mobile/tablette : la partie du viewport cachee par un panneau ouvert
+    // (feuille du bas sur mobile, panneau lateral flottant sur tablette)
+    // ne compte pas dans la zone visible. Une feuille depasse sous le
+    // viewport (elle couvre aussi la barre de pages) : seule la partie
+    // qui recouvre le viewport compte.
+    let availW = viewport.clientWidth, availH = viewport.clientHeight;
+    let hiddenBottom = 0, hiddenLeft = 0;
+    const mobile = window.innerWidth <= 600;
+    const panel = $("#left-panel");
+    if (panel && !panel.classList.contains("closed") && getComputedStyle(panel).position === "absolute") {
+      if (mobile) hiddenBottom = sheetsOverlapHeight(viewport);
+      else hiddenLeft = panel.offsetWidth;
+    }
+    const props = document.querySelector(".properties-panel");
+    if (props && props.classList.contains("sheet-open")) hiddenBottom = sheetsOverlapHeight(viewport);
+    availW -= hiddenLeft;
+    availH -= hiddenBottom;
+    // La zone visible est en haut du viewport (mobile) ou a droite du
+    // panneau (tablette) : le canvas doit s'y centrer, pas au centre du
+    // viewport entier (sinon il passe sous le panneau). On decale le
+    // viewport par rembourrage pour que le centrage flex tombe dans la
+    // zone visible.
+    if (mobile) viewport.style.paddingBottom = hiddenBottom ? `${hiddenBottom + 12}px` : "";
+    else viewport.style.paddingLeft = hiddenLeft ? `${hiddenLeft + 38}px` : "";
+    const pad = mobile ? 24 : 80;
+    const ratio = Math.min((availW - pad) / page.width, (availH - pad) / page.height, 1);
+    // Avec une feuille ouverte, la bande visible est petite : le zoom
+    // minimum descend a 5 % pour qu'une page haute y tienne entiere.
+    setZoom(Math.max(mobile && hiddenBottom ? .05 : .12, ratio));
   }
   function setZoom(value) {
     state.zoom = Math.max(.12, Math.min(2.5, value));
@@ -347,7 +408,7 @@
   function updateProperties() {
     const objects=activeObjects(),root=$("#properties-content");
     if(!objects.length){$("#properties-title").textContent="Page";$(".selection-dot").style.background="#8a8d7a";root.innerHTML=`<div class="properties-empty">Sélectionnez un élément pour le modifier, ou ajustez les paramètres de la page ci-dessous.</div><div class="page-settings"><div class="field"><label>Largeur (px)</label><input id="page-width" type="number" min="1" max="6000" value="${currentPage()?.width||1080}"></div><div class="field"><label>Hauteur (px)</label><input id="page-height" type="number" min="1" max="6000" value="${currentPage()?.height||1080}"></div><div class="field"><label>Fond</label><input id="page-prop-color" type="color" value="${currentPage()?.background?.startsWith("#")?currentPage().background:"#ffffff"}"></div><div class="quick-actions"><button id="save-template">Enregistrer comme modèle</button></div></div>`;
-      $("#page-width").onchange=()=>resizePage(Math.max(1,Math.min(6000,Number($("#page-width").value))),currentPage().height);$("#page-height").onchange=()=>resizePage(currentPage().width,Math.max(1,Math.min(6000,Number($("#page-height").value))));$("#page-prop-color").oninput=(event)=>setBackground(event.target.value);$("#save-template").onclick=saveAsTemplate;return;
+      $("#page-width").onchange=()=>resizePage(Math.max(1,Math.min(6000,Number($("#page-width").value))),currentPage().height);$("#page-height").onchange=()=>resizePage(currentPage().width,Math.max(1,Math.min(6000,Number($("#page-height").value))));$("#page-prop-color").oninput=(event)=>setBackground(event.target.value);$("#save-template").onclick=saveAsTemplate;syncPropertiesSheet(false);return;
     }
     const object=objects[0],isText=["i-text","textbox","text"].includes(object.type),isImage=object.type==="image";
     $("#properties-title").textContent=objects.length>1?`${objects.length} éléments`:isText?"Texte":isImage?"Image":"Élément";$(".selection-dot").style.background="#c9a86a";
@@ -358,6 +419,7 @@
     html+=`<div class="property-group"><div class="property-title">ORDRE DES CALQUES</div><div class="quick-actions"><button data-action="front">Tout devant</button><button data-action="forward">Monter</button><button data-action="backward">Descendre</button><button data-action="back">Tout derrière</button></div>${objects.length>1?'<div class="quick-actions"><button data-action="group">Grouper</button><button data-action="align-left">Aligner à gauche</button><button data-action="align-center">Centrer</button><button data-action="align-top">Aligner en haut</button></div>':object.type==="group"?'<div class="quick-actions"><button data-action="ungroup">Dégrouper</button></div>':""}</div>`;
     root.innerHTML=html;$$("[data-prop]",root).forEach(input=>input.addEventListener("input",()=>updateObject(input,objects)));
     $$("[data-action]",root).forEach(button=>button.onclick=()=>objectAction(button.dataset.action,objects));
+    syncPropertiesSheet(true);
   }
   function colorValue(value){return typeof value==="string"&&/^#[0-9a-f]{6}$/i.test(value)?value:"#293f39";}
   function updateObject(input,objects){
@@ -444,11 +506,163 @@
     else if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key)&&activeObjects().length){event.preventDefault();const step=event.shiftKey?10:1;for(const object of activeObjects()){if(event.key==="ArrowLeft")object.left-=step;if(event.key==="ArrowRight")object.left+=step;if(event.key==="ArrowUp")object.top-=step;if(event.key==="ArrowDown")object.top+=step;object.setCoords();}state.canvas.requestRenderAll();snapshot();}
     else if(event.code==="Space"){state.spaceDown=true;$("#canvas-viewport").style.cursor="grab";}
   }
+  // Mobile (Canva) : les panneaux sont des feuilles du bas. Sur bureau,
+  // openPanel/closePanel gardent le comportement historique (le panneau
+  // se replie dans la grille).
+  function isMobile() { return window.innerWidth <= 600; }
+  // Vrai quand le panneau flotte au-dessus du canvas (feuille du bas sur
+  // mobile, panneau lateral sur tablette) : c'est alors que le canvas
+  // doit se re-ajuster quand le panneau s'ouvre ou se ferme.
+  function panelIsOverlay() {
+    const panel = $("#left-panel");
+    return !!panel && getComputedStyle(panel).position === "absolute";
+  }
+  function openPanel() {
+    const panel = $("#left-panel"); if (!panel) return;
+    panel.classList.remove("closed");
+    panel.closest(".editor-layout").classList.remove("panel-closed");
+    if (isMobile()) {
+      // Une seule feuille a la fois : ouvrir les outils referme les proprietes.
+      const props = document.querySelector(".properties-panel");
+      if (props) props.classList.remove("sheet-open");
+    }
+    if (panelIsOverlay()) fitCanvas();
+  }
+  function closePanel() {
+    const panel = $("#left-panel"); if (!panel) return;
+    panel.classList.add("closed");
+    panel.closest(".editor-layout").classList.add("panel-closed");
+    if (panelIsOverlay()) fitCanvas();
+  }
+  function syncPropertiesSheet(hasSelection) {
+    if (!isMobile()) return;
+    const panel = document.querySelector(".properties-panel"); if (!panel) return;
+    const wasOpen = panel.classList.contains("sheet-open");
+    panel.classList.toggle("sheet-open", hasSelection);
+    if (hasSelection) {
+      // Canva : l'ouverture des proprietes referme le panneau d'outils.
+      const left = $("#left-panel");
+      if (left && !left.classList.contains("closed")) {
+        left.classList.add("closed");
+        left.closest(".editor-layout").classList.add("panel-closed");
+      }
+    }
+    if (wasOpen !== hasSelection) fitCanvas();
+  }
+  function closePropertiesSheet() {
+    const panel = document.querySelector(".properties-panel"); if (!panel) return;
+    panel.classList.remove("sheet-open");
+    if (isMobile()) fitCanvas();
+  }
+  // Glisser la poignee vers le bas ferme la feuille (Canva).
+  function sheetDragToClose(handle, onClose) {
+    if (!handle) return;
+    const panel = handle.parentElement;
+    let startY = null, dy = 0;
+    handle.addEventListener("pointerdown", (event) => {
+      startY = event.clientY; dy = 0;
+      panel.style.transition = "none";
+      handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener("pointermove", (event) => {
+      if (startY === null) return;
+      dy = Math.max(0, event.clientY - startY);
+      panel.style.transform = `translateY(${dy}px)`;
+    });
+    const end = () => {
+      if (startY === null) return;
+      panel.style.transform = "";
+      panel.style.transition = "";
+      const shouldClose = dy > 80;
+      startY = null; dy = 0;
+      if (shouldClose) onClose();
+    };
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }
+  // Pincement a deux doigts pour zoomer, deux doigts pour deplacer
+  // (Canva mobile). Les evenements sont captes en phase de capture
+  // pour prendre le geste avant Fabric.
+  function wirePinchZoom() {
+    const viewportEl = $("#canvas-viewport");
+    if (!viewportEl) return;
+    let pinch = null;
+    viewportEl.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch") return;
+      if (!pinch) pinch = { pointers: new Map() };
+      pinch.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinch.pointers.size === 2) {
+        const [a, b] = [...pinch.pointers.values()];
+        pinch.startDist = Math.hypot(a.x - b.x, a.y - b.y);
+        pinch.startZoom = state.zoom;
+        pinch.startScroll = { left: viewportEl.scrollLeft, top: viewportEl.scrollTop };
+        pinch.startMid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      }
+    }, true);
+    viewportEl.addEventListener("pointermove", (event) => {
+      if (!pinch || !pinch.pointers.has(event.pointerId)) return;
+      pinch.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinch.pointers.size === 2 && pinch.startDist) {
+        event.preventDefault(); event.stopPropagation();
+        const [a, b] = [...pinch.pointers.values()];
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        setZoom(pinch.startZoom * (dist / pinch.startDist));
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        viewportEl.scrollLeft = pinch.startScroll.left - (mid.x - pinch.startMid.x);
+        viewportEl.scrollTop = pinch.startScroll.top - (mid.y - pinch.startMid.y);
+      }
+    }, true);
+    const endPinch = (event) => {
+      if (!pinch) return;
+      pinch.pointers.delete(event.pointerId);
+      if (pinch.pointers.size < 2) pinch.startDist = 0;
+      if (pinch.pointers.size === 0) pinch = null;
+    };
+    viewportEl.addEventListener("pointerup", endPinch, true);
+    viewportEl.addEventListener("pointercancel", endPinch, true);
+  }
   function init() {
     if(state.initialized)return;state.initialized=true;
     if(typeof fabric==="undefined"){toast("Fabric.js n’a pas pu être chargé.",true);return;}
-    $$(".tool-tab[data-tab]").forEach(button=>button.onclick=()=>setPanel(button.dataset.tab));
-    $("#panel-close").onclick=()=>{const panel=$("#left-panel");const closed=panel.classList.toggle("closed");panel.closest(".editor-layout").classList.toggle("panel-closed",closed);};
+    $$(".tool-tab[data-tab]").forEach(button=>button.onclick=()=>{
+      const panel=$("#left-panel");
+      const wasActive=button.dataset.tab===state.activeTab;
+      const wasOpen=panel && !panel.classList.contains("closed");
+      setPanel(button.dataset.tab);
+      if (isMobile()) {
+        // Toucher l'onglet actif referme la feuille (Canva) ; toucher
+        // un autre onglet l'ouvre.
+        if (wasActive && wasOpen) closePanel();
+        else openPanel();
+        button.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+      } else if (panelIsOverlay()) {
+        // Tablette : toucher un onglet rouvre le panneau s'il etait
+        // ferme, et le canvas se re-ajuste a la zone visible restante.
+        if (!wasOpen) openPanel();
+        else fitCanvas();
+      }
+    });
+    $("#panel-close").onclick=()=>{const panel=$("#left-panel");const closed=panel.classList.toggle("closed");panel.closest(".editor-layout").classList.toggle("panel-closed",closed);if(panelIsOverlay())fitCanvas();};
+    $("#properties-close").onclick=closePropertiesSheet;
+    sheetDragToClose($("#panel-handle"), closePanel);
+    sheetDragToClose($("#properties-handle"), closePropertiesSheet);
+    wirePinchZoom();
+    // Mobile : le canvas se re-ajuste quand la hauteur d'une feuille
+    // change (son contenu se charge en differe, par exemple les
+    // modeles) — sinon le canvas reste en partie sous la feuille. La
+    // coquille est observee aussi : sa hauteur (100dvh) peut se
+    // stabiliser apres le premier rendu, ce qui change la zone visible
+    // sans que les feuilles bougent. Boite de bordure : le rembourrage
+    // pose par fitCanvas ne doit pas declencher de boucle.
+    if (window.ResizeObserver) {
+      const sheetObserver = new ResizeObserver(() => { if (isMobile()) fitCanvas(); });
+      const leftPanel = $("#left-panel");
+      const propsPanel = document.querySelector(".properties-panel");
+      const shell = document.querySelector(".editor-shell");
+      if (leftPanel) sheetObserver.observe(leftPanel, { box: "border-box" });
+      if (propsPanel) sheetObserver.observe(propsPanel, { box: "border-box" });
+      if (shell) sheetObserver.observe(shell, { box: "border-box" });
+    }
     $("#save-project").onclick=saveProject;$("#project-name").oninput=markDirty;$("#undo").onclick=()=>historyMove(-1);$("#redo").onclick=()=>historyMove(1);
     $("#zoom-in").onclick=()=>setZoom(state.zoom*1.12);$("#zoom-out").onclick=()=>setZoom(state.zoom/1.12);$("#zoom-fit").onclick=fitCanvas;
     $("#export-button").onclick=()=>$("#export-menu").classList.toggle("open");$$("[data-format]").forEach(button=>button.onclick=()=>exportProject(button.dataset.format));
@@ -469,6 +683,9 @@
     const config=window.EDITOR_CONFIG||{};
     if(config.projectId)loadProject(config.projectId);else if(config.templateId)openTemplate(config.templateId);else{state.project.pages=[{width:1080,height:1080,background:"#ffffff",objects:[]}];setPage(state.project.pages[0]);}
     setPanel("templates");
+    // Mobile (Canva) : l'editeur s'ouvre sur le canvas seul, la feuille
+    // des modeles fermee ; l'utilisateur l'ouvre en touchant un onglet.
+    if (isMobile()) closePanel();
   }
   async function loadProject(id) {
     try {const response=await fetch(`/api/atelier/projects/${encodeURIComponent(id)}`);if(!response.ok)throw new Error((await response.json()).detail||"Projet introuvable.");state.project=await response.json();state.project.pages=state.project.pages||[state.project];$("#project-name").value=state.project.name||"Design sans titre";state.saved=true;$("#save-status").textContent="Enregistré";setPage(state.project.pages[0],0);}

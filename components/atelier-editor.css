@@ -68,6 +68,12 @@
   flex-shrink: 0;
 }
 
+/* Mobile uniquement (Canva) : retour vers la page d'accueil Atelier
+   et poignees des feuilles du bas. Caches sur bureau. */
+.atelier-scope .editor-back { display: none; }
+.atelier-scope .sheet-handle { display: none; }
+.atelier-scope #properties-close { display: none; }
+
 .atelier-scope .editor-brand {
   display: inline-flex;
   align-items: center;
@@ -557,32 +563,122 @@
 }
 
 @media (max-width: 600px) {
+  /* ---- Canva mobile: l'editeur est une app plein ecran. Barre du
+     haut minimale, canvas ajuste, barre d'onglets en bas, panneaux
+     en feuille du bas (bottom sheet). La coquille garde la hauteur
+     du viewport ; rien ne fait defiler la page elle-meme. ---- */
+  .atelier-scope { --atelier-tabbar-h: calc(58px + env(safe-area-inset-bottom, 0px)); }
   .atelier-scope .editor-shell { height: auto; min-height: 0; }
-  .atelier-scope .editor-layout { display: flex; flex-direction: column; }
-  .atelier-scope .left-rail { flex-direction: row; width: 100%; overflow-x: auto; padding: 4px; }
-  .atelier-scope .rail-bottom { margin-top: 0; margin-left: auto; }
-  .atelier-scope .tool-tab { width: 52px; height: 52px; flex: none; }
-  .atelier-scope .left-panel { position: static; width: 100%; border-right: 0; border-bottom: 1px solid var(--line); max-height: 300px; }
-  .atelier-scope .left-panel.closed { max-height: 0; padding-top: 0; padding-bottom: 0; border-bottom: 0; }
-  .atelier-scope .workspace { order: -1; }
-  .atelier-scope .canvas-viewport { padding: 20px 10px; min-height: 420px; }
-  .atelier-scope .properties-panel { border-left: 0; border-top: 1px solid var(--line); }
-  .atelier-scope .workspace-toolbar { height: 34px; }
-  .atelier-scope .pages-bar { height: 40px; }
-  .atelier-scope .page-action-label { display: none; }
-  .atelier-scope .page-action { padding: 6px 9px; }
-  .atelier-scope .editor-topbar { height: 52px; padding: 0 7px; gap: 5px; }
-  .atelier-scope .editor-brand { font-size: 12px; }
-  .atelier-scope .top-divider { height: 22px; }
-  .atelier-scope .project-title-wrap { min-width: 0; }
-  .atelier-scope .project-title-wrap input { width: 120px; font-size: 11px; }
+  .atelier-scope .editor-layout { display: flex; flex-direction: column; min-height: 0; }
+
+  /* Barre du haut : retour, titre, annuler/retablir, Enregistrer,
+     Exporter. Zoom, dimensions et separateurs sont masques (le zoom
+     se fait au pincement, comme sur Canva). */
+  .atelier-scope .editor-topbar { height: 52px; padding: 0 8px; gap: 6px; }
+  .atelier-scope .editor-back {
+    display: grid; place-items: center; flex: none;
+    width: 32px; height: 32px; border-radius: 50%;
+    color: var(--ink); font-size: 19px; line-height: 1;
+    text-decoration: none;
+  }
+  .atelier-scope .editor-back:hover { background: var(--atelier-panel-2); }
+  .atelier-scope .editor-brand { display: none; }
+  .atelier-scope .top-divider { display: none; }
+  .atelier-scope .project-title-wrap { min-width: 0; flex: 1; }
+  .atelier-scope .project-title-wrap input {
+    width: 100%; min-width: 0; font-size: 13px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .atelier-scope .project-title-wrap span { display: none; }
+  .atelier-scope .top-actions { gap: 2px; flex: none; }
   .atelier-scope .top-actions > .top-divider,
-  .atelier-scope .top-actions > .icon-button:nth-child(2),
+  .atelier-scope #zoom-out,
+  .atelier-scope #zoom-in,
   .atelier-scope .zoom-label,
-  .atelier-scope .zoom-fit { display: none; }
-  .atelier-scope .button-save { padding: 8px; font-size: 9px; }
-  .atelier-scope .editor-topbar .button-dark { padding: 8px 9px; font-size: 10px; }
+  .atelier-scope .zoom-fit,
+  .atelier-scope .dimensions { display: none; }
+  .atelier-scope .button-save { padding: 8px 10px; font-size: 11px; }
+  .atelier-scope .editor-topbar .button-dark { padding: 8px 10px; font-size: 11px; }
+  .atelier-scope .top-actions > .icon-button { width: 30px; height: 30px; }
+
+  /* Espace de travail : prend toute la hauteur restante. */
+  .atelier-scope .workspace { order: -1; flex: 1; min-height: 0; }
+  .atelier-scope .workspace-toolbar { height: 36px; padding: 0 10px; }
+  .atelier-scope .workspace-toolbar .toolbar-group { gap: 8px; }
+  .atelier-scope .workspace-toolbar .icon-button { width: 28px; height: 28px; }
+  .atelier-scope .canvas-viewport {
+    padding: 12px; min-height: 0;
+    /* Les gestes tactiles sont geres par l'editeur (pincement pour
+       zoomer, deux doigts pour deplacer) : le navigateur ne doit pas
+       prendre le geste a son compte avec son propre zoom de page. */
+    touch-action: none;
+  }
+
+  /* Barre de pages compacte, defilante. */
+  .atelier-scope .pages-bar {
+    height: 44px; justify-content: flex-start; overflow-x: auto;
+    gap: 6px; padding: 0 8px; scrollbar-width: none;
+  }
+  .atelier-scope .pages-bar::-webkit-scrollbar { display: none; }
+  .atelier-scope .page-chip { flex: none; }
+  .atelier-scope .page-action { padding: 6px 9px; }
+  .atelier-scope .page-action-label { display: none; }
+  .atelier-scope .page-action-hint { display: none; }
+
+  /* Barre d'onglets en bas (Canva) : icone + libelle court,
+     defilante horizontalement, sans ascenseur visible. */
+  .atelier-scope .left-rail {
+    order: 2; flex: none; flex-direction: row; width: 100%;
+    height: var(--atelier-tabbar-h);
+    padding: 4px 2px env(safe-area-inset-bottom, 0px);
+    overflow-x: auto; overflow-y: hidden; gap: 0;
+    border-right: 0; border-top: 1px solid var(--line);
+    scrollbar-width: none;
+  }
+  .atelier-scope .left-rail::-webkit-scrollbar { display: none; }
+  .atelier-scope .rail-bottom { margin-top: 0; margin-left: auto; flex: none; }
+  .atelier-scope .tool-tab {
+    width: 56px; min-width: 56px; height: 50px; flex: none;
+    font-size: 9px; gap: 2px;
+  }
+  .atelier-scope .tool-tab > span { font-size: 20px; }
+  .atelier-scope .tool-tab .tool-tab-dot { width: 6px; height: 6px; }
+
+  /* Panneaux en feuille du bas : au-dessus de la barre d'onglets,
+     hauteur max 62 %, coins arrondis, ombre, poignee de glissement.
+     Fermes par translation vers le bas (pas de max-height: 0 qui
+     ecrasait le contenu). */
+  .atelier-scope .left-panel,
+  .atelier-scope .properties-panel {
+    position: absolute; left: 0; right: 0;
+    top: auto; bottom: var(--atelier-tabbar-h);
+    width: auto; max-height: 62%; overflow-y: auto;
+    border-right: 0; border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.45);
+    z-index: 15;
+    transform: translateY(0);
+    transition: transform .28s ease, visibility 0s linear 0s;
+    padding-top: 8px;
+  }
+  .atelier-scope .left-panel.closed,
+  .atelier-scope .properties-panel:not(.sheet-open) {
+    transform: translateY(110%);
+    visibility: hidden; opacity: 1;
+    transition: transform .28s ease, visibility 0s linear .28s;
+  }
+  .atelier-scope .left-panel .panel-heading { padding: 0 8px; }
+  .atelier-scope .sheet-handle {
+    display: block; width: 36px; height: 4px; border-radius: 2px;
+    background: var(--line); margin: 2px auto 10px; flex: none;
+    touch-action: none; cursor: grab;
+  }
+  .atelier-scope .properties-panel { padding: 8px 16px 16px; }
+  .atelier-scope #properties-close { display: grid; }
+
+  /* La zone de travail garde sa place : le panneau etant absolu,
+     il ne pousse plus le canvas hors de l'ecran. */
+  .atelier-scope .editor-layout.panel-closed { grid-template-columns: unset; }
 }
 
 /* Standalone editor page (no platform shell): the editor owns the

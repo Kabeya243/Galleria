@@ -6759,6 +6759,33 @@ export const DICTIONARY = {
       sw: "Imekamilika",
       ln: "Esilaki",
     },
+    // Redesign v2 (Nov 2026): dashboard hero tagline and the new KPI
+    // cards (sparklines) + the Recent artworks column. English is the
+    // fallback for locales without a translation yet.
+    elevateCreativity: {
+      fr: "Faisons grandir votre créativité.",
+      en: "Let's elevate your creativity.",
+    },
+    exhibitionEngagement: {
+      fr: "Engagement des expositions",
+      en: "Exhibition engagement",
+    },
+    artworkViews: {
+      fr: "Vues des œuvres",
+      en: "Artwork views",
+    },
+    recentArtworks: {
+      fr: "Œuvres récentes",
+      en: "Recent artworks",
+    },
+    seeAllArtworks: {
+      fr: "Voir toutes les œuvres",
+      en: "See all artworks",
+    },
+    visitedLast30: {
+      fr: "visitées ces 30 derniers jours",
+      en: "visited in the last 30 days",
+    },
   },
   // Redesign shell + dashboard (Phase 1, Nov 2026): the new sidebar
   // groups, header, command palette and dashboard micro-actions.
@@ -7439,6 +7466,21 @@ export const DICTIONARY = {
       ko: "모두 지금 공개 중",
       sw: "Yote hewani sasa",
       ln: "Nionso ebimi sikoyo",
+    },
+    // Redesign v2 (Nov 2026): the new light design's top search, the
+    // sidebar "Analytics" label and the "Feedback" link. English is
+    // the fallback for locales without a translation yet.
+    searchPlaceholderTop: {
+      fr: "Rechercher des expositions, des artistes ou des œuvres…",
+      en: "Search exhibitions, artists, or artworks…",
+    },
+    analytics: {
+      fr: "Statistiques",
+      en: "Analytics",
+    },
+    feedback: {
+      fr: "Commentaires",
+      en: "Feedback",
     },
   },
   // Welcome tour (Nov 2026): animated pop-up that walks a new user

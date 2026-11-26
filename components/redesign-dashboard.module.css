@@ -1,41 +1,49 @@
 /* ------------------------------------------------------------------ */
-/* Lakisa redesign, Phase 1 (Nov 2026): dashboard + app shell.        */
-/* All classes are module-scoped, so nothing here can leak onto other  */
-/* pages. Tokens mirror the approved prototype (obsidian surfaces,     */
-/* gold accent, Manrope, tabular numerals) and are scoped to .shell,  */
-/* reading the theme from <html data-theme> set by the root layout.    */
+/* Lakisa redesign v2 (Nov 2026): the dashboard screenshot's visual   */
+/* language — light grey background, white cards, dark-green accent.  */
+/* Replaces the Gemini maquette (obsidian + gold) of Phase 1+2.       */
+/* All classes are module-scoped. Tokens are scoped to .shell,        */
+/* reading the theme from <html data-theme> set by the root layout.   */
+/* Light is the default (first paint); dark keeps the same layout     */
+/* with dark surfaces and the same green accent, lightened so it      */
+/* still reads.                                                        */
 /* ------------------------------------------------------------------ */
 
 .shell {
   --rd-font: var(--font-redesign), "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-  /* Dark is the fallback when no theme is set yet (first paint). */
-  --rd-bg: #0b0b0d;
-  --rd-bg-elev: #101013;
-  --rd-surface: #131318;
-  --rd-surface-2: #17171d;
-  --rd-surface-3: #1e1e26;
-  --rd-border: rgba(255, 255, 255, 0.08);
-  --rd-border-2: rgba(255, 255, 255, 0.14);
-  --rd-text: #f4f4f5;
-  --rd-t2: #a6a6b0;
-  --rd-t3: #71717e;
-  --rd-accent: #e4b95c;
-  --rd-accent-soft: rgba(228, 185, 92, 0.14);
-  --rd-cta-bg: #f4f4f5;
-  --rd-cta-text: #0b0b0d;
-  --rd-green: #3ecf8e;
-  --rd-green-soft: rgba(62, 207, 142, 0.13);
-  --rd-amber: #f5b84c;
-  --rd-amber-soft: rgba(245, 184, 76, 0.13);
-  --rd-red: #f26d6d;
-  --rd-hover: rgba(255, 255, 255, 0.05);
-  --rd-active: rgba(255, 255, 255, 0.09);
-  --rd-input-bg: #17171d;
-  --rd-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --rd-scrim: rgba(4, 4, 6, 0.62);
-  --rd-chart-prev: #8b8b96;
+  /* Light is the fallback when no theme is set yet (first paint). */
+  --rd-bg: #f2f4f5;
+  --rd-bg-elev: #ffffff;
+  --rd-surface: #ffffff;
+  --rd-surface-2: #f4f6f7;
+  --rd-surface-3: #e8ecee;
+  --rd-border: rgba(16, 24, 32, 0.08);
+  --rd-border-2: rgba(16, 24, 32, 0.16);
+  --rd-text: #101828;
+  --rd-t2: #475467;
+  --rd-t3: #98a2b3;
+  /* Dark green sampled from the screenshot's Create + button. */
+  --rd-accent: #1b454d;
+  --rd-accent-soft: rgba(27, 69, 77, 0.1);
+  --rd-on-accent: #ffffff;
+  --rd-cta-bg: #1b454d;
+  --rd-cta-text: #ffffff;
+  --rd-green: #067647;
+  --rd-green-soft: rgba(6, 118, 71, 0.1);
+  --rd-amber: #b54708;
+  --rd-amber-soft: rgba(181, 71, 8, 0.1);
+  --rd-red: #b42318;
+  --rd-hover: rgba(16, 24, 32, 0.04);
+  --rd-active: rgba(27, 69, 77, 0.08);
+  --rd-input-bg: #edf1f4;
+  --rd-shadow: 0 16px 40px rgba(16, 24, 40, 0.12);
+  --rd-scrim: rgba(16, 24, 40, 0.5);
+  --rd-chart-prev: #98a2b3;
+  --rd-spark-blue: #5b8def;
+  --rd-spark-purple: #a55eea;
+  --rd-spark-green: #2fbf71;
   display: grid;
-  grid-template-columns: 266px minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
   min-height: 100dvh;
   background: var(--rd-bg);
   color: var(--rd-text);
@@ -47,59 +55,67 @@
 }
 
 :global([data-theme="dark"]) .shell {
-  --rd-bg: #0b0b0d;
-  --rd-bg-elev: #101013;
-  --rd-surface: #131318;
-  --rd-surface-2: #17171d;
-  --rd-surface-3: #1e1e26;
+  --rd-bg: #0e1512;
+  --rd-bg-elev: #131c17;
+  --rd-surface: #16211b;
+  --rd-surface-2: #1c2a22;
+  --rd-surface-3: #243528;
   --rd-border: rgba(255, 255, 255, 0.08);
-  --rd-border-2: rgba(255, 255, 255, 0.14);
-  --rd-text: #f4f4f5;
-  --rd-t2: #a6a6b0;
-  --rd-t3: #71717e;
-  --rd-accent: #e4b95c;
-  --rd-accent-soft: rgba(228, 185, 92, 0.14);
-  --rd-cta-bg: #f4f4f5;
-  --rd-cta-text: #0b0b0d;
-  --rd-green: #3ecf8e;
-  --rd-green-soft: rgba(62, 207, 142, 0.13);
+  --rd-border-2: rgba(255, 255, 255, 0.16);
+  --rd-text: #f2f4f5;
+  --rd-t2: #b6c2bb;
+  --rd-t3: #7a8a81;
+  --rd-accent: #5fb38a;
+  --rd-accent-soft: rgba(95, 179, 138, 0.14);
+  --rd-on-accent: #0b0f0d;
+  --rd-cta-bg: #2e7d6b;
+  --rd-cta-text: #ffffff;
+  --rd-green: #4ade80;
+  --rd-green-soft: rgba(74, 222, 128, 0.13);
   --rd-amber: #f5b84c;
   --rd-amber-soft: rgba(245, 184, 76, 0.13);
   --rd-red: #f26d6d;
   --rd-hover: rgba(255, 255, 255, 0.05);
-  --rd-active: rgba(255, 255, 255, 0.09);
-  --rd-input-bg: #17171d;
+  --rd-active: rgba(95, 179, 138, 0.14);
+  --rd-input-bg: #1c2a22;
   --rd-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --rd-scrim: rgba(4, 4, 6, 0.62);
-  --rd-chart-prev: #8b8b96;
+  --rd-scrim: rgba(4, 6, 5, 0.62);
+  --rd-chart-prev: #7a8a81;
+  --rd-spark-blue: #5b8def;
+  --rd-spark-purple: #a55eea;
+  --rd-spark-green: #2fbf71;
 }
 
 :global([data-theme="light"]) .shell {
-  --rd-bg: #f6f6f4;
+  --rd-bg: #f2f4f5;
   --rd-bg-elev: #ffffff;
   --rd-surface: #ffffff;
-  --rd-surface-2: #f1f1ed;
-  --rd-surface-3: #e8e8e2;
-  --rd-border: rgba(18, 18, 22, 0.09);
-  --rd-border-2: rgba(18, 18, 22, 0.17);
-  --rd-text: #141417;
-  --rd-t2: #55555f;
-  --rd-t3: #8b8b95;
-  --rd-accent: #9c7614;
-  --rd-accent-soft: rgba(156, 118, 20, 0.12);
-  --rd-cta-bg: #141417;
+  --rd-surface-2: #f4f6f7;
+  --rd-surface-3: #e8ecee;
+  --rd-border: rgba(16, 24, 32, 0.08);
+  --rd-border-2: rgba(16, 24, 32, 0.16);
+  --rd-text: #101828;
+  --rd-t2: #475467;
+  --rd-t3: #98a2b3;
+  --rd-accent: #1b454d;
+  --rd-accent-soft: rgba(27, 69, 77, 0.1);
+  --rd-on-accent: #ffffff;
+  --rd-cta-bg: #1b454d;
   --rd-cta-text: #ffffff;
-  --rd-green: #07875c;
-  --rd-green-soft: rgba(7, 135, 92, 0.1);
-  --rd-amber: #a96f06;
-  --rd-amber-soft: rgba(169, 111, 6, 0.12);
-  --rd-red: #c93333;
-  --rd-hover: rgba(18, 18, 22, 0.045);
-  --rd-active: rgba(18, 18, 22, 0.08);
-  --rd-input-bg: #ffffff;
-  --rd-shadow: 0 16px 40px rgba(20, 20, 30, 0.14);
-  --rd-scrim: rgba(20, 20, 25, 0.45);
-  --rd-chart-prev: #a3a3ac;
+  --rd-green: #067647;
+  --rd-green-soft: rgba(6, 118, 71, 0.1);
+  --rd-amber: #b54708;
+  --rd-amber-soft: rgba(181, 71, 8, 0.1);
+  --rd-red: #b42318;
+  --rd-hover: rgba(16, 24, 32, 0.04);
+  --rd-active: rgba(27, 69, 77, 0.08);
+  --rd-input-bg: #edf1f4;
+  --rd-shadow: 0 16px 40px rgba(16, 24, 40, 0.12);
+  --rd-scrim: rgba(16, 24, 40, 0.5);
+  --rd-chart-prev: #98a2b3;
+  --rd-spark-blue: #5b8def;
+  --rd-spark-purple: #a55eea;
+  --rd-spark-green: #2fbf71;
 }
 
 .shellCollapsed {
@@ -112,14 +128,19 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Sidebar                                                            */
+/* Sidebar (v2): the screenshot's flat list — Inventory, Contacts,    */
+/* Price Your Work, Analytics, Settings, then the rest of the pages   */
+/* below a divider so every page stays reachable. The logo and the    */
+/* profile live in the topbar now; the plan card and the workspace    */
+/* switcher are gone (My plan is a nav item, the account switch sits  */
+/* at the bottom). Sticky below the topbar.                           */
 /* ------------------------------------------------------------------ */
 
 .sidebar {
   position: sticky;
-  top: 0;
-  height: 100dvh;
-  z-index: 60;
+  top: 56px;
+  height: calc(100dvh - 56px);
+  z-index: 40;
   display: flex;
   flex-direction: column;
   background: var(--rd-bg-elev);
@@ -127,118 +148,14 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 18px 18px 12px;
-  text-decoration: none;
-  color: var(--rd-text);
-  flex-shrink: 0;
-}
-
-.brandMark {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  background: var(--rd-cta-bg);
-  color: var(--rd-cta-text);
-}
-
-.brandName {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-
-.brandTag {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--rd-t3);
-  letter-spacing: 0;
-}
-
-.ws {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 6px 12px 14px;
-  padding: 9px 10px;
-  border: 1px solid var(--rd-border);
-  border-radius: 12px;
-  background: var(--rd-surface);
-  color: var(--rd-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.ws:hover {
-  background: var(--rd-surface-2);
-}
-
-.wsAvatar {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--rd-accent);
-  color: #141417;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.wsMeta {
-  min-width: 0;
-  flex: 1;
-}
-
-.wsName {
-  display: block;
-  font-size: 13.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.wsSub {
-  display: block;
-  font-size: 11.5px;
-  color: var(--rd-t2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 20px 12px 12px;
 }
 
 .nav {
   flex: 1;
-  padding: 0 12px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-.navLabel {
-  margin: 0 0 6px;
-  padding: 0 10px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rd-t3);
-  white-space: nowrap;
+  gap: 1px;
 }
 
 .navItems {
@@ -247,11 +164,18 @@
   gap: 1px;
 }
 
+.navDivider {
+  height: 1px;
+  background: var(--rd-border);
+  margin: 12px 8px;
+  flex-shrink: 0;
+}
+
 .navLink {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-radius: 9px;
   color: var(--rd-t2);
   font-size: 14px;
@@ -289,136 +213,18 @@
   place-items: center;
   border-radius: 999px;
   background: var(--rd-accent);
-  color: #141417;
+  color: var(--rd-on-accent);
   font-size: 11px;
   font-weight: 800;
 }
 
 .sidebarBottom {
-  padding: 12px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--rd-border);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 1px;
   flex-shrink: 0;
-}
-
-.planCard {
-  border: 1px solid var(--rd-border);
-  border-radius: 12px;
-  background: var(--rd-surface);
-  padding: 12px;
-}
-
-.planName {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-
-.planBar {
-  height: 5px;
-  border-radius: 999px;
-  background: var(--rd-surface-3);
-  overflow: hidden;
-  margin: 0 0 7px;
-}
-
-.planBarFill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--rd-accent);
-}
-
-.planUsage {
-  margin: 0;
-  font-size: 11.5px;
-  color: var(--rd-t2);
-}
-
-.planManage {
-  display: inline-flex;
-  margin-top: 8px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--rd-accent);
-  text-decoration: none;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.planManage:hover {
-  text-decoration: underline;
-}
-
-.profileChip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 6px 0;
-}
-
-.profileAvatar {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--rd-surface-3);
-  color: var(--rd-text);
-  font-size: 12px;
-  font-weight: 800;
-  overflow: hidden;
-}
-
-.profileAvatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.profileCopy {
-  min-width: 0;
-  flex: 1;
-}
-
-.profileCopy strong {
-  display: block;
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.profileCopy span {
-  display: block;
-  font-size: 11.5px;
-  color: var(--rd-t2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.signOut {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  padding: 4px;
-  color: var(--rd-t3);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.signOut:hover {
-  color: var(--rd-text);
 }
 
 .collapseBtn {
@@ -427,7 +233,7 @@
   gap: 10px;
   width: 100%;
   padding: 9px 10px;
-  border: 1px solid var(--rd-border);
+  border: none;
   border-radius: 9px;
   background: none;
   color: var(--rd-t2);
@@ -444,44 +250,15 @@
 }
 
 /* Collapsed rail: icons only, labels hidden, tooltips via title attr. */
-.sidebarCollapsed .brandName,
-.sidebarCollapsed .wsMeta,
-.sidebarCollapsed .ws > svg,
-.sidebarCollapsed .navLabel,
 .sidebarCollapsed .navLink span,
 .sidebarCollapsed .navBadge,
-.sidebarCollapsed .planCard,
-.sidebarCollapsed .profileCopy,
-.sidebarCollapsed .signOut,
 .sidebarCollapsed .collapseBtn span {
   display: none;
-}
-
-.sidebarCollapsed .brand {
-  justify-content: center;
-  padding: 18px 0 12px;
-}
-
-.sidebarCollapsed .ws {
-  justify-content: center;
-  margin: 6px 10px 14px;
-  padding: 0;
-  border: none;
-  background: none;
-}
-
-.sidebarCollapsed .nav {
-  padding: 0 10px;
 }
 
 .sidebarCollapsed .navLink {
   justify-content: center;
   padding: 10px 0;
-}
-
-.sidebarCollapsed .profileChip {
-  justify-content: center;
-  padding: 4px 0 0;
 }
 
 .sidebarCollapsed .collapseBtn {
@@ -490,7 +267,11 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Main column + topbar                                               */
+/* Main column + topbar (v2): the topbar spans the whole width —      */
+/* logo left, search centred, theme toggle, bell and the user chip    */
+/* right. Below it, the tabs row (Dashboard, My Exhibitions, My       */
+/* Artworks, Resources, Insights) with the dark-green Create + pill   */
+/* at the right end.                                                   */
 /* ------------------------------------------------------------------ */
 
 .main {
@@ -500,15 +281,37 @@
 }
 
 .topbar {
+  grid-column: 1 / -1;
   position: sticky;
   top: 0;
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 24px;
-  background: var(--rd-bg);
+  gap: 16px;
+  height: 56px;
+  padding: 0 24px;
+  background: var(--rd-bg-elev);
   border-bottom: 1px solid var(--rd-border);
+}
+
+.brandTop {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: var(--rd-text);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.topSearch {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .searchBtn {
@@ -517,10 +320,10 @@
   gap: 9px;
   min-width: 0;
   width: 100%;
-  max-width: 420px;
-  padding: 9px 12px;
-  border: 1px solid var(--rd-border);
-  border-radius: 10px;
+  max-width: 520px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 999px;
   background: var(--rd-input-bg);
   color: var(--rd-t2);
   font: inherit;
@@ -530,7 +333,6 @@
 }
 
 .searchBtn:hover {
-  border-color: var(--rd-border-2);
   color: var(--rd-text);
 }
 
@@ -547,7 +349,7 @@
   padding: 2px 6px;
   border: 1px solid var(--rd-border);
   border-radius: 5px;
-  background: var(--rd-surface-2);
+  background: var(--rd-surface);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 11px;
   color: var(--rd-t2);
@@ -557,22 +359,29 @@
   flex: 1;
 }
 
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .iconBtn {
   flex-shrink: 0;
   width: 38px;
   height: 38px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--rd-border);
+  border: none;
   border-radius: 10px;
-  background: var(--rd-surface);
+  background: none;
   color: var(--rd-text);
   cursor: pointer;
   position: relative;
 }
 
 .iconBtn:hover {
-  background: var(--rd-surface-2);
+  background: var(--rd-hover);
 }
 
 .bellDot {
@@ -599,37 +408,181 @@
   height: 38px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--rd-border);
+  border: none;
   border-radius: 10px;
-  background: var(--rd-surface);
+  background: none;
   color: var(--rd-text);
   cursor: pointer;
   position: relative;
 }
 
 .bellSlot button:hover {
-  background: var(--rd-surface-2);
+  background: var(--rd-hover);
 }
 
-.tourBtn {
+/* User chip with a dropdown menu (profile, tour, sign out). The
+   account switch lives at the bottom of the sidebar. */
+.userMenuWrap {
+  position: relative;
   flex-shrink: 0;
-  display: inline-flex;
+}
+
+.userChip {
+  display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 14px;
-  border: 1px solid var(--rd-border);
-  border-radius: 10px;
-  background: var(--rd-surface);
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border: none;
+  border-radius: 999px;
+  background: none;
   color: var(--rd-text);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.tourBtn:hover {
-  background: var(--rd-surface-2);
+.userChip:hover {
+  background: var(--rd-hover);
+}
+
+.userChipAvatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--rd-accent);
+  color: var(--rd-on-accent);
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.userChipAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userChipName {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userMenuScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: default;
+}
+
+.userMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 100;
+  width: 250px;
+  padding: 6px;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border-2);
+  border-radius: 14px;
+  box-shadow: var(--rd-shadow);
+}
+
+.userMenuHead {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rd-border);
+  margin-bottom: 6px;
+}
+
+.userMenuHead strong {
+  display: block;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userMenuHead span {
+  display: block;
+  font-size: 12px;
+  color: var(--rd-t2);
+  word-break: break-all;
+}
+
+.userMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--rd-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: left;
+}
+
+.userMenuItem:hover {
+  background: var(--rd-hover);
+}
+
+/* Create + in the topbar: mobile only (desktop uses the tabs row). */
+.topbarCreate {
+  display: none;
+}
+
+/* Tabs row under the topbar, with the Create + pill at the right. */
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 14px 32px 0;
+  border-bottom: 1px solid var(--rd-border);
+  flex-shrink: 0;
+}
+
+.tab {
+  padding: 8px 12px 12px;
+  margin-bottom: -1px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--rd-t2);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--rd-text);
+}
+
+.tabActive {
+  color: var(--rd-text);
+  font-weight: 700;
+  border-bottom-color: var(--rd-text);
+}
+
+.tabsCreate {
+  margin-left: auto;
+  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .createBtn {
@@ -639,7 +592,7 @@
   gap: 7px;
   padding: 9px 16px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--rd-cta-bg);
   color: var(--rd-cta-text);
   font: inherit;
@@ -672,43 +625,324 @@
   gap: 20px;
 }
 
-.greet {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+/* ------------------------------------------------------------------ */
+/* Dashboard v2: hero card, then a three-column grid — left: KPIs +   */
+/* Create card; middle: My Exhibitions; right: Recent Artworks.       */
+/* ------------------------------------------------------------------ */
+
+.dashGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr);
+  gap: 20px;
+  align-items: start;
 }
 
-.greet h1 {
+.dashCol {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero {
+  padding: 24px 26px;
+}
+
+.hero h1 {
   margin: 0;
   font-size: 28px;
-  line-height: 1.2;
+  line-height: 1.25;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
-.greetSub {
-  margin: 5px 0 0;
-  color: var(--rd-t2);
-  font-size: 14.5px;
-}
-
-.today {
-  margin: 0;
-  text-align: right;
-  flex-shrink: 0;
-  padding-top: 4px;
-}
-
-.today b {
+.heroTagline {
   display: block;
-  font-size: 13.5px;
-  font-weight: 700;
 }
 
-.today span {
+/* KPI cards with sparklines (v2): three across inside the left
+   column, each with a label, a big value, a coloured sparkline of
+   the last 14 days and its min/max. */
+.kpis3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpiSpark {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 12px;
+  min-width: 0;
+}
+
+.kpiSparkLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rd-t2);
+  /* Two lines, not a single-line ellipsis: "Exhibition engagement" is
+     cut to "Exhibition eng…" in the narrow cards at desktop width.
+     The min-height keeps the three values aligned when one label wraps
+     and the others do not. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+  min-height: 2.6em;
+}
+
+.kpiSparkValue {
+  margin: 8px 0 2px;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.kpiSparkNote {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--rd-t3);
+  /* Same as the label: "3 of 17 visited in the last 30 days" was cut
+     to "3 of 17 visited in …". Two lines, values stay aligned. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  min-height: 2.8em;
+}
+
+.spark {
+  width: 100%;
+  height: 44px;
+  margin-top: 10px;
+  display: block;
+}
+
+.sparkAxis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--rd-t3);
+  margin-top: 2px;
+}
+
+/* My Exhibitions grid (v2): two columns of small cards — cover,
+   title, status badge and visits. */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 2px 0;
+}
+
+.sectionHead h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sectionHead .cardLink {
+  font-size: 13px;
+}
+
+.expoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.expoMini {
+  display: flex;
+  flex-direction: column;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border);
+  border-radius: 14px;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--rd-text);
+  min-width: 0;
+}
+
+.expoMini:hover {
+  border-color: var(--rd-border-2);
+}
+
+.expoMiniCover {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: var(--rd-surface-2);
+  overflow: hidden;
+}
+
+.expoMiniCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.expoMiniCoverFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--rd-t3);
+}
+
+.expoMiniBody {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.expoMiniTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expoMiniFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--rd-t2);
+}
+
+.expoMiniVisits {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Status badges (v2): Published is green, Draft is grey, Scheduled
+   is amber. Same mapping as the exhibitions page. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badgeLive {
+  background: var(--rd-green-soft);
+  color: var(--rd-green);
+}
+
+.badgeDraft {
+  background: var(--rd-surface-3);
+  color: var(--rd-t2);
+}
+
+.badgeAmber {
+  background: var(--rd-amber-soft);
+  color: var(--rd-amber);
+}
+
+/* Recent Artworks column (v2): stacked cards — image, title, artist
+   and views. */
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recentCard {
+  display: flex;
+  flex-direction: column;
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border);
+  border-radius: 14px;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--rd-text);
+  min-width: 0;
+}
+
+.recentCard:hover {
+  border-color: var(--rd-border-2);
+}
+
+.recentThumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: var(--rd-surface-2);
+  overflow: hidden;
+}
+
+.recentThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.recentBody {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recentTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recentArtist {
+  margin: 0;
   font-size: 12.5px;
   color: var(--rd-t2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recentFoot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--rd-t2);
+}
+
+.recentFoot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
 }
 
 /* ------------------------------------------------------------------ */
@@ -770,30 +1004,51 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Onboarding (compact, 3 steps in a row)                             */
+/* Onboarding (v2): the screenshot's "Create Your Next Exhibition"    */
+/* card — three steps in a row, each a dark-green circle icon over a  */
+/* centred title and text, with an arrow between the steps. Progress  */
+/* still comes from real data; a done step shows a check.             */
 /* ------------------------------------------------------------------ */
 
 .onboardingSteps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  gap: 28px;
+  margin-top: 20px;
   list-style: none;
   padding: 0;
 }
 
+.onboardingSteps li {
+  position: relative;
+  min-width: 0;
+}
+
+.onboardingSteps li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  right: -20px;
+  width: 11px;
+  height: 11px;
+  border-top: 2px solid var(--rd-t3);
+  border-right: 2px solid var(--rd-t3);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
 .step {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   width: 100%;
-  padding: 14px;
-  border: 1px solid var(--rd-border);
+  padding: 4px 6px;
+  border: none;
   border-radius: 12px;
-  background: var(--rd-surface-2);
+  background: none;
   color: var(--rd-text);
   font: inherit;
-  text-align: left;
   cursor: pointer;
 }
 
@@ -806,11 +1061,10 @@ div.step {
 }
 
 .step:hover {
-  border-color: var(--rd-border-2);
+  background: var(--rd-hover);
 }
 
 .stepCurrent {
-  border-color: var(--rd-accent);
   background: var(--rd-accent-soft);
 }
 
@@ -820,37 +1074,38 @@ div.step {
 
 .stepNum {
   flex-shrink: 0;
-  width: 30px;
-  height: 30px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--rd-surface-3);
-  border: 1px solid var(--rd-border-2);
-  font-size: 13px;
-  font-weight: 800;
+  background: var(--rd-cta-bg);
+  color: var(--rd-cta-text);
 }
 
 .stepCurrent .stepNum {
   background: var(--rd-accent);
-  border-color: var(--rd-accent);
-  color: #141417;
+  color: var(--rd-on-accent);
+  box-shadow: 0 0 0 3px var(--rd-accent-soft);
 }
 
 .stepDone .stepNum {
-  background: var(--rd-green-soft);
-  border-color: transparent;
-  color: var(--rd-green);
+  background: var(--rd-green);
+  color: #fff;
 }
 
 .stepBody {
   min-width: 0;
-  flex: 1;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .stepTitle {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   margin: 0;
   font-size: 14px;
@@ -865,15 +1120,13 @@ div.step {
 
 .stepText {
   margin: 3px 0 0;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.45;
   color: var(--rd-t2);
 }
 
 .stepChevron {
-  flex-shrink: 0;
-  margin-top: 4px;
-  color: var(--rd-t3);
+  display: none;
 }
 
 .stepProgress {
@@ -1377,17 +1630,25 @@ div.step {
 /* Responsive                                                          */
 /* ------------------------------------------------------------------ */
 
-@media (max-width: 1100px) {
+@media (max-width: 1150px) {
   .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .onboardingSteps {
-    grid-template-columns: 1fr;
+  /* The dashboard's three columns become two: Recent Artworks spans
+     the full width below, its cards in a row. */
+  .dashGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .step {
-    align-items: center;
+  .recentCol {
+    grid-column: 1 / -1;
+  }
+
+  .recentList {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
   }
 }
 
@@ -1398,15 +1659,25 @@ div.step {
   }
 
   /* Mobile navigation goes through the global burger (root layout),
-     the single menu button on phones, so the sidebar stays hidden. */
+     the single menu button on phones, so the sidebar stays hidden.
+     The tabs row is the mobile nav for the five main sections. */
   .sidebar {
     display: none;
   }
 
   .topbar {
     /* Clear the fixed global burger at the top-right. */
-    padding: 10px 64px 10px 14px;
+    height: 56px;
+    padding: 0 64px 0 14px;
     gap: 8px;
+  }
+
+  .brandTop {
+    font-size: 18px;
+  }
+
+  .topSearch {
+    justify-content: flex-end;
   }
 
   .searchBtn {
@@ -1426,7 +1697,31 @@ div.step {
     justify-content: center;
   }
 
-  .tourBtn {
+  .userChipName {
+    display: none;
+  }
+
+  .userChip {
+    padding: 4px;
+  }
+
+  /* The tabs-row Create + is out of view on a scrolling tab row, so
+     the topbar carries a compact Create button on phones instead. */
+  .tabsCreate {
+    display: none;
+  }
+
+  .topbarCreate {
+    display: inline-flex;
+  }
+
+  .tabs {
+    padding: 10px 16px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
     display: none;
   }
 
@@ -1439,18 +1734,8 @@ div.step {
     gap: 16px;
   }
 
-  .greet {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .greet h1 {
+  .hero h1 {
     font-size: 24px;
-  }
-
-  .today {
-    text-align: left;
-    padding-top: 0;
   }
 
   .card {
@@ -1459,6 +1744,48 @@ div.step {
 
   .kpis {
     grid-template-columns: 1fr;
+  }
+
+  .dashGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .recentList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .onboardingSteps {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .onboardingSteps li:not(:last-child)::after {
+    display: none;
+  }
+
+  .step {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 14px;
+  }
+
+  .stepBody {
+    margin-top: 0;
+    align-items: flex-start;
+  }
+
+  .stepTitle {
+    justify-content: flex-start;
+  }
+
+  .stepText {
+    text-align: left;
+  }
+
+  .stepNum {
+    width: 44px;
+    height: 44px;
   }
 
   .topRow {
@@ -1471,12 +1798,26 @@ div.step {
   }
 }
 
+@media (max-width: 560px) {
+  .expoGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kpiSparkValue {
+    font-size: 22px;
+  }
+
+  .kpiSpark {
+    padding: 14px 12px 10px;
+  }
+}
+
 @media (max-width: 420px) {
-  .createBtn span {
+  .topbarCreate span {
     display: none;
   }
 
-  .createBtn {
+  .topbarCreate {
     padding: 9px 11px;
   }
 

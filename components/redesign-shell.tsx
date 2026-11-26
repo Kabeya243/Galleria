@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Avatar from "@/components/avatar";
 import ExhibitionCreateDialog from "@/components/exhibition-create-dialog";
 import NotificationBell from "@/components/notification-bell";
 import RedesignCommandPalette, { type PaletteExhibition } from "@/components/redesign-command-palette";
@@ -10,16 +12,19 @@ import WelcomeTour, { hasSeenWelcomeTour } from "@/components/welcome-tour";
 import { useT } from "@/lib/i18n";
 import type { RoomModelId } from "@/lib/rooms";
 import { applyTheme, getStoredTheme, resolveTheme } from "@/lib/theme";
-import { Moon, Plus, Route, Search, Sun } from "lucide-react";
+import { Box, ChevronDown, LogOut, Moon, Plus, Route, Search, Settings2, Sun } from "lucide-react";
 import styles from "./redesign-dashboard.module.css";
 
-// Redesign shell (Phase 2, Nov 2026): the Phase 1 dashboard chrome —
-// grouped sidebar, topbar with ⌘K search, light/dark toggle, bell,
-// tour and Create — shared by every redesigned page. The dashboard
-// keeps its own content; every other page renders its content as the
-// shell's children. Children may be a render function receiving
-// { openCreate } when a page needs to open the create dialog from its
-// own content (the dashboard onboarding does).
+// Redesign shell v2 (Nov 2026): the screenshot's chrome — a topbar
+// with the logo, a centred search pill, the theme toggle, the bell and
+// the user chip with its dropdown; below it the tabs row (Dashboard,
+// My Exhibitions, My Artworks, Resources, Insights) with the
+// dark-green Create + pill at the right; the flat sidebar on the left.
+// Shared by every redesigned page. The dashboard keeps its own
+// content; every other page renders its content as the shell's
+// children. Children may be a render function receiving { openCreate }
+// when a page needs to open the create dialog from its own content
+// (the dashboard onboarding does).
 //
 // The command palette needs the user's exhibitions. Pages that already
 // load them server-side pass them in; the shell otherwise fetches
@@ -38,6 +43,18 @@ export type RedesignShellUser = {
   isAdmin?: boolean;
   isSubAdmin?: boolean;
 };
+
+// The five tabs. Pages whose active id is not one of these (explore,
+// feed, messages, tools, …) leave every tab unselected; the sidebar
+// shows their active item instead. "published" is a filter of My
+// Exhibitions, so it lights that tab.
+const TABS = [
+  { id: "dashboard", href: "/", label: "dashboard" },
+  { id: "exhibitions", href: "/exhibitions", label: "myExhibitions" },
+  { id: "artworks", href: "/artworks", label: "myArtworks" },
+  { id: "resources", href: "/tools", label: "resources" },
+  { id: "insights", href: "/dashboard/analytics", label: "exhibitionInsights" },
+] as const;
 
 export default function RedesignShell({
   user,
@@ -62,6 +79,7 @@ export default function RedesignShell({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [exhibitions, setExhibitions] = useState<PaletteExhibition[]>(exhibitionsProp ?? []);
 
   // Sidebar collapse preference (per browser), read after mount.
@@ -136,6 +154,11 @@ export default function RedesignShell({
     setShowCreateDialog(true);
   }
 
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.assign("/login");
+  }
+
   async function createExhibition(title: string, model: RoomModelId) {
     setCreating(true);
     try {
@@ -159,18 +182,18 @@ export default function RedesignShell({
     }
   }
 
+  const activeTab = active === "published" ? "exhibitions" : active;
+  const createLabel = creating ? t("dashboard", "creating") : t("nav", "create");
+
   return (
     <div className={`${styles.shell}${sidebarCollapsed ? ` ${styles.shellCollapsed}` : ""}`}>
-      <RedesignSidebar
-        user={user}
-        active={active}
-        exhibitionCount={exhibitionCount}
-        collapsed={sidebarCollapsed}
-        onCollapsedChange={handleSidebarCollapsed}
-      />
+      <header className={styles.topbar}>
+        <Link className={styles.brandTop} href="/" aria-label="Lakisa">
+          <Box size={22} aria-hidden="true" />
+          Lakisa
+        </Link>
 
-      <div className={styles.main}>
-        <header className={styles.topbar}>
+        <div className={styles.topSearch}>
           <button
             type="button"
             className={styles.searchBtn}
@@ -179,10 +202,12 @@ export default function RedesignShell({
             aria-label={t("redesign", "searchAria")}
           >
             <Search size={16} />
-            <span>{t("redesign", "searchPlaceholder")}</span>
+            <span>{t("redesign", "searchPlaceholderTop")}</span>
             <kbd className={styles.searchKbd}>⌘K</kbd>
           </button>
-          <span className={styles.topSpacer} aria-hidden="true" />
+        </div>
+
+        <div className={styles.topActions}>
           <button
             type="button"
             className={styles.iconBtn}
@@ -195,18 +220,102 @@ export default function RedesignShell({
           <span className={styles.bellSlot}>
             <NotificationBell />
           </span>
-          <button type="button" className={styles.tourBtn} onClick={() => setShowTour(true)}>
-            <Route size={16} /> {t("redesign", "takeTour")}
-          </button>
           <button
             type="button"
-            className={styles.createBtn}
+            className={`${styles.createBtn} ${styles.topbarCreate}`}
             onClick={openCreate}
             disabled={creating}
           >
-            <Plus size={16} /> <span>{creating ? t("dashboard", "creating") : t("redesign", "createExhibition")}</span>
+            <span>{createLabel}</span> <Plus size={16} />
           </button>
-        </header>
+          <div className={styles.userMenuWrap}>
+            <button
+              type="button"
+              className={styles.userChip}
+              onClick={() => setUserMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+            >
+              <Avatar name={user.name} avatarUrl={user.avatarUrl} className={styles.userChipAvatar} />
+              <span className={styles.userChipName}>{user.name}</span>
+              <ChevronDown size={15} />
+            </button>
+            {userMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className={styles.userMenuScrim}
+                  aria-label={t("common", "dismiss")}
+                  onClick={() => setUserMenuOpen(false)}
+                />
+                <div className={styles.userMenu} role="menu">
+                  <div className={styles.userMenuHead}>
+                    <strong>{user.name}</strong>
+                    <span>{user.email}</span>
+                  </div>
+                  <Link
+                    className={styles.userMenuItem}
+                    href="/settings"
+                    role="menuitem"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Settings2 size={16} /> {t("redesign", "settings")}
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.userMenuItem}
+                    role="menuitem"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      setShowTour(true);
+                    }}
+                  >
+                    <Route size={16} /> {t("redesign", "takeTour")}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.userMenuItem}
+                    role="menuitem"
+                    onClick={() => void signOut()}
+                  >
+                    <LogOut size={16} /> {t("nav", "signOut")}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <RedesignSidebar
+        user={user}
+        active={active}
+        exhibitionCount={exhibitionCount}
+        collapsed={sidebarCollapsed}
+        onCollapsedChange={handleSidebarCollapsed}
+      />
+
+      <div className={styles.main}>
+        <nav className={styles.tabs} aria-label="Lakisa sections">
+          {TABS.map((tab) => (
+            <Link
+              key={tab.id}
+              href={tab.href}
+              className={`${styles.tab}${activeTab === tab.id ? ` ${styles.tabActive}` : ""}`}
+              aria-current={activeTab === tab.id ? "page" : undefined}
+            >
+              {t("redesign", tab.label)}
+            </Link>
+          ))}
+          <button
+            type="button"
+            className={`${styles.createBtn} ${styles.tabsCreate}`}
+            onClick={openCreate}
+            disabled={creating}
+          >
+            <span>{createLabel}</span> <Plus size={16} />
+          </button>
+        </nav>
 
         <RedesignCommandPalette
           open={paletteOpen}

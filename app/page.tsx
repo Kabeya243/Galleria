@@ -117,7 +117,7 @@ export default async function HomePage() {
   // one long scrolling page).
   const dashboard = await loadUserDashboard(user);
 
-  // Redesign dashboard (Phase 1, Nov 2026): the signed-in home page
+  // Redesign dashboard v2 (Nov 2026): the signed-in home page
   // renders the new shell + dashboard on the same real data. The
   // public (signed-out) homepage below is untouched.
   return (
@@ -125,12 +125,12 @@ export default async function HomePage() {
       user={user}
       isNewUser={Date.now() - user.createdAt.getTime() < NEW_USER_WINDOW_MS}
       exhibitionCount={dashboard.exhibitionCount}
+      artworkCount={dashboard.artworkCount}
+      publicExhibitionCount={dashboard.publicExhibitionCount}
       newestExhibition={dashboard.newestExhibition}
       exhibitions={dashboard.exhibitions}
       stats={dashboard.stats}
-      chart={dashboard.chart}
-      chartTotal={dashboard.chartTotal}
-      chartRange={dashboard.chartRange}
+      recentArtworks={dashboard.recentArtworks}
       topExhibitions={dashboard.topExhibitions}
     />
   );

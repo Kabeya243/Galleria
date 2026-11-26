@@ -1508,7 +1508,7 @@ button { font-weight: 600; }
 .galleries-viewer-stage { height: 420px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); overflow: hidden; }
 .galleries-viewer-canvas { position: relative; width: 100%; height: 100%; }
 .galleries-viewer-hint { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-.galleries-grid { max-width: 1350px; margin: 0 auto; padding: 16px 44px 48px; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.galleries-grid { max-width: 1350px; margin: 0 auto; padding: 16px 44px 48px; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; width: 100%; min-width: 0; /* Flex item of .content (flex column) with margin: 0 auto, which disables the stretch that would otherwise size it to the content box: it sized to its min-content instead (6 x 180px columns + padding = 1218px), wider than the 1180px content box, so the last column was clipped past the viewport at 768 and 1440px. width: 100% pins it to the content box and auto-fill drops to 5 columns. */ }
 .gallery-card { border: 1px solid var(--line); border-radius: 10px; background: var(--surface-3); overflow: hidden; }
 .gallery-card.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
 .gallery-card-preview-button { display: block; width: 100%; padding: 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; cursor: pointer; }

@@ -45,6 +45,11 @@ type PageEntry = {
   href: string;
   label: DictionarySection<"redesign">;
   icon: LucideIcon;
+  // Extra search words that do not show in the label: the same page is
+  // called "Analytics" in the sidebar but "Exhibition insights" in the
+  // top tabs and here, so typing "analytics" in the palette found
+  // nothing even though the page exists.
+  keywords?: string[];
 };
 
 const PAGES: PageEntry[] = [
@@ -62,7 +67,7 @@ const PAGES: PageEntry[] = [
   { id: "certificates", href: "/tools/documents", label: "certificates", icon: FileText },
   { id: "orders", href: "/dashboard/orders", label: "myOrders", icon: ShoppingBag },
   { id: "plan", href: "/dashboard/plan", label: "myPlan", icon: CreditCard },
-  { id: "insights", href: "/dashboard/analytics", label: "exhibitionInsights", icon: BarChart3 },
+  { id: "insights", href: "/dashboard/analytics", label: "exhibitionInsights", icon: BarChart3, keywords: ["analytics"] },
   { id: "contacts", href: "/tools/contacts", label: "contacts", icon: Users },
   { id: "resources", href: "/tools", label: "resources", icon: Wrench },
   { id: "settings", href: "/settings", label: "settings", icon: Settings2 },
@@ -154,7 +159,12 @@ export default function RedesignCommandPalette({
 
   const pages: FlatItem[] = useMemo(
     () =>
-      PAGES.filter((page) => !q || t("redesign", page.label).toLowerCase().includes(q)).map((page) => ({
+      PAGES.filter(
+        (page) =>
+          !q ||
+          t("redesign", page.label).toLowerCase().includes(q) ||
+          (page.keywords ?? []).some((keyword) => keyword.toLowerCase().includes(q)),
+      ).map((page) => ({
         kind: "page" as const,
         id: `page-${page.id}`,
         href: page.href,

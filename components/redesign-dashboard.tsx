@@ -5,29 +5,39 @@ import { useRouter } from "next/navigation";
 import RedesignOnboarding, { type RedesignOnboardingExhibition } from "@/components/redesign-onboarding";
 import RedesignShell from "@/components/redesign-shell";
 import type { PaletteExhibition } from "@/components/redesign-command-palette";
-import { useLocale, useT, LOCALE_TAGS } from "@/lib/i18n";
+import { coverImageRef, handleCoverImageError } from "@/lib/image-fallback";
+import { useT } from "@/lib/i18n";
 import { USER_ROLES } from "@/lib/validation";
 import {
-  ArrowUpRight,
-  Compass,
   Eye,
   GalleryVerticalEnd,
   Image,
-  Plus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "./redesign-dashboard.module.css";
 
-// Redesign dashboard (Phase 1 + 2, Nov 2026): the prototype's layout
-// on real data — grouped sidebar, ⌘K palette, light/dark toggle,
-// compact 3-step onboarding, KPI cards with deltas and micro-actions,
-// activity chart and top exhibitions. All data comes from
-// loadUserDashboard (lib/user-dashboard-data.ts); nothing here is demo
-// content. The shell (sidebar, topbar, palette, create dialog, tour)
-// lives in components/redesign-shell.tsx and is shared by every
-// redesigned page; this file only renders the dashboard's own content.
+// Redesign dashboard v2 (Nov 2026): the screenshot's layout on real
+// data — hero greeting, KPI cards with sparklines (real VisitLog daily
+// series), the 3-step Create card, the My Exhibitions grid and the
+// Recent Artworks column. All data comes from loadUserDashboard
+// (lib/user-dashboard-data.ts); nothing here is demo content. The
+// shell (topbar, tabs, sidebar, palette, create dialog, tour) lives
+// in components/redesign-shell.tsx and is shared by every redesigned
+// page; this file only renders the dashboard's own content.
 
-type StatDelta = { value: number; delta: string; tone: "up" | "flat" };
+type KpiStat = { value: number; note: string; spark: number[] };
+
+type RecentArtwork = {
+  id: string;
+  title: string;
+  artist: string;
+  medium: string;
+  year: string;
+  imageUrl: string | null;
+  exhibitionId: string;
+  exhibitionTitle: string;
+  views: number;
+};
 
 type TopExhibition = {
   id: string;
@@ -40,40 +50,70 @@ type TopExhibition = {
   roomCount: number;
 };
 
-type ChartDay = { label: string; full: string; count: number; isRecentWeek: boolean };
+// Compact counts the way the screenshot shows them: 9.30K, 2.20K.
+function compact(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
+  return value.toLocaleString("en-US");
+}
+
+// Sparkline: a 14-point daily series as a filled area + line. Flat
+// when every value is zero (a new account with no visits yet).
+function Sparkline({ values, color }: { values: number[]; color: string }) {
+  const max = Math.max(1, ...values);
+  const width = 100;
+  const height = 36;
+  const pad = 2;
+  const points = values.map((value, index) => {
+    const x = pad + (index * (width - pad * 2)) / Math.max(1, values.length - 1);
+    const y = height - pad - (value / max) * (height - pad * 2);
+    return [x, y] as const;
+  });
+  const line = points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const area = `${line} L${points[points.length - 1][0].toFixed(1)},${height} L${points[0][0].toFixed(1)},${height} Z`;
+  return (
+    <svg className={styles.spark} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+      <path d={area} fill={color} fillOpacity={0.1} />
+      <path
+        d={line}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 export default function RedesignDashboard({
   user,
   isNewUser,
   exhibitionCount,
+  artworkCount,
+  publicExhibitionCount,
   newestExhibition,
   exhibitions,
   stats,
-  chart,
-  chartTotal,
-  chartRange,
+  recentArtworks,
   topExhibitions,
 }: {
   user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean; role?: string | null; country?: string | null };
   isNewUser: boolean;
   exhibitionCount: number;
+  artworkCount: number;
+  publicExhibitionCount: number;
   newestExhibition: RedesignOnboardingExhibition | null;
   exhibitions: PaletteExhibition[];
   stats: {
-    exhibitions: StatDelta;
-    artworks: StatDelta;
-    views: { value: number; note: string };
-    publicExhibitions: StatDelta;
+    visits: KpiStat;
+    engagement: KpiStat;
+    artworkViews: KpiStat;
   };
-  chart: ChartDay[];
-  chartTotal: number;
-  chartRange: string;
+  recentArtworks: RecentArtwork[];
   topExhibitions: TopExhibition[];
 }) {
   const t = useT();
-  const { locale } = useLocale();
   const router = useRouter();
-  const firstName = user.name.split(" ")[0] || user.name;
 
   // Complete your profile (ported from the old dashboard): Google
   // sign-in gives no role or country, so accounts created that way
@@ -124,7 +164,7 @@ export default function RedesignDashboard({
     try {
       window.localStorage.setItem(`lakisa-profile-prompt-${user.id}`, "dismissed");
     } catch {
-      // Dismissal is a nicety; without storage the card just shows again.
+      // Private mode: the card just hides for this visit.
     }
     setProfileDismissed(true);
   }
@@ -139,14 +179,35 @@ export default function RedesignDashboard({
     }
   }, [router]);
 
-  const maxCount = Math.max(1, ...chart.map((day) => day.count));
-
-  const today = new Date().toLocaleDateString(LOCALE_TAGS[locale] ?? "en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const kpis: Array<{
+    label: string;
+    value: string;
+    note: string;
+    spark: number[];
+    color: string;
+  }> = [
+    {
+      label: t("dashboard", "totalVisits"),
+      value: compact(stats.visits.value),
+      note: stats.visits.note,
+      spark: stats.visits.spark,
+      color: "#5b8def",
+    },
+    {
+      label: t("dashboard", "exhibitionEngagement"),
+      value: `${stats.engagement.value.toFixed(1)}%`,
+      note: stats.engagement.note,
+      spark: stats.engagement.spark,
+      color: "#a55eea",
+    },
+    {
+      label: t("dashboard", "artworkViews"),
+      value: compact(stats.artworkViews.value),
+      note: stats.artworkViews.note,
+      spark: stats.artworkViews.spark,
+      color: "#2fbf71",
+    },
+  ];
 
   return (
     <RedesignShell
@@ -156,207 +217,100 @@ export default function RedesignDashboard({
       exhibitions={exhibitions}
       openTourOnMount={isNewUser}
     >
-      {({ openCreate }) => {
-        const statCards: Array<{
-          label: string;
-          icon: React.ReactNode;
-          value: number;
-          delta: string;
-          tone: "up" | "flat";
-          action: React.ReactNode;
-        }> = [
-          {
-            label: t("dashboard", "myExhibitions"),
-            icon: <GalleryVerticalEnd size={15} />,
-            value: stats.exhibitions.value,
-            delta: stats.exhibitions.delta,
-            tone: stats.exhibitions.tone,
-            action: (
-              <button type="button" className={styles.kpiAction} onClick={openCreate}>
-                <Plus size={14} /> {t("redesign", "newExhibition")}
-              </button>
-            ),
-          },
-          {
-            label: t("dashboard", "myArtworks"),
-            icon: <Image size={15} />,
-            value: stats.artworks.value,
-            delta: stats.artworks.delta,
-            tone: stats.artworks.tone,
-            action: (
-              <Link className={styles.kpiAction} href="/artworks">
-                <Plus size={14} /> {t("redesign", "addArtwork")}
-              </Link>
-            ),
-          },
-          {
-            label: t("dashboard", "totalVisits"),
-            icon: <Eye size={15} />,
-            value: stats.views.value,
-            delta: stats.views.note,
-            tone: "flat" as const,
-            action: (
-              <Link className={styles.kpiAction} href="/dashboard/analytics">
-                {t("redesign", "viewInsights")} <ArrowUpRight size={14} />
-              </Link>
-            ),
-          },
-          {
-            label: t("dashboard", "publicExhibitions"),
-            icon: <Compass size={15} />,
-            value: stats.publicExhibitions.value,
-            delta: stats.publicExhibitions.delta,
-            tone: stats.publicExhibitions.tone,
-            action: (
-              <Link className={styles.kpiAction} href={`/works/${user.id}`}>
-                {t("redesign", "viewPublicPages")} <ArrowUpRight size={14} />
-              </Link>
-            ),
-          },
-        ];
-
-        return (
-          <>
-            <div className={styles.greet}>
-              <div>
+      {({ openCreate }) => (
+        <>
+          <div className={styles.dashGrid}>
+            <div className={styles.dashCol}>
+              <section className={`${styles.card} ${styles.hero}`} aria-label={t("dashboard", "hello")}>
                 <h1>
-                  {t("dashboard", "hello")} {firstName}!
+                  {t("dashboard", "hello")} {user.name}!
+                  <span className={styles.heroTagline}>{t("dashboard", "elevateCreativity")}</span>
                 </h1>
-                <p className={styles.greetSub}>{t("dashboard", "overview")}</p>
-              </div>
-              <p className={styles.today}>
-                <b>{today}</b>
-              </p>
+              </section>
+
+              <section className={styles.kpis3} aria-label={t("dashboard", "yourStatistics")}>
+                {kpis.map((kpi) => {
+                  const min = Math.min(...kpi.spark);
+                  const max = Math.max(...kpi.spark);
+                  return (
+                    <article className={`${styles.card} ${styles.kpiSpark}`} key={kpi.label}>
+                      <span className={styles.kpiSparkLabel}>{kpi.label}</span>
+                      <span className={`${styles.kpiSparkValue} ${styles.tnum}`}>{kpi.value}</span>
+                      <p className={styles.kpiSparkNote}>{kpi.note}</p>
+                      <Sparkline values={kpi.spark} color={kpi.color} />
+                      <span className={styles.sparkAxis} aria-hidden="true">
+                        <span className={styles.tnum}>{compact(min)}</span>
+                        <span className={styles.tnum}>{compact(max)}</span>
+                      </span>
+                    </article>
+                  );
+                })}
+              </section>
+
+              <RedesignOnboarding
+                exhibitionCount={exhibitionCount}
+                artworksCount={artworkCount}
+                publicExhibitionsCount={publicExhibitionCount}
+                newestExhibition={newestExhibition}
+                onCreate={openCreate}
+              />
+
+              {profileIncomplete && (
+                <section className={styles.card} aria-label="Complete your profile">
+                  <div className={styles.cardHead}>
+                    <div>
+                      <span className={styles.eyebrow}>Your profile</span>
+                      <h2>Tell us who you are</h2>
+                      <p className={styles.cardSub}>
+                        Are you an artist, a curator, a collector? And where are you based? It helps us invite you to
+                        the right open calls and shows.
+                      </p>
+                    </div>
+                  </div>
+                  <div className={styles.profilePromptFields}>
+                    <label className={styles.profileField}>
+                      <span>{t("auth", "yourRole")}</span>
+                      <select value={profileRole} onChange={(e) => setProfileRole(e.target.value)}>
+                        <option value="">{t("auth", "chooseRole")}</option>
+                        {USER_ROLES.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={styles.profileField}>
+                      <span>{t("auth", "country")}</span>
+                      <input
+                        value={profileCountry}
+                        onChange={(e) => setProfileCountry(e.target.value)}
+                        placeholder={t("auth", "countryPlaceholder")}
+                        maxLength={80}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.createBtn}
+                      onClick={() => void saveProfilePrompt()}
+                      disabled={profileSaving}
+                    >
+                      {profileSaving ? "Saving…" : "Save"}
+                    </button>
+                    <button type="button" className={styles.textBtn} onClick={dismissProfilePrompt}>
+                      Not now
+                    </button>
+                  </div>
+                  {profileNote && <p className={styles.profileNote}>{profileNote}</p>}
+                  <p className={styles.profileHint}>
+                    You can change these anytime in <Link href="/settings">Settings</Link>.
+                  </p>
+                </section>
+              )}
             </div>
 
-            <RedesignOnboarding
-              exhibitionCount={exhibitionCount}
-              artworksCount={stats.artworks.value}
-              publicExhibitionsCount={stats.publicExhibitions.value}
-              newestExhibition={newestExhibition}
-              onCreate={openCreate}
-            />
-
-            {profileIncomplete && (
-              <section className={styles.card} aria-label="Complete your profile">
-                <div className={styles.cardHead}>
-                  <div>
-                    <span className={styles.eyebrow}>Your profile</span>
-                    <h2>Tell us who you are</h2>
-                    <p className={styles.cardSub}>
-                      Are you an artist, a curator, a collector? And where are you based? It helps us invite you to
-                      the right open calls and shows.
-                    </p>
-                  </div>
-                </div>
-                <div className={styles.profilePromptFields}>
-                  <label className={styles.profileField}>
-                    <span>{t("auth", "yourRole")}</span>
-                    <select value={profileRole} onChange={(e) => setProfileRole(e.target.value)}>
-                      <option value="">{t("auth", "chooseRole")}</option>
-                      {USER_ROLES.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className={styles.profileField}>
-                    <span>{t("auth", "country")}</span>
-                    <input
-                      value={profileCountry}
-                      onChange={(e) => setProfileCountry(e.target.value)}
-                      placeholder={t("auth", "countryPlaceholder")}
-                      maxLength={80}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className={styles.createBtn}
-                    onClick={() => void saveProfilePrompt()}
-                    disabled={profileSaving}
-                  >
-                    {profileSaving ? "Saving…" : "Save"}
-                  </button>
-                  <button type="button" className={styles.textBtn} onClick={dismissProfilePrompt}>
-                    Not now
-                  </button>
-                </div>
-                {profileNote && <p className={styles.profileNote}>{profileNote}</p>}
-                <p className={styles.profileHint}>
-                  You can change these anytime in <Link href="/settings">Settings</Link>.
-                </p>
-              </section>
-            )}
-
-            <section className={styles.kpis} aria-label={t("dashboard", "yourStatistics")}>
-              {statCards.map((card) => (
-                <article className={`${styles.card} ${styles.kpi}`} key={card.label}>
-                  <div className={styles.kpiLabel}>
-                    <span>{card.label}</span>
-                    <span className={styles.kpiIcon}>{card.icon}</span>
-                  </div>
-                  <div className={`${styles.kpiValue} ${styles.tnum}`}>{card.value.toLocaleString("en-US")}</div>
-                  <p className={styles.kpiDelta}>
-                    {card.tone === "up" ? (
-                      <>
-                        <ArrowUpRight size={13} /> <span className={styles.kpiDeltaUp}>{card.delta}</span>
-                      </>
-                    ) : (
-                      card.delta
-                    )}
-                  </p>
-                  {card.action}
-                </article>
-              ))}
-            </section>
-
-            <section className={styles.card} aria-label={t("dashboard", "yourActivity")}>
-              <div className={styles.cardHead}>
-                <div>
-                  <span className={styles.eyebrow}>{t("dashboard", "activity")}</span>
-                  <h2>{t("dashboard", "yourActivity")}</h2>
-                  <p className={styles.cardSub}>
-                    {t("dashboard", "artworksPerDay")} {chartRange}
-                  </p>
-                </div>
-                <strong className={styles.chartTotal}>
-                  <span className={styles.tnum}>{chartTotal}</span> <span>{t("dashboard", "newIn14Days")}</span>
-                </strong>
-              </div>
-              <div className={styles.chart}>
-                {chart.map((day) => (
-                  <div
-                    className={styles.barWrap}
-                    key={day.full}
-                    title={`${day.full}: ${day.count} ${day.count === 1 ? t("dashboard", "artworkAdded") : t("dashboard", "artworksAdded")}`}
-                  >
-                    {day.count > 0 && <span className={`${styles.barValue} ${styles.tnum}`}>{day.count}</span>}
-                    <div
-                      className={`${styles.bar} ${day.isRecentWeek ? styles.barRecent : ""}`}
-                      style={{ height: `${Math.max(day.count > 0 ? 6 : 2, (day.count / maxCount) * 100)}%` }}
-                    />
-                    <span className={styles.barLabel}>{day.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className={styles.legend}>
-                <span>
-                  <i className={`${styles.legendDot} ${styles.legendDotRecent}`} /> {t("dashboard", "last7Days")}
-                </span>
-                <span>
-                  <i className={styles.legendDot} /> {t("dashboard", "previous7Days")}
-                </span>
-              </div>
-            </section>
-
-            <section className={styles.card} aria-label={t("dashboard", "topExhibitions")}>
-              <div className={styles.cardHead}>
-                <div>
-                  <span className={styles.eyebrow}>{t("dashboard", "mostVisited")}</span>
-                  <h2>{t("dashboard", "topExhibitions")}</h2>
-                  <p className={styles.cardSub}>{t("dashboard", "yourMostVisited")}</p>
-                </div>
+            <div className={styles.dashCol}>
+              <div className={styles.sectionHead}>
+                <h2>{t("redesign", "myExhibitions")}</h2>
                 <Link className={styles.cardLink} href="/exhibitions">
                   {t("dashboard", "seeAll")}
                 </Link>
@@ -364,58 +318,107 @@ export default function RedesignDashboard({
               {topExhibitions.length === 0 ? (
                 <p className={styles.empty}>{t("dashboard", "noExhibitionsYet")}</p>
               ) : (
-                <ol className={styles.topList}>
-                  {topExhibitions.map((exhibition, index) => (
-                    <li key={exhibition.id}>
-                      <Link className={styles.topRow} href={`/editor/${exhibition.id}`}>
-                        <span className={styles.topRank}>{index + 1}</span>
+                <div className={styles.expoGrid}>
+                  {topExhibitions.map((exhibition) => (
+                    <Link key={exhibition.id} className={styles.expoMini} href={`/editor/${exhibition.id}`}>
+                      <span className={styles.expoMiniCover}>
                         {exhibition.coverImageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            className={styles.topThumb}
                             src={exhibition.coverImageUrl}
                             alt=""
                             loading="lazy"
+                            onError={handleCoverImageError}
+                            ref={coverImageRef}
                           />
                         ) : (
-                          <span className={`${styles.topThumb} ${styles.topThumbFallback}`} aria-hidden="true">
+                          <span className={styles.expoMiniCoverFallback} aria-hidden="true">
                             <GalleryVerticalEnd size={20} />
                           </span>
                         )}
-                        <span className={styles.topMeta}>
-                          <span className={styles.topTitle}>{exhibition.title}</span>
-                          <span className={styles.topSub}>
+                      </span>
+                      <span className={styles.expoMiniBody}>
+                        <span className={styles.expoMiniTitle}>{exhibition.title}</span>
+                        <span className={styles.expoMiniFoot}>
+                          <span
+                            className={`${styles.badge} ${
+                              exhibition.status === "public" ? styles.badgeLive : styles.badgeDraft
+                            }`}
+                          >
+                            <span className={styles.badgeDot} aria-hidden="true" />
                             {exhibition.status === "public"
-                              ? ""
-                              : `${t("dashboard", "draft")} · `}
-                            {exhibition.artworkCount} {t("redesign", "works")}
-                            {exhibition.roomCount > 0
-                              ? ` · ${exhibition.roomCount} ${
-                                  exhibition.roomCount === 1
-                                    ? t("redesign", "roomOne")
-                                    : t("redesign", "roomMany")
-                                }`
-                              : ""}
+                              ? t("exhibitions", "published")
+                              : t("exhibitions", "draft")}
+                          </span>
+                          <span className={styles.expoMiniVisits}>
+                            <Eye size={13} />{" "}
+                            <span className={styles.tnum}>{exhibition.views.toLocaleString("en-US")}</span>
                           </span>
                         </span>
-                        <span className={styles.topViews}>
-                          <b className={styles.tnum}>{exhibition.views.toLocaleString("en-US")}</b>
-                          <span>{t("dashboard", "visits")}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className={`${styles.dashCol} ${styles.recentCol}`}>
+              <div className={styles.sectionHead}>
+                <h2>{t("dashboard", "recentArtworks")}</h2>
+                <Link className={styles.cardLink} href="/artworks">
+                  {t("dashboard", "seeAllArtworks")}
+                </Link>
+              </div>
+              {recentArtworks.length === 0 ? (
+                <p className={styles.empty}>{t("works", "noWorksYet")}</p>
+              ) : (
+                <div className={styles.recentList}>
+                  {recentArtworks.map((artwork) => {
+                    const subtitle = [artwork.artist || artwork.exhibitionTitle, artwork.medium, artwork.year]
+                      .filter(Boolean)
+                      .join(" · ");
+                    return (
+                      <Link key={artwork.id} className={styles.recentCard} href="/artworks">
+                        <span className={styles.recentThumb}>
+                          {artwork.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={artwork.imageUrl}
+                              alt=""
+                              loading="lazy"
+                              onError={handleCoverImageError}
+                              ref={coverImageRef}
+                            />
+                          ) : (
+                            <span className={styles.expoMiniCoverFallback} aria-hidden="true">
+                              <Image size={20} />
+                            </span>
+                          )}
+                        </span>
+                        <span className={styles.recentBody}>
+                          <span className={styles.recentTitle}>{artwork.title}</span>
+                          <span className={styles.recentArtist}>{subtitle}</span>
+                          <span className={styles.recentFoot}>
+                            <span>
+                              <Eye size={13} />{" "}
+                              <span className={styles.tnum}>{artwork.views.toLocaleString("en-US")}</span>
+                            </span>
+                          </span>
                         </span>
                       </Link>
-                    </li>
-                  ))}
-                </ol>
+                    );
+                  })}
+                </div>
               )}
-            </section>
+            </div>
+          </div>
 
-            <footer className={styles.footer}>
-              <span>{t("common", "footerRights")}</span>
-              <span>{t("common", "footerTagline")}</span>
-            </footer>
-          </>
-        );
-      }}
+          <footer className={styles.footer}>
+            <span>{t("common", "footerRights")}</span>
+            <span>{t("common", "footerTagline")}</span>
+          </footer>
+        </>
+      )}
     </RedesignShell>
   );
 }

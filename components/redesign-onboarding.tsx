@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, Image, MousePointerClick, Share2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import styles from "./redesign-dashboard.module.css";
 
@@ -91,18 +91,21 @@ export default function RedesignOnboarding({
     {
       n: 1,
       done: step1Done,
+      icon: <MousePointerClick size={20} />,
       title: t("dashboard", "onboardingStep1Title"),
       text: t("dashboard", "onboardingStep1Text"),
     },
     {
       n: 2,
       done: step2Done,
+      icon: <Image size={20} />,
       title: t("dashboard", "onboardingStep2Title"),
       text: t("dashboard", "onboardingStep2Text"),
     },
     {
       n: 3,
       done: step3Done,
+      icon: <Share2 size={20} />,
       title: t("dashboard", "onboardingStep3Title"),
       text: t("dashboard", "onboardingStep3Text"),
     },
@@ -112,7 +115,7 @@ export default function RedesignOnboarding({
     return (
       <>
         <span className={styles.stepNum} aria-label={step.done ? t("dashboard", "onboardingDone") : undefined}>
-          {step.done ? <Check size={15} /> : step.n}
+          {step.done ? <Check size={20} /> : step.icon}
         </span>
         <span className={styles.stepBody}>
           <span className={styles.stepTitle}>
@@ -135,7 +138,6 @@ export default function RedesignOnboarding({
             </span>
           )}
         </span>
-        <ChevronRight size={16} className={styles.stepChevron} />
       </>
     );
   }

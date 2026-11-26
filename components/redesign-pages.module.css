@@ -1,10 +1,11 @@
 /* ------------------------------------------------------------------ */
-/* Lakisa redesign, Phase 2 (Nov 2026): page-level styles.            */
-/* Same Gemini language as the dashboard (redesign-dashboard.module   */
-/* .css): obsidian surfaces, gold accent, Manrope, tabular numerals.  */
-/* These classes are used inside .shell, so the --rd-* tokens defined */
-/* there resolve here. Every page reuses .card/.kpis/.eyebrow etc.    */
-/* from the dashboard module and adds its own layout below.           */
+/* Lakisa redesign v2 (Nov 2026): page-level styles.                  */
+/* Same language as the dashboard (redesign-dashboard.module.css):    */
+/* light grey background, white cards, dark-green accent, Manrope,    */
+/* tabular numerals. These classes are used inside .shell, so the     */
+/* --rd-* tokens defined there resolve here. Every page reuses        */
+/* .card/.kpis/.eyebrow etc. from the dashboard module and adds its   */
+/* own layout below.                                                  */
 /* ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------ */
@@ -90,7 +91,7 @@
 .btnAccent {
   border-color: transparent;
   background: var(--rd-accent);
-  color: #141417;
+  color: var(--rd-on-accent);
 }
 
 .btnAccent:hover {
@@ -422,7 +423,7 @@
   place-items: center;
   border-radius: 50%;
   background: var(--rd-accent);
-  color: #141417;
+  color: var(--rd-on-accent);
   font-size: 13px;
   font-weight: 800;
   overflow: hidden;
@@ -678,10 +679,8 @@ button.hubCard:hover {
   color: var(--rd-t3);
 }
 
-/* Large profile avatar (Settings): gold disc, dark serif initials,
-   mirroring the sidebar avatar. The old .settings-avatar class relied
-   on the legacy --accent token, which is black in the light theme, so
-   its black initials were invisible on the disc. */
+/* Large profile avatar (Settings): green disc, light initials,
+   mirroring the sidebar avatar. */
 .avatarLg {
   width: 64px;
   height: 64px;
@@ -690,7 +689,7 @@ button.hubCard:hover {
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--rd-accent);
-  color: #141414;
+  color: var(--rd-on-accent);
   font: 600 22px var(--font-redesign), inherit;
 }
 
@@ -882,7 +881,7 @@ button.hubCard:hover {
   place-items: center;
   border-radius: 50%;
   background: var(--rd-accent);
-  color: #141417;
+  color: var(--rd-on-accent);
   font-size: 13px;
   font-weight: 800;
   overflow: hidden;
@@ -1062,7 +1061,7 @@ button.hubCard:hover {
   place-items: center;
   border-radius: 999px;
   background: var(--rd-accent);
-  color: #141417;
+  color: var(--rd-on-accent);
   font-size: 11px;
   font-weight: 800;
 }

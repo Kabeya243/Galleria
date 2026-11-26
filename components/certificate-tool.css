@@ -213,8 +213,28 @@
   padding: 18px;
   border-bottom: 1px solid var(--line);
   display: grid;
+  /* Explicit track: an implicit auto track sizes to the select's longest
+     option text (a long artwork title), blowing the panel past the
+     viewport on mobile while the panel's overflow:hidden clipped the
+     fields instead of scrolling. minmax(0, 1fr) keeps the panel inside
+     the viewport and lets the fields shrink. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-content: start;
+}
+
+.certificate-scope .cert-panel-section > * {
+  min-width: 0;
+}
+
+.certificate-scope .cert-field-row > * {
+  min-width: 0;
+}
+
+.certificate-scope .cert-panel-section select,
+.certificate-scope .cert-panel-section input,
+.certificate-scope .cert-panel-section textarea {
+  min-width: 0;
 }
 
 .certificate-scope .cert-panel-section:last-child {

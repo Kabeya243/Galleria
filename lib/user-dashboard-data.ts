@@ -43,13 +43,6 @@ function utcDayStart(time: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-function deltaText(recentCount: number): { delta: string; tone: "up" | "flat" } {
-  if (recentCount > 0) {
-    return { delta: `+${recentCount} in the last 7 days`, tone: "up" };
-  }
-  return { delta: "No new in the last 7 days", tone: "flat" };
-}
-
 type DashboardUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
 // The owner's exhibitions with their artworks, newest first. Retried:
@@ -63,7 +56,18 @@ async function loadOwnExhibitions(user: DashboardUser) {
         artworks: {
           // roomId is selected so placedArtworks() can tell which works
           // are actually hung in a room (cover image for the top list).
-          select: { id: true, createdAt: true, imageUrl: true, roomId: true },
+          // Title, artist, medium and year feed the Recent artworks
+          // column on the dashboard.
+          select: {
+            id: true,
+            createdAt: true,
+            imageUrl: true,
+            roomId: true,
+            title: true,
+            artist: true,
+            medium: true,
+            year: true,
+          },
           orderBy: { createdAt: "desc" },
         },
         _count: { select: { artworks: true } },
@@ -90,36 +94,100 @@ export async function loadUserDashboard(user: DashboardUser) {
   // Windows in UTC days (createdAt is stored in UTC).
   const now = Date.now();
   const todayStart = utcDayStart(now);
-  const last7Start = todayStart - 6 * DAY_MS;
-  const last7End = todayStart + DAY_MS;
-  const inLast7Days = (time: number) => time >= last7Start && time < last7End;
 
-  const exhibitionsRecent = exhibitions.filter((e) => inLast7Days(e.createdAt.getTime())).length;
-  const artworksRecent = artworks.filter((a) => inLast7Days(a.createdAt.getTime())).length;
-  const publishedRecent = publicExhibitions.filter(
-    (e) => e.publishedAt && inLast7Days(e.publishedAt.getTime()),
-  ).length;
+  // Visit history (VisitLog: one row per visitor per day per
+  // exhibition, artworkId set when a specific work was viewed). The
+  // KPI sparklines are the real daily series for the last 14 days;
+  // nothing here is invented. The 30-day window covers both the
+  // 14-day sparklines and the engagement share below.
+  const exhibitionIds = exhibitions.map((exhibition) => exhibition.id);
+  const thirtyDaysAgo = new Date(todayStart - 29 * DAY_MS);
+  const [visitRows, artworkViewsAllTime, artworkViewGroups] = await Promise.all([
+    exhibitionIds.length > 0
+      ? withDbRetry(() =>
+          db.visitLog.findMany({
+            where: { exhibitionId: { in: exhibitionIds }, day: { gte: thirtyDaysAgo } },
+            select: { day: true, exhibitionId: true, artworkId: true },
+          }),
+        )
+      : Promise.resolve([] as { day: Date; exhibitionId: string; artworkId: string | null }[]),
+    exhibitionIds.length > 0
+      ? withDbRetry(() =>
+          db.visitLog.count({
+            where: { exhibitionId: { in: exhibitionIds }, artworkId: { not: null } },
+          }),
+        )
+      : Promise.resolve(0),
+    exhibitionIds.length > 0
+      ? withDbRetry(() =>
+          db.visitLog.groupBy({
+            by: ["artworkId"],
+            where: { exhibitionId: { in: exhibitionIds }, artworkId: { not: null } },
+            _count: { _all: true },
+          }),
+        )
+      : Promise.resolve([] as { artworkId: string | null; _count: { _all: number } }[]),
+  ]);
 
-  // Artworks added per day, last 14 days, oldest first. Visits have no
-  // per-day history (only a total per exhibition), so the chart shows
-  // creation activity instead — never invented visit history.
-  const chart = Array.from({ length: 14 }, (_, index) => {
-    const dayStart = todayStart - (13 - index) * DAY_MS;
-    const dayEnd = dayStart + DAY_MS;
-    const count = artworks.filter((a) => {
-      const t = a.createdAt.getTime();
-      return t >= dayStart && t < dayEnd;
-    }).length;
-    const d = new Date(dayStart);
-    return {
-      label: String(d.getUTCDate()),
-      full: d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
-      count,
-      isRecentWeek: index >= 7,
-    };
-  });
-  const chartTotal = chart.reduce((sum, day) => sum + day.count, 0);
-  const chartRange = `${chart[0].full} – ${chart[13].full}`;
+  const dayKey = (time: number) => new Date(time).toISOString().slice(0, 10);
+  const rowsByDay = new Map<string, typeof visitRows>();
+  for (const row of visitRows) {
+    const key = dayKey(row.day.getTime());
+    const bucket = rowsByDay.get(key);
+    if (bucket) bucket.push(row);
+    else rowsByDay.set(key, [row]);
+  }
+  // Last 14 days, oldest first.
+  const last14Keys = Array.from({ length: 14 }, (_, index) =>
+    dayKey(todayStart - (13 - index) * DAY_MS),
+  );
+  const dailyVisits = last14Keys.map((key) => rowsByDay.get(key)?.length ?? 0);
+  const dailyArtworkViews = last14Keys.map(
+    (key) => rowsByDay.get(key)?.filter((row) => row.artworkId).length ?? 0,
+  );
+  const dailyExhibitionsVisited = last14Keys.map(
+    (key) => new Set(rowsByDay.get(key)?.map((row) => row.exhibitionId)).size,
+  );
+  const visited30 = new Set(visitRows.map((row) => row.exhibitionId)).size;
+  const engagementPct =
+    exhibitions.length > 0 ? Math.round((visited30 / exhibitions.length) * 1000) / 10 : 0;
+
+  const artworkViewsById = new Map<string, number>();
+  for (const group of artworkViewGroups) {
+    if (group.artworkId) artworkViewsById.set(group.artworkId, group._count._all);
+  }
+
+  // The three most recently added distinct works (same dedupe rule as
+  // the artwork count: one library item can sit in several shows),
+  // with their real per-work view counts.
+  const seenImages = new Set<string>();
+  const recentArtworks = exhibitions
+    .flatMap((exhibition) =>
+      exhibition.artworks.map((artwork) => ({
+        ...artwork,
+        exhibitionId: exhibition.id,
+        exhibitionTitle: exhibition.title,
+      })),
+    )
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .filter((artwork) => {
+      const key = artwork.imageUrl ?? `id:${artwork.id}`;
+      if (seenImages.has(key)) return false;
+      seenImages.add(key);
+      return true;
+    })
+    .slice(0, 3)
+    .map((artwork) => ({
+      id: artwork.id,
+      title: artwork.title,
+      artist: artwork.artist,
+      medium: artwork.medium,
+      year: artwork.year,
+      imageUrl: artwork.imageUrl ? toServingImageUrl(artwork.imageUrl) : null,
+      exhibitionId: artwork.exhibitionId,
+      exhibitionTitle: artwork.exhibitionTitle,
+      views: artworkViewsById.get(artwork.id) ?? 0,
+    }));
 
   const topExhibitions = [...exhibitions]
     .sort((a, b) => b.views - a.views)
@@ -164,15 +232,27 @@ export async function loadUserDashboard(user: DashboardUser) {
       ? { id: exhibitions[0].id, slug: exhibitions[0].slug, status: exhibitions[0].status }
       : null,
     stats: {
-      exhibitions: { value: exhibitions.length, ...deltaText(exhibitionsRecent) },
-      artworks: { value: artworkCount, ...deltaText(artworksRecent) },
-      views: { value: viewCount, note: "All time · page loads" },
-      publicExhibitions: { value: publicExhibitions.length, ...deltaText(publishedRecent) },
+      // Total visits: the established all-time counter (sum of the
+      // per-exhibition page-load counters), with the real daily
+      // VisitLog series of the last 14 days as its sparkline.
+      visits: { value: viewCount, note: "All time · page loads", spark: dailyVisits },
+      // Engagement: the share of the user's exhibitions that drew at
+      // least one visit in the last 30 days, with the daily count of
+      // distinct exhibitions visited as its sparkline.
+      engagement: {
+        value: engagementPct,
+        note: `${visited30} of ${exhibitions.length} visited in the last 30 days`,
+        spark: dailyExhibitionsVisited,
+      },
+      // Artwork views: VisitLog rows that viewed a specific work,
+      // all time, with the real daily series as its sparkline.
+      artworkViews: { value: artworkViewsAllTime, note: "All time · artwork views", spark: dailyArtworkViews },
     },
-    chart,
-    chartTotal,
-    chartRange,
+    recentArtworks,
     topExhibitions,
+    // Counts the onboarding progress reads (steps 2 and 3).
+    artworkCount,
+    publicExhibitionCount: publicExhibitions.length,
   };
 }
 

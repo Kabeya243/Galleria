@@ -72,7 +72,7 @@ export default function VerifyEmailForm({ token }: { token: string }) {
 
       <section className="auth-noir-panel">
         <Link className="auth-noir-switch-top" href="/login">
-          Sign in
+          {t("auth", "signIn")}
         </Link>
         <div className="auth-noir-form-wrap">
           <h1>{t("auth", "verifyEmailTitle")}</h1>
@@ -87,7 +87,7 @@ export default function VerifyEmailForm({ token }: { token: string }) {
                 {t("auth", "verifySuccess")}
               </p>
               <p className="auth-noir-switch">
-                <Link href="/login">Sign in</Link>
+                <Link href="/login">{t("auth", "signIn")}</Link>
               </p>
             </>
           )}

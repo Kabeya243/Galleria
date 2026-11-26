@@ -38,6 +38,87 @@ const TOOL_INFO: Array<{ slug: string; href: string; titleKey: DictionarySection
   { slug: "marketplace", href: "/marketplace", titleKey: "marketplace", minPlan: "creator" },
 ];
 
+// Plan display strings live in the dictionary (section `pricing`:
+// plan<Plan>Tagline, plan<Plan>Desc, plan<Plan>F<n>). The database
+// rows seeded from lib/subscriptions.ts PLAN_DEFAULTS hold the English
+// text; the page translates a value only when it still matches the
+// known English default below, so a plan the manager renamed or
+// reworded in the admin keeps showing the manager's text instead of a
+// stale translation. Keep this mirror in sync with PLAN_DEFAULTS.
+const PLAN_DEFAULT_TEXTS: Record<PlanSlug, { tagline: string; description: string; features: string[] }> = {
+  discovery: {
+    tagline: "Discover the platform",
+    description: "For artists discovering Lakisa: a 3D gallery, one exhibition and room to try the tools.",
+    features: [
+      "3D gallery with base room models",
+      "1 public exhibition",
+      "5 artworks",
+      "1 GB storage",
+      "Public feed and messaging",
+      "Search",
+      "20 contacts",
+      "Inventory up to 20 artworks",
+    ],
+  },
+  creator: {
+    tagline: "For artists who exhibit and sell",
+    description: "For active artists who exhibit and sell their work: every creative tool, more room, and your own subdomain.",
+    features: [
+      "Everything in Discovery",
+      "All 3D room models",
+      "10 exhibitions",
+      "100 artworks",
+      "20 GB storage",
+      "Unlimited contacts and inventory",
+      "Price Your Work",
+      "Documents and certificates",
+      "Portfolio PDF (Atelier)",
+      "Frames & Art on Walls",
+      "Photography Lab",
+      "Exhibition Planner",
+      "Open Calls",
+      "Your subdomain (you.lakisa.art)",
+      "Basic statistics",
+      "100 AI actions per month",
+    ],
+  },
+  studio: {
+    tagline: "For galleries, collectives and full sites",
+    description: "For galleries, collectives and artists who want their own site: everything in Creator, plus the Website Builder and advanced tools.",
+    features: [
+      "Everything in Creator",
+      "Unlimited exhibitions and artworks",
+      "100 GB storage",
+      "Website Builder (full site)",
+      "Art in Context",
+      "Advanced visitor analytics",
+      "Sub-admins",
+      "White label (no Lakisa logo)",
+      "Priority support",
+      "1,000 AI actions per month",
+      "Marketplace commission 5% instead of 10%",
+    ],
+  },
+};
+
+const PLAN_TAGLINE_KEYS: Record<PlanSlug, DictionarySection<"pricing">> = {
+  discovery: "planDiscoveryTagline",
+  creator: "planCreatorTagline",
+  studio: "planStudioTagline",
+};
+
+const PLAN_DESC_KEYS: Record<PlanSlug, DictionarySection<"pricing">> = {
+  discovery: "planDiscoveryDesc",
+  creator: "planCreatorDesc",
+  studio: "planStudioDesc",
+};
+
+const PLAN_FEATURE_KEYS: Record<PlanSlug, Array<DictionarySection<"pricing">>> = {
+  discovery: ["planDiscoveryF1", "planDiscoveryF2", "planDiscoveryF3", "planDiscoveryF4", "planDiscoveryF5", "planDiscoveryF6", "planDiscoveryF7", "planDiscoveryF8"],
+  creator: ["planCreatorF1", "planCreatorF2", "planCreatorF3", "planCreatorF4", "planCreatorF5", "planCreatorF6", "planCreatorF7", "planCreatorF8", "planCreatorF9", "planCreatorF10", "planCreatorF11", "planCreatorF12", "planCreatorF13", "planCreatorF14", "planCreatorF15", "planCreatorF16"],
+  studio: ["planStudioF1", "planStudioF2", "planStudioF3", "planStudioF4", "planStudioF5", "planStudioF6", "planStudioF7", "planStudioF8", "planStudioF9", "planStudioF10", "planStudioF11"],
+};
+
 function planRank(slug: PlanSlug): number {
   return slug === "discovery" ? 0 : slug === "creator" ? 1 : 2;
 }
@@ -101,6 +182,25 @@ export default function PricingPage() {
 
   const formatUgx = (usd: number) =>
     new Intl.NumberFormat(locale).format(usd * UGX_PER_USD);
+
+  // Plan tagline, description and features in the visitor's language.
+  // Only the known seed defaults are translated (see
+  // PLAN_DEFAULT_TEXTS above); anything the manager edited in the
+  // admin is shown as stored.
+  const planTagline = (plan: PlanDTO) =>
+    plan.tagline === PLAN_DEFAULT_TEXTS[plan.slug].tagline
+      ? t("pricing", PLAN_TAGLINE_KEYS[plan.slug])
+      : plan.tagline;
+  const planDescription = (plan: PlanDTO) =>
+    plan.description === PLAN_DEFAULT_TEXTS[plan.slug].description
+      ? t("pricing", PLAN_DESC_KEYS[plan.slug])
+      : plan.description;
+  const planFeature = (plan: PlanDTO, feature: string, index: number) => {
+    const key = PLAN_FEATURE_KEYS[plan.slug]?.[index];
+    return key && feature === PLAN_DEFAULT_TEXTS[plan.slug].features[index]
+      ? t("pricing", key)
+      : feature;
+  };
 
   async function confirmChange(payload: PlanChangePayload) {
     if (!changeTarget) return;
@@ -343,18 +443,18 @@ export default function PricingPage() {
                       <span className={styles.planBadge}>{t("pricing", "yourPlan")}</span>
                     )}
                     <h3 className={styles.planName}>{plan.name}</h3>
-                    <p className={styles.planTagline}>{plan.tagline}</p>
+                    <p className={styles.planTagline}>{planTagline(plan)}</p>
                     <p className={styles.planPrice}>
                       {priceText(plan)}
                       {suffix && <span>{suffix}</span>}
                     </p>
                     {ugx && <p className={styles.planUgx}>{ugx}</p>}
-                    <p className={styles.planDescription}>{plan.description}</p>
+                    <p className={styles.planDescription}>{planDescription(plan)}</p>
                     <ul className={styles.planFeatures}>
-                      {plan.features.map((feature) => (
+                      {plan.features.map((feature, index) => (
                         <li key={feature}>
                           <Check size={15} aria-hidden="true" />
-                          <span>{feature}</span>
+                          <span>{planFeature(plan, feature, index)}</span>
                         </li>
                       ))}
                     </ul>

@@ -19,7 +19,7 @@ import { saveRenderQuality, type RenderQuality } from "@/lib/render-quality";
 import { hasUsableTour, tourStopToTeleportTarget, type GuidedTour } from "@/lib/tour";
 import { VIEW_PRESETS, type CameraViewPreset } from "@/lib/editor-params";
 import { describeVrError, detectXrSupport, requestVrSession, type XrSupport } from "@/lib/webxr";
-import { useT } from "@/lib/i18n";
+import { useT, type DictionarySection } from "@/lib/i18n";
 import type { Artwork } from "@/lib/demo-data";
 import type { GalleryRoom } from "@/lib/rooms";
 
@@ -29,6 +29,7 @@ import type { GalleryRoom } from "@/lib/rooms";
 // never block the site if an image stalls.
 function ExhibitionLoader() {
   const { progress, active } = useProgress();
+  const t = useT();
   const [fading, setFading] = useState(false);
   const [gone, setGone] = useState(false);
   const done = progress >= 100 && !active;
@@ -50,7 +51,7 @@ function ExhibitionLoader() {
     <div className={`exhibition-loader${fading ? " done" : ""}`} aria-hidden={fading || undefined}>
       <div className="loader-brand"><BrandLogo variant="horizontal" height={52} /></div>
       <div className="loader-bar"><span style={{ width: `${Math.round(progress)}%` }} /></div>
-      <p>Loading the exhibition… {Math.round(progress)}%</p>
+      <p>{t("exhibition", "loading").replace("{progress}", String(Math.round(progress)))}</p>
     </div>
   );
 }
@@ -72,6 +73,15 @@ export type PublicAccessibilityPack = {
     captionFr: string;
     transcript: string;
   }[];
+};
+
+// Long titles for the camera view buttons (the short label comes from
+// VIEW_PRESETS[view].labelKey, same `exhibition` dictionary section).
+const VIEW_TITLE_KEYS: Record<CameraViewPreset, DictionarySection<"exhibition">> = {
+  eye: "viewEyeTitle",
+  wide: "viewWideTitle",
+  high: "viewHighTitle",
+  plan: "viewPlanTitle",
 };
 
 export default function PublicExhibition({
@@ -393,7 +403,7 @@ export default function PublicExhibition({
         await document.documentElement.requestFullscreen();
       }
     } catch {
-      setFullscreenError("Fullscreen is not available in this browser.");
+      setFullscreenError(t("exhibition", "fullscreenUnavailable"));
     }
   }
 
@@ -408,7 +418,7 @@ export default function PublicExhibition({
       return;
     }
     if (!("speechSynthesis" in window)) {
-      setTtsError("Text-to-speech is not available in this browser.");
+      setTtsError(t("exhibition", "ttsUnavailable"));
       return;
     }
     window.speechSynthesis.cancel();
@@ -427,7 +437,7 @@ export default function PublicExhibition({
     utterance.onend = () => setSpeakingKey(null);
     utterance.onerror = () => {
       setSpeakingKey(null);
-      setTtsError("The browser could not play this audio.");
+      setTtsError(t("exhibition", "ttsFailed"));
     };
     setTtsError(null);
     setSpeakingKey(key);
@@ -498,11 +508,11 @@ export default function PublicExhibition({
               embeddable={exhibition.visibility === "public"}
             />
           )}
-          <button className="public-info-button" aria-label="Exhibition information" onClick={() => setShowInfo((value) => !value)}><Info size={17} /></button>
+          <button className="public-info-button" aria-label={t("exhibition", "ariaExhibitionInfo")} onClick={() => setShowInfo((value) => !value)}><Info size={17} /></button>
           {accessibilityPack && (
             <button
               className="public-info-button"
-              aria-label="Accessibility and audio guide"
+              aria-label={t("exhibition", "ariaAccessibility")}
               aria-pressed={showAccessibility}
               onClick={() => { setShowAccessibility((value) => !value); setShowInfo(false); }}
             >
@@ -512,15 +522,15 @@ export default function PublicExhibition({
         </div>
       </header>
       {activeRoom && <div className="public-room-label"><span>ROOM {String(exhibition.rooms.indexOf(activeRoom) + 1).padStart(2, "0")}</span><i /> {activeRoom.name.toUpperCase()}</div>}
-      {exhibition.rooms.length > 1 && <nav className="public-room-nav" aria-label="Exhibition rooms">
+      {exhibition.rooms.length > 1 && <nav className="public-room-nav" aria-label={t("exhibition", "ariaRooms")}>
         <style>{`
           .public-room-nav .public-room-message { display: inline-flex; align-items: center; gap: 6px; min-height: 27px; margin-left: 2px; padding: 0 8px 0 10px; border: 0; border-left: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--muted); font: 500 8px "DM Sans", sans-serif; text-decoration: none; white-space: nowrap; cursor: pointer; }
           .public-room-nav .public-room-message:hover { color: var(--ink); }
           .public-room-nav .public-room-message span { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
         `}</style>
-        <button aria-label="Previous room" onClick={() => changeRoom((exhibition.rooms.indexOf(activeRoom) - 1 + exhibition.rooms.length) % exhibition.rooms.length)}><ChevronLeft size={15} /></button>
+        <button aria-label={t("exhibition", "ariaPreviousRoom")} onClick={() => changeRoom((exhibition.rooms.indexOf(activeRoom) - 1 + exhibition.rooms.length) % exhibition.rooms.length)}><ChevronLeft size={15} /></button>
         {exhibition.rooms.map((room, index) => <button key={room.id} className={room.id === activeRoom?.id ? "active" : ""} onClick={() => changeRoom(index)}>{String(index + 1).padStart(2, "0")} <span>{room.name}</span></button>)}
-        <button aria-label="Next room" onClick={() => changeRoom((exhibition.rooms.indexOf(activeRoom) + 1) % exhibition.rooms.length)}><ChevronRight size={15} /></button>
+        <button aria-label={t("exhibition", "ariaNextRoom")} onClick={() => changeRoom((exhibition.rooms.indexOf(activeRoom) + 1) % exhibition.rooms.length)}><ChevronRight size={15} /></button>
         {/* "Send a message" lives here, in the rooms menu of the visit,
             not on the exhibition cards: it opens the same new-message
             page for the exhibitor as the old card button did. */}
@@ -574,20 +584,20 @@ export default function PublicExhibition({
         />
       )}
       {walking && (
-        <div className="public-pov" role="group" aria-label="Point of view">
+        <div className="public-pov" role="group" aria-label={t("exhibition", "ariaPointOfView")}>
           {(Object.keys(VIEW_PRESETS) as CameraViewPreset[]).map((view) => (
             <button
               key={view}
               type="button"
               className={cameraView === view ? "active" : ""}
               aria-pressed={cameraView === view}
-              title={view === "eye" ? "Eye level view" : view === "wide" ? "Wide view from the front-right corner" : view === "high" ? "High view from above (ceiling hidden)" : "Plan view from above (ceiling hidden)"}
+              title={t("exhibition", VIEW_TITLE_KEYS[view])}
               onClick={() => requestCameraView(view)}
-            >{VIEW_PRESETS[view].label}</button>
+            >{t("exhibition", VIEW_PRESETS[view].labelKey)}</button>
           ))}
         </div>
       )}
-      {walking && <button className="public-reset-view" onClick={() => { exitTour(); resetCameraView(); setSelected(undefined); walkReset.current += 1; }}>↺ Entrance</button>}
+      {walking && <button className="public-reset-view" onClick={() => { exitTour(); resetCameraView(); setSelected(undefined); walkReset.current += 1; }}>{t("exhibition", "entrance")}</button>}
       {walking && (
         <ExhibitionAudioPlayer
           music={music ?? null}
@@ -596,12 +606,12 @@ export default function PublicExhibition({
           startSignal={enterSignal}
         />
       )}
-      {walking && <div className="walk-pad" aria-label="Touch movement controls">
+      {walking && <div className="walk-pad" aria-label={t("exhibition", "ariaTouchControls")}>
         {([
-          ["ArrowUp", "Forward", "↑"],
-          ["ArrowLeft", "Left", "←"],
-          ["ArrowDown", "Back", "↓"],
-          ["ArrowRight", "Right", "→"],
+          ["ArrowUp", t("exhibition", "moveForward"), "↑"],
+          ["ArrowLeft", t("exhibition", "moveLeft"), "←"],
+          ["ArrowDown", t("exhibition", "moveBack"), "↓"],
+          ["ArrowRight", t("exhibition", "moveRight"), "→"],
         ] as const).map(([key, label, icon]) => (
           <button
             key={key}
@@ -622,7 +632,7 @@ export default function PublicExhibition({
           onClick={() => void (vrInSession ? exitVR() : enterVR())}
         ><Headset size={17} /></button>
       )}
-      <button className="public-fullscreen" aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void toggleFullscreen()}>{isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
+      <button className="public-fullscreen" aria-label={isFullscreen ? t("exhibition", "ariaExitFullscreen") : t("exhibition", "ariaFullscreen")} onClick={() => void toggleFullscreen()}>{isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
       {fullscreenError && <p className="public-fullscreen-note" role="alert">{fullscreenError}</p>}
       {vrStatus && <p className="public-fullscreen-note" role="status">{vrStatus}</p>}
       {selected && !showListView && (
@@ -654,31 +664,31 @@ export default function PublicExhibition({
       )}
       {showInfo && !selected && (
         <aside className="artwork-info-card">
-          <button className="info-close" onClick={() => setShowInfo(false)} aria-label="Close information">×</button>
-          <span className="panel-kicker">ABOUT THIS EXHIBITION</span>
+          <button className="info-close" onClick={() => setShowInfo(false)} aria-label={t("exhibition", "ariaCloseInformation")}>×</button>
+          <span className="panel-kicker">{t("exhibition", "aboutTitle")}</span>
           <h1>{exhibition.title}</h1>
-          <p className="public-art-meta">Curated by {exhibition.ownerName}</p>
-          <p>{exhibition.description || "A collection of artworks, brought together in a space of its own."}</p>
-          <span className="public-art-meta">{exhibition.artworks.length} artworks · {exhibition.rooms.length} rooms</span>
+          <p className="public-art-meta">{t("exhibition", "curatedBy").replace("{name}", exhibition.ownerName)}</p>
+          <p>{exhibition.description || t("exhibition", "defaultDescription")}</p>
+          <span className="public-art-meta">{t("exhibition", "artworkRoomCount").replace("{n}", String(exhibition.artworks.length)).replace("{m}", String(exhibition.rooms.length))}</span>
           <p style={{ margin: "14px 0 0" }}>
             <Link
               href={`/messages/new?to=${encodeURIComponent(exhibition.ownerId)}&exhibitionId=${encodeURIComponent(exhibition.id)}`}
               style={{ color: "var(--accent)", fontSize: 13, fontWeight: 600 }}
             >
-              Send a message to {exhibition.ownerName}
+              {t("exhibition", "sendMessageTo").replace("{name}", exhibition.ownerName)}
             </Link>
           </p>
         </aside>
       )}
       {showAccessibility && accessibilityPack && (
-        <aside className="artwork-info-card" aria-label="Accessibility and audio guide">
-          <button className="info-close" onClick={() => setShowAccessibility(false)} aria-label="Close accessibility panel">×</button>
-          <span className="panel-kicker">ACCESSIBILITY · AUDIO GUIDE</span>
-          <h1>Listen to the exhibition</h1>
+        <aside className="artwork-info-card" aria-label={t("exhibition", "ariaAccessibility")}>
+          <button className="info-close" onClick={() => setShowAccessibility(false)} aria-label={t("exhibition", "ariaCloseAccessibility")}>×</button>
+          <span className="panel-kicker">{t("exhibition", "a11yKicker")}</span>
+          <h1>{t("exhibition", "a11yTitle")}</h1>
           <p className="public-art-meta">
-            Audio descriptions read aloud by your device’s own voices, with full transcripts.
+            {t("exhibition", "a11yIntro")}
           </p>
-          <div style={{ display: "flex", gap: 6, margin: "10px 0 14px" }} role="group" aria-label="Audio guide language">
+          <div style={{ display: "flex", gap: 6, margin: "10px 0 14px" }} role="group" aria-label={t("exhibition", "ariaAudioGuideLanguage")}>
             {(["en", "fr"] as const).map((language) => (
               <button
                 key={language}
@@ -708,7 +718,7 @@ export default function PublicExhibition({
                 className="editor-secondary-button"
                 onClick={() => speakAccessibility("intro", a11yLang === "fr" ? accessibilityPack.introFr : accessibilityPack.introEn, a11yLang)}
               >
-                {speakingKey === "intro" ? "⏸ Stop" : "▶ Listen to the welcome"}
+                {speakingKey === "intro" ? t("exhibition", "a11yStop") : t("exhibition", "a11yListenWelcome")}
               </button>
             </div>
           )}
@@ -732,7 +742,7 @@ export default function PublicExhibition({
                       className="editor-secondary-button"
                       onClick={() => speakAccessibility(`desc-${entry.artworkId}`, description, a11yLang)}
                     >
-                      {speakingKey === `desc-${entry.artworkId}` ? "⏸ Stop" : "▶ Listen to the description"}
+                      {speakingKey === `desc-${entry.artworkId}` ? t("exhibition", "a11yStop") : t("exhibition", "a11yListenDescription")}
                     </button>
                   </>
                 )}
@@ -741,7 +751,7 @@ export default function PublicExhibition({
                 )}
                 {entry.transcript.trim() && (
                   <details style={{ marginTop: 10 }}>
-                    <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Transcript</summary>
+                    <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 600 }}>{t("exhibition", "a11yTranscript")}</summary>
                     <p style={{ marginTop: 6 }}>{entry.transcript}</p>
                   </details>
                 )}

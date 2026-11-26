@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import BrandLogo from "@/components/brand-logo";
+import { useT } from "@/lib/i18n";
 
 export default function ResetPasswordForm({ token }: { token: string }) {
+  const t = useT();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -14,7 +16,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError("The new passwords don't match.");
+      setError(t("auth", "resetPasswordMismatch"));
       return;
     }
     setError("");
@@ -26,10 +28,10 @@ export default function ResetPasswordForm({ token }: { token: string }) {
         body: JSON.stringify({ token, newPassword }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not reset your password right now.");
+      if (!response.ok) throw new Error(result.error ?? t("auth", "resetPasswordCouldNotReset"));
       setDone(true);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Something went wrong.");
+      setError(submitError instanceof Error ? submitError.message : t("auth", "somethingWrong"));
     } finally {
       setSubmitting(false);
     }
@@ -44,33 +46,33 @@ export default function ResetPasswordForm({ token }: { token: string }) {
         <div className="auth-noir-mark">
           <BrandLogo variant="principal" theme="dark" />
         </div>
-        <p className="auth-noir-copy">© 2026 Lakisa Studio. All rights reserved.</p>
+        <p className="auth-noir-copy">{t("auth", "rights")}</p>
       </section>
 
       <section className="auth-noir-panel">
         <Link className="auth-noir-switch-top" href="/login">
-          Sign in
+          {t("auth", "signIn")}
         </Link>
         <div className="auth-noir-form-wrap">
-          <h1>Choose a new password</h1>
+          <h1>{t("auth", "resetPasswordTitle")}</h1>
           {!token ? (
             <p className="auth-noir-hint" style={{ marginTop: 0 }}>
-              This reset link is incomplete.{" "}
-              <Link href="/forgot-password">Request a new one</Link>.
+              {t("auth", "resetPasswordLinkIncomplete")}{" "}
+              <Link href="/forgot-password">{t("auth", "resetPasswordRequestNew")}</Link>.
             </p>
           ) : done ? (
             <>
               <p className="auth-noir-hint" style={{ marginTop: 0 }}>
-                Your password has been changed.
+                {t("auth", "resetPasswordChanged")}
               </p>
               <p className="auth-noir-switch">
-                <Link href="/login">Sign in</Link>
+                <Link href="/login">{t("auth", "signIn")}</Link>
               </p>
             </>
           ) : (
             <form onSubmit={handleSubmit}>
               <div className="auth-noir-field">
-                <label htmlFor="reset-password">New password</label>
+                <label htmlFor="reset-password">{t("auth", "resetPasswordNewPassword")}</label>
                 <div className="auth-noir-field-row">
                   <input
                     id="reset-password"
@@ -81,12 +83,12 @@ export default function ResetPasswordForm({ token }: { token: string }) {
                     maxLength={72}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
-                    placeholder="At least 10 characters"
+                    placeholder={t("auth", "ruleLength")}
                   />
                 </div>
               </div>
               <div className="auth-noir-field">
-                <label htmlFor="reset-confirm">Confirm new password</label>
+                <label htmlFor="reset-confirm">{t("auth", "resetPasswordConfirmPassword")}</label>
                 <div className="auth-noir-field-row">
                   <input
                     id="reset-confirm"
@@ -100,17 +102,14 @@ export default function ResetPasswordForm({ token }: { token: string }) {
                   />
                 </div>
               </div>
-              <p className="auth-noir-hint">
-                Use at least 10 characters, including an uppercase letter, a lowercase letter
-                and a number.
-              </p>
+              <p className="auth-noir-hint">{t("auth", "passwordHint")}</p>
               {error && (
                 <p className="auth-noir-error" role="alert">
                   {error}
                 </p>
               )}
               <button type="submit" className="auth-noir-submit" disabled={submitting}>
-                {submitting ? "…" : "RESET"}
+                {submitting ? "…" : t("auth", "resetPasswordReset")}
               </button>
             </form>
           )}

@@ -20,14 +20,20 @@ export const EYE_HEIGHT = 1.6;
 // room reads from the top (the editor passes hideCeiling to the scene).
 export type CameraViewPreset = "eye" | "wide" | "high" | "plan";
 
+// labelKey points at the dictionary (`exhibition` section) so the
+// public visit can show the view name in the visitor's language.
+// `label` stays as the English fallback for the editor's own View
+// buttons (components/editor.tsx), which are not dictionary-bound.
+export type CameraViewLabelKey = "viewEye" | "viewWide" | "viewHigh" | "viewPlan";
+
 export const VIEW_PRESETS: Record<
   CameraViewPreset,
-  { label: string; y: number; pitch: number; x?: number; z?: number; yaw?: number; hideCeiling: boolean }
+  { label: string; labelKey: CameraViewLabelKey; y: number; pitch: number; x?: number; z?: number; yaw?: number; hideCeiling: boolean }
 > = {
-  eye: { label: "Eye", y: EYE_HEIGHT, pitch: 0, hideCeiling: false },
-  wide: { label: "Wide", y: 4.2, pitch: -0.3, x: 9.5, z: 10.5, yaw: 0.785, hideCeiling: false },
-  high: { label: "High", y: 11, pitch: -0.95, x: 0, z: 11, yaw: 0, hideCeiling: true },
-  plan: { label: "Plan", y: 22, pitch: -1.55, x: 0, z: -1, yaw: 0, hideCeiling: true },
+  eye: { label: "Eye", labelKey: "viewEye", y: EYE_HEIGHT, pitch: 0, hideCeiling: false },
+  wide: { label: "Wide", labelKey: "viewWide", y: 4.2, pitch: -0.3, x: 9.5, z: 10.5, yaw: 0.785, hideCeiling: false },
+  high: { label: "High", labelKey: "viewHigh", y: 11, pitch: -0.95, x: 0, z: 11, yaw: 0, hideCeiling: true },
+  plan: { label: "Plan", labelKey: "viewPlan", y: 22, pitch: -1.55, x: 0, z: -1, yaw: 0, hideCeiling: true },
 } as const;
 
 // How fast the camera height eases toward a view preset's height

@@ -91,6 +91,14 @@ function isPlanSlug(value: unknown): value is PlanSlug {
 // one-month-only price (Creator $5.99, Studio $29, no renewal).
 // Feature lines are the plan data shown on the pricing page, in display
 // order. Limits use null for unlimited and 0 for not included.
+//
+// TRANSLATION: the tagline, description and features below are the
+// English seed values stored in the database (and the fallback when
+// the manager edits a plan in the admin). Their translations live in
+// the dictionary, section `pricing` (plan<Plan>Tagline, plan<Plan>Desc,
+// plan<Plan>F<n>), and the pricing page (components/pricing-page.tsx)
+// translates a value only when it still matches the default here —
+// keep PLAN_DEFAULT_TEXTS there in sync with this list.
 const PLAN_DEFAULTS: Array<{
   slug: PlanSlug;
   name: string;

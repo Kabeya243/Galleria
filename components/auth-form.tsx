@@ -4,14 +4,29 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import BrandLogo from "@/components/brand-logo";
+import LanguageSwitcher from "@/components/language-switcher";
 import { useT } from "@/lib/i18n";
 import { USER_ROLES, passwordChecks } from "@/lib/validation";
+
+// Display labels for the signup "Your role" select: the option values
+// stay the English enum from lib/validation.ts (the server validates
+// them), only the label is translated.
+const ROLE_LABEL_KEYS = {
+  Artist: "roleArtist",
+  Curator: "roleCurator",
+  Gallery: "roleGallery",
+  Collector: "roleCollector",
+  "Art Advisor": "roleArtAdvisor",
+  Institution: "roleInstitution",
+  Other: "roleOther",
+} as const;
 
 // "Continue with Google" (feature 9): a plain link to the OAuth start —
 // Google handles the sign-in, the callback signs the visitor in here.
 // The button is the same on login and register: Google creates the
 // account on first use.
 function GoogleButton() {
+  const t = useT();
   return (
     <a className="auth-noir-google" href="/api/auth/google">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -32,7 +47,7 @@ function GoogleButton() {
           d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.3 0 3.3 2.8 1.3 6.8l3.9 2.9c.9-2.9 3.6-5 6.8-5z"
         />
       </svg>
-      Continue with Google
+      {t("auth", "continueWithGoogle")}
     </a>
   );
 }
@@ -78,10 +93,10 @@ export default function AuthForm({
   // visitor types, using the same rules as the server schema.
   const checks = passwordChecks(password);
   const checklist = [
-    { ok: checks.length, label: "At least 10 characters" },
-    { ok: checks.lowercase, label: "A lowercase letter" },
-    { ok: checks.uppercase, label: "An uppercase letter" },
-    { ok: checks.number, label: "A number" },
+    { ok: checks.length, label: t("auth", "ruleLength") },
+    { ok: checks.lowercase, label: t("auth", "ruleLower") },
+    { ok: checks.uppercase, label: t("auth", "ruleUpper") },
+    { ok: checks.number, label: t("auth", "ruleNumber") },
   ];
 
   async function handleResendVerification(targetEmail: string) {
@@ -95,11 +110,11 @@ export default function AuthForm({
         body: JSON.stringify({ email: targetEmail }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not send the email right now.");
+      if (!response.ok) throw new Error(result.error ?? t("auth", "couldNotSendEmail"));
       if (!result.emailSent) throw new Error(t("auth", "verificationEmailNotSent"));
       setResendMessage(t("auth", "verificationResent"));
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Something went wrong.");
+      setError(submitError instanceof Error ? submitError.message : t("auth", "somethingWrong"));
     } finally {
       setResending(false);
     }
@@ -139,7 +154,7 @@ export default function AuthForm({
         }
         throw new Error(
           result.error ??
-            (isRegister ? "Could not create your account right now." : "Could not sign in right now."),
+            (isRegister ? t("auth", "couldNotCreateAccount") : t("auth", "couldNotSignIn")),
         );
       }
       if (isRegister) {
@@ -152,7 +167,7 @@ export default function AuthForm({
       }
       window.location.assign("/");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Something went wrong.");
+      setError(submitError instanceof Error ? submitError.message : t("auth", "somethingWrong"));
       setSubmitting(false);
     }
   }
@@ -166,15 +181,18 @@ export default function AuthForm({
         <div className="auth-noir-mark">
           <BrandLogo variant="principal" theme="dark" />
         </div>
-        <p className="auth-noir-copy">© 2026 Lakisa Studio. All rights reserved.</p>
+        <p className="auth-noir-copy">{t("auth", "rights")}</p>
       </section>
 
       <section className="auth-noir-panel">
         <Link className="auth-noir-switch-top" href={isRegister ? "/login" : "/register"}>
-          {isRegister ? "Sign in" : "Create an account"}
+          {isRegister ? t("auth", "signIn") : t("auth", "createAccount")}
         </Link>
         <div className="auth-noir-form-wrap">
-          <h1>{isRegister ? "Create an account" : "Login"}</h1>
+          <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 24 }}>
+            <LanguageSwitcher />
+          </div>
+          <h1>{isRegister ? t("auth", "createAccount") : t("auth", "login")}</h1>
           {registered ? (
             <>
               <p className="auth-noir-hint" style={{ marginTop: 0 }}>
@@ -208,19 +226,19 @@ export default function AuthForm({
                 </p>
               )}
               <p className="auth-noir-switch">
-                <Link href="/login">Sign in</Link>
+                <Link href="/login">{t("auth", "signIn")}</Link>
               </p>
             </>
           ) : (
             <>
               <GoogleButton />
               <div className="auth-noir-divider" aria-hidden="true">
-                <span>or</span>
+                <span>{t("auth", "or")}</span>
               </div>
               <form onSubmit={handleSubmit}>
             {isRegister && (
               <div className="auth-noir-field">
-                <label htmlFor="auth-name">Your name</label>
+                <label htmlFor="auth-name">{t("auth", "yourName")}</label>
                 <div className="auth-noir-field-row">
                   <input
                     id="auth-name"
@@ -230,25 +248,25 @@ export default function AuthForm({
                     maxLength={60}
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="How should we call you?"
+                    placeholder={t("auth", "namePlaceholder")}
                   />
                 </div>
               </div>
             )}
             {isRegister && (
               <div className="auth-noir-field">
-                <label htmlFor="auth-role">Your role</label>
+                <label htmlFor="auth-role">{t("auth", "yourRole")}</label>
                 <div className="auth-noir-field-row">
                   <select
                     id="auth-role"
                     value={role}
                     onChange={(event) => setRole(event.target.value)}
-                    aria-label="Your role on Lakisa"
+                    aria-label={t("auth", "roleAria")}
                   >
-                    <option value="">Choose your role (optional)</option>
+                    <option value="">{t("auth", "chooseRole")}</option>
                     {USER_ROLES.map((item) => (
                       <option key={item} value={item}>
-                        {item}
+                        {t("auth", ROLE_LABEL_KEYS[item])}
                       </option>
                     ))}
                   </select>
@@ -257,7 +275,7 @@ export default function AuthForm({
             )}
             {isRegister && (
               <div className="auth-noir-field">
-                <label htmlFor="auth-country">Country</label>
+                <label htmlFor="auth-country">{t("auth", "country")}</label>
                 <div className="auth-noir-field-row">
                   <input
                     id="auth-country"
@@ -265,7 +283,7 @@ export default function AuthForm({
                     maxLength={80}
                     value={country}
                     onChange={(event) => setCountry(event.target.value)}
-                    placeholder="Where are you based? (optional)"
+                    placeholder={t("auth", "countryPlaceholder")}
                     list="auth-country-list"
                   />
                   <datalist id="auth-country-list">
@@ -313,7 +331,7 @@ export default function AuthForm({
               </div>
             )}
             <div className="auth-noir-field">
-              <label htmlFor="auth-email">Email</label>
+              <label htmlFor="auth-email">{t("auth", "email")}</label>
               <div className="auth-noir-field-row">
                 <input
                   id="auth-email"
@@ -328,7 +346,7 @@ export default function AuthForm({
               </div>
             </div>
             <div className="auth-noir-field">
-              <label htmlFor="auth-password">Password</label>
+              <label htmlFor="auth-password">{t("auth", "password")}</label>
               <div className="auth-noir-field-row">
                 <input
                   id="auth-password"
@@ -339,13 +357,13 @@ export default function AuthForm({
                   maxLength={72}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder={isRegister ? "At least 10 characters" : "Your password"}
+                  placeholder={isRegister ? t("auth", "ruleLength") : t("auth", "passwordPlaceholder")}
                 />
                 <button
                   type="button"
                   className="auth-noir-eye"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? t("auth", "hidePassword") : t("auth", "showPassword")}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -361,10 +379,7 @@ export default function AuthForm({
               </ul>
             )}
             {isRegister && password.length === 0 && (
-              <p className="auth-noir-hint">
-                Use at least 10 characters, including an uppercase letter, a lowercase letter
-                and a number.
-              </p>
+              <p className="auth-noir-hint">{t("auth", "passwordHint")}</p>
             )}
             {!isRegister && (
               <div className="auth-noir-row">
@@ -374,10 +389,10 @@ export default function AuthForm({
                     checked={rememberMe}
                     onChange={(event) => setRememberMe(event.target.checked)}
                   />
-                  Remember me
+                  {t("auth", "rememberMe")}
                 </label>
                 <Link className="auth-noir-forgot" href="/forgot-password">
-                  Forgot?
+                  {t("auth", "forgot")}
                 </Link>
               </div>
             )}
@@ -427,21 +442,18 @@ export default function AuthForm({
               className="auth-noir-submit"
               disabled={submitting || (isRegister && !acceptTerms)}
             >
-              {submitting ? "…" : isRegister ? "SIGN UP" : "SIGN IN"}
+              {submitting ? "…" : isRegister ? t("auth", "signUp") : t("auth", "signInBtn")}
             </button>
           </form>
             </>
           )}
           <p className="auth-noir-switch">
-            {isRegister ? "Already have an account?" : "New to Lakisa?"}{" "}
+            {isRegister ? t("auth", "alreadyHave") : t("auth", "newToSanaa")}{" "}
             <Link href={isRegister ? "/login" : "/register"}>
-              {isRegister ? "Sign in" : "Create an account"}
+              {isRegister ? t("auth", "signIn") : t("auth", "createAccount")}
             </Link>
           </p>
-          <p className="auth-noir-terms">
-            By continuing, you agree to use Lakisa respectfully and only share work you have
-            permission to publish.
-          </p>
+          <p className="auth-noir-terms">{t("auth", "terms")}</p>
         </div>
       </section>
     </main>

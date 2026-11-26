@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import RedesignShell from "@/components/redesign-shell";
+import Avatar from "@/components/avatar";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
 import { LOCALE_TAGS, useLocale, useT, type Locale } from "@/lib/i18n";
@@ -191,14 +192,7 @@ function FeedList({ redesign = false }: { redesign?: boolean }) {
           const artistName = post.artist.name ?? "";
           return (
             <article key={post.id} className={`${dash.card} ${page.post}`}>
-              {post.artist.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={post.artist.avatarUrl} alt="" className={page.postAvatar} />
-              ) : (
-                <span aria-hidden="true" className={page.postAvatar}>
-                  {artistName.trim().charAt(0).toUpperCase()}
-                </span>
-              )}
+              <Avatar name={artistName} avatarUrl={post.artist.avatarUrl} className={page.postAvatar} />
               <div className={page.postBody}>
                 <div className={page.postHead}>
                   <strong>{artistName}</strong>
@@ -294,13 +288,7 @@ function FeedList({ redesign = false }: { redesign?: boolean }) {
               <img src={toServingImageUrl(post.coverImageUrl) ?? post.coverImageUrl} alt={post.title} className={styles.cover} loading="lazy" onError={handleCoverImageError} ref={coverImageRef} />
               <div className={styles.postBody}>
                 <div className={styles.artistRow}>
-                  {post.artist.avatarUrl ? (
-                    <img src={post.artist.avatarUrl} alt="" className={styles.avatar} />
-                  ) : (
-                    <span aria-hidden="true" className={styles.avatarFallback}>
-                      {artistName.trim().charAt(0).toUpperCase()}
-                    </span>
-                  )}
+                  <Avatar name={artistName} avatarUrl={post.artist.avatarUrl} className={styles.avatar} />
                   <div className={styles.artistMeta}>
                     <p className={styles.artistName}>{artistName}</p>
                     <time dateTime={post.createdAt} className={styles.postDate}>

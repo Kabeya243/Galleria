@@ -6,7 +6,6 @@ import { Eye, Footprints, PenLine, Search, Star } from "lucide-react";
 import GalleryScene from "@/components/gallery-scene";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
-import RedesignShell from "@/components/redesign-shell";
 import { ceilingTextures, createGalleryRoom, floorTextures, floorTexturesFr, ROOM_MODELS, roomCategories, roomLayouts, wallTextures, wallTexturesFr, type RoomCategory, type RoomLayout } from "@/lib/rooms";
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
 import { useLocale, useT, type Locale } from "@/lib/i18n";
@@ -1103,11 +1102,8 @@ export default function GalleriesPage({
     );
   }
 
-  // Signed-in: the redesign shell. The room catalogue itself (live 3D
-  // preview, canvas-painted finish cards) keeps its own visual system.
-  return (
-    <RedesignShell user={user} active="galleries" exhibitionCount={ownExhibitionCount}>
-      {galleriesContent}
-    </RedesignShell>
-  );
+  // Signed-in: the shell is owned by the shared (app) layout now; this
+  // file renders the room catalogue only (live 3D preview,
+  // canvas-painted finish cards keep their own visual system).
+  return <>{galleriesContent}</>;
 }

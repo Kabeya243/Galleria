@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import RedesignShell from "@/components/redesign-shell";
 import VisitorAnalytics from "@/components/visitor-analytics";
 import { getCurrentUser } from "@/lib/auth";
 import { loadDashboardAnalytics } from "@/lib/user-dashboard-data";
@@ -26,40 +25,40 @@ export default async function DashboardAnalyticsRoute({
   const { exhibitionId } = await searchParams;
   const { exhibitionCount, visitorAnalytics } = await loadDashboardAnalytics(user, exhibitionId);
   return (
-    <RedesignShell user={user} active="insights" exhibitionCount={exhibitionCount}>
-      <div className={page.pageHead}>
+    <>
+    <div className={page.pageHead}>
+      <div>
+        <span className={page.eyebrow}>Visits</span>
+        <h1>Visitor analytics</h1>
+        <p className={page.pageSub}>
+          Visits, unique visitors, most viewed artworks, devices, traffic sources and
+          countries, per exhibition, with a CSV export.
+        </p>
+      </div>
+    </div>
+
+    <section className={dash.card} aria-label="Visitor statistics">
+      <div className={dash.cardHead}>
         <div>
-          <span className={page.eyebrow}>Visits</span>
-          <h1>Visitor analytics</h1>
-          <p className={page.pageSub}>
-            Visits, unique visitors, most viewed artworks, devices, traffic sources and
-            countries, per exhibition, with a CSV export.
+          <span className={dash.eyebrow}>Visits</span>
+          <h2>Visitor statistics</h2>
+          <p className={dash.cardSub}>
+            Per exhibition: pick one to see its own numbers.
           </p>
         </div>
       </div>
-
-      <section className={dash.card} aria-label="Visitor statistics">
-        <div className={dash.cardHead}>
-          <div>
-            <span className={dash.eyebrow}>Visits</span>
-            <h2>Visitor statistics</h2>
-            <p className={dash.cardSub}>
-              Per exhibition: pick one to see its own numbers.
-            </p>
-          </div>
-        </div>
-        {visitorAnalytics === null ? (
-          <p className={dash.empty}>
-            No exhibitions yet. Create one to see its visitor statistics here.
-          </p>
-        ) : (
-          <VisitorAnalytics
-            {...visitorAnalytics}
-            basePath="/dashboard/analytics"
-            selectSuffix=""
-          />
-        )}
-      </section>
-    </RedesignShell>
+      {visitorAnalytics === null ? (
+        <p className={dash.empty}>
+          No exhibitions yet. Create one to see its visitor statistics here.
+        </p>
+      ) : (
+        <VisitorAnalytics
+          {...visitorAnalytics}
+          basePath="/dashboard/analytics"
+          selectSuffix=""
+        />
+      )}
+    </section>
+    </>
   );
 }

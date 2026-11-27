@@ -8,11 +8,8 @@ import { parseGalleryRooms, placedArtworks } from "@/lib/rooms";
 import { toServingImageUrl } from "@/lib/r2";
 import { loadUserDashboard } from "@/lib/user-dashboard-data";
 
-// A "new" account (welcome tour): created in the last 30 days. The
-// tour auto-opens once, on the first dashboard visit; older accounts
-// never see it unprompted but can reopen it from the dashboard.
-const NEW_USER_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
-
+// (The "new account" welcome tour is decided in the shared (app) layout
+// now, from the user's createdAt — see app/(app)/layout.tsx.)
 function countRooms(value: string): number {
   try {
     return parseGalleryRooms(value).length;
@@ -117,18 +114,17 @@ export default async function HomePage() {
   // one long scrolling page).
   const dashboard = await loadUserDashboard(user);
 
-  // Redesign dashboard v2 (Nov 2026): the signed-in home page
-  // renders the new shell + dashboard on the same real data. The
-  // public (signed-out) homepage below is untouched.
+  // Redesign dashboard (Nov 2026): the signed-in home page renders the
+  // dashboard content on the same real data. The shell is owned by the
+  // shared (app) layout now. The public (signed-out) homepage below is
+  // untouched.
   return (
     <RedesignDashboard
       user={user}
-      isNewUser={Date.now() - user.createdAt.getTime() < NEW_USER_WINDOW_MS}
       exhibitionCount={dashboard.exhibitionCount}
       artworkCount={dashboard.artworkCount}
       publicExhibitionCount={dashboard.publicExhibitionCount}
       newestExhibition={dashboard.newestExhibition}
-      exhibitions={dashboard.exhibitions}
       stats={dashboard.stats}
       recentArtworks={dashboard.recentArtworks}
       topExhibitions={dashboard.topExhibitions}

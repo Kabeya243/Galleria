@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import RedesignShell from "@/components/redesign-shell";
 import Avatar from "@/components/avatar";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
@@ -393,16 +392,16 @@ export default function FeedPage({
   }
 
   return (
-    <RedesignShell user={user} active="feed" exhibitionCount={ownExhibitionCount}>
-      <div className={page.pageHead}>
-        <div>
-          <h1>{t("feed", "title")}</h1>
-          <p className={page.pageSub}>{t("feed", "copy")}</p>
-        </div>
+    <>
+    <div className={page.pageHead}>
+      <div>
+        <h1>{t("feed", "title")}</h1>
+        <p className={page.pageSub}>{t("feed", "copy")}</p>
       </div>
-      <section aria-label={t("feed", "feedLabel")}>
-        <FeedList redesign />
-      </section>
-    </RedesignShell>
+    </div>
+    <section aria-label={t("feed", "feedLabel")}>
+      <FeedList redesign />
+    </section>
+    </>
   );
 }

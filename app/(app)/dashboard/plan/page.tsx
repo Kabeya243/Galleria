@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import RedesignShell from "@/components/redesign-shell";
 import PlanCard from "@/components/plan-card";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -20,18 +19,18 @@ export default async function DashboardPlanRoute() {
   if (!user) redirect("/login");
   const exhibitionCount = await db.exhibition.count({ where: { ownerId: user.id } });
   return (
-    <RedesignShell user={user} active="plan" exhibitionCount={exhibitionCount}>
-      <div className={page.pageHead}>
-        <div>
-          <span className={page.eyebrow}>Subscription</span>
-          <h1>My plan</h1>
-          <p className={page.pageSub}>
-            Your current plan, what it includes, and how much of it you have used.
-          </p>
-        </div>
+    <>
+    <div className={page.pageHead}>
+      <div>
+        <span className={page.eyebrow}>Subscription</span>
+        <h1>My plan</h1>
+        <p className={page.pageSub}>
+          Your current plan, what it includes, and how much of it you have used.
+        </p>
       </div>
+    </div>
 
-      <PlanCard />
-    </RedesignShell>
+    <PlanCard />
+    </>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, ArrowUpRight, PenLine, Plus, Search, Trash2 } from "lucide-react";
-import RedesignShell from "@/components/redesign-shell";
+import { requestOpenCreate } from "@/components/redesign-shell";
 import { useT } from "@/lib/i18n";
 import { coverImageRef, handleCoverImageError } from "@/lib/image-fallback";
 import styles from "./redesign-pages.module.css";
@@ -33,11 +33,9 @@ export type OwnExhibition = {
 type Filter = "all" | "published" | "draft";
 
 export default function ExhibitionsPage({
-  user,
   exhibitions: initialExhibitions,
   initialStatus = "all",
 }: {
-  user: { id: string; name: string; email: string; isAdmin?: boolean };
   exhibitions: OwnExhibition[];
   initialStatus?: Filter;
 }) {
@@ -96,153 +94,147 @@ export default function ExhibitionsPage({
     { id: "draft", label: t("exhibitions", "filterDraft"), count: counts.draft },
   ];
 
+  // The shell is owned by the shared (app) layout now; this file renders
+  // the exhibitions list only. The create buttons open the shell's
+  // dialog by dispatching a "lakisa:open-create" event.
   return (
-    <RedesignShell
-      user={user}
-      active={filter === "published" && initialStatus === "published" ? "published" : "exhibitions"}
-      exhibitionCount={exhibitions.length}
-      exhibitions={exhibitions.map((item) => ({ id: item.id, title: item.title, slug: item.slug, status: item.status }))}
-    >
-      {({ openCreate }) => (
+    <>
+      <div className={styles.pageHead}>
+        <div>
+          <h1>{t("exhibitions", "title")}</h1>
+          <p className={styles.pageSub}>{t("exhibitions", "copy")}</p>
+        </div>
+        <div className={styles.pageActions}>
+          <button type="button" className={`${styles.btn} ${styles.btnCta}`} onClick={requestOpenCreate}>
+            <Plus size={16} /> {t("exhibitions", "createNew")}
+          </button>
+        </div>
+      </div>
+
+      {pageError && (
+        <div className="editor-error-banner" role="alert">
+          <span>{pageError}</span>
+          <button type="button" aria-label={t("common", "dismiss")} onClick={() => setPageError(null)}>
+            ×
+          </button>
+        </div>
+      )}
+
+      {exhibitions.length === 0 ? (
+        <section className={`${dash.card} ${styles.emptyState}`} aria-label={t("exhibitions", "noExhibitions")}>
+          <h3>{t("exhibitions", "noExhibitions")}</h3>
+          <p>{t("exhibitions", "firstRoom")}</p>
+          <button type="button" className={`${styles.btn} ${styles.btnCta}`} onClick={requestOpenCreate}>
+            {t("exhibitions", "createNew")} <ArrowRight size={15} />
+          </button>
+        </section>
+      ) : (
         <>
-          <div className={styles.pageHead}>
-            <div>
-              <h1>{t("exhibitions", "title")}</h1>
-              <p className={styles.pageSub}>{t("exhibitions", "copy")}</p>
-            </div>
-            <div className={styles.pageActions}>
-              <button type="button" className={`${styles.btn} ${styles.btnCta}`} onClick={openCreate}>
-                <Plus size={16} /> {t("exhibitions", "createNew")}
+          <div className={styles.chips} role="group" aria-label={t("exhibitions", "filterLabel")}>
+            {chips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                className={`${styles.chip}${filter === chip.id ? ` ${styles.chipOn}` : ""}`}
+                aria-pressed={filter === chip.id}
+                onClick={() => setFilter(chip.id)}
+              >
+                {chip.label} · {chip.count}
               </button>
-            </div>
+            ))}
           </div>
 
-          {pageError && (
-            <div className="editor-error-banner" role="alert">
-              <span>{pageError}</span>
-              <button type="button" aria-label={t("common", "dismiss")} onClick={() => setPageError(null)}>
-                ×
+          <label className={styles.searchField}>
+            <Search size={16} aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("exhibitions", "searchPlaceholder")}
+              aria-label={t("exhibitions", "searchAria")}
+            />
+          </label>
+
+          {visibleExhibitions.length === 0 ? (
+            <p className={dash.empty}>{t("exhibitions", "noMatch")}</p>
+          ) : (
+            <div className={styles.gridCards}>
+              {visibleExhibitions.map((exhibition) => (
+                <article key={exhibition.id} className={styles.expoCard}>
+                  <Link
+                    href={`/editor/${exhibition.id}`}
+                    className={styles.expoCover}
+                    aria-label={`${t("exhibitions", "continueBuilding")}, ${exhibition.title}`}
+                  >
+                    {exhibition.coverImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={exhibition.coverImageUrl}
+                        alt={exhibition.title}
+                        loading="lazy"
+                        onError={handleCoverImageError} ref={coverImageRef}
+                      />
+                    ) : (
+                      <span className={styles.expoCoverFallback}>LAKISA</span>
+                    )}
+                    <span className={`${styles.pill} ${exhibition.status === "public" ? styles.pillLive : styles.pillDraft} ${styles.pillOnCover}`}>
+                      <span className={styles.pillDot} aria-hidden="true" />
+                      {exhibition.status === "public" ? t("exhibitions", "published") : t("exhibitions", "draft")}
+                    </span>
+                  </Link>
+                  <div className={styles.expoBody}>
+                    <h3 className={styles.expoTitle}>
+                      <Link href={`/editor/${exhibition.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                        {exhibition.title}
+                      </Link>
+                    </h3>
+                    <p className={styles.expoMeta}>
+                      {exhibition.roomCount} {exhibition.roomCount === 1 ? t("exhibitions", "room") : t("exhibitions", "rooms")} ·{" "}
+                      {exhibition.artworkCount} {exhibition.artworkCount === 1 ? t("exhibitions", "artwork") : t("exhibitions", "artworks")}
+                    </p>
+                    <div className={styles.expoFoot}>
+                      <span>
+                        <b className={dash.tnum}>{exhibition.views}</b>{" "}
+                        {exhibition.views === 1 ? t("exhibitions", "visitSingular") : t("exhibitions", "visits")}
+                      </span>
+                      <span>{new Date(exhibition.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    </div>
+                    <div className={styles.expoActions}>
+                      <Link href={`/editor/${exhibition.id}`} className={styles.btn}>
+                        <PenLine size={14} /> {t("exhibitions", "continueBuilding")}
+                      </Link>
+                      {exhibition.status === "public" && (
+                        <Link href={`/exhibition/${exhibition.slug}`} className={styles.btn}>
+                          {t("exhibitions", "visit")} <ArrowUpRight size={14} />
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnDanger}`}
+                        onClick={() => void deleteExhibition(exhibition)}
+                        disabled={deletingId === exhibition.id}
+                        aria-label={confirmingDeleteId === exhibition.id ? `${t("exhibitions", "clickAgainDelete")}, ${exhibition.title}` : `${t("exhibitions", "delete")}, ${exhibition.title}`}
+                      >
+                        <Trash2 size={14} />{" "}
+                        {deletingId === exhibition.id
+                          ? t("exhibitions", "deleting")
+                          : confirmingDeleteId === exhibition.id
+                            ? t("exhibitions", "clickAgainDelete")
+                            : t("exhibitions", "delete")}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+
+              <button type="button" className={styles.createCard} onClick={requestOpenCreate}>
+                <Plus size={20} />
+                {t("exhibitions", "createNew")}
+                <span>{t("exhibitions", "createHint")}</span>
               </button>
             </div>
-          )}
-
-          {exhibitions.length === 0 ? (
-            <section className={`${dash.card} ${styles.emptyState}`} aria-label={t("exhibitions", "noExhibitions")}>
-              <h3>{t("exhibitions", "noExhibitions")}</h3>
-              <p>{t("exhibitions", "firstRoom")}</p>
-              <button type="button" className={`${styles.btn} ${styles.btnCta}`} onClick={openCreate}>
-                {t("exhibitions", "createNew")} <ArrowRight size={15} />
-              </button>
-            </section>
-          ) : (
-            <>
-              <div className={styles.chips} role="group" aria-label={t("exhibitions", "filterLabel")}>
-                {chips.map((chip) => (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    className={`${styles.chip}${filter === chip.id ? ` ${styles.chipOn}` : ""}`}
-                    aria-pressed={filter === chip.id}
-                    onClick={() => setFilter(chip.id)}
-                  >
-                    {chip.label} · {chip.count}
-                  </button>
-                ))}
-              </div>
-
-              <label className={styles.searchField}>
-                <Search size={16} aria-hidden="true" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={t("exhibitions", "searchPlaceholder")}
-                  aria-label={t("exhibitions", "searchAria")}
-                />
-              </label>
-
-              {visibleExhibitions.length === 0 ? (
-                <p className={dash.empty}>{t("exhibitions", "noMatch")}</p>
-              ) : (
-                <div className={styles.gridCards}>
-                  {visibleExhibitions.map((exhibition) => (
-                    <article key={exhibition.id} className={styles.expoCard}>
-                      <Link
-                        href={`/editor/${exhibition.id}`}
-                        className={styles.expoCover}
-                        aria-label={`${t("exhibitions", "continueBuilding")}, ${exhibition.title}`}
-                      >
-                        {exhibition.coverImageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={exhibition.coverImageUrl}
-                            alt={exhibition.title}
-                            loading="lazy"
-                            onError={handleCoverImageError} ref={coverImageRef}
-                          />
-                        ) : (
-                          <span className={styles.expoCoverFallback}>LAKISA</span>
-                        )}
-                        <span className={`${styles.pill} ${exhibition.status === "public" ? styles.pillLive : styles.pillDraft} ${styles.pillOnCover}`}>
-                          <span className={styles.pillDot} aria-hidden="true" />
-                          {exhibition.status === "public" ? t("exhibitions", "published") : t("exhibitions", "draft")}
-                        </span>
-                      </Link>
-                      <div className={styles.expoBody}>
-                        <h3 className={styles.expoTitle}>
-                          <Link href={`/editor/${exhibition.id}`} style={{ color: "inherit", textDecoration: "none" }}>
-                            {exhibition.title}
-                          </Link>
-                        </h3>
-                        <p className={styles.expoMeta}>
-                          {exhibition.roomCount} {exhibition.roomCount === 1 ? t("exhibitions", "room") : t("exhibitions", "rooms")} ·{" "}
-                          {exhibition.artworkCount} {exhibition.artworkCount === 1 ? t("exhibitions", "artwork") : t("exhibitions", "artworks")}
-                        </p>
-                        <div className={styles.expoFoot}>
-                          <span>
-                            <b className={dash.tnum}>{exhibition.views}</b>{" "}
-                            {exhibition.views === 1 ? t("exhibitions", "visitSingular") : t("exhibitions", "visits")}
-                          </span>
-                          <span>{new Date(exhibition.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
-                        </div>
-                        <div className={styles.expoActions}>
-                          <Link href={`/editor/${exhibition.id}`} className={styles.btn}>
-                            <PenLine size={14} /> {t("exhibitions", "continueBuilding")}
-                          </Link>
-                          {exhibition.status === "public" && (
-                            <Link href={`/exhibition/${exhibition.slug}`} className={styles.btn}>
-                              {t("exhibitions", "visit")} <ArrowUpRight size={14} />
-                            </Link>
-                          )}
-                          <button
-                            type="button"
-                            className={`${styles.btn} ${styles.btnDanger}`}
-                            onClick={() => void deleteExhibition(exhibition)}
-                            disabled={deletingId === exhibition.id}
-                            aria-label={confirmingDeleteId === exhibition.id ? `${t("exhibitions", "clickAgainDelete")}, ${exhibition.title}` : `${t("exhibitions", "delete")}, ${exhibition.title}`}
-                          >
-                            <Trash2 size={14} />{" "}
-                            {deletingId === exhibition.id
-                              ? t("exhibitions", "deleting")
-                              : confirmingDeleteId === exhibition.id
-                                ? t("exhibitions", "clickAgainDelete")
-                                : t("exhibitions", "delete")}
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-
-                  <button type="button" className={styles.createCard} onClick={openCreate}>
-                    <Plus size={20} />
-                    {t("exhibitions", "createNew")}
-                    <span>{t("exhibitions", "createHint")}</span>
-                  </button>
-                </div>
-              )}
-            </>
           )}
         </>
       )}
-    </RedesignShell>
+    </>
   );
 }

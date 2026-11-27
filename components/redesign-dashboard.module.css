@@ -1,50 +1,59 @@
 /* ------------------------------------------------------------------ */
-/* Lakisa redesign v2 (Nov 2026): the dashboard screenshot's visual   */
-/* language — light grey background, white cards, dark-green accent.  */
-/* Replaces the Gemini maquette (obsidian + gold) of Phase 1+2.       */
+/* Lakisa redesign (Nov 2026, fixes Dec 2026): museum-gallery white  */
+/* — gallery-white background, white cards, charcoal black accent.   */
+/* No green, no gold anywhere. Replaces the Gemini maquette (obsidian */
+/* + gold) of Phase 1+2 and the dark-green v2 accent.                 */
 /* All classes are module-scoped. Tokens are scoped to .shell,        */
 /* reading the theme from <html data-theme> set by the root layout.   */
-/* Light is the default (first paint); dark keeps the same layout     */
-/* with dark surfaces and the same green accent, lightened so it      */
-/* still reads.                                                        */
+/* Light is the default (first paint); dark is a neutral charcoal     */
+/* with the same layout and a light-grey accent.                       */
+/*                                                                     */
+/* Scroll: the window never scrolls (globals.css locks html/body).    */
+/* .shell is exactly one viewport tall; .main is the scroll container */
+/* (overflow-y: auto), so the content scrolls while the topbar and    */
+/* the sidebar stay fixed.                                             */
 /* ------------------------------------------------------------------ */
 
 .shell {
   --rd-font: var(--font-redesign), "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   /* Light is the fallback when no theme is set yet (first paint). */
-  --rd-bg: #f2f4f5;
+  --rd-bg: #fafaf8;
   --rd-bg-elev: #ffffff;
   --rd-surface: #ffffff;
-  --rd-surface-2: #f4f6f7;
-  --rd-surface-3: #e8ecee;
-  --rd-border: rgba(16, 24, 32, 0.08);
-  --rd-border-2: rgba(16, 24, 32, 0.16);
-  --rd-text: #101828;
-  --rd-t2: #475467;
-  --rd-t3: #98a2b3;
-  /* Dark green sampled from the screenshot's Create + button. */
-  --rd-accent: #1b454d;
-  --rd-accent-soft: rgba(27, 69, 77, 0.1);
+  --rd-surface-2: #f5f5f3;
+  --rd-surface-3: #ececea;
+  --rd-border: rgba(17, 17, 17, 0.08);
+  --rd-border-2: rgba(17, 17, 17, 0.16);
+  --rd-text: #111111;
+  --rd-t2: #555555;
+  --rd-t3: #8a8a8a;
+  /* Museum-gallery palette: charcoal black accent on gallery white. */
+  --rd-accent: #111111;
+  --rd-accent-soft: rgba(17, 17, 17, 0.08);
   --rd-on-accent: #ffffff;
-  --rd-cta-bg: #1b454d;
+  --rd-cta-bg: #111111;
   --rd-cta-text: #ffffff;
-  --rd-green: #067647;
-  --rd-green-soft: rgba(6, 118, 71, 0.1);
+  --rd-live: #111111;
+  --rd-live-soft: rgba(17, 17, 17, 0.08);
   --rd-amber: #b54708;
   --rd-amber-soft: rgba(181, 71, 8, 0.1);
   --rd-red: #b42318;
-  --rd-hover: rgba(16, 24, 32, 0.04);
-  --rd-active: rgba(27, 69, 77, 0.08);
-  --rd-input-bg: #edf1f4;
-  --rd-shadow: 0 16px 40px rgba(16, 24, 40, 0.12);
-  --rd-scrim: rgba(16, 24, 40, 0.5);
-  --rd-chart-prev: #98a2b3;
-  --rd-spark-blue: #5b8def;
-  --rd-spark-purple: #a55eea;
-  --rd-spark-green: #2fbf71;
+  --rd-hover: rgba(17, 17, 17, 0.04);
+  --rd-active: rgba(17, 17, 17, 0.08);
+  --rd-input-bg: #f5f5f3;
+  --rd-shadow: 0 16px 40px rgba(17, 17, 17, 0.12);
+  --rd-scrim: rgba(17, 17, 17, 0.5);
+  --rd-chart-prev: #b0b0b0;
+  /* KPI sparklines: monochrome greys, one per KPI. */
+  --rd-spark-1: #111111;
+  --rd-spark-2: #6b6b6b;
+  --rd-spark-3: #9ca3af;
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
-  min-height: 100dvh;
+  /* Exactly one viewport tall: the window never scrolls, .main below
+     is the scroll container. */
+  height: 100dvh;
+  overflow: hidden;
   background: var(--rd-bg);
   color: var(--rd-text);
   font-family: var(--rd-font);
@@ -55,67 +64,68 @@
 }
 
 :global([data-theme="dark"]) .shell {
-  --rd-bg: #0e1512;
-  --rd-bg-elev: #131c17;
-  --rd-surface: #16211b;
-  --rd-surface-2: #1c2a22;
-  --rd-surface-3: #243528;
+  --rd-bg: #111111;
+  --rd-bg-elev: #1a1a1a;
+  --rd-surface: #1e1e1e;
+  --rd-surface-2: #242424;
+  --rd-surface-3: #2b2b2b;
   --rd-border: rgba(255, 255, 255, 0.08);
   --rd-border-2: rgba(255, 255, 255, 0.16);
-  --rd-text: #f2f4f5;
-  --rd-t2: #b6c2bb;
-  --rd-t3: #7a8a81;
-  --rd-accent: #5fb38a;
-  --rd-accent-soft: rgba(95, 179, 138, 0.14);
-  --rd-on-accent: #0b0f0d;
-  --rd-cta-bg: #2e7d6b;
-  --rd-cta-text: #ffffff;
-  --rd-green: #4ade80;
-  --rd-green-soft: rgba(74, 222, 128, 0.13);
+  --rd-text: #fafafa;
+  --rd-t2: #a3a3a3;
+  --rd-t3: #737373;
+  /* Neutral charcoal dark: light-grey accent, no green. */
+  --rd-accent: #f5f5f5;
+  --rd-accent-soft: rgba(255, 255, 255, 0.1);
+  --rd-on-accent: #111111;
+  --rd-cta-bg: #f5f5f5;
+  --rd-cta-text: #111111;
+  --rd-live: #f5f5f5;
+  --rd-live-soft: rgba(255, 255, 255, 0.1);
   --rd-amber: #f5b84c;
   --rd-amber-soft: rgba(245, 184, 76, 0.13);
   --rd-red: #f26d6d;
   --rd-hover: rgba(255, 255, 255, 0.05);
-  --rd-active: rgba(95, 179, 138, 0.14);
-  --rd-input-bg: #1c2a22;
+  --rd-active: rgba(255, 255, 255, 0.1);
+  --rd-input-bg: #242424;
   --rd-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --rd-scrim: rgba(4, 6, 5, 0.62);
-  --rd-chart-prev: #7a8a81;
-  --rd-spark-blue: #5b8def;
-  --rd-spark-purple: #a55eea;
-  --rd-spark-green: #2fbf71;
+  --rd-scrim: rgba(0, 0, 0, 0.62);
+  --rd-chart-prev: #737373;
+  --rd-spark-1: #f5f5f5;
+  --rd-spark-2: #a3a3a3;
+  --rd-spark-3: #737373;
 }
 
 :global([data-theme="light"]) .shell {
-  --rd-bg: #f2f4f5;
+  --rd-bg: #fafaf8;
   --rd-bg-elev: #ffffff;
   --rd-surface: #ffffff;
-  --rd-surface-2: #f4f6f7;
-  --rd-surface-3: #e8ecee;
-  --rd-border: rgba(16, 24, 32, 0.08);
-  --rd-border-2: rgba(16, 24, 32, 0.16);
-  --rd-text: #101828;
-  --rd-t2: #475467;
-  --rd-t3: #98a2b3;
-  --rd-accent: #1b454d;
-  --rd-accent-soft: rgba(27, 69, 77, 0.1);
+  --rd-surface-2: #f5f5f3;
+  --rd-surface-3: #ececea;
+  --rd-border: rgba(17, 17, 17, 0.08);
+  --rd-border-2: rgba(17, 17, 17, 0.16);
+  --rd-text: #111111;
+  --rd-t2: #555555;
+  --rd-t3: #8a8a8a;
+  --rd-accent: #111111;
+  --rd-accent-soft: rgba(17, 17, 17, 0.08);
   --rd-on-accent: #ffffff;
-  --rd-cta-bg: #1b454d;
+  --rd-cta-bg: #111111;
   --rd-cta-text: #ffffff;
-  --rd-green: #067647;
-  --rd-green-soft: rgba(6, 118, 71, 0.1);
+  --rd-live: #111111;
+  --rd-live-soft: rgba(17, 17, 17, 0.08);
   --rd-amber: #b54708;
   --rd-amber-soft: rgba(181, 71, 8, 0.1);
   --rd-red: #b42318;
-  --rd-hover: rgba(16, 24, 32, 0.04);
-  --rd-active: rgba(27, 69, 77, 0.08);
-  --rd-input-bg: #edf1f4;
-  --rd-shadow: 0 16px 40px rgba(16, 24, 40, 0.12);
-  --rd-scrim: rgba(16, 24, 40, 0.5);
-  --rd-chart-prev: #98a2b3;
-  --rd-spark-blue: #5b8def;
-  --rd-spark-purple: #a55eea;
-  --rd-spark-green: #2fbf71;
+  --rd-hover: rgba(17, 17, 17, 0.04);
+  --rd-active: rgba(17, 17, 17, 0.08);
+  --rd-input-bg: #f5f5f3;
+  --rd-shadow: 0 16px 40px rgba(17, 17, 17, 0.12);
+  --rd-scrim: rgba(17, 17, 17, 0.5);
+  --rd-chart-prev: #b0b0b0;
+  --rd-spark-1: #111111;
+  --rd-spark-2: #6b6b6b;
+  --rd-spark-3: #9ca3af;
 }
 
 .shellCollapsed {
@@ -270,14 +280,22 @@
 /* Main column + topbar (v2): the topbar spans the whole width —      */
 /* logo left, search centred, theme toggle, bell and the user chip    */
 /* right. Below it, the tabs row (Dashboard, My Exhibitions, My       */
-/* Artworks, Resources, Insights) with the dark-green Create + pill   */
+/* Artworks, Resources, Insights) with the black Create + pill   */
 /* at the right end.                                                   */
 /* ------------------------------------------------------------------ */
 
+/* Main column: the scroll container. The window never scrolls, so this
+   column takes the remaining viewport height (100dvh minus the 56px
+   topbar) and scrolls its own content; the topbar and the sidebar
+   stay fixed. min-height: 0 lets the grid row shrink below the
+   content height instead of growing the page. */
 .main {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .topbar {
@@ -544,8 +562,14 @@
   display: none;
 }
 
-/* Tabs row under the topbar, with the Create + pill at the right. */
+/* Tabs row under the topbar, with the Create + pill at the right.
+   Sticky at the top of the scrolling .main column, so the section
+   nav stays visible while the content scrolls under it. */
 .tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--rd-bg);
   display: flex;
   align-items: flex-end;
   gap: 2px;
@@ -830,8 +854,8 @@
   white-space: nowrap;
 }
 
-/* Status badges (v2): Published is green, Draft is grey, Scheduled
-   is amber. Same mapping as the exhibitions page. */
+/* Status badges (v2): Published is a solid black pill, Draft is grey,
+   Scheduled is amber. Same mapping as the exhibitions page. */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -851,8 +875,8 @@
 }
 
 .badgeLive {
-  background: var(--rd-green-soft);
-  color: var(--rd-green);
+  background: var(--rd-accent);
+  color: var(--rd-on-accent);
 }
 
 .badgeDraft {
@@ -1005,7 +1029,7 @@
 
 /* ------------------------------------------------------------------ */
 /* Onboarding (v2): the screenshot's "Create Your Next Exhibition"    */
-/* card — three steps in a row, each a dark-green circle icon over a  */
+/* card — three steps in a row, each a black circle icon over a  */
 /* centred title and text, with an arrow between the steps. Progress  */
 /* still comes from real data; a done step shows a check.             */
 /* ------------------------------------------------------------------ */
@@ -1090,8 +1114,8 @@ div.step {
 }
 
 .stepDone .stepNum {
-  background: var(--rd-green);
-  color: #fff;
+  background: var(--rd-live);
+  color: var(--rd-on-accent);
 }
 
 .stepBody {
@@ -1115,7 +1139,7 @@ div.step {
 .stepDoneTag {
   font-size: 11px;
   font-weight: 700;
-  color: var(--rd-green);
+  color: var(--rd-live);
 }
 
 .stepText {
@@ -1215,7 +1239,7 @@ div.step {
 }
 
 .kpiDeltaUp {
-  color: var(--rd-green);
+  color: var(--rd-live);
   font-weight: 700;
 }
 

@@ -22,24 +22,24 @@ a { color: inherit; text-decoration: none; }
 button, input { font: inherit; }
 button { color: inherit; }
 
-/* Scrollbars — mobile hidden, desktop thin gold pill (8 Nov, Kabeya
-   decision): below 1024 px the scrollbars stay invisible (same as
-   before) so nothing eats screen space on phones; on desktop
-   (min-width: 1024 px) a slim 6 px pill thumb in muted SANAA gold
-   (#c9a86a, the Atelier --atelier-gold) on a transparent track.
-   Scrolling itself is untouched everywhere (wheel, touch, keyboard).
-   Firefox uses scrollbar-width / scrollbar-color; Chromium/Safari use
-   the webkit pseudo-elements. The .public-room-nav strip below is the
-   one exception: its scrollbar stays hidden at every size, it is a
+/* Scrollbars — mobile hidden, desktop thin neutral-grey pill (Dec 2026:
+   the gold thumb is gone with the museum-white palette): below 1024 px
+   the scrollbars stay invisible (same as before) so nothing eats screen
+   space on phones; on desktop (min-width: 1024 px) a slim 6 px pill
+   thumb in neutral grey on a transparent track. Scrolling itself is
+   untouched everywhere (wheel, touch, keyboard). Firefox uses
+   scrollbar-width / scrollbar-color; Chromium/Safari use the webkit
+   pseudo-elements. The .public-room-nav strip below is the one
+   exception: its scrollbar stays hidden at every size, it is a
    horizontal chip strip, not a scrolling panel. */
 * { scrollbar-width: none; -ms-overflow-style: none; }
 *::-webkit-scrollbar { display: none; width: 0; height: 0; }
 @media (min-width: 1024px) {
-  * { scrollbar-width: thin; scrollbar-color: rgba(201, 168, 106, 0.55) transparent; -ms-overflow-style: auto; }
+  * { scrollbar-width: thin; scrollbar-color: rgba(17, 17, 17, 0.35) transparent; -ms-overflow-style: auto; }
   *::-webkit-scrollbar { display: block; width: 6px; height: 6px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  *::-webkit-scrollbar-thumb { background: rgba(201, 168, 106, 0.55); border-radius: 999px; }
-  *::-webkit-scrollbar-thumb:hover { background: rgba(201, 168, 106, 0.85); }
+  *::-webkit-scrollbar-thumb { background: rgba(17, 17, 17, 0.35); border-radius: 999px; }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(17, 17, 17, 0.55); }
 }
 
 /* App shell — fixed height, the window itself never scrolls. Scrolling

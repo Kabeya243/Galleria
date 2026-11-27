@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import RedesignShell from "@/components/redesign-shell";
 import { useLocale, useT, LOCALE_TAGS } from "@/lib/i18n";
 import page from "./redesign-pages.module.css";
 import dash from "./redesign-dashboard.module.css";
@@ -263,167 +262,167 @@ export default function MessagesThread({
         : null;
 
   return (
-    <RedesignShell user={user} active="messages" exhibitionCount={ownExhibitionCount}>
-      <Link href="/messages" className={dash.cardLink}>
-        ← Messages
-      </Link>
+    <>
+    <Link href="/messages" className={dash.cardLink}>
+      ← Messages
+    </Link>
 
-      {error && (
-        <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: 0 }}>
-          {error}
-        </p>
-      )}
+    {error && (
+      <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: 0 }}>
+        {error}
+      </p>
+    )}
 
-      {loading ? (
-        <p className={dash.empty}>Opening the conversation…</p>
-      ) : !conversation ? (
-        <p className={dash.empty}>This conversation does not exist, or it is not yours.</p>
-      ) : (
-        <section className={dash.card}>
-          <div className={page.pageHead} style={{ marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span className={page.rowAvatar} aria-hidden="true">
-                {initial(conversation.otherUser.name)}
-              </span>
-              <div>
-                <h1 style={{ margin: 0, fontSize: 19, fontWeight: 700 }}>{conversation.otherUser.name}</h1>
-                {context && <p className={page.pageSub} style={{ margin: "2px 0 0" }}>{context}</p>}
-              </div>
+    {loading ? (
+      <p className={dash.empty}>Opening the conversation…</p>
+    ) : !conversation ? (
+      <p className={dash.empty}>This conversation does not exist, or it is not yours.</p>
+    ) : (
+      <section className={dash.card}>
+        <div className={page.pageHead} style={{ marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span className={page.rowAvatar} aria-hidden="true">
+              {initial(conversation.otherUser.name)}
+            </span>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 19, fontWeight: 700 }}>{conversation.otherUser.name}</h1>
+              {context && <p className={page.pageSub} style={{ margin: "2px 0 0" }}>{context}</p>}
             </div>
-            <div className={page.pageActions}>
+          </div>
+          <div className={page.pageActions}>
+            <button
+              type="button"
+              className={page.btn}
+              onClick={() => {
+                setReportingConversation(true);
+                setReportingMessageId(null);
+                setReportNotice("");
+              }}
+            >
+              {t("messagesSafety", "reportConversation")}
+            </button>
+            <button
+              type="button"
+              className={`${page.btn} ${page.btnDanger}`}
+              disabled={blockBusy}
+              onClick={toggleBlock}
+            >
+              {blockedByMe
+                ? t("messagesSafety", "unblockUser")
+                : blockConfirm
+                  ? t("messagesSafety", "confirm")
+                  : t("messagesSafety", "blockUser")}
+            </button>
+          </div>
+        </div>
+
+        {blockConfirm && !blockedByMe && (
+          <p style={{ fontSize: 13, color: "var(--rd-amber)", margin: "0 0 8px" }}>
+            {t("messagesSafety", "blockConfirm")}
+          </p>
+        )}
+        {blockNotice && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{blockNotice}</p>}
+        {reportNotice && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{reportNotice}</p>}
+
+        {(reportingMessageId || reportingConversation) && (
+          <div className={page.form} style={{ marginBottom: 12 }}>
+            <label className={page.field}>
+              <span>{t("messagesSafety", "reportReason")}</span>
+              <select
+                className={page.select}
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value as ReportReason)}
+              >
+                {REPORT_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {t("messagesSafety", reportReasonKey(reason))}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className={page.formActions}>
+              <button
+                type="button"
+                className={`${page.btn} ${page.btnCta}`}
+                disabled={reportBusy}
+                onClick={sendReport}
+              >
+                {reportBusy ? "…" : t("messagesSafety", "sendReport")}
+              </button>
               <button
                 type="button"
                 className={page.btn}
                 onClick={() => {
-                  setReportingConversation(true);
                   setReportingMessageId(null);
-                  setReportNotice("");
+                  setReportingConversation(false);
                 }}
               >
-                {t("messagesSafety", "reportConversation")}
+                {t("common", "cancel")}
               </button>
-              <button
-                type="button"
-                className={`${page.btn} ${page.btnDanger}`}
-                disabled={blockBusy}
-                onClick={toggleBlock}
+            </div>
+          </div>
+        )}
+
+        <div className={page.msgBubbles}>
+          {messages.length === 0 ? (
+            <p className={dash.empty}>No messages yet.</p>
+          ) : (
+            messages.map((m) => (
+              <div
+                key={m.id}
+                className={`${page.msgBubble} ${m.senderId === user.id ? page.msgBubbleMe : page.msgBubbleThem}`}
               >
-                {blockedByMe
-                  ? t("messagesSafety", "unblockUser")
-                  : blockConfirm
-                    ? t("messagesSafety", "confirm")
-                    : t("messagesSafety", "blockUser")}
-              </button>
-            </div>
-          </div>
-
-          {blockConfirm && !blockedByMe && (
-            <p style={{ fontSize: 13, color: "var(--rd-amber)", margin: "0 0 8px" }}>
-              {t("messagesSafety", "blockConfirm")}
-            </p>
-          )}
-          {blockNotice && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{blockNotice}</p>}
-          {reportNotice && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{reportNotice}</p>}
-
-          {(reportingMessageId || reportingConversation) && (
-            <div className={page.form} style={{ marginBottom: 12 }}>
-              <label className={page.field}>
-                <span>{t("messagesSafety", "reportReason")}</span>
-                <select
-                  className={page.select}
-                  value={reportReason}
-                  onChange={(event) => setReportReason(event.target.value as ReportReason)}
-                >
-                  {REPORT_REASONS.map((reason) => (
-                    <option key={reason} value={reason}>
-                      {t("messagesSafety", reportReasonKey(reason))}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className={page.formActions}>
-                <button
-                  type="button"
-                  className={`${page.btn} ${page.btnCta}`}
-                  disabled={reportBusy}
-                  onClick={sendReport}
-                >
-                  {reportBusy ? "…" : t("messagesSafety", "sendReport")}
-                </button>
-                <button
-                  type="button"
-                  className={page.btn}
-                  onClick={() => {
-                    setReportingMessageId(null);
-                    setReportingConversation(false);
-                  }}
-                >
-                  {t("common", "cancel")}
-                </button>
+                {m.body}
+                <div className={page.msgTime}>{time(m.createdAt)}</div>
+                {m.senderId !== user.id && (
+                  <div>
+                    <button
+                      type="button"
+                      className={dash.cardLink}
+                      style={{ fontSize: 12 }}
+                      onClick={() => {
+                        setReportingMessageId(m.id);
+                        setReportingConversation(false);
+                        setReportNotice("");
+                      }}
+                    >
+                      {t("messagesSafety", "report")}
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
+            ))
           )}
+          <div ref={bottomRef} />
+        </div>
 
-          <div className={page.msgBubbles}>
-            {messages.length === 0 ? (
-              <p className={dash.empty}>No messages yet.</p>
-            ) : (
-              messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`${page.msgBubble} ${m.senderId === user.id ? page.msgBubbleMe : page.msgBubbleThem}`}
-                >
-                  {m.body}
-                  <div className={page.msgTime}>{time(m.createdAt)}</div>
-                  {m.senderId !== user.id && (
-                    <div>
-                      <button
-                        type="button"
-                        className={dash.cardLink}
-                        style={{ fontSize: 12 }}
-                        onClick={() => {
-                          setReportingMessageId(m.id);
-                          setReportingConversation(false);
-                          setReportNotice("");
-                        }}
-                      >
-                        {t("messagesSafety", "report")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-            <div ref={bottomRef} />
-          </div>
+        {blockedByMe && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{t("messagesSafety", "blockedNotice")}</p>}
 
-          {blockedByMe && <p style={{ fontSize: 13, margin: "0 0 8px" }}>{t("messagesSafety", "blockedNotice")}</p>}
-
-          <form className={page.msgComposer} onSubmit={sendReply}>
-            <textarea
-              aria-label="Write a reply"
-              value={reply}
-              maxLength={4000}
-              disabled={blockedByMe}
-              onChange={(event) => setReply(event.target.value)}
-              placeholder={`Write to ${conversation.otherUser.name}…`}
-              className={page.textarea}
-            />
-            <button
-              type="submit"
-              className={`${page.btn} ${page.btnCta}`}
-              disabled={sending || blockedByMe || !reply.trim()}
-            >
-              {sending ? "Sending…" : "Send"}
-            </button>
-          </form>
-          {sendError && (
-            <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "8px 0 0" }}>
-              {sendError}
-            </p>
-          )}
-        </section>
-      )}
-    </RedesignShell>
+        <form className={page.msgComposer} onSubmit={sendReply}>
+          <textarea
+            aria-label="Write a reply"
+            value={reply}
+            maxLength={4000}
+            disabled={blockedByMe}
+            onChange={(event) => setReply(event.target.value)}
+            placeholder={`Write to ${conversation.otherUser.name}…`}
+            className={page.textarea}
+          />
+          <button
+            type="submit"
+            className={`${page.btn} ${page.btnCta}`}
+            disabled={sending || blockedByMe || !reply.trim()}
+          >
+            {sending ? "Sending…" : "Send"}
+          </button>
+        </form>
+        {sendError && (
+          <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "8px 0 0" }}>
+            {sendError}
+          </p>
+        )}
+      </section>
+    )}
+    </>
   );
 }

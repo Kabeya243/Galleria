@@ -180,7 +180,7 @@ export default function ContactsTool() {
           </p>
         )}
         {migratedCount > 0 && (
-          <p role="status" style={{ color: "var(--rd-green)", fontSize: 13, margin: "12px 0 0" }}>
+          <p role="status" style={{ color: "var(--rd-live)", fontSize: 13, margin: "12px 0 0" }}>
             {migratedCount} {migratedCount === 1 ? "contact" : "contacts"} moved from this browser into your account.
           </p>
         )}

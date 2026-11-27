@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import RedesignShell from "@/components/redesign-shell";
 import BrandLogo from "@/components/brand-logo";
 import PublicNav from "@/components/public-nav";
 import styles from "./public-home.module.css";
@@ -175,8 +174,10 @@ export default function ExplorePage({
     );
   }
 
+  // The shell is owned by the shared (app) layout now; this file renders
+  // the explore content only.
   return (
-    <RedesignShell user={user} active="explore" exhibitionCount={ownExhibitionCount}>
+    <>
       <div className={page.pageHead}>
         <div>
           <h1>{t("explore", "title")}</h1>
@@ -184,6 +185,6 @@ export default function ExplorePage({
         </div>
       </div>
       <ExhibitionGrid exhibitions={exhibitions} />
-    </RedesignShell>
+    </>
   );
 }

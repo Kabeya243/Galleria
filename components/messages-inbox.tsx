@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import RedesignShell from "@/components/redesign-shell";
 import { useLocale, LOCALE_TAGS } from "@/lib/i18n";
 import page from "./redesign-pages.module.css";
 import dash from "./redesign-dashboard.module.css";
@@ -120,65 +119,65 @@ export default function MessagesInbox({
     new Intl.DateTimeFormat(LOCALE_TAGS[locale], { day: "numeric", month: "short" }).format(new Date(value));
 
   return (
-    <RedesignShell user={user} active="messages" exhibitionCount={ownExhibitionCount}>
-      <div className={page.pageHead}>
-        <div>
-          <h1>Messages</h1>
-          <p className={page.pageSub}>
-            Private conversations with other people on Lakisa, and inquiries about exhibitions and artworks.
-          </p>
-        </div>
-      </div>
-
-      {error && (
-        <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: 0 }}>
-          {error}
+    <>
+    <div className={page.pageHead}>
+      <div>
+        <h1>Messages</h1>
+        <p className={page.pageSub}>
+          Private conversations with other people on Lakisa, and inquiries about exhibitions and artworks.
         </p>
-      )}
+      </div>
+    </div>
 
-      {loading ? (
-        <p className={dash.empty}>Loading your messages…</p>
-      ) : conversations.length === 0 ? (
-        <section className={`${dash.card} ${page.emptyState}`}>
-          <h3>No messages yet</h3>
-          <p>
-            When someone writes to you, or you write to an exhibitor, the conversation
-            shows up here.
-          </p>
-        </section>
-      ) : (
-        <section className={dash.card} aria-label="Conversations">
-          <ul className={page.rows}>
-            {conversations.map((c) => {
-              const context = contextLabel(c);
-              return (
-                <li key={c.id} className={page.row}>
-                  <span className={page.rowAvatar} aria-hidden="true">
-                    {initial(c.otherUser.name)}
+    {error && (
+      <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: 0 }}>
+        {error}
+      </p>
+    )}
+
+    {loading ? (
+      <p className={dash.empty}>Loading your messages…</p>
+    ) : conversations.length === 0 ? (
+      <section className={`${dash.card} ${page.emptyState}`}>
+        <h3>No messages yet</h3>
+        <p>
+          When someone writes to you, or you write to an exhibitor, the conversation
+          shows up here.
+        </p>
+      </section>
+    ) : (
+      <section className={dash.card} aria-label="Conversations">
+        <ul className={page.rows}>
+          {conversations.map((c) => {
+            const context = contextLabel(c);
+            return (
+              <li key={c.id} className={page.row}>
+                <span className={page.rowAvatar} aria-hidden="true">
+                  {initial(c.otherUser.name)}
+                </span>
+                <span className={page.rowMain}>
+                  <span className={page.rowTitle}>
+                    <Link href={`/messages/${c.id}`}>{c.otherUser.name}</Link>
                   </span>
-                  <span className={page.rowMain}>
-                    <span className={page.rowTitle}>
-                      <Link href={`/messages/${c.id}`}>{c.otherUser.name}</Link>
+                  {context && <span className={page.rowSub}>{context}</span>}
+                  {c.lastMessage && (
+                    <span className={page.rowSub} style={c.unreadCount > 0 ? { color: "var(--rd-text)", fontWeight: 700 } : undefined}>
+                      {c.lastMessage.body}
                     </span>
-                    {context && <span className={page.rowSub}>{context}</span>}
-                    {c.lastMessage && (
-                      <span className={page.rowSub} style={c.unreadCount > 0 ? { color: "var(--rd-text)", fontWeight: 700 } : undefined}>
-                        {c.lastMessage.body}
-                      </span>
-                    )}
+                  )}
+                </span>
+                <span className={page.rowSide}>
+                  <span className={page.rowValue}>
+                    <span>{time(c.updatedAt)}</span>
                   </span>
-                  <span className={page.rowSide}>
-                    <span className={page.rowValue}>
-                      <span>{time(c.updatedAt)}</span>
-                    </span>
-                    {c.unreadCount > 0 && <span className={page.msgUnread}>{c.unreadCount}</span>}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-    </RedesignShell>
+                  {c.unreadCount > 0 && <span className={page.msgUnread}>{c.unreadCount}</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    )}
+    </>
   );
 }

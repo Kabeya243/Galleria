@@ -7,7 +7,6 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import Avatar from "@/components/avatar";
 import { LakisaUploadProgress } from "@/components/lakisa-loader";
 import { showToast } from "@/lib/toast";
-import RedesignShell from "@/components/redesign-shell";
 import LanguageSwitcher from "@/components/language-switcher";
 import { LOCALE_TAGS, useLocale, useT } from "@/lib/i18n";
 import { applyTheme, getStoredTheme, type ThemeChoice } from "@/lib/theme";
@@ -220,283 +219,283 @@ export default function SettingsPage({
   }
 
   return (
-    <RedesignShell user={user} active="settings" exhibitionCount={user.exhibitionCount}>
-      <div className={page.pageHead}>
-        <div>
-          <span className={dash.eyebrow}>{t("settings", "yourAccount")}</span>
-          <h1>{t("settings", "title")}</h1>
-          <p>{t("settings", "settingsDesc")}</p>
+    <>
+    <div className={page.pageHead}>
+      <div>
+        <span className={dash.eyebrow}>{t("settings", "yourAccount")}</span>
+        <h1>{t("settings", "title")}</h1>
+        <p>{t("settings", "settingsDesc")}</p>
+      </div>
+    </div>
+
+    <div className={page.sectionStack}>
+      <section className={dash.card} aria-label={t("settings", "appearance")}>
+        <div className={dash.cardHead}>
+          <div>
+            <h2>{t("settings", "appearance")}</h2>
+            <p className={dash.cardSub}>{t("settings", "appearanceDesc")}</p>
+          </div>
         </div>
-      </div>
-
-      <div className={page.sectionStack}>
-        <section className={dash.card} aria-label={t("settings", "appearance")}>
-          <div className={dash.cardHead}>
-            <div>
-              <h2>{t("settings", "appearance")}</h2>
-              <p className={dash.cardSub}>{t("settings", "appearanceDesc")}</p>
-            </div>
-          </div>
-          <div className={page.chips} style={{ marginTop: 12 }}>
-            {(["light", "dark", "system"] as ThemeChoice[]).map((choice) => (
-              <button
-                key={choice}
-                type="button"
-                className={`${page.chip} ${theme === choice ? page.chipActive : ""}`}
-                onClick={() => applyTheme(choice)}
-                aria-pressed={theme === choice}
-              >
-                {choice === "light" ? (
-                  <Sun size={15} />
-                ) : choice === "dark" ? (
-                  <Moon size={15} />
-                ) : (
-                  <Monitor size={15} />
-                )}
-                {choice === "light" ? t("settings", "light") : choice === "dark" ? t("settings", "dark") : t("settings", "system")}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className={dash.card} aria-label={t("settings", "language")}>
-          <div className={dash.cardHead}>
-            <div>
-              <h2>{t("settings", "language")}</h2>
-              <p className={dash.cardSub}>{t("settings", "languageDesc")}</p>
-            </div>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <LanguageSwitcher />
-          </div>
-        </section>
-
-        <section className={dash.card} aria-label={t("settings", "profile")}>
-          <div className={dash.cardHead}>
-            <div>
-              <h2>{t("settings", "profile")}</h2>
-              <p className={dash.cardSub}>{t("settings", "profileDesc")}</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
-            <Avatar name={user.name} avatarUrl={avatarUrl} className={page.avatarLg} />
-            <div style={{ display: "grid", gap: 6, flex: 1, minWidth: 240 }}>
-              <strong style={{ fontSize: 16 }}>{user.name}</strong>
-              <span className={dash.cardSub}>
-                {t("settings", "memberSince")} {memberSince} · {user.exhibitionCount}{" "}
-                {user.exhibitionCount === 1 ? t("settings", "exhibition") : t("settings", "exhibitions")}
-              </span>
-              <span className={page.formActions}>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/avif"
-                  hidden
-                  aria-label={t("settings", "uploadAvatar")}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void uploadAvatar(file);
-                  }}
-                />
-                <button
-                  type="button"
-                  className={page.btn}
-                  disabled={uploadingAvatar}
-                  onClick={() => avatarInputRef.current?.click()}
-                >
-                  {uploadingAvatar ? (
-                    <LakisaUploadProgress progress={null} label={t("settings", "uploading")} />
-                  ) : (
-                    <>{t("settings", "uploadAvatar")}</>
-                  )}
-                </button>
-                {avatarUrl && (
-                  <button type="button" className={`${page.btn} ${page.btnDanger}`} disabled={uploadingAvatar} onClick={() => void removeAvatar()}>
-                    {t("settings", "removeAvatar")}
-                  </button>
-                )}
-                {avatarNote && (
-                  <span style={{ color: avatarNote.ok ? "var(--rd-green)" : "var(--rd-red)", fontSize: 13 }}>
-                    {avatarNote.text}
-                  </span>
-                )}
-              </span>
-              <small className={dash.cardSub}>{t("settings", "avatarHint")}</small>
-              <span>
-                <Link href={`/works/${user.id}`} target="_blank" rel="noreferrer" style={{ color: "var(--rd-accent)", fontSize: 13 }}>
-                  {t("works", "viewPublicPage")} ↗
-                </Link>
-              </span>
-            </div>
-          </div>
-          <form onSubmit={saveProfile} style={{ marginTop: 20 }}>
-            <div className={page.field}>
-              <label htmlFor="settings-name">{t("settings", "yourName")}</label>
-              <input
-                id="settings-name"
-                required
-                minLength={2}
-                maxLength={60}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className={page.field}>
-              <label htmlFor="settings-bio">{t("settings", "yourBio")}</label>
-              <textarea
-                id="settings-bio"
-                rows={3}
-                maxLength={500}
-                value={bio}
-                onChange={(event) => setBio(event.target.value)}
-                placeholder={t("settings", "bioPlaceholder")}
-              />
-              <small>{t("settings", "bioHint")}</small>
-            </div>
-            <div className={page.field}>
-              <label htmlFor="settings-role">{t("auth", "yourRole")}</label>
-              <select
-                id="settings-role"
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-              >
-                <option value="">{t("auth", "chooseRole")}</option>
-                {USER_ROLES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className={page.field}>
-              <label htmlFor="settings-country">{t("auth", "country")}</label>
-              <input
-                id="settings-country"
-                autoComplete="country-name"
-                maxLength={80}
-                value={country}
-                onChange={(event) => setCountry(event.target.value)}
-                placeholder={t("auth", "countryPlaceholder")}
-              />
-            </div>
-            <div className={page.field}>
-              <label htmlFor="settings-email">{t("settings", "email")}</label>
-              <input id="settings-email" value={user.email} disabled />
-              <small>{t("settings", "emailNote")}</small>
-            </div>
-            <div className={page.formActions}>
-              <button type="submit" className={`${page.btn} ${page.btnCta}`} disabled={savingProfile}>
-                {savingProfile ? t("settings", "saving") : t("settings", "saveChanges")}
-              </button>
-              {profileNote && (
-                <span style={{ color: profileNote.ok ? "var(--rd-green)" : "var(--rd-red)", fontSize: 13 }}>
-                  {profileNote.text}
-                </span>
-              )}
-            </div>
-          </form>
-        </section>
-
-        <section className={dash.card} aria-label={t("settings", "password")}>
-          <div className={dash.cardHead}>
-            <div>
-              <h2>{t("settings", "password")}</h2>
-              <p className={dash.cardSub}>{t("settings", "passwordDesc")}</p>
-            </div>
-          </div>
-          <form onSubmit={changePassword} style={{ marginTop: 16 }}>
-            <div className={page.field}>
-              <label htmlFor="settings-current-password">{t("settings", "currentPassword")}</label>
-              <input
-                id="settings-current-password"
-                type="password"
-                autoComplete="current-password"
-                required
-                minLength={1}
-                maxLength={72}
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-              />
-            </div>
-            <div className={page.field}>
-              <label htmlFor="settings-new-password">{t("settings", "newPassword")}</label>
-              <input
-                id="settings-new-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={10}
-                maxLength={72}
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                placeholder={t("settings", "passwordPlaceholder")}
-              />
-              <small>{t("settings", "passwordHint")}</small>
-            </div>
-            <div className={page.field}>
-              <label htmlFor="settings-confirm-password">{t("settings", "confirmNewPassword")}</label>
-              <input
-                id="settings-confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={10}
-                maxLength={72}
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-              />
-            </div>
-            <div className={page.formActions}>
-              <button type="submit" className={`${page.btn} ${page.btnCta}`} disabled={savingPassword}>
-                {savingPassword ? t("settings", "saving") : t("settings", "changePassword")}
-              </button>
-              {passwordNote && (
-                <span style={{ color: passwordNote.ok ? "var(--rd-green)" : "var(--rd-red)", fontSize: 13 }}>
-                  {passwordNote.text}
-                </span>
-              )}
-            </div>
-          </form>
-        </section>
-
-        <section className={dash.card} aria-label={t("settings", "session")}>
-          <div className={dash.cardHead}>
-            <div>
-              <h2>{t("settings", "session")}</h2>
-              <p className={dash.cardSub}>{t("settings", "sessionDesc")}</p>
-            </div>
-          </div>
-          <div className={page.formActions} style={{ marginTop: 12 }}>
-            <button type="button" className={page.btn} onClick={signOut}>
-              {t("common", "signOut")}
-            </button>
-          </div>
-        </section>
-
-        <section className={dash.card} aria-label={t("settings", "deleteAccount")} style={{ borderColor: "color-mix(in srgb, var(--rd-red) 45%, var(--rd-border))" }}>
-          <div className={dash.cardHead}>
-            <div>
-              <h2 style={{ color: "var(--rd-red)" }}>{t("settings", "deleteAccount")}</h2>
-              <p className={dash.cardSub}>{t("settings", "deleteAccountDesc")}</p>
-            </div>
-          </div>
-          <div className={page.formActions} style={{ marginTop: 12 }}>
+        <div className={page.chips} style={{ marginTop: 12 }}>
+          {(["light", "dark", "system"] as ThemeChoice[]).map((choice) => (
             <button
+              key={choice}
               type="button"
-              className={`${page.btn} ${page.btnDanger}`}
-              onClick={deleteAccount}
-              disabled={deleting}
+              className={`${page.chip} ${theme === choice ? page.chipActive : ""}`}
+              onClick={() => applyTheme(choice)}
+              aria-pressed={theme === choice}
             >
-              {deleting
-                ? t("settings", "deleting")
-                : confirmDelete
-                  ? t("settings", "clickAgainToConfirm")
-                  : t("settings", "deleteMyAccount")}
+              {choice === "light" ? (
+                <Sun size={15} />
+              ) : choice === "dark" ? (
+                <Moon size={15} />
+              ) : (
+                <Monitor size={15} />
+              )}
+              {choice === "light" ? t("settings", "light") : choice === "dark" ? t("settings", "dark") : t("settings", "system")}
             </button>
-            {deleteNote && <span style={{ color: "var(--rd-red)", fontSize: 13 }}>{deleteNote}</span>}
+          ))}
+        </div>
+      </section>
+
+      <section className={dash.card} aria-label={t("settings", "language")}>
+        <div className={dash.cardHead}>
+          <div>
+            <h2>{t("settings", "language")}</h2>
+            <p className={dash.cardSub}>{t("settings", "languageDesc")}</p>
           </div>
-        </section>
-      </div>
-    </RedesignShell>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <LanguageSwitcher />
+        </div>
+      </section>
+
+      <section className={dash.card} aria-label={t("settings", "profile")}>
+        <div className={dash.cardHead}>
+          <div>
+            <h2>{t("settings", "profile")}</h2>
+            <p className={dash.cardSub}>{t("settings", "profileDesc")}</p>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
+          <Avatar name={user.name} avatarUrl={avatarUrl} className={page.avatarLg} />
+          <div style={{ display: "grid", gap: 6, flex: 1, minWidth: 240 }}>
+            <strong style={{ fontSize: 16 }}>{user.name}</strong>
+            <span className={dash.cardSub}>
+              {t("settings", "memberSince")} {memberSince} · {user.exhibitionCount}{" "}
+              {user.exhibitionCount === 1 ? t("settings", "exhibition") : t("settings", "exhibitions")}
+            </span>
+            <span className={page.formActions}>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/avif"
+                hidden
+                aria-label={t("settings", "uploadAvatar")}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadAvatar(file);
+                }}
+              />
+              <button
+                type="button"
+                className={page.btn}
+                disabled={uploadingAvatar}
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {uploadingAvatar ? (
+                  <LakisaUploadProgress progress={null} label={t("settings", "uploading")} />
+                ) : (
+                  <>{t("settings", "uploadAvatar")}</>
+                )}
+              </button>
+              {avatarUrl && (
+                <button type="button" className={`${page.btn} ${page.btnDanger}`} disabled={uploadingAvatar} onClick={() => void removeAvatar()}>
+                  {t("settings", "removeAvatar")}
+                </button>
+              )}
+              {avatarNote && (
+                <span style={{ color: avatarNote.ok ? "var(--rd-live)" : "var(--rd-red)", fontSize: 13 }}>
+                  {avatarNote.text}
+                </span>
+              )}
+            </span>
+            <small className={dash.cardSub}>{t("settings", "avatarHint")}</small>
+            <span>
+              <Link href={`/works/${user.id}`} target="_blank" rel="noreferrer" style={{ color: "var(--rd-accent)", fontSize: 13 }}>
+                {t("works", "viewPublicPage")} ↗
+              </Link>
+            </span>
+          </div>
+        </div>
+        <form onSubmit={saveProfile} style={{ marginTop: 20 }}>
+          <div className={page.field}>
+            <label htmlFor="settings-name">{t("settings", "yourName")}</label>
+            <input
+              id="settings-name"
+              required
+              minLength={2}
+              maxLength={60}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+          <div className={page.field}>
+            <label htmlFor="settings-bio">{t("settings", "yourBio")}</label>
+            <textarea
+              id="settings-bio"
+              rows={3}
+              maxLength={500}
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              placeholder={t("settings", "bioPlaceholder")}
+            />
+            <small>{t("settings", "bioHint")}</small>
+          </div>
+          <div className={page.field}>
+            <label htmlFor="settings-role">{t("auth", "yourRole")}</label>
+            <select
+              id="settings-role"
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+            >
+              <option value="">{t("auth", "chooseRole")}</option>
+              {USER_ROLES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={page.field}>
+            <label htmlFor="settings-country">{t("auth", "country")}</label>
+            <input
+              id="settings-country"
+              autoComplete="country-name"
+              maxLength={80}
+              value={country}
+              onChange={(event) => setCountry(event.target.value)}
+              placeholder={t("auth", "countryPlaceholder")}
+            />
+          </div>
+          <div className={page.field}>
+            <label htmlFor="settings-email">{t("settings", "email")}</label>
+            <input id="settings-email" value={user.email} disabled />
+            <small>{t("settings", "emailNote")}</small>
+          </div>
+          <div className={page.formActions}>
+            <button type="submit" className={`${page.btn} ${page.btnCta}`} disabled={savingProfile}>
+              {savingProfile ? t("settings", "saving") : t("settings", "saveChanges")}
+            </button>
+            {profileNote && (
+              <span style={{ color: profileNote.ok ? "var(--rd-live)" : "var(--rd-red)", fontSize: 13 }}>
+                {profileNote.text}
+              </span>
+            )}
+          </div>
+        </form>
+      </section>
+
+      <section className={dash.card} aria-label={t("settings", "password")}>
+        <div className={dash.cardHead}>
+          <div>
+            <h2>{t("settings", "password")}</h2>
+            <p className={dash.cardSub}>{t("settings", "passwordDesc")}</p>
+          </div>
+        </div>
+        <form onSubmit={changePassword} style={{ marginTop: 16 }}>
+          <div className={page.field}>
+            <label htmlFor="settings-current-password">{t("settings", "currentPassword")}</label>
+            <input
+              id="settings-current-password"
+              type="password"
+              autoComplete="current-password"
+              required
+              minLength={1}
+              maxLength={72}
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+            />
+          </div>
+          <div className={page.field}>
+            <label htmlFor="settings-new-password">{t("settings", "newPassword")}</label>
+            <input
+              id="settings-new-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              maxLength={72}
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder={t("settings", "passwordPlaceholder")}
+            />
+            <small>{t("settings", "passwordHint")}</small>
+          </div>
+          <div className={page.field}>
+            <label htmlFor="settings-confirm-password">{t("settings", "confirmNewPassword")}</label>
+            <input
+              id="settings-confirm-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              maxLength={72}
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </div>
+          <div className={page.formActions}>
+            <button type="submit" className={`${page.btn} ${page.btnCta}`} disabled={savingPassword}>
+              {savingPassword ? t("settings", "saving") : t("settings", "changePassword")}
+            </button>
+            {passwordNote && (
+              <span style={{ color: passwordNote.ok ? "var(--rd-live)" : "var(--rd-red)", fontSize: 13 }}>
+                {passwordNote.text}
+              </span>
+            )}
+          </div>
+        </form>
+      </section>
+
+      <section className={dash.card} aria-label={t("settings", "session")}>
+        <div className={dash.cardHead}>
+          <div>
+            <h2>{t("settings", "session")}</h2>
+            <p className={dash.cardSub}>{t("settings", "sessionDesc")}</p>
+          </div>
+        </div>
+        <div className={page.formActions} style={{ marginTop: 12 }}>
+          <button type="button" className={page.btn} onClick={signOut}>
+            {t("common", "signOut")}
+          </button>
+        </div>
+      </section>
+
+      <section className={dash.card} aria-label={t("settings", "deleteAccount")} style={{ borderColor: "color-mix(in srgb, var(--rd-red) 45%, var(--rd-border))" }}>
+        <div className={dash.cardHead}>
+          <div>
+            <h2 style={{ color: "var(--rd-red)" }}>{t("settings", "deleteAccount")}</h2>
+            <p className={dash.cardSub}>{t("settings", "deleteAccountDesc")}</p>
+          </div>
+        </div>
+        <div className={page.formActions} style={{ marginTop: 12 }}>
+          <button
+            type="button"
+            className={`${page.btn} ${page.btnDanger}`}
+            onClick={deleteAccount}
+            disabled={deleting}
+          >
+            {deleting
+              ? t("settings", "deleting")
+              : confirmDelete
+                ? t("settings", "clickAgainToConfirm")
+                : t("settings", "deleteMyAccount")}
+          </button>
+          {deleteNote && <span style={{ color: "var(--rd-red)", fontSize: 13 }}>{deleteNote}</span>}
+        </div>
+      </section>
+    </div>
+    </>
   );
 }

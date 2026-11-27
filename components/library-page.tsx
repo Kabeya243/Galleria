@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Check, Plus, Search, Trash2 } from "lucide-react";
-import RedesignShell from "@/components/redesign-shell";
 import { useT } from "@/lib/i18n";
 import { coverImageRef, handleCoverImageError } from "@/lib/image-fallback";
 import type { LibraryWorkItem } from "@/lib/library";
@@ -241,269 +240,264 @@ export default function LibraryPage({
   }
 
   return (
-    <RedesignShell
-      user={user}
-      active="artworks"
-      exhibitionCount={exhibitions.length}
-      exhibitions={exhibitions.map((item) => ({ id: item.id, title: item.title, slug: "", status: "" }))}
-    >
-      <div className={page.pageHead}>
-        <div>
-          <span className={dash.eyebrow}>
-            {t("library", "yourLibrary")} {works.length}
-          </span>
-          <h1>{t("library", "title")}</h1>
-          <p className={page.pageSub}>{t("library", "copy")}</p>
-        </div>
-        <div className={page.pageActions}>
-          <button
-            type="button"
-            className={`${page.btn} ${page.btnCta}`}
-            onClick={() => setShowAddForm((current) => !current)}
-            aria-expanded={showAddForm}
-          >
-            <Plus size={16} /> {t("library", "addArtwork")}
-          </button>
-        </div>
+    <>
+    <div className={page.pageHead}>
+      <div>
+        <span className={dash.eyebrow}>
+          {t("library", "yourLibrary")} {works.length}
+        </span>
+        <h1>{t("library", "title")}</h1>
+        <p className={page.pageSub}>{t("library", "copy")}</p>
       </div>
+      <div className={page.pageActions}>
+        <button
+          type="button"
+          className={`${page.btn} ${page.btnCta}`}
+          onClick={() => setShowAddForm((current) => !current)}
+          aria-expanded={showAddForm}
+        >
+          <Plus size={16} /> {t("library", "addArtwork")}
+        </button>
+      </div>
+    </div>
 
-      {pageError && (
-        <div className="editor-error-banner" role="alert">
-          <span>{pageError}</span>
-          <button type="button" aria-label={t("common", "dismiss")} onClick={() => setPageError(null)}>
-            ×
-          </button>
-        </div>
-      )}
+    {pageError && (
+      <div className="editor-error-banner" role="alert">
+        <span>{pageError}</span>
+        <button type="button" aria-label={t("common", "dismiss")} onClick={() => setPageError(null)}>
+          ×
+        </button>
+      </div>
+    )}
 
-      <label className={page.searchField}>
-        <Search size={15} />
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("library", "searchPlaceholder")}
-          aria-label={t("library", "searchAria")}
-        />
-      </label>
+    <label className={page.searchField}>
+      <Search size={15} />
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={t("library", "searchPlaceholder")}
+        aria-label={t("library", "searchAria")}
+      />
+    </label>
 
-      {showAddForm && (
-        <section className={dash.card} aria-label={t("library", "addArtwork")}>
-          <div className={dash.cardHead}>
-            <div>
-              <span className={dash.eyebrow}>{t("library", "addArtwork")}</span>
-              <h2>{t("library", "addArtwork")}</h2>
-              <p className={dash.cardSub}>{t("library", "addArtworkCopy")}</p>
-            </div>
+    {showAddForm && (
+      <section className={dash.card} aria-label={t("library", "addArtwork")}>
+        <div className={dash.cardHead}>
+          <div>
+            <span className={dash.eyebrow}>{t("library", "addArtwork")}</span>
+            <h2>{t("library", "addArtwork")}</h2>
+            <p className={dash.cardSub}>{t("library", "addArtworkCopy")}</p>
           </div>
-          <form onSubmit={addArtwork} className={page.form} style={{ marginTop: 16 }}>
-            <div className={page.formGrid}>
-              <label className={page.field}>
-                <span>{t("library", "artworkImage")}</span>
-                <input
-                  ref={addFileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/svg+xml,.jpg,.jpeg,.png,.webp,.svg"
-                  onChange={(event) => setAddFile(event.target.files?.[0] ?? null)}
-                  required
-                  className={page.input}
-                />
-                {addFile && <span className={page.fieldHint}>{addFile.name}</span>}
-              </label>
-              <label className={page.field}>
-                <span>{t("library", "artworkTitle")}</span>
-                <input
-                  value={addTitle}
-                  onChange={(event) => setAddTitle(event.target.value)}
-                  placeholder={t("library", "artworkTitlePlaceholder")}
-                  required
-                  className={page.input}
-                />
-              </label>
-              <label className={page.field}>
-                <span>{t("library", "artworkArtist")}</span>
-                <input value={addArtist} onChange={(event) => setAddArtist(event.target.value)} className={page.input} />
-              </label>
-              <label className={page.field}>
-                <span>{t("library", "artworkYear")}</span>
-                <input value={addYear} onChange={(event) => setAddYear(event.target.value)} className={page.input} />
-              </label>
-              <label className={page.field}>
-                <span>{t("library", "artworkMedium")}</span>
-                <input value={addMedium} onChange={(event) => setAddMedium(event.target.value)} className={page.input} />
-              </label>
-              <label className={page.field}>
-                <span>{t("library", "artworkDimensions")}</span>
-                <input
-                  value={addDimensions}
-                  onChange={(event) => setAddDimensions(event.target.value)}
-                  placeholder="80 × 100 cm"
-                  className={page.input}
-                />
-              </label>
-              <label className={page.field} style={{ gridColumn: "1 / -1" }}>
-                <span>{t("library", "artworkDescription")}</span>
-                <input value={addDescription} onChange={(event) => setAddDescription(event.target.value)} className={page.input} />
-              </label>
-            </div>
-            <div className={page.formActions}>
-              <button type="submit" className={`${page.btn} ${page.btnCta}`} disabled={addBusy}>
-                {addBusy
-                  ? addProgress != null
-                    ? `${t("library", "uploading")} ${addProgress}%`
-                    : t("library", "savingArtwork")
-                  : t("library", "addArtwork")}
-              </button>
-            </div>
-          </form>
-          {addError && (
-            <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "12px 0 0" }}>
-              {addError}
-            </p>
-          )}
-          {addSuccess && (
-            <p role="status" style={{ color: "var(--rd-green)", fontSize: 13, margin: "12px 0 0" }}>
-              <Check size={13} /> {t("library", "artworkAdded")}
-            </p>
-          )}
-        </section>
-      )}
-
-      {works.length === 0 ? (
-        <section className={`${dash.card} ${page.emptyState}`}>
-          <h3>{t("library", "noWorks")}</h3>
-          <p>{t("library", "noWorksDesc")}</p>
-        </section>
-      ) : visibleWorks.length === 0 ? (
-        <p className={dash.empty}>{t("library", "noMatch")}</p>
-      ) : (
-        <div className={page.workGrid}>
-          {visibleWorks.map((work) => (
-            <article key={work.id} className={page.workCard}>
-              <span className={page.workThumb} aria-label={work.title}>
-                {work.videoUrl ? (
-                  <video src={work.videoUrl} muted loop playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                ) : work.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={work.imageUrl}
-                    alt={work.altText ?? work.title}
-                    loading="lazy"
-                    onError={handleCoverImageError} ref={coverImageRef}
-                  />
-                ) : work.sculptureUrl ? (
-                  <span
-                    style={{ background: "linear-gradient(135deg, #b8a184, #343e36)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, letterSpacing: "0.2em", width: "100%", height: "100%" }}
-                    role="img"
-                    aria-label={work.title}
-                  >
-                    3D
-                  </span>
-                ) : null}
-              </span>
-              <div className={page.workBody}>
-                <h3 className={page.workTitle}>{work.title}</h3>
-                <p className={page.workMeta}>
-                  {[work.year, work.medium].filter(Boolean).join(" · ") || work.artist}
-                </p>
-                <p className={page.workMeta}>
-                  {work.exhibitionIds.length === 0
-                    ? t("library", "notInExhibition")
-                    : `${t("library", "inExhibitions")} ${work.exhibitionIds.length} ${work.exhibitionIds.length === 1 ? t("library", "exhibition") : t("library", "exhibitions")}`}
-                </p>
-                {work.exhibitionIds.length > 0 && (
-                  <div className={page.tagRow}>
-                    {work.exhibitionIds.map((exhibitionId) => {
-                      const exhibition = exhibitions.find((item) => item.id === exhibitionId);
-                      if (!exhibition) return null;
-                      const key = `${work.id}:${exhibitionId}`;
-                      return (
-                        <span key={exhibitionId} className={page.tag}>
-                          {exhibition.title}
-                          <button
-                            type="button"
-                            onClick={() => void removeWorkFromExhibition(work, exhibitionId)}
-                            disabled={removingKey === key}
-                            aria-label={`${t("library", "removeFromExhibition")}: ${exhibition.title}`}
-                            title={t("library", "removeFromExhibition")}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-                {confirmingDeleteId === work.id && (
-                  <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "8px 0 0" }}>
-                    {t("library", "deleteWarning")}
-                  </p>
-                )}
-                {addedNote?.workId === work.id && (
-                  <p role="status" style={{ color: "var(--rd-green)", fontSize: 13, margin: "8px 0 0" }}>
-                    <Check size={13} /> {t("library", "addedTo")} {addedNote.exhibitionTitle}
-                  </p>
-                )}
-                {removedNote?.workId === work.id && (
-                  <p role="status" style={{ color: "var(--rd-green)", fontSize: 13, margin: "8px 0 0" }}>
-                    <Check size={13} /> {t("library", "removedFrom")} {removedNote.exhibitionTitle}
-                  </p>
-                )}
-                <div className={page.expoActions}>
-                  <select
-                    className={page.select}
-                    value={reuseTarget[work.id] ?? ""}
-                    onChange={(event) => setReuseTarget((current) => ({ ...current, [work.id]: event.target.value }))}
-                    aria-label={t("library", "chooseExhibition")}
-                  >
-                    <option value="">{t("library", "chooseExhibition")}</option>
-                    {exhibitions.map((exhibition) => (
-                      <option key={exhibition.id} value={exhibition.id}>{exhibition.title}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => void reuseWork(work)}
-                    disabled={addingId === work.id || !reuseTarget[work.id] || work.exhibitionIds.includes(reuseTarget[work.id] ?? "")}
-                    className={page.btn}
-                    title={reuseTarget[work.id] && work.exhibitionIds.includes(reuseTarget[work.id]) ? t("library", "alreadyInExhibition") : undefined}
-                  >
-                    <Plus size={14} /> {addingId === work.id ? t("library", "adding") : t("library", "addToExhibition")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void deleteWork(work)}
-                    disabled={deletingId === work.id}
-                    className={`${page.btn} ${page.btnDanger}`}
-                    aria-label={confirmingDeleteId === work.id ? `${t("library", "clickAgainDelete")}, ${work.title}` : `${t("library", "delete")}, ${work.title}`}
-                  >
-                    <Trash2 size={14} />{" "}
-                    {deletingId === work.id
-                      ? t("library", "deleting")
-                      : confirmingDeleteId === work.id
-                        ? t("library", "clickAgainDelete")
-                        : t("library", "delete")}
-                  </button>
-                </div>
-                {reuseTarget[work.id] && work.exhibitionIds.includes(reuseTarget[work.id]) && (
-                  <p role="status" style={{ color: "var(--rd-green)", fontSize: 13, margin: "8px 0 0" }}>
-                    {t("library", "alreadyInExhibition")}
-                  </p>
-                )}
-              </div>
-            </article>
-          ))}
         </div>
-      )}
-
-      <section className={`${dash.card} ${page.noteCard}`}>
-        <p>
-          <strong>{t("library", "inventoryHintTitle")}</strong> {t("library", "inventoryHint")}
-        </p>
-        <a className={page.btn} href="/tools/inventory">
-          {t("library", "openInventory")}
-        </a>
+        <form onSubmit={addArtwork} className={page.form} style={{ marginTop: 16 }}>
+          <div className={page.formGrid}>
+            <label className={page.field}>
+              <span>{t("library", "artworkImage")}</span>
+              <input
+                ref={addFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/svg+xml,.jpg,.jpeg,.png,.webp,.svg"
+                onChange={(event) => setAddFile(event.target.files?.[0] ?? null)}
+                required
+                className={page.input}
+              />
+              {addFile && <span className={page.fieldHint}>{addFile.name}</span>}
+            </label>
+            <label className={page.field}>
+              <span>{t("library", "artworkTitle")}</span>
+              <input
+                value={addTitle}
+                onChange={(event) => setAddTitle(event.target.value)}
+                placeholder={t("library", "artworkTitlePlaceholder")}
+                required
+                className={page.input}
+              />
+            </label>
+            <label className={page.field}>
+              <span>{t("library", "artworkArtist")}</span>
+              <input value={addArtist} onChange={(event) => setAddArtist(event.target.value)} className={page.input} />
+            </label>
+            <label className={page.field}>
+              <span>{t("library", "artworkYear")}</span>
+              <input value={addYear} onChange={(event) => setAddYear(event.target.value)} className={page.input} />
+            </label>
+            <label className={page.field}>
+              <span>{t("library", "artworkMedium")}</span>
+              <input value={addMedium} onChange={(event) => setAddMedium(event.target.value)} className={page.input} />
+            </label>
+            <label className={page.field}>
+              <span>{t("library", "artworkDimensions")}</span>
+              <input
+                value={addDimensions}
+                onChange={(event) => setAddDimensions(event.target.value)}
+                placeholder="80 × 100 cm"
+                className={page.input}
+              />
+            </label>
+            <label className={page.field} style={{ gridColumn: "1 / -1" }}>
+              <span>{t("library", "artworkDescription")}</span>
+              <input value={addDescription} onChange={(event) => setAddDescription(event.target.value)} className={page.input} />
+            </label>
+          </div>
+          <div className={page.formActions}>
+            <button type="submit" className={`${page.btn} ${page.btnCta}`} disabled={addBusy}>
+              {addBusy
+                ? addProgress != null
+                  ? `${t("library", "uploading")} ${addProgress}%`
+                  : t("library", "savingArtwork")
+                : t("library", "addArtwork")}
+            </button>
+          </div>
+        </form>
+        {addError && (
+          <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "12px 0 0" }}>
+            {addError}
+          </p>
+        )}
+        {addSuccess && (
+          <p role="status" style={{ color: "var(--rd-live)", fontSize: 13, margin: "12px 0 0" }}>
+            <Check size={13} /> {t("library", "artworkAdded")}
+          </p>
+        )}
       </section>
-    </RedesignShell>
+    )}
+
+    {works.length === 0 ? (
+      <section className={`${dash.card} ${page.emptyState}`}>
+        <h3>{t("library", "noWorks")}</h3>
+        <p>{t("library", "noWorksDesc")}</p>
+      </section>
+    ) : visibleWorks.length === 0 ? (
+      <p className={dash.empty}>{t("library", "noMatch")}</p>
+    ) : (
+      <div className={page.workGrid}>
+        {visibleWorks.map((work) => (
+          <article key={work.id} className={page.workCard}>
+            <span className={page.workThumb} aria-label={work.title}>
+              {work.videoUrl ? (
+                <video src={work.videoUrl} muted loop playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              ) : work.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={work.imageUrl}
+                  alt={work.altText ?? work.title}
+                  loading="lazy"
+                  onError={handleCoverImageError} ref={coverImageRef}
+                />
+              ) : work.sculptureUrl ? (
+                <span
+                  style={{ background: "linear-gradient(135deg, #b8a184, #343e36)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, letterSpacing: "0.2em", width: "100%", height: "100%" }}
+                  role="img"
+                  aria-label={work.title}
+                >
+                  3D
+                </span>
+              ) : null}
+            </span>
+            <div className={page.workBody}>
+              <h3 className={page.workTitle}>{work.title}</h3>
+              <p className={page.workMeta}>
+                {[work.year, work.medium].filter(Boolean).join(" · ") || work.artist}
+              </p>
+              <p className={page.workMeta}>
+                {work.exhibitionIds.length === 0
+                  ? t("library", "notInExhibition")
+                  : `${t("library", "inExhibitions")} ${work.exhibitionIds.length} ${work.exhibitionIds.length === 1 ? t("library", "exhibition") : t("library", "exhibitions")}`}
+              </p>
+              {work.exhibitionIds.length > 0 && (
+                <div className={page.tagRow}>
+                  {work.exhibitionIds.map((exhibitionId) => {
+                    const exhibition = exhibitions.find((item) => item.id === exhibitionId);
+                    if (!exhibition) return null;
+                    const key = `${work.id}:${exhibitionId}`;
+                    return (
+                      <span key={exhibitionId} className={page.tag}>
+                        {exhibition.title}
+                        <button
+                          type="button"
+                          onClick={() => void removeWorkFromExhibition(work, exhibitionId)}
+                          disabled={removingKey === key}
+                          aria-label={`${t("library", "removeFromExhibition")}: ${exhibition.title}`}
+                          title={t("library", "removeFromExhibition")}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {confirmingDeleteId === work.id && (
+                <p role="alert" style={{ color: "var(--rd-red)", fontSize: 13, margin: "8px 0 0" }}>
+                  {t("library", "deleteWarning")}
+                </p>
+              )}
+              {addedNote?.workId === work.id && (
+                <p role="status" style={{ color: "var(--rd-live)", fontSize: 13, margin: "8px 0 0" }}>
+                  <Check size={13} /> {t("library", "addedTo")} {addedNote.exhibitionTitle}
+                </p>
+              )}
+              {removedNote?.workId === work.id && (
+                <p role="status" style={{ color: "var(--rd-live)", fontSize: 13, margin: "8px 0 0" }}>
+                  <Check size={13} /> {t("library", "removedFrom")} {removedNote.exhibitionTitle}
+                </p>
+              )}
+              <div className={page.expoActions}>
+                <select
+                  className={page.select}
+                  value={reuseTarget[work.id] ?? ""}
+                  onChange={(event) => setReuseTarget((current) => ({ ...current, [work.id]: event.target.value }))}
+                  aria-label={t("library", "chooseExhibition")}
+                >
+                  <option value="">{t("library", "chooseExhibition")}</option>
+                  {exhibitions.map((exhibition) => (
+                    <option key={exhibition.id} value={exhibition.id}>{exhibition.title}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => void reuseWork(work)}
+                  disabled={addingId === work.id || !reuseTarget[work.id] || work.exhibitionIds.includes(reuseTarget[work.id] ?? "")}
+                  className={page.btn}
+                  title={reuseTarget[work.id] && work.exhibitionIds.includes(reuseTarget[work.id]) ? t("library", "alreadyInExhibition") : undefined}
+                >
+                  <Plus size={14} /> {addingId === work.id ? t("library", "adding") : t("library", "addToExhibition")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void deleteWork(work)}
+                  disabled={deletingId === work.id}
+                  className={`${page.btn} ${page.btnDanger}`}
+                  aria-label={confirmingDeleteId === work.id ? `${t("library", "clickAgainDelete")}, ${work.title}` : `${t("library", "delete")}, ${work.title}`}
+                >
+                  <Trash2 size={14} />{" "}
+                  {deletingId === work.id
+                    ? t("library", "deleting")
+                    : confirmingDeleteId === work.id
+                      ? t("library", "clickAgainDelete")
+                      : t("library", "delete")}
+                </button>
+              </div>
+              {reuseTarget[work.id] && work.exhibitionIds.includes(reuseTarget[work.id]) && (
+                <p role="status" style={{ color: "var(--rd-live)", fontSize: 13, margin: "8px 0 0" }}>
+                  {t("library", "alreadyInExhibition")}
+                </p>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+
+    <section className={`${dash.card} ${page.noteCard}`}>
+      <p>
+        <strong>{t("library", "inventoryHintTitle")}</strong> {t("library", "inventoryHint")}
+      </p>
+      <a className={page.btn} href="/tools/inventory">
+        {t("library", "openInventory")}
+      </a>
+    </section>
+    </>
   );
 }

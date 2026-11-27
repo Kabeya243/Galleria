@@ -15,25 +15,37 @@ import { applyTheme, getStoredTheme, resolveTheme } from "@/lib/theme";
 import { Box, ChevronDown, LogOut, Moon, Plus, Route, Search, Settings2, Sun } from "lucide-react";
 import styles from "./redesign-dashboard.module.css";
 
-// Redesign shell v2 (Nov 2026): the screenshot's chrome — a topbar
-// with the logo, a centred search pill, the theme toggle, the bell and
-// the user chip with its dropdown; below it the tabs row (Dashboard,
-// My Exhibitions, My Artworks, Resources, Insights) with the
-// dark-green Create + pill at the right; the flat sidebar on the left.
-// Shared by every redesigned page. The dashboard keeps its own
-// content; every other page renders its content as the shell's
-// children. Children may be a render function receiving { openCreate }
-// when a page needs to open the create dialog from its own content
-// (the dashboard onboarding does).
+// Redesign shell (Nov 2026, fixes Dec 2026): the screenshot's chrome —
+// a topbar with the logo, a centred search pill, the theme toggle, the
+// bell and the user chip with its dropdown; below it the tabs row
+// (Dashboard, My Exhibitions, My Artworks, Resources, Insights) with
+// the black Create + pill at the right; the flat sidebar on the left.
 //
-// The command palette needs the user's exhibitions. Pages that already
-// load them server-side pass them in; the shell otherwise fetches
+// The shell lives in the shared (app) layout — app/(app)/layout.tsx —
+// so it mounts once and persists across page navigations; only the
+// content changes. Pages render their own content only, never this
+// shell. Pages that need to open the create dialog (dashboard
+// onboarding, exhibitions list) dispatch a "lakisa:open-create" event
+// via requestOpenCreate() below; the shell listens for it.
+//
+// The command palette needs the user's exhibitions. The layout loads
+// them server-side and passes them in; the shell otherwise fetches
 // GET /api/exhibitions (own exhibitions) once, client-side. A failed
 // fetch just leaves the palette's exhibition section empty.
 
 export type RedesignShellHelpers = {
   openCreate: () => void;
 };
+
+// Ask the (single, layout-owned) shell to open the create-exhibition
+// dialog. Pages inside the layout dispatch this event instead of
+// receiving openCreate as a render prop — the shell is no longer
+// rendered by the pages, so there is no prop to pass down.
+export function requestOpenCreate() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("lakisa:open-create"));
+  }
+}
 
 export type RedesignShellUser = {
   id: string;
@@ -153,6 +165,17 @@ export default function RedesignShell({
   function openCreate() {
     setShowCreateDialog(true);
   }
+
+  // Pages inside the layout open the create dialog by dispatching a
+  // "lakisa:open-create" event (see requestOpenCreate above) — the
+  // shell is layout-owned now, so no page can call openCreate directly.
+  useEffect(() => {
+    const handler = () => openCreate();
+    window.addEventListener("lakisa:open-create", handler);
+    return () => window.removeEventListener("lakisa:open-create", handler);
+    // openCreate only touches setState, so it is stable to omit here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });

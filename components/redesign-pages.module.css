@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Lakisa redesign v2 (Nov 2026): page-level styles.                  */
 /* Same language as the dashboard (redesign-dashboard.module.css):    */
-/* light grey background, white cards, dark-green accent, Manrope,    */
+/* gallery-white background, white cards, charcoal black accent, Manrope,    */
 /* tabular numerals. These classes are used inside .shell, so the     */
 /* --rd-* tokens defined there resolve here. Every page reuses        */
 /* .card/.kpis/.eyebrow etc. from the dashboard module and adds its   */
@@ -252,8 +252,8 @@
 }
 
 .pillLive {
-  background: var(--rd-green-soft);
-  color: var(--rd-green);
+  background: var(--rd-live-soft);
+  color: var(--rd-live);
 }
 
 .pillDraft {
@@ -679,7 +679,7 @@ button.hubCard:hover {
   color: var(--rd-t3);
 }
 
-/* Large profile avatar (Settings): green disc, light initials,
+/* Large profile avatar (Settings): black disc, light initials,
    mirroring the sidebar avatar. */
 .avatarLg {
   width: 64px;

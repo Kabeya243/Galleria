@@ -8,6 +8,7 @@ import type { DictionarySection } from "@/lib/i18n";
 import {
   Archive,
   BarChart3,
+  BookOpen,
   Boxes,
   Calculator,
   Compass,
@@ -15,6 +16,9 @@ import {
   FileText,
   GalleryVerticalEnd,
   Globe,
+  Image,
+  LayoutDashboard,
+  Layers,
   Mail,
   MessageSquare,
   Newspaper,
@@ -23,17 +27,22 @@ import {
   Settings2,
   ShoppingBag,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import styles from "./redesign-dashboard.module.css";
 
-// Redesign sidebar v2 (Nov 2026): the screenshot's flat list —
-// Inventory, Contacts, Price Your Work, Analytics, Settings — then,
-// below a divider, the rest of the pages so every page stays
-// reachable. The logo and the profile moved to the topbar; the plan
-// card and the workspace switcher are gone (My plan is a nav item, the
-// account switch sits at the bottom). Collapsible to an icon rail
-// (labels hidden, tooltips via title).
+// Redesign sidebar (Nov 2026, reordered Dec 2026): the menu starts with
+// the public/discovery sections by order of importance — Explore,
+// Exhibitions (published), Feed, Magazine — then the artist's own
+// workspace (Dashboard, My Exhibitions, My Artworks, Resources) and
+// the rest (Messages, Lakisa Galerie, Inventory, Contacts, Price Your
+// Work, Certificates, Analytics, My Orders, My Plan, 3D Editor).
+// Settings stays at the bottom, with Feedback and the account switch.
+// The logo and the profile moved to the topbar; the plan card and the
+// workspace switcher are gone (My plan is a nav item, the account
+// switch sits at the bottom). Collapsible to an icon rail (labels
+// hidden, tooltips via title).
 
 type NavItem = {
   id: string;
@@ -44,21 +53,28 @@ type NavItem = {
   external?: boolean;
 };
 
+// Top of the menu, by order of importance: discovery first. "Exhibitions"
+// is the published exhibitions (the public view); the artist's own list
+// is "My Exhibitions" further down.
 const NAV_MAIN: NavItem[] = [
-  { id: "inventory", href: "/tools/inventory", label: "inventory", icon: Archive },
-  { id: "contacts", href: "/tools/contacts", label: "contacts", icon: Users },
-  { id: "price", href: "/tools/price-your-work", label: "priceYourWork", icon: Calculator },
-  { id: "insights", href: "/dashboard/analytics", label: "analytics", icon: BarChart3 },
-  { id: "settings", href: "/settings", label: "settings", icon: Settings2 },
+  { id: "explore", href: "/explore", label: "exploreExhibitions", icon: Compass },
+  { id: "published", href: "/exhibitions?status=published", label: "exhibitions", icon: Globe },
+  { id: "feed", href: "/feed", label: "feed", icon: Newspaper },
+  { id: "magazine", href: "/magazine", label: "magazine", icon: BookOpen },
 ];
 
 const NAV_MORE: NavItem[] = [
-  { id: "explore", href: "/explore", label: "exploreExhibitions", icon: Compass },
-  { id: "feed", href: "/feed", label: "feed", icon: Newspaper },
+  { id: "dashboard", href: "/", label: "dashboard", icon: LayoutDashboard },
+  { id: "exhibitions", href: "/exhibitions", label: "myExhibitions", icon: Layers },
+  { id: "artworks", href: "/artworks", label: "myArtworks", icon: Image },
+  { id: "resources", href: "/tools", label: "resources", icon: Wrench },
   { id: "messages", href: "/messages", label: "messages", icon: MessageSquare, unread: true },
   { id: "galleries", href: "/galleries", label: "lakisaGalerie", icon: GalleryVerticalEnd },
-  { id: "published", href: "/exhibitions?status=published", label: "publishedExhibitions", icon: Globe },
+  { id: "inventory", href: "/tools/inventory", label: "inventory", icon: Archive },
+  { id: "contacts", href: "/tools/contacts", label: "contacts", icon: Users },
+  { id: "price", href: "/tools/price-your-work", label: "priceYourWork", icon: Calculator },
   { id: "certificates", href: "/tools/documents", label: "certificates", icon: FileText },
+  { id: "insights", href: "/dashboard/analytics", label: "analytics", icon: BarChart3 },
   { id: "orders", href: "/dashboard/orders", label: "myOrders", icon: ShoppingBag },
   { id: "plan", href: "/dashboard/plan", label: "myPlan", icon: CreditCard },
   { id: "editor", href: "/exhibitions", label: "editor3d", icon: Boxes },

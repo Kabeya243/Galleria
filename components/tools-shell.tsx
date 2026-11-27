@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import RedesignShell from "@/components/redesign-shell";
 import Sidebar from "@/components/sidebar";
 import ThemeToggle from "@/components/theme-toggle";
 import { useT, type DictionarySection } from "@/lib/i18n";
@@ -19,6 +18,12 @@ import page from "./redesign-pages.module.css";
 // documents, price-your-work, and the /tools index) pass
 // redesign + redesignActive and render inside the redesign shell
 // instead. Every other tool keeps the old shell untouched.
+//
+// Fixes Dec 2026: the redesign shell is owned by the shared (app)
+// layout now, so the redesign branch renders only the page header +
+// the tool itself — no shell here. The redesignActive prop is kept
+// (pages still pass it) but the layout derives the active item from
+// the URL instead.
 export default function ToolsShell({
   user,
   exhibitionCount,
@@ -27,7 +32,7 @@ export default function ToolsShell({
   description,
   eyebrowOverride,
   redesign = false,
-  redesignActive = "resources",
+  redesignActive: _redesignActive = "resources",
   children,
 }: {
   user: { id: string; name: string; email: string; avatarUrl?: string | null; isAdmin?: boolean };
@@ -41,9 +46,10 @@ export default function ToolsShell({
   children: ReactNode;
 }) {
   const t = useT();
+  void _redesignActive;
   if (redesign) {
     return (
-      <RedesignShell user={user} active={redesignActive} exhibitionCount={exhibitionCount}>
+      <>
         <div className={page.pageHead}>
           <div>
             <span className={page.eyebrow}>
@@ -54,7 +60,7 @@ export default function ToolsShell({
           </div>
         </div>
         {children}
-      </RedesignShell>
+      </>
     );
   }
   return (

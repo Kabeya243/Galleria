@@ -21,10 +21,9 @@ export type CertificateArtwork = {
 
 // ---------------------------------------------------------------------------
 // Certificate Studio — redesigned on the Atelier editor's visual language
-// (SANAA dark/gold theme: charcoal panels, off-white text, restrained gold
-// accent, Manrope; see components/certificate-tool.css, scoped under
-// .certificate-scope like .atelier-scope). Same certificate data as before
-// — artwork, artist, dimensions, date, signature — only the chrome
+// (charcoal panels, off-white text, restrained black accent, Manrope; see
+// components/certificate-tool.css, scoped under .certificate-scope like
+// .atelier-scope). Same certificate data as before — artwork, artist, dimensions, date, signature — only the chrome
 // around it changed.
 //
 // Saving is twofold, like Atelier designs:
@@ -55,7 +54,7 @@ type TemplateId =
   | "ribbon";
 type PaperSize = "A4" | "Letter";
 type Orientation = "portrait" | "landscape";
-type BorderStyle = "none" | "single" | "double" | "gold";
+type BorderStyle = "none" | "single" | "double" | "black";
 
 type CertificateConfig = {
   artworkId: string;
@@ -80,7 +79,7 @@ type CertificateConfig = {
   paperSize: PaperSize;
   orientation: Orientation;
   border: BorderStyle;
-  goldAccent: boolean;
+  blackAccent: boolean;
   showImage: boolean;
   verificationNote: string;
 };
@@ -113,20 +112,20 @@ type TemplateMeta = {
 };
 
 const TEMPLATES: TemplateMeta[] = [
-  { id: "classic", name: "Classic", blurb: "Centred, formal, double rule: the traditional certificate.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "classic", name: "Classic", blurb: "Centred, formal, double rule: the traditional certificate.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#111111", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
   { id: "minimal", name: "Minimal", blurb: "Quiet and spare: small type, wide margins, one thin rule.", align: "left", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#1a1a1a", ornament: "none", details: "stack", kickerSpacing: "0.18em", titleSize: 26 },
-  { id: "gallery", name: "Gallery", blurb: "The work leads: large image, generous title, gallery-label details.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
-  { id: "heritage", name: "Heritage", blurb: "Warm ivory paper, double gold rule, corner flourishes and a wax seal.", align: "center", bg: "#faf6ec", ink: "#2b2416", muted: "#7a6a45", accent: "#8a6d2b", ornament: "corners", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
+  { id: "gallery", name: "Gallery", blurb: "The work leads: large image, generous title, gallery-label details.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#111111", ornament: "none", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "heritage", name: "Heritage", blurb: "Warm ivory paper, double black rule, corner flourishes and a wax seal.", align: "center", bg: "#faf6ec", ink: "#2b2416", muted: "#7a6a45", accent: "#111111", ornament: "corners", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
   { id: "modern", name: "Modern", blurb: "Left-aligned, thick black top bar, bold grotesque type, details in two columns.", align: "left", bg: "#ffffff", ink: "#111111", muted: "#555555", accent: "#111111", ornament: "topbar", details: "grid", kickerSpacing: "0.2em", titleSize: 32 },
-  { id: "noir", name: "Atelier Noir", blurb: "Charcoal sheet, gold type: the certificate as a dark gallery wall.", align: "center", bg: "#141210", ink: "#f5f2eb", muted: "#c9b896", accent: "#c9a86a", ornament: "none", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
-  { id: "deco", name: "Deco", blurb: "A row of gold diamonds, wide letterspacing, double rule: geometry, not clutter.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "diamonds", details: "stack", kickerSpacing: "0.34em", titleSize: 30 },
-  { id: "monogram", name: "Monogram", blurb: "The artist's initial as a pale watermark behind the title, hairline frame.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#8a6d2b", ornament: "watermark", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "noir", name: "Atelier Noir", blurb: "Charcoal sheet, light type: the certificate as a dark gallery wall.", align: "center", bg: "#111111", ink: "#f5f5f5", muted: "#a3a3a3", accent: "#f5f5f5", ornament: "none", details: "stack", kickerSpacing: "0.3em", titleSize: 30 },
+  { id: "deco", name: "Deco", blurb: "A row of black diamonds, wide letterspacing, double rule: geometry, not clutter.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#111111", ornament: "diamonds", details: "stack", kickerSpacing: "0.34em", titleSize: 30 },
+  { id: "monogram", name: "Monogram", blurb: "The artist's initial as a pale watermark behind the title, hairline frame.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#111111", ornament: "watermark", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
   { id: "ledger", name: "Ledger", blurb: "An archival ledger: ruled lines, typewriter details, an ORIGINAL stamp box.", align: "left", bg: "#fbfaf6", ink: "#22201a", muted: "#6b6558", accent: "#22201a", ornament: "ruled", details: "stack", kickerSpacing: "0.12em", titleSize: 26 },
-  { id: "ribbon", name: "Ribbon", blurb: "A gold band across the top and a seal circle: the certificate as an award.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#b08d3e", ornament: "band", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
+  { id: "ribbon", name: "Ribbon", blurb: "A black band across the top and a seal circle: the certificate as an award.", align: "center", bg: "#fdfdfc", ink: "#1a1a1a", muted: "#666666", accent: "#111111", ornament: "band", details: "stack", kickerSpacing: "0.22em", titleSize: 30 },
 ];
 
 const TEMPLATE_IDS = TEMPLATES.map((item) => item.id) as TemplateId[];
-const GOLD = "#b08d3e";
+const BLACK = "#111111";
 const INK = "#1a1a1a";
 const SERIF = '"Fraunces", Georgia, serif';
 const MONO = '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
@@ -186,7 +185,7 @@ function configForArtwork(artwork: CertificateArtwork, artistName: string): Cert
     paperSize: "A4",
     orientation: "portrait",
     border: "double",
-    goldAccent: true,
+    blackAccent: true,
     showImage: true,
     verificationNote: DEFAULT_VERIFICATION_NOTE,
   };
@@ -217,7 +216,7 @@ function configForBlank(artistName: string): CertificateConfig {
     paperSize: "A4",
     orientation: "portrait",
     border: "double",
-    goldAccent: true,
+    blackAccent: true,
     showImage: true,
     verificationNote: DEFAULT_VERIFICATION_NOTE,
   };
@@ -229,7 +228,7 @@ function configFromSaved(data: Record<string, unknown>, fallback: CertificateCon
   if (!TEMPLATE_IDS.includes(merged.template)) merged.template = "classic";
   if (!["A4", "Letter"].includes(merged.paperSize)) merged.paperSize = "A4";
   if (!["portrait", "landscape"].includes(merged.orientation)) merged.orientation = "portrait";
-  if (!["none", "single", "double", "gold"].includes(merged.border)) merged.border = "double";
+  if (!["none", "single", "double", "black"].includes(merged.border)) merged.border = "double";
   if (typeof merged.priceUsd !== "string") merged.priceUsd = "";
   // Certificates issued before the online verification service carry
   // the old note. The QR code now points to the verification page, so
@@ -531,7 +530,7 @@ export default function CertificateTool({
       // A new artwork starts a fresh certificate: prefill from its record
       // and mint a new ID; the design choices stay as the artist set them.
       const fresh = configForArtwork(artwork, artistName);
-      return { ...prev, ...fresh, template: prev.template, paperSize: prev.paperSize, orientation: prev.orientation, border: prev.border, goldAccent: prev.goldAccent, showImage: prev.showImage, verificationNote: prev.verificationNote };
+      return { ...prev, ...fresh, template: prev.template, paperSize: prev.paperSize, orientation: prev.orientation, border: prev.border, blackAccent: prev.blackAccent, showImage: prev.showImage, verificationNote: prev.verificationNote };
     });
     setLoadedId(null);
     setIssueMsg(null);
@@ -691,8 +690,8 @@ export default function CertificateTool({
   const template = TEMPLATES.find((item) => item.id === cfg.template) ?? TEMPLATES[0];
   const isLandscape = cfg.orientation === "landscape";
   const paperRatio = cfg.paperSize === "A4" ? (isLandscape ? 297 / 210 : 210 / 297) : isLandscape ? 11 / 8.5 : 8.5 / 11;
-  const accent = cfg.goldAccent ? template.accent : template.ink;
-  const frameColor = cfg.border === "gold" ? (cfg.goldAccent ? GOLD : template.ink) : template.ink;
+  const accent = cfg.blackAccent ? template.accent : template.ink;
+  const frameColor = cfg.border === "black" ? (cfg.blackAccent ? BLACK : template.ink) : template.ink;
   const borderStyle =
     cfg.border === "none"
       ? `1px solid ${template.ink}22`
@@ -946,7 +945,7 @@ export default function CertificateTool({
                 <select value={cfg.border} onChange={(event) => set("border", event.target.value as BorderStyle)}>
                   <option value="double">Double rule</option>
                   <option value="single">Single rule</option>
-                  <option value="gold">Gold rule</option>
+                  <option value="black">Black rule</option>
                   <option value="none">None</option>
                 </select>
               </label>
@@ -954,7 +953,7 @@ export default function CertificateTool({
                 <span>Accents</span>
                 <span className="cert-checks">
                   <label>
-                    <input type="checkbox" checked={cfg.goldAccent} onChange={(event) => set("goldAccent", event.target.checked)} /> Gold accent
+                    <input type="checkbox" checked={cfg.blackAccent} onChange={(event) => set("blackAccent", event.target.checked)} /> Black accent
                   </label>
                   <label>
                     <input type="checkbox" checked={cfg.showImage} disabled={!cfg.imageUrl} onChange={(event) => set("showImage", event.target.checked)} /> Show artwork image

@@ -1,16 +1,16 @@
 /* Certificate Studio — the Atelier editor's visual language, scoped under
    .certificate-scope so none of it leaks into the rest of SANAA (same
    pattern as .atelier-scope in atelier-editor.css): dark/charcoal panels,
-   off-white text, restrained gold accent, Manrope. The certificate sheet
+   off-white text, restrained black accent, Manrope. The certificate sheet
    itself stays paper-coloured — it is the document being made, not the
    chrome around it. Uses SANAA's own tokens (--paper, --ink, --muted,
    --line, --surface-2, --surface-3) so the tool follows the light/dark
    toggle. */
 
 .certificate-scope {
-  --cert-gold: #c9a86a;
-  --cert-gold-ink: #141210;
-  --cert-gold-soft: rgba(201, 168, 106, 0.16);
+  --cert-accent: #f5f5f5;
+  --cert-accent-ink: #111111;
+  --cert-accent-soft: rgba(255, 255, 255, 0.12);
   --cert-panel: var(--surface-3);
   --cert-panel-2: var(--surface-2);
   --cert-workspace-bg: #131313;
@@ -19,8 +19,8 @@
 }
 
 [data-theme="light"] .certificate-scope {
-  --cert-gold: #8a6d2b;
-  --cert-gold-soft: rgba(138, 109, 43, 0.12);
+  --cert-accent: #111111;
+  --cert-accent-soft: rgba(17, 17, 17, 0.1);
   --cert-workspace-bg: #e9e9e7;
   --cert-danger: #b3261e;
 }
@@ -95,7 +95,7 @@
 }
 
 .certificate-scope .cert-button:hover {
-  border-color: var(--cert-gold);
+  border-color: var(--cert-accent);
   color: var(--ink);
 }
 
@@ -106,9 +106,9 @@
 }
 
 .certificate-scope .cert-button-save {
-  background: var(--cert-gold);
-  border-color: var(--cert-gold);
-  color: var(--cert-gold-ink);
+  background: var(--cert-accent);
+  border-color: var(--cert-accent);
+  color: var(--cert-accent-ink);
 }
 
 .certificate-scope .cert-button-save:hover {
@@ -246,7 +246,7 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.18em;
-  color: var(--cert-gold);
+  color: var(--cert-accent);
 }
 
 .certificate-scope .cert-panel-section h3 {
@@ -322,12 +322,12 @@
 }
 
 .certificate-scope .cert-tpl:hover {
-  border-color: var(--cert-gold);
+  border-color: var(--cert-accent);
 }
 
 .certificate-scope .cert-tpl.active {
-  border-color: var(--cert-gold);
-  background: var(--cert-gold-soft);
+  border-color: var(--cert-accent);
+  background: var(--cert-accent-soft);
 }
 
 /* Each miniature is a faithful thumbnail of its template: the same
@@ -893,8 +893,8 @@
 }
 
 .certificate-scope .cert-issued-row.active {
-  background: var(--cert-gold-soft);
-  border-color: var(--cert-gold);
+  background: var(--cert-accent-soft);
+  border-color: var(--cert-accent);
 }
 
 .certificate-scope .cert-issued-info {

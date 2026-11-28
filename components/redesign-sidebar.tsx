@@ -25,6 +25,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings2,
+  ShieldCheck,
   ShoppingBag,
   Users,
   Wrench,
@@ -39,6 +40,8 @@ import styles from "./redesign-dashboard.module.css";
 // the rest (Messages, Lakisa Galerie, Inventory, Contacts, Price Your
 // Work, Certificates, Analytics, My Orders, My Plan, 3D Editor).
 // Settings stays at the bottom, with Feedback and the account switch.
+// Admin (admin and sub-admin accounts only) sits at the bottom, above
+// Settings, linking to the admin dashboard (/admin, own shell).
 // The logo and the profile moved to the topbar; the plan card and the
 // workspace switcher are gone (My plan is a nav item, the account
 // switch sits at the bottom). Collapsible to an icon rail (labels
@@ -168,6 +171,12 @@ export default function RedesignSidebar({
       </nav>
 
       <div className={styles.sidebarBottom}>
+        {(user.isAdmin || user.isSubAdmin) && (
+          <Link href="/admin" className={styles.navLink} title="Admin">
+            <ShieldCheck size={17} />
+            <span>Admin</span>
+          </Link>
+        )}
         <Link
           href="/settings"
           className={`${styles.navLink}${active === "settings" ? ` ${styles.navLinkActive}` : ""}`}

@@ -36,6 +36,9 @@ export type LibraryWorkItem = {
   sculptureUrl: string | null;
   frame: string;
   palette: string[] | null;
+  // Tags kept by the artist (AI tag tool, library form): lowercase
+  // tags, stored as a JSON string in the row (like palette).
+  tags: string[] | null;
   altText: string | null;
   createdAt: string;
   /** Exhibitions of this owner where a copy of the work hangs. */
@@ -54,6 +57,7 @@ export type LibraryArtworkFields = {
   sculptureUrl?: string | null;
   frame: string;
   palette?: string[] | string | null;
+  tags?: string[] | string | null;
   altText?: string | null;
 };
 
@@ -77,6 +81,25 @@ function parsePalette(value: string | null | undefined): string[] | null {
   }
 }
 
+// Same shape as parsePalette, for the tags JSON string: lowercase,
+// trimmed, de-duplicated, at most 20 tags.
+export function parseTags(value: string | null | undefined): string[] | null {
+  const parsed = parsePalette(value);
+  if (!parsed) return null;
+  const clean = parsed
+    .map((tag) => tag.trim().toLowerCase())
+    .filter((tag) => tag.length > 0 && tag.length <= 40);
+  const unique = [...new Set(clean)].slice(0, 20);
+  return unique.length > 0 ? unique : null;
+}
+
+export function stringifyTags(tags: string[] | string | null | undefined): string | null {
+  if (typeof tags === "string") return tags;
+  if (!tags || tags.length === 0) return null;
+  const clean = [...new Set(tags.map((tag) => tag.trim().toLowerCase()).filter((tag) => tag.length > 0 && tag.length <= 40))].slice(0, 20);
+  return clean.length > 0 ? JSON.stringify(clean) : null;
+}
+
 function toItem(
   row: {
     id: string;
@@ -91,6 +114,7 @@ function toItem(
     sculptureUrl: string | null;
     frame: string;
     palette: string | null;
+    tags: string | null;
     altText: string | null;
     createdAt: Date;
   },
@@ -109,6 +133,7 @@ function toItem(
     sculptureUrl: row.sculptureUrl,
     frame: row.frame,
     palette: parsePalette(row.palette),
+    tags: parseTags(row.tags),
     altText: row.altText,
     createdAt: row.createdAt.toISOString(),
     exhibitionIds,
@@ -136,6 +161,7 @@ async function ensureLibraryRow(
     sculptureUrl?: string | null;
     frame: string;
     palette?: string | string[] | null;
+    tags?: string | string[] | null;
     altText?: string | null;
   },
 ): Promise<void> {
@@ -162,6 +188,7 @@ async function ensureLibraryRow(
     sculptureUrl,
     frame: artwork.frame,
     palette: typeof artwork.palette === "string" ? artwork.palette : artwork.palette ? JSON.stringify(artwork.palette) : null,
+    tags: stringifyTags(artwork.tags),
     altText: artwork.altText ?? null,
   };
   if (sculptureUrl || videoUrl) {
@@ -197,6 +224,7 @@ export async function ensureLibraryWorks(ownerId: string): Promise<void> {
       sculptureUrl: true,
       frame: true,
       palette: true,
+      tags: true,
       altText: true,
     },
     orderBy: { createdAt: "asc" },
@@ -322,6 +350,7 @@ export async function copyLibraryWorkToExhibition(
       sculptureUrl: work.sculptureUrl,
       frame: work.frame,
       palette: work.palette,
+      tags: work.tags,
       altText: work.altText,
       // A sculpture copy stands on the floor at the room's centre,
       // not on the wall at eye level — the editor moves it from there.

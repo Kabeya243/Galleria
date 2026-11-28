@@ -29,15 +29,28 @@ export type ExploreExhibition = {
   views: number;
   coverImageUrl: string | null;
   publishedAt: string | null;
+  // Tags of the works hanging in this show (from the AI tag tool),
+  // sorted. Empty for shows whose works have no tags yet.
+  tags: string[];
 };
 
 function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
   const t = useT();
   const [onlyNew, setOnlyNew] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const visible = onlyNew
-    ? exhibitions.filter((item) => item.publishedAt && new Date(item.publishedAt).getTime() >= weekAgo)
-    : exhibitions;
+  // Every tag used by at least one public show, with how many shows
+  // carry it. Only tags that exist are offered: no invented filter.
+  const tagCounts = new Map<string, number>();
+  for (const exhibition of exhibitions) {
+    for (const tag of exhibition.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+  }
+  const allTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const visible = exhibitions.filter((item) => {
+    if (onlyNew && !(item.publishedAt && new Date(item.publishedAt).getTime() >= weekAgo)) return false;
+    if (activeTag && !item.tags.includes(activeTag)) return false;
+    return true;
+  });
   const newCount = exhibitions.filter(
     (item) => item.publishedAt && new Date(item.publishedAt).getTime() >= weekAgo,
   ).length;
@@ -63,13 +76,39 @@ function ExhibitionGrid({ exhibitions }: { exhibitions: ExploreExhibition[] }) {
         </button>
       </div>
 
+      {allTags.length > 0 && (
+        <div className={page.chips} role="group" aria-label={t("explore", "filterByTag")} style={{ marginTop: 8 }}>
+          <button
+            type="button"
+            className={`${page.chip}${!activeTag ? ` ${page.chipOn}` : ""}`}
+            aria-pressed={!activeTag}
+            onClick={() => setActiveTag(null)}
+          >
+            {t("explore", "allTags")}
+          </button>
+          {allTags.map(([tag, count]) => (
+            <button
+              key={tag}
+              type="button"
+              className={`${page.chip}${activeTag === tag ? ` ${page.chipOn}` : ""}`}
+              aria-pressed={activeTag === tag}
+              onClick={() => setActiveTag((current) => (current === tag ? null : tag))}
+            >
+              {tag} · {count}
+            </button>
+          ))}
+        </div>
+      )}
+
       {visible.length === 0 ? (
         <div className={`${dash.card} ${page.emptyState}`}>
-          <h3>{t("explore", "noPublic")}</h3>
-          <p>{t("explore", "noPublicDesc")}</p>
-          <Link href="/register" className={`${page.btn} ${page.btnCta}`}>
-            {t("explore", "createAccount")} <ArrowRight size={15} />
-          </Link>
+          <h3>{activeTag ? t("explore", "noTagResults") : t("explore", "noPublic")}</h3>
+          {!activeTag && <p>{t("explore", "noPublicDesc")}</p>}
+          {!activeTag && (
+            <Link href="/register" className={`${page.btn} ${page.btnCta}`}>
+              {t("explore", "createAccount")} <ArrowRight size={15} />
+            </Link>
+          )}
         </div>
       ) : (
         <div className={page.gridCards}>

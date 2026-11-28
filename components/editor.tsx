@@ -56,12 +56,13 @@ import type { Artwork, FrameConfig, FrameFinish, FrameGlass, FrameMaterial, Fram
 import { FRAME_FINISH_LABELS, FRAME_GLASS_LABELS, FRAME_MATERIAL_LABELS, FRAME_PRESETS, FRAME_PROFILE_LABELS, FRAME_VARIANTS, effectiveFrameConfig, encodeFrameConfig, isCustomFrame, parseFrameConfig, parseSavedFrameConfig } from "@/lib/demo-data";
 import { dominantHex, extractPalette, HARMONY_LABELS, harmonyOf, harmonyScore, hueFamilyOf, HUE_FAMILY_LABELS, isWarmHex, suggestedFrameVariant, suggestedWallColor } from "@/lib/palette";
 import { DEFAULT_ARTWORK_DESCRIPTION, enrichWithGemini, generateCaption, isGeminiAvailable } from "@/lib/caption";
+import { buildHangSuggestionPrompt, parseAiJson } from "@/lib/ai-tools-prompts";
 import { composeWall, dominantFamilyOf, wallFaceLabel, type ComposeItem, type ComposeObstacle } from "@/lib/compose-wall";
 import type { ArtworkCaption, CaptionSource, CaptionStatus } from "@/lib/caption";
 import { createElement, ELEMENT_DEFAULTS, ELEMENT_PLANES, PLINTH_VARIANTS, WALL_TEXT_ALIGNS, WALL_TEXT_FONTS, WALL_TEXT_LAYOUTS, WALL_TEXT_SWATCHES, type ElementType, type RoomElement, type WallTextAlign, type WallTextFont, type WallTextLayout } from "@/lib/elements";
 import { applyLayoutPreset, ceilingTextures, createGalleryRoom, floorTextures, floorTypes, HIDDEN_LAYOUT_KEYS, lightTypes, parseGalleryRooms, roomLayouts, roomPlanOffsets, wallTextures, type GalleryRoom, type RoomLayout, type WallId } from "@/lib/rooms";
 import { galleryLabel, type GalleryNamesMap } from "@/lib/gallery-names";
-import { useLocale, useT } from "@/lib/i18n";
+import { LOCALE_NAMES, useLocale, useT } from "@/lib/i18n";
 import { useGalleryNames } from "@/lib/use-gallery-names";
 import { galleryCameraStart, galleryDef, galleryHangWalls, galleryWallHit, galleryWallsForPosition, roomFloorCenterZ } from "@/lib/gallery-defs";
 import { isVideoServingUrl, VIDEO_DIRECT_MAX_FILE_SIZE } from "@/lib/video";
@@ -395,6 +396,21 @@ export default function Editor({
   // multi-selecting artworks, so a room full of stacked works had no
   // visible way to arrange it.
   const [composeAll, setComposeAll] = useState(false);
+  // AI hang suggestion (Tool 3, Phase 5, see lib/ai-tools-prompts.ts):
+  // the groups and wall order the model proposes for the compose
+  // candidates. A preview only, never applied on its own: "Apply"
+  // reorders the artworks to the suggested order and then runs the
+  // same composeWall placement as "Compose", and "Dismiss" drops it.
+  // hangRawText keeps the model's raw reply when it is not valid
+  // JSON, so the curator still sees what came back.
+  type HangSuggestion = {
+    groups: { name: string; artworkIds: string[]; note: string }[];
+    order: string[];
+  };
+  const [hangSuggestion, setHangSuggestion] = useState<HangSuggestion | null>(null);
+  const [hangSuggesting, setHangSuggesting] = useState(false);
+  const [hangError, setHangError] = useState<string | null>(null);
+  const [hangRawText, setHangRawText] = useState<string | null>(null);
   // 3D builder: 0.5 m floor grid (drags snap to 0.25 m while it is on),
   // measurement guides, and the stage-settings toggle (shows the room
   // settings panel — the same UI the inspector falls back to).
@@ -2444,6 +2460,11 @@ export default function Editor({
     const face = cameraWallFace() ?? composeFaces[0];
     setComposeWallId(face?.id ?? null);
     setComposeMessage(null);
+    // A suggestion belongs to the artworks it was made for; opening
+    // the panel starts fresh rather than showing a stale one.
+    setHangSuggestion(null);
+    setHangError(null);
+    setHangRawText(null);
     setComposeOpen(true);
   }
 
@@ -2473,22 +2494,20 @@ export default function Editor({
         ];
   }
 
-  // Automatic wall composition ("Compose wall"): place the selected
-  // artworks of the active room on the chosen wall — one row at eye
-  // level when they fit, otherwise as many as the wall holds (see
-  // lib/compose-wall.ts). One snapshot, one state update: the whole
-  // composition undoes in a single step, and the curator drags
-  // anything that does not please them afterwards.
-  function applyComposition() {
-    if (!activeRoom) return;
-    const face = composeFaces.find((item) => item.id === composeWallId)
+  // The wall Compose targets: the picked wall, else the wall the
+  // camera looks at, else the room's first hangable wall.
+  function composeTargetFace() {
+    return composeFaces.find((item) => item.id === composeWallId)
       ?? cameraWallFace()
-      ?? composeFaces[0];
-    if (!face) {
-      setComposeMessage("This room has no hangable wall to compose on.");
-      return;
-    }
-    const items: ComposeItem[] = composeCandidates.map((artwork) => {
+      ?? composeFaces[0]
+      ?? null;
+  }
+
+  // ComposeItems for a list of artworks: real size on the wall
+  // (dimensions field x scale) plus the dominant hue family of the
+  // stored palette, when the artwork has one.
+  function composeItemsFor(candidates: LayerArtwork[]): ComposeItem[] {
+    return candidates.map((artwork) => {
       const parsed = parseArtworkDimensions(artwork.dimensions ?? "");
       return {
         id: artwork.id,
@@ -2498,6 +2517,22 @@ export default function Editor({
         dominantFamily: dominantFamilyOf(artwork.palette),
       };
     });
+  }
+
+  // Automatic wall composition ("Compose wall"): place the selected
+  // artworks of the active room on the chosen wall — one row at eye
+  // level when they fit, otherwise as many as the wall holds (see
+  // lib/compose-wall.ts). One snapshot, one state update: the whole
+  // composition undoes in a single step, and the curator drags
+  // anything that does not please them afterwards.
+  function applyComposition() {
+    if (!activeRoom) return;
+    const face = composeTargetFace();
+    if (!face) {
+      setComposeMessage("This room has no hangable wall to compose on.");
+      return;
+    }
+    const items: ComposeItem[] = composeItemsFor(composeCandidates);
     // The solid volumes standing in front of the chosen wall: the
     // room's own collision blocks plus the blocks of its elements
     // (see roomObstacles above).
@@ -2512,6 +2547,135 @@ export default function Editor({
       return placement ? { ...artwork, position: placement.position, rotation: placement.rotation } : artwork;
     }));
     setSaved(false);
+  }
+
+  // AI hang suggestion (Tool 3): ask the model to group the compose
+  // candidates and order them for the wall, then show the suggestion
+  // as a preview. Nothing moves here; "Apply" does that, below.
+  // The dominant hue sent is the stored palette's dominant colour
+  // (hex), when the artwork has a palette; the placeholder
+  // description ("Add a description…") is left out, it says nothing
+  // about the work. Unknown or repeated ids in the reply are dropped,
+  // and any candidate the model forgot is added at the end of the
+  // order, so applying never loses an artwork.
+  async function suggestHang() {
+    if (hangSuggesting || composeCandidates.length < 2) return;
+    setHangSuggesting(true);
+    setHangError(null);
+    setHangRawText(null);
+    setHangSuggestion(null);
+    try {
+      const { system, prompt } = buildHangSuggestionPrompt({
+        artworks: composeCandidates.map((artwork) => ({
+          id: artwork.id,
+          title: artwork.title || "Untitled",
+          medium: artwork.medium || "",
+          dimensions: artwork.dimensions || "",
+          dominantHue: dominantHex(artwork.palette ?? null) ?? undefined,
+          description:
+            artwork.description && artwork.description !== DEFAULT_ARTWORK_DESCRIPTION
+              ? artwork.description
+              : undefined,
+        })),
+        language: LOCALE_NAMES[locale] ?? "English",
+      });
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ system, prompt, maxTokens: 800 }),
+      });
+      const json = (await res.json().catch(() => null)) as { text?: string; error?: string } | null;
+      if (!res.ok) {
+        if (res.status === 503) throw new Error("AI is not connected yet. Connect a provider to use hang suggestions.");
+        if (res.status === 429) throw new Error("Too many AI requests, try again later.");
+        if (res.status === 401) throw new Error("Sign in to use AI features.");
+        throw new Error(json?.error ?? "The AI request failed. Try again.");
+      }
+      const text = json?.text ?? "";
+      const parsed = parseAiJson<HangSuggestion>(text);
+      if (!parsed || !Array.isArray(parsed.groups) || !Array.isArray(parsed.order)) {
+        // Keep the raw reply visible instead of failing silently:
+        // the curator sees what the model actually returned.
+        setHangRawText(text);
+        throw new Error("The suggestion came back in a format I could not read. The raw text is shown below.");
+      }
+      const known = new Set(composeCandidates.map((artwork) => artwork.id));
+      const seen = new Set<string>();
+      const order: string[] = [];
+      for (const id of parsed.order) {
+        if (typeof id === "string" && known.has(id) && !seen.has(id)) {
+          seen.add(id);
+          order.push(id);
+        }
+      }
+      if (order.length === 0) {
+        throw new Error("The suggestion did not name any of these artworks. Try again.");
+      }
+      for (const artwork of composeCandidates) {
+        if (!seen.has(artwork.id)) order.push(artwork.id);
+      }
+      const groups = parsed.groups
+        .map((group) => ({
+          name: typeof group?.name === "string" && group.name.trim() ? group.name.trim() : "Group",
+          note: typeof group?.note === "string" ? group.note : "",
+          artworkIds: (Array.isArray(group?.artworkIds) ? group.artworkIds : []).filter(
+            (id): id is string => typeof id === "string" && known.has(id),
+          ),
+        }))
+        .filter((group) => group.artworkIds.length > 0);
+      setHangSuggestion({ groups, order });
+    } catch (err) {
+      setHangError(err instanceof Error ? err.message : "The AI request failed. Try again.");
+    } finally {
+      setHangSuggesting(false);
+    }
+  }
+
+  // Apply the AI hang suggestion: reorder the artworks to the
+  // suggested order, then hang them with the same composeWall
+  // placement as "Compose" (the model decides grouping and order
+  // only; the placement rules stay in lib/compose-wall.ts). One
+  // snapshot, one state update, so the whole apply undoes in a
+  // single step. The preview is cleared once applied.
+  function applyHangSuggestion() {
+    if (!hangSuggestion || !activeRoom) return;
+    const face = composeTargetFace();
+    if (!face) {
+      setComposeMessage("This room has no hangable wall to compose on.");
+      return;
+    }
+    const byId = new Map(composeCandidates.map((artwork) => [artwork.id, artwork]));
+    const ordered = hangSuggestion.order
+      .map((id) => byId.get(id))
+      .filter((artwork): artwork is LayerArtwork => artwork !== undefined);
+    for (const artwork of composeCandidates) {
+      if (!ordered.includes(artwork)) ordered.push(artwork);
+    }
+    const items: ComposeItem[] = composeItemsFor(ordered);
+    const result = composeWall(items, face, roomObstacles(activeRoom));
+    setComposeMessage(result.message);
+    if (result.placements.length === 0) return;
+    const placementById = new Map(result.placements.map((placement) => [placement.id, placement]));
+    const rank = new Map(ordered.map((artwork, index) => [artwork.id, index]));
+    snapshot();
+    setArtworks((current) => {
+      const placed = current.map((artwork) => {
+        const placement = placementById.get(artwork.id);
+        return placement ? { ...artwork, position: placement.position, rotation: placement.rotation } : artwork;
+      });
+      // Suggested artworks first, in the suggested order; everything
+      // else keeps its place after them.
+      const before = new Map(placed.map((artwork, index) => [artwork.id, index]));
+      return [...placed].sort((a, b) => {
+        const rankA = rank.get(a.id) ?? Number.POSITIVE_INFINITY;
+        const rankB = rank.get(b.id) ?? Number.POSITIVE_INFINITY;
+        return rankA - rankB || (before.get(a.id) ?? 0) - (before.get(b.id) ?? 0);
+      });
+    });
+    setSaved(false);
+    setHangSuggestion(null);
+    setHangRawText(null);
+    setHangError(null);
   }
 
   // The artist a newly created artwork or text carries: the most
@@ -3978,6 +4142,7 @@ async function compressImage(file: File): Promise<File> {
             </div>
           )}
           {composeOpen && composeCandidates.length >= 2 && (
+            <>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderBottom: "1px solid var(--border)", background: "var(--surface-3)", color: "var(--ink)", fontSize: "9px", flexWrap: "wrap" }}>
               <span>Compose {composeCandidates.length} artworks on</span>
               <select
@@ -3991,9 +4156,49 @@ async function compressImage(file: File): Promise<File> {
                 ))}
               </select>
               <button type="button" title="Place these artworks on this wall" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={applyComposition}>Compose</button>
-              <button type="button" title="Close the compose panel" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => { setComposeOpen(false); setComposeAll(false); }}>Close</button>
+              <button type="button" disabled={hangSuggesting} title="Ask the AI to group these artworks and suggest an order for the wall" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: hangSuggesting ? "default" : "pointer", opacity: hangSuggesting ? 0.6 : 1 }} onClick={() => { void suggestHang(); }}><Sparkles size={12} /> {hangSuggesting ? "Thinking…" : "Suggest a hang"}</button>
+              <button type="button" title="Close the compose panel" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => { setComposeOpen(false); setComposeAll(false); setHangSuggestion(null); setHangError(null); setHangRawText(null); }}>Close</button>
               {composeMessage && <span role="status" style={{ color: "var(--muted)", lineHeight: 1.5 }}>{composeMessage}</span>}
             </div>
+            {hangSuggesting && (
+              <div style={{ padding: "6px 12px", borderBottom: "1px solid var(--border)", background: "var(--surface-3)", color: "var(--muted)", fontSize: "9px" }} role="status">Thinking about the hang…</div>
+            )}
+            {hangError && (
+              <div style={{ padding: "6px 12px", borderBottom: "1px solid var(--border)", background: "var(--surface-3)", color: "var(--ink)", fontSize: "9px" }} role="status">
+                <span style={{ color: "var(--danger, #b3261e)" }}>{hangError}</span>
+                {hangRawText && <pre style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--muted)", fontSize: "9px", lineHeight: 1.5 }}>{hangRawText}</pre>}
+                <button type="button" style={{ marginTop: "6px", display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => { setHangError(null); setHangRawText(null); }}>Dismiss</button>
+              </div>
+            )}
+            {hangSuggestion && !hangSuggesting && (
+              <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)", background: "var(--surface-3)", color: "var(--ink)", fontSize: "9px", lineHeight: 1.6 }} role="status">
+                <p style={{ margin: "0 0 6px" }}>Suggested hang. Nothing moves until you press Apply.</p>
+                {hangSuggestion.groups.length > 0 && hangSuggestion.groups.map((group) => (
+                  <div key={group.name} style={{ marginBottom: "6px" }}>
+                    <strong>{group.name}</strong>
+                    {group.note ? <span style={{ color: "var(--muted)" }}> {group.note}</span> : null}
+                    <ul style={{ margin: "2px 0 0", paddingLeft: "16px" }}>
+                      {group.artworkIds.map((id) => (
+                        <li key={id}>{composeCandidates.find((artwork) => artwork.id === id)?.title || "Untitled"}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                <div style={{ marginBottom: "8px" }}>
+                  <strong>Wall order</strong>
+                  <ol style={{ margin: "2px 0 0", paddingLeft: "16px" }}>
+                    {hangSuggestion.order.map((id, index) => (
+                      <li key={`${id}-${index}`}>{composeCandidates.find((artwork) => artwork.id === id)?.title || "Untitled"}</li>
+                    ))}
+                  </ol>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button type="button" title="Hang the artworks in the suggested order" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={applyHangSuggestion}>Apply</button>
+                  <button type="button" title="Ignore this suggestion" style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "3px", background: "var(--surface-2)", color: "var(--ink)", fontSize: "9px", cursor: "pointer" }} onClick={() => setHangSuggestion(null)}>Dismiss</button>
+                </div>
+              </div>
+            )}
+            </>
           )}
           <div className="scene-wrap">
             {activeRoom && sceneRoom && <GalleryScene artworks={visibleArtworks} selectedId={selectedId} onSelect={selectArtwork} className="gallery-canvas editor-canvas" room={sceneRoom} rooms={sceneRooms} interior walkMode walking input={movementKeys} activeRoomId={activeRoom.id} onRoomChange={(id) => { setActiveRoomId(id); clearSelection(); resetCameraView(); }} teleportTarget={teleportTarget} cameraStateRef={cameraStateRef} viewRequest={viewRequest} lookAtRequest={lookAtRequest} appearingId={appearingId} editable onArtworkUpdate={handleSceneArtworkUpdate} onArtworkDragEnd={handleArtworkDragEnd} selectedElementId={selectedElementId} onSelectElement={selectElement} onElementUpdate={handleSceneElementUpdate} selectedSunlightElementId={selectedSunlightElementId} onSelectSunlightElement={selectSunlightElement} onSunlightElementUpdate={handleSceneSunlightElementUpdate} selectedWallId={selectedWallId} onWallSelect={(wallId) => selectWall(wallId)} onEditStart={beginEdit} onEditEnd={endEdit} onElementDrop={dropElement} showGrid={showGrid} showMeasure={showMeasure} multiSelectedIds={multiSelected.map((ref) => ref.id)} />}

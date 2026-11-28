@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { listLibraryWorks, upsertLibraryWorks } from "@/lib/library";
+import { db } from "@/lib/db";
+import { listLibraryWorks, stringifyTags, upsertLibraryWorks } from "@/lib/library";
 
 // The artist's own reusable library: every work they have ever
 // uploaded, all exhibitions together. The read backfills from the
@@ -35,6 +36,16 @@ export async function POST(request: Request) {
   const imageUrl = clean(data.imageUrl, 2000);
   if (!title) return NextResponse.json({ error: "A title is required." }, { status: 400 });
   if (!imageUrl) return NextResponse.json({ error: "An image is required." }, { status: 400 });
+  // Tags kept by the artist in the form (AI tag tool): an array of
+  // short strings, normalised to lowercase and de-duplicated, stored
+  // as a JSON string like palette.
+  const rawTags = Array.isArray(data.tags) ? data.tags : [];
+  const tags = rawTags
+    .filter((tag): tag is string => typeof tag === "string")
+    .map((tag) => tag.trim().toLowerCase())
+    .filter((tag) => tag.length > 0 && tag.length <= 40)
+    .slice(0, 20);
+  const uniqueTags = [...new Set(tags)];
   await upsertLibraryWorks(user.id, [
     {
       title,
@@ -45,10 +56,20 @@ export async function POST(request: Request) {
       description: clean(data.description, 2000),
       imageUrl,
       frame: clean(data.frame, 200) || "wood",
+      tags: uniqueTags,
     },
   ]);
   const works = await listLibraryWorks(user.id);
   const work = works.find((item) => item.imageUrl === imageUrl) ?? null;
   if (!work) return NextResponse.json({ error: "Could not save this artwork." }, { status: 500 });
+  // The library upsert is create-only (an existing row is never
+  // overwritten from a copy), so a re-save of a work that is already
+  // in the library would silently drop the tags just chosen: write
+  // them explicitly here when any were kept.
+  if (uniqueTags.length > 0) {
+    await db.libraryWork.update({ where: { id: work.id }, data: { tags: stringifyTags(uniqueTags) } });
+    const updated = (await listLibraryWorks(user.id)).find((item) => item.id === work.id) ?? work;
+    return NextResponse.json({ work: updated }, { status: 201 });
+  }
   return NextResponse.json({ work }, { status: 201 });
 }

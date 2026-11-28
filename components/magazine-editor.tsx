@@ -16,6 +16,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import type { SerializedMagazineArticle } from "@/lib/magazine";
+import { LOCALE_NAMES, useLocale } from "@/lib/i18n";
+import { buildSocialPrompt, parseAiJson } from "@/lib/ai-tools-prompts";
+import { callAiGenerate } from "@/lib/ai-generate-client";
 import editorStyles from "./magazine-editor.module.css";
 import articleStyles from "./magazine-page.module.css";
 
@@ -86,6 +89,62 @@ type Snapshot = {
   status: "draft" | "published";
 };
 
+/** The three texts tool 5 generates. Each is shown for review and
+ * editing, and only enters the article when the admin inserts it. */
+type SocialDrafts = {
+  instagramCaption: string;
+  pressParagraph: string;
+  openCallAnnouncement: string;
+};
+
+function isValidSocialDrafts(value: unknown): value is SocialDrafts {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.instagramCaption === "string" &&
+    v.instagramCaption.trim().length > 0 &&
+    typeof v.pressParagraph === "string" &&
+    v.pressParagraph.trim().length > 0 &&
+    typeof v.openCallAnnouncement === "string" &&
+    v.openCallAnnouncement.trim().length > 0
+  );
+}
+
+function SocialDraftField({
+  label,
+  hint,
+  value,
+  onChange,
+  onInsert,
+  onCopy,
+  copied,
+}: {
+  label: string;
+  hint: string;
+  value: string;
+  onChange: (value: string) => void;
+  onInsert: () => void;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  return (
+    <div className={editorStyles.aiDraft}>
+      <span>{label}</span>
+      <span className={editorStyles.fieldHint}>{hint}</span>
+      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} />
+      <span className={editorStyles.aiDraftActions}>
+        <button type="button" className={editorStyles.secondaryButton} onClick={onInsert}>
+          Insert into article
+        </button>
+        <button type="button" className={editorStyles.secondaryButton} onClick={onCopy}>
+          Copy
+        </button>
+        {copied && <span className={editorStyles.copiedNote}>Copied</span>}
+      </span>
+    </div>
+  );
+}
+
 export default function MagazineEditor({
   article,
 }: {
@@ -110,6 +169,23 @@ export default function MagazineEditor({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const { locale } = useLocale();
+
+  // AI social texts (tool 5): one click writes an Instagram caption, a
+  // press paragraph and an open call announcement from the article. The
+  // article has no linked exhibition or artwork, so the kind and the
+  // details below are filled in here. Nothing is inserted automatically.
+  const [aiKind, setAiKind] = useState<"exhibition" | "artwork">("exhibition");
+  const [aiArtist, setAiArtist] = useState("");
+  const [aiVenue, setAiVenue] = useState("");
+  const [aiDates, setAiDates] = useState("");
+  const [aiMedium, setAiMedium] = useState("");
+  const [aiYear, setAiYear] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiRawText, setAiRawText] = useState<string | null>(null);
+  const [aiDrafts, setAiDrafts] = useState<SocialDrafts | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState<Snapshot | null>(
     article
       ? {
@@ -198,6 +274,75 @@ export default function MagazineEditor({
       setError(err instanceof Error ? err.message : "The image upload failed.");
     } finally {
       setUploading(null);
+    }
+  }
+
+  async function generateSocialTexts() {
+    if (aiBusy || !title.trim()) return;
+    setAiBusy(true);
+    setAiError(null);
+    setAiRawText(null);
+    try {
+      // The excerpt first, then the start of the body, as the "about".
+      const description = excerpt.trim() || content.trim().slice(0, 800) || undefined;
+      const { system, prompt } = buildSocialPrompt({
+        kind: aiKind,
+        title: title.trim(),
+        artist: aiArtist.trim() || undefined,
+        description,
+        medium: aiMedium.trim() || undefined,
+        year: aiYear.trim() || undefined,
+        venue: aiVenue.trim() || undefined,
+        dates: aiDates.trim() || undefined,
+        language: LOCALE_NAMES[locale],
+      });
+      const reply = await callAiGenerate({ prompt, system, maxTokens: 800 });
+      const parsed = parseAiJson<SocialDrafts>(reply.text);
+      if (!isValidSocialDrafts(parsed)) {
+        // The reply was not the JSON asked for: show the raw text and
+        // say so, instead of guessing which part is which.
+        setAiDrafts(null);
+        setAiRawText(reply.text);
+        return;
+      }
+      setAiDrafts(parsed);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "The AI request failed. Try again.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  // Insert a generated text into the article body, at the cursor.
+  // The article is only changed in the editor; saving stays manual.
+  function insertIntoContent(text: string) {
+    const textarea = contentRef.current;
+    const insert = `\n\n${text.trim()}\n`;
+    if (textarea) {
+      const start = textarea.selectionStart ?? content.length;
+      const end = textarea.selectionEnd ?? content.length;
+      const next = content.slice(0, start) + insert + content.slice(end);
+      setContent(next);
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + insert.length, start + insert.length);
+      });
+    } else {
+      setContent((value) => value + insert);
+    }
+    setTab("write");
+  }
+
+  async function copyDraft(key: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      window.setTimeout(
+        () => setCopiedKey((current) => (current === key ? null : current)),
+        1600,
+      );
+    } catch {
+      setCopiedKey(null);
     }
   }
 
@@ -529,6 +674,152 @@ export default function MagazineEditor({
               </div>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* AI social texts (tool 5): Instagram caption, press paragraph and
+          open call announcement, written from this article. Each text is
+          shown for review and editing, and only enters the article when
+          the admin inserts it. Nothing here is automatic. */}
+      <div className={editorStyles.aiSection} aria-label="AI social texts">
+        <div>
+          <h3>AI social texts</h3>
+          <span className={editorStyles.fieldHint}>
+            Write an Instagram caption, a press paragraph and an open call
+            announcement from this article. Read each one, edit it if you
+            like, then insert it into the article or copy it.
+          </span>
+        </div>
+        <div className={editorStyles.bodyToolbar}>
+          <div className={editorStyles.segmented} role="tablist" aria-label="What the article is about">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={aiKind === "exhibition"}
+              className={aiKind === "exhibition" ? editorStyles.active : ""}
+              onClick={() => setAiKind("exhibition")}
+            >
+              Exhibition
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={aiKind === "artwork"}
+              className={aiKind === "artwork" ? editorStyles.active : ""}
+              onClick={() => setAiKind("artwork")}
+            >
+              Artwork
+            </button>
+          </div>
+          <span className={editorStyles.fieldHint}>
+            The title and the excerpt or body are used as the facts. Add
+            details below when the article is about a show or a work.
+          </span>
+        </div>
+        <div className={editorStyles.aiGrid}>
+          <label className={editorStyles.field}>
+            Artist
+            <input
+              type="text"
+              value={aiArtist}
+              onChange={(e) => setAiArtist(e.target.value)}
+              placeholder="Artist name"
+            />
+          </label>
+          <label className={editorStyles.field}>
+            Venue
+            <input
+              type="text"
+              value={aiVenue}
+              onChange={(e) => setAiVenue(e.target.value)}
+              placeholder="Gallery or place"
+            />
+          </label>
+          <label className={editorStyles.field}>
+            Dates
+            <input
+              type="text"
+              value={aiDates}
+              onChange={(e) => setAiDates(e.target.value)}
+              placeholder="19 November – 19 December 2026"
+            />
+          </label>
+          <label className={editorStyles.field}>
+            Medium
+            <input
+              type="text"
+              value={aiMedium}
+              onChange={(e) => setAiMedium(e.target.value)}
+              placeholder="Charcoal on paper"
+            />
+          </label>
+          <label className={editorStyles.field}>
+            Year
+            <input
+              type="text"
+              value={aiYear}
+              onChange={(e) => setAiYear(e.target.value)}
+              placeholder="2026"
+            />
+          </label>
+        </div>
+        <div className={editorStyles.aiDraftActions}>
+          <button
+            type="button"
+            className={editorStyles.primaryButton}
+            onClick={() => void generateSocialTexts()}
+            disabled={aiBusy || !title.trim()}
+          >
+            {aiBusy ? "Writing…" : aiDrafts ? "Write again" : "Write social texts"}
+          </button>
+          {!title.trim() && (
+            <span className={editorStyles.fieldHint}>Add a title first.</span>
+          )}
+        </div>
+        {aiError && (
+          <p role="alert" className={editorStyles.errorText}>
+            {aiError}
+          </p>
+        )}
+        {aiRawText && !aiDrafts && (
+          <div>
+            <p className={editorStyles.errorText}>
+              The reply was not clear, so no texts are shown. Here is the raw
+              text:
+            </p>
+            <p className={editorStyles.aiRawBox}>{aiRawText}</p>
+          </div>
+        )}
+        {aiDrafts && (
+          <>
+            <SocialDraftField
+              label="Instagram caption"
+              hint="Edit it, then insert it into the article or copy it."
+              value={aiDrafts.instagramCaption}
+              onChange={(value) => setAiDrafts({ ...aiDrafts, instagramCaption: value })}
+              onInsert={() => insertIntoContent(aiDrafts.instagramCaption)}
+              onCopy={() => void copyDraft("instagram", aiDrafts.instagramCaption)}
+              copied={copiedKey === "instagram"}
+            />
+            <SocialDraftField
+              label="Press paragraph"
+              hint="Edit it, then insert it into the article or copy it."
+              value={aiDrafts.pressParagraph}
+              onChange={(value) => setAiDrafts({ ...aiDrafts, pressParagraph: value })}
+              onInsert={() => insertIntoContent(aiDrafts.pressParagraph)}
+              onCopy={() => void copyDraft("press", aiDrafts.pressParagraph)}
+              copied={copiedKey === "press"}
+            />
+            <SocialDraftField
+              label="Open call announcement"
+              hint="Edit it, then insert it into the article or copy it."
+              value={aiDrafts.openCallAnnouncement}
+              onChange={(value) => setAiDrafts({ ...aiDrafts, openCallAnnouncement: value })}
+              onInsert={() => insertIntoContent(aiDrafts.openCallAnnouncement)}
+              onCopy={() => void copyDraft("opencall", aiDrafts.openCallAnnouncement)}
+              copied={copiedKey === "opencall"}
+            />
+          </>
         )}
       </div>
 

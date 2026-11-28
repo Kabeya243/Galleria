@@ -14354,6 +14354,85 @@ export const DICTIONARY = {
       sw: "Kazi imeongezwa kwenye maktaba yako.",
       ln: "Mosala ebakisami na bibliothèque na yo.",
     },
+    // AI tools 1 and 4 (library form): on-demand text and tag
+    // generation. Only French and English are translated here; other
+    // languages fall back to English (see translate).
+    aiGenerateTexts: {
+      fr: "Générer les textes avec l'IA",
+      en: "Generate texts with AI",
+    },
+    aiGenerating: {
+      fr: "L'IA écrit…",
+      en: "AI is writing…",
+    },
+    aiTextsTitle: {
+      fr: "Textes proposés",
+      en: "Suggested texts",
+    },
+    aiTextsHint: {
+      fr: "Relisez et modifiez avant d'enregistrer. Rien n'est appliqué tout seul.",
+      en: "Read and edit before saving. Nothing is applied on its own.",
+    },
+    aiDescription: {
+      fr: "Description",
+      en: "Description",
+    },
+    aiArtistStatement: {
+      fr: "Texte d'artiste",
+      en: "Artist statement",
+    },
+    aiCuratorialText: {
+      fr: "Texte curatorial",
+      en: "Curatorial text",
+    },
+    aiApplyDescription: {
+      fr: "Utiliser comme description",
+      en: "Use as description",
+    },
+    aiApplied: {
+      fr: "Description appliquée.",
+      en: "Description applied.",
+    },
+    aiCopy: {
+      fr: "Copier",
+      en: "Copy",
+    },
+    aiCopied: {
+      fr: "Copié.",
+      en: "Copied.",
+    },
+    aiSuggestTags: {
+      fr: "Suggérer des tags",
+      en: "Suggest tags",
+    },
+    aiSuggestingTags: {
+      fr: "L'IA cherche des tags…",
+      en: "AI is finding tags…",
+    },
+    aiTagsTitle: {
+      fr: "Tags suggérés",
+      en: "Suggested tags",
+    },
+    aiTagsHint: {
+      fr: "Touchez un tag pour le garder ou l'enlever. Seuls les tags gardés sont enregistrés.",
+      en: "Tap a tag to keep it or drop it. Only kept tags are saved.",
+    },
+    aiNotConnected: {
+      fr: "IA non connectée. Ajoutez une clé API pour l'activer.",
+      en: "AI is not connected. Add an API key to turn it on.",
+    },
+    aiTooMany: {
+      fr: "Trop de requêtes, réessaie plus tard.",
+      en: "Too many requests, try again later.",
+    },
+    aiFailed: {
+      fr: "L'IA n'a pas répondu. Réessaie.",
+      en: "The AI did not answer. Try again.",
+    },
+    aiUnclear: {
+      fr: "La réponse de l'IA n'était pas claire. Voici le texte brut :",
+      en: "The AI reply was not clear. Here is the raw text:",
+    },
     fromLibrary: {
       fr: "Depuis mes œuvres",
       en: "From my works",
@@ -14905,6 +14984,18 @@ export const DICTIONARY = {
       ko: "전시 필터",
       sw: "Chuja maonyesho",
       ln: "Kopona bimiseli",
+    },
+    filterByTag: {
+      fr: "Filtrer par tag",
+      en: "Filter by tag",
+    },
+    allTags: {
+      fr: "Tous les tags",
+      en: "All tags",
+    },
+    noTagResults: {
+      fr: "Aucune exposition avec ce tag.",
+      en: "No exhibition with this tag.",
     },
     liveNow: {
       fr: "En ligne",

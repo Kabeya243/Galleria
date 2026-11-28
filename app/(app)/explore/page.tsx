@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import ExplorePage, { type ExploreExhibition } from "@/components/explore-page";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseTags } from "@/lib/library";
 import { parseGalleryRooms, placedArtworks } from "@/lib/rooms";
 import { toServingImageUrl } from "@/lib/r2";
 
@@ -31,12 +32,16 @@ async function findPublicExhibitions(): Promise<ExploreExhibition[]> {
     },
     include: {
       owner: { select: { id: true, name: true } },
-      artworks: { select: { roomId: true, imageUrl: true }, orderBy: { createdAt: "asc" } },
+      artworks: { select: { roomId: true, imageUrl: true, tags: true }, orderBy: { createdAt: "asc" } },
     },
     orderBy: { publishedAt: { sort: "desc", nulls: "last" } },
   });
   return exhibitions.map((exhibition) => {
     const { count, coverImageUrl } = placedArtworks(exhibition.rooms, exhibition.artworks);
+    // The tags of the works hanging in this show, de-duplicated and
+    // sorted, so visitors can filter the list by tag. Works without
+    // tags (everything saved before the tag tool) simply add none.
+    const tags = [...new Set(exhibition.artworks.flatMap((artwork) => parseTags(artwork.tags) ?? []))].sort();
     return {
       id: exhibition.id,
       title: exhibition.title,
@@ -48,6 +53,7 @@ async function findPublicExhibitions(): Promise<ExploreExhibition[]> {
       views: exhibition.views,
       coverImageUrl: toServingImageUrl(coverImageUrl),
       publishedAt: exhibition.publishedAt ? exhibition.publishedAt.toISOString() : null,
+      tags,
     };
   });
 }
